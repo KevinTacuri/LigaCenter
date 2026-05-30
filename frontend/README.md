@@ -67,10 +67,28 @@ pnpm build
 
 ---
 
-## 🔗 Integración con el Backend
-Las peticiones HTTP del frontend están configuradas para consultar la URL de la API local en `http://127.0.0.1:8000/api` por defecto. 
+## 🔗 Integración con el Backend y Configuración de API (Axios)
 
-Si deseas cambiar la dirección de la API, puedes definir la variable de entorno `VITE_API_URL` en un archivo `.env` dentro de la carpeta `frontend/`:
-```env
-VITE_API_URL=https://tu-servidor-produccion.com/api
-```
+Por defecto, las peticiones HTTP realizadas desde el frontend están dirigidas a la URL local estándar de Laravel:
+👉 `http://127.0.0.1:8000/api` (usada cuando ejecutas `php artisan serve`).
+
+### ⚡ Configuración Alternativa usando Laravel Herd (Recomendada)
+Si prefieres servir el backend directamente con **Laravel Herd** (sin necesidad de ejecutar `php artisan serve`), sigue estos pasos para evitar errores de conexión (`AxiosError: Network Error`):
+
+1.  **Enlazar el Backend en Herd**:
+    Abre tu terminal en la carpeta `/backend` y ejecuta:
+    ```bash
+    herd link
+    ```
+    *Esto creará un dominio local apuntando a tu backend, normalmente disponible en `http://backend.test`.*
+
+2.  **Configurar la URL en el Frontend**:
+    Crea un archivo llamado `.env` dentro de la carpeta `/frontend` y define la variable de entorno con tu URL local de Herd:
+    ```env
+    VITE_API_URL=http://backend.test/api
+    ```
+    *(Reemplaza `backend.test` por el dominio asignado por Herd si es diferente).*
+
+> [!NOTE]
+> El archivo `frontend/.env` está configurado en `.gitignore`, por lo que **no se subirá al repositorio**. Esto permite que cada desarrollador configure su propia URL local (ya sea usando `artisan serve` en el puerto 8000 o Herd con dominios `.test`) sin afectar a los demás compañeros del equipo.
+
