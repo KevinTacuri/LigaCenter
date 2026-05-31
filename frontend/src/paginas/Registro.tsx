@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 
@@ -13,6 +13,24 @@ export const Registro: React.FC = () => {
   const [procesando, setProcesando] = useState(false);
   const { registrar } = useAutenticacion();
   const navegar = useNavigate();
+
+  const imagenRef = useRef<HTMLImageElement | null>(null);
+
+  // Parallax sutil en la imagen al mover el mouse
+  useEffect(() => {
+    const manejarMovimientoMouse = (e: MouseEvent) => {
+      if (imagenRef.current) {
+        const x = (window.innerWidth - e.pageX * 2) / 120;
+        const y = (window.innerHeight - e.pageY * 2) / 120;
+        imagenRef.current.style.transform = `scale(1.1) translate(${x}px, ${y}px)`;
+      }
+    };
+
+    window.addEventListener('mousemove', manejarMovimientoMouse);
+    return () => {
+      window.removeEventListener('mousemove', manejarMovimientoMouse);
+    };
+  }, []);
 
   const manejarEnvio = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,144 +69,178 @@ export const Registro: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-radial from-[#1e1b4b] via-[#0f172a] to-[#020617] p-4 font-sans select-none">
-      {/* Círculos decorativos flotantes para efecto de profundidad */}
-      <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-indigo-600/10 rounded-full blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl animate-pulse delay-700"></div>
-
-      {/* Tarjeta con efecto Glassmorphism */}
-      <div className="relative w-full max-w-lg bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl transition-all duration-300 hover:shadow-purple-500/5 hover:border-white/20">
-        
-        {/* Cabecera */}
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-linear-to-r from-white via-slate-200 to-slate-400">
-            Crear Cuenta
-          </h1>
-          <p className="text-sm text-slate-400 mt-2">
-            Únete a LigaCenter y participa en los campeonatos
-          </p>
-        </div>
-
-        {/* Mensaje de Error */}
-        {errorLocal && (
-          <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm flex items-center gap-2 animate-shake">
-            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <span>{errorLocal}</span>
+    <main className="golden-grid font-sans min-h-screen text-on-surface select-none">
+      
+      {/* Sección 1: Banner Izquierdo */}
+      <section className="bg-primary-container relative flex items-center justify-center overflow-hidden">
+        <img
+          ref={imagenRef}
+          alt="Institución Deportiva"
+          className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay transition-transform duration-300 ease-out"
+          src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmQAm57BlNbbDwN2i6XcKFTXuv1qTEBkRKxmWkWt7REVKNpgizNc7yWFVnjazJItuqiOXiptjuFLjEdIO2zNVHV05-flSliAEXP7bhcG63XcRnmu1h2-gWCIjGF7FGR0CpG3sP_xJcWZk0zGJkdbbc-8sWo4g3DNyj-2XkGZWwjiSEb-clMnTr6biZ0b2-Fdttgg3oRrK0weUjDQ3vkUjjcfluCU6m3w5WL1LfnO76ZOxUQ34jNLhrgCp2rmIolTgeKQ2aJHASAyVj"
+          style={{ transform: 'scale(1.1) translate(0px, 0px)' }}
+        />
+        <div className="relative z-10 p-12 text-center md:text-left max-w-2xl">
+          <header className="flex items-center gap-3 mb-5 justify-center md:justify-start">
+            <span className="material-symbols-outlined text-on-primary-container text-[48px]">account_balance</span>
+            <h1 className="text-3xl font-extrabold text-on-primary-container tracking-tight">
+              Crear Cuenta
+            </h1>
+          </header>
+          <div className="space-y-3">
+            <p className="text-2xl font-bold text-on-primary-container opacity-90">LigaCenter</p>
+            <p className="text-base text-on-primary-container/80 leading-relaxed">
+              Únete hoy mismo para inscribir a tus equipos, consultar calendarios oficiales y hacer seguimiento en tiempo real de todos los campeonatos de tu institución.
+            </p>
           </div>
-        )}
+        </div>
+        <div className="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-primary-container to-transparent opacity-60"></div>
+      </section>
 
-        {/* Formulario */}
-        <form onSubmit={manejarEnvio} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Sección 2: Formulario Derecho */}
+      <section className="flex flex-col items-center justify-center p-6 md:p-12 relative bg-surface-container-low">
+        <div className="w-full max-w-[480px] bg-surface-container-lowest p-8 rounded-xl shadow-md border border-outline-variant/40">
+          
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-primary mb-1">Registro de Usuario</h2>
+            <p className="text-sm text-on-surface-variant">Complete sus datos para crear su cuenta pública.</p>
+          </div>
+
+          {errorLocal && (
+            <div className="mb-5 p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 text-xs flex items-center gap-2 animate-shake">
+              <span className="material-symbols-outlined text-sm shrink-0">error</span>
+              <span>{errorLocal}</span>
+            </div>
+          )}
+
+          <form onSubmit={manejarEnvio} className="space-y-4">
+            
             {/* Nombre Completo */}
-            <div className="md:col-span-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+            <div className="space-y-1 transition-transform duration-200 focus-within:scale-[1.01]">
+              <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider" htmlFor="name">
                 Nombre Completo *
               </label>
               <input
+                id="name"
                 type="text"
                 required
-                className="w-full bg-slate-900/50 border border-slate-700/60 rounded-xl py-2.5 px-4 text-white placeholder-slate-500 focus:outline-hidden focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all text-sm"
+                disabled={procesando}
+                className="w-full px-4 py-2 rounded border border-outline-variant bg-surface-bright text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-hidden text-sm shadow-xs transition-all"
                 placeholder="Juan Pérez"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
-                disabled={procesando}
               />
             </div>
 
             {/* Correo Electrónico */}
-            <div className="md:col-span-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+            <div className="space-y-1 transition-transform duration-200 focus-within:scale-[1.01]">
+              <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider" htmlFor="email">
                 Correo Electrónico *
               </label>
               <input
+                id="email"
                 type="email"
                 required
-                className="w-full bg-slate-900/50 border border-slate-700/60 rounded-xl py-2.5 px-4 text-white placeholder-slate-500 focus:outline-hidden focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all text-sm"
+                disabled={procesando}
+                className="w-full px-4 py-2 rounded border border-outline-variant bg-surface-bright text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-hidden text-sm shadow-xs transition-all"
                 placeholder="correo@ejemplo.com"
                 value={correo}
                 onChange={(e) => setCorreo(e.target.value)}
-                disabled={procesando}
               />
             </div>
 
-            {/* DNI */}
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                DNI / Cédula
-              </label>
-              <input
-                type="text"
-                className="w-full bg-slate-900/50 border border-slate-700/60 rounded-xl py-2.5 px-4 text-white placeholder-slate-500 focus:outline-hidden focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all text-sm"
-                placeholder="12345678"
-                value={dni}
-                onChange={(e) => setDni(e.target.value)}
-                disabled={procesando}
-              />
-            </div>
+            {/* Fila: DNI y Teléfono */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1 transition-transform duration-200 focus-within:scale-[1.01]">
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider" htmlFor="dni">
+                  DNI / Cédula
+                </label>
+                <input
+                  id="dni"
+                  type="text"
+                  disabled={procesando}
+                  className="w-full px-4 py-2 rounded border border-outline-variant bg-surface-bright text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-hidden text-sm shadow-xs transition-all"
+                  placeholder="12345678"
+                  value={dni}
+                  onChange={(e) => setDni(e.target.value)}
+                />
+              </div>
 
-            {/* Teléfono */}
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                Teléfono
-              </label>
-              <input
-                type="tel"
-                className="w-full bg-slate-900/50 border border-slate-700/60 rounded-xl py-2.5 px-4 text-white placeholder-slate-500 focus:outline-hidden focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all text-sm"
-                placeholder="987654321"
-                value={telefono}
-                onChange={(e) => setTelefono(e.target.value)}
-                disabled={procesando}
-              />
+              <div className="space-y-1 transition-transform duration-200 focus-within:scale-[1.01]">
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider" htmlFor="phone">
+                  Teléfono
+                </label>
+                <input
+                  id="phone"
+                  type="tel"
+                  disabled={procesando}
+                  className="w-full px-4 py-2 rounded border border-outline-variant bg-surface-bright text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-hidden text-sm shadow-xs transition-all"
+                  placeholder="987654321"
+                  value={telefono}
+                  onChange={(e) => setTelefono(e.target.value)}
+                />
+              </div>
             </div>
 
             {/* Contraseña */}
-            <div className="md:col-span-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+            <div className="space-y-1 transition-transform duration-200 focus-within:scale-[1.01]">
+              <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider" htmlFor="password">
                 Contraseña *
               </label>
               <input
+                id="password"
                 type="password"
                 required
-                className="w-full bg-slate-900/50 border border-slate-700/60 rounded-xl py-2.5 px-4 text-white placeholder-slate-500 focus:outline-hidden focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all text-sm"
+                disabled={procesando}
+                className="w-full px-4 py-2 rounded border border-outline-variant bg-surface-bright text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-hidden text-sm shadow-xs transition-all"
                 placeholder="Mínimo 8 caracteres"
                 value={contrasenia}
                 onChange={(e) => setContrasenia(e.target.value)}
-                disabled={procesando}
               />
             </div>
+
+            {/* Botón Registrar */}
+            <button
+              type="submit"
+              disabled={procesando}
+              className="w-full bg-primary-container text-on-primary-container font-semibold py-3 rounded-lg shadow-xs hover:brightness-110 active:scale-[0.98] transition-all duration-150 mt-4 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {procesando ? (
+                <>
+                  <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                  <span>Registrando...</span>
+                </>
+              ) : (
+                <span>Crear Cuenta</span>
+              )}
+            </button>
+          </form>
+
+          {/* Enlace Volver */}
+          <div className="mt-6 pt-4 border-t border-outline-variant/60 text-center">
+            <p className="text-sm text-on-surface-variant">
+              ¿Ya tienes una cuenta? <br />
+              <Link to="/login" className="text-on-primary-container font-bold hover:underline">
+                Inicia sesión aquí
+              </Link>
+            </p>
           </div>
 
-          <button
-            type="submit"
-            disabled={procesando}
-            className="w-full mt-4 bg-linear-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-semibold rounded-xl py-3 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
-          >
-            {procesando ? (
-              <>
-                <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                <span>Creando Cuenta...</span>
-              </>
-            ) : (
-              <span>Registrarse</span>
-            )}
-          </button>
-        </form>
-
-        {/* Enlace a Login */}
-        <div className="mt-6 text-center border-t border-white/5 pt-4 text-sm text-slate-400">
-          ¿Ya tienes cuenta?{' '}
-          <Link to="/login" className="font-semibold text-purple-400 hover:text-purple-300 transition-all">
-            Inicia sesión aquí
-          </Link>
         </div>
 
-      </div>
-    </div>
+        {/* Footer */}
+        <footer className="absolute bottom-6 left-0 w-full hidden lg:block">
+          <div className="flex justify-center items-center gap-3 text-on-surface-variant/60 text-xs">
+            <a href="#" className="hover:underline">Privacidad</a>
+            <span className="w-1.5 h-1.5 bg-outline-variant rounded-full"></span>
+            <a href="#" className="hover:underline">Soporte</a>
+            <span className="w-1.5 h-1.5 bg-outline-variant rounded-full"></span>
+            <span>© 2026 LigaCenter</span>
+          </div>
+        </footer>
+
+      </section>
+
+    </main>
   );
 };

@@ -33,12 +33,12 @@ export const Tablero: React.FC = () => {
       {/* Barra de Navegación Superior */}
       <header className="bg-slate-900/40 backdrop-blur-md border-b border-slate-800/80 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-cyan-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-cyan-500/10">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-primary to-primary-container flex items-center justify-center shadow-lg shadow-primary-container/10">
             <span className="text-white font-extrabold text-lg">LC</span>
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-tight text-white">LigaCenter</h1>
-            <span className="text-xs text-cyan-400 font-semibold tracking-wider uppercase">Tablero de Control</span>
+            <span className="text-xs text-on-primary-container font-semibold tracking-wider uppercase">Tablero de Control</span>
           </div>
         </div>
 
@@ -65,8 +65,8 @@ export const Tablero: React.FC = () => {
       <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
         
         {/* Banner de Bienvenida */}
-        <section className="relative rounded-2xl overflow-hidden bg-linear-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800/80 p-8 shadow-xl">
-          <div className="absolute right-0 top-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl -z-10 pointer-events-none"></div>
+        <section className="relative rounded-2xl overflow-hidden bg-linear-to-r from-slate-900 via-primary-container/20 to-slate-900 border border-slate-800/80 p-8 shadow-xl">
+          <div className="absolute right-0 top-0 w-96 h-96 bg-primary-container/10 rounded-full blur-3xl -z-10 pointer-events-none"></div>
           <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-2">
             ¡Bienvenido de nuevo, {usuario.name}!
           </h2>
@@ -76,7 +76,7 @@ export const Tablero: React.FC = () => {
 
           <div className="mt-6 flex flex-wrap gap-2">
             {usuario.roles?.map((rol, i) => (
-              <span key={i} className="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 text-xs font-semibold uppercase tracking-wider">
+              <span key={i} className="px-3 py-1 rounded-full bg-primary-container/10 border border-primary-container/20 text-on-primary-container text-xs font-semibold uppercase tracking-wider">
                 Rol: {rol.replace('_', ' ')}
               </span>
             ))}
@@ -90,7 +90,7 @@ export const Tablero: React.FC = () => {
           <div className="bg-slate-900/30 backdrop-blur-lg border border-slate-800/80 rounded-2xl p-6 shadow-md flex flex-col justify-between">
             <div>
               <h3 className="text-slate-200 font-bold text-lg mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 text-on-primary-container" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 Información de Perfil
@@ -123,7 +123,7 @@ export const Tablero: React.FC = () => {
           {/* Card: Acciones y Módulos según Permisos */}
           <div className="lg:col-span-2 bg-slate-900/30 backdrop-blur-lg border border-slate-800/80 rounded-2xl p-6 shadow-md">
             <h3 className="text-slate-200 font-bold text-lg mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-on-primary-container" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
               </svg>
               Módulos Disponibles
@@ -132,8 +132,8 @@ export const Tablero: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Módulo: Gestión de Usuarios (Solo Administrador) */}
               {tienePermiso('gestionar_usuarios') && (
-                <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-800 hover:border-cyan-500/30 hover:bg-slate-800/50 transition-all group flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center group-hover:scale-110 transition-all shrink-0">
+                <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-800 hover:border-primary-container/35 hover:bg-slate-800/50 transition-all group flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary-container/15 text-on-primary-container flex items-center justify-center group-hover:scale-110 transition-all shrink-0">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
@@ -141,7 +141,7 @@ export const Tablero: React.FC = () => {
                   <div>
                     <h4 className="font-bold text-sm text-white">Gestión de Usuarios</h4>
                     <p className="text-xs text-slate-400 mt-1">Administra accesos, roles y activa o desactiva usuarios.</p>
-                    <button className="mt-3 text-xs text-cyan-400 font-semibold flex items-center gap-1 group-hover:text-cyan-300 transition-all cursor-pointer">
+                    <button className="mt-3 text-xs text-on-primary-container font-semibold flex items-center gap-1 group-hover:text-primary transition-all cursor-pointer">
                       Acceder Módulo →
                     </button>
                   </div>

@@ -1,1 +1,50 @@
 @import "tailwindcss";
+
+@theme {
+  --color-primary: #41000c;
+  --color-primary-container: #650a1b;
+  --color-on-primary-container: #ed737b;
+  --color-on-primary: #ffffff;
+  
+  --color-secondary: #4e6073;
+  --color-secondary-container: #cfe2f9;
+  --color-on-secondary-container: #526478;
+
+  --color-surface: #fff8f7;
+  --color-surface-dim: #e9d6d5;
+  --color-surface-bright: #fff8f7;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #fff0f0;
+  --color-surface-container-high: #f8e4e3;
+  --color-surface-container-highest: #f2dede;
+
+  --color-on-surface: #231919;
+  --color-on-surface-variant: #564242;
+
+  --color-outline: #897172;
+  --color-outline-variant: #dcc0c0;
+
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #93000a;
+}
+
+body {
+  background-color: #f4f6f7;
+  overflow-x: hidden;
+}
+
+/* Estilo para el diseño de proporción áurea */
+.golden-grid {
+  display: grid;
+  height: 100vh;
+  grid-template-columns: 61.8vw 38.2vw;
+}
+
+@media (max-width: 1024px) {
+  .golden-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: 38.2vh 61.8vh;
+  }
+}
