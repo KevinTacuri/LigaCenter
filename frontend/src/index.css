@@ -1,28 +1,28 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #41000c;
-  --color-primary-container: #650a1b;
-  --color-on-primary-container: #ed737b;
+  --color-primary: #001b3a;                 /* Azul Marino del Logo */
+  --color-primary-container: #002855;       /* Azul Marino Claro */
+  --color-on-primary-container: #00cbb8;    /* Verde Agua / Turquesa del Logo */
   --color-on-primary: #ffffff;
   
-  --color-secondary: #4e6073;
-  --color-secondary-container: #cfe2f9;
-  --color-on-secondary-container: #526478;
+  --color-secondary: #00bfa5;
+  --color-secondary-container: #70e000;     /* Verde Limón del Logo */
+  --color-on-secondary-container: #1b4d00;
 
-  --color-surface: #fff8f7;
-  --color-surface-dim: #e9d6d5;
-  --color-surface-bright: #fff8f7;
+  --color-surface: #f4f6f7;
+  --color-surface-dim: #e2e8f0;
+  --color-surface-bright: #ffffff;
   --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #fff0f0;
-  --color-surface-container-high: #f8e4e3;
-  --color-surface-container-highest: #f2dede;
+  --color-surface-container-low: #f8fafc;
+  --color-surface-container-high: #e2e8f0;
+  --color-surface-container-highest: #cbd5e1;
 
-  --color-on-surface: #231919;
-  --color-on-surface-variant: #564242;
+  --color-on-surface: #0f172a;
+  --color-on-surface-variant: #475569;
 
-  --color-outline: #897172;
-  --color-outline-variant: #dcc0c0;
+  --color-outline: #cbd5e1;
+  --color-outline-variant: #e2e8f0;
 
   --color-error: #ba1a1a;
   --color-error-container: #ffdad6;
@@ -38,13 +38,25 @@ body {
 /* Estilo para el diseño de proporción áurea */
 .golden-grid {
   display: grid;
-  height: 100vh;
+  min-height: 100vh;
   grid-template-columns: 61.8vw 38.2vw;
 }
 
 @media (max-width: 1024px) {
   .golden-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: 38.2vh 61.8vh;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    height: auto;
+  }
+
+  .golden-grid > section:first-of-type {
+    min-height: 240px;
+    padding: 3rem 1.5rem;
+  }
+
+  .golden-grid > section:last-of-type {
+    flex-grow: 1;
+    padding: 3rem 1.5rem;
   }
 }

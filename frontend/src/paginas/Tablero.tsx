@@ -1,10 +1,29 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
+
+// Importación de recursos
+import logoImg from '../assets/logo.svg';
+import deportesFondo from '../assets/deportes_fondo.png';
 
 export const Tablero: React.FC = () => {
   const { usuario, cerrarSesion, cargando, tienePermiso } = useAutenticacion();
   const navegar = useNavigate();
+  const [coordenadasMouse, setCoordenadasMouse] = useState({ x: 0, y: 0 });
+
+  // Parallax interactivo sutil en el fondo
+  useEffect(() => {
+    const manejarMovimientoMouse = (e: MouseEvent) => {
+      const x = (window.innerWidth - e.pageX * 2) / 150;
+      const y = (window.innerHeight - e.pageY * 2) / 150;
+      setCoordenadasMouse({ x, y });
+    };
+
+    window.addEventListener('mousemove', manejarMovimientoMouse);
+    return () => {
+      window.removeEventListener('mousemove', manejarMovimientoMouse);
+    };
+  }, []);
 
   useEffect(() => {
     if (!cargando && !usuario) {
@@ -14,13 +33,13 @@ export const Tablero: React.FC = () => {
 
   if (cargando) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#090d16] text-white">
+      <div className="min-h-screen flex items-center justify-center bg-[#f4f6f7] text-slate-800">
         <div className="flex flex-col items-center gap-4">
-          <svg className="animate-spin h-10 w-10 text-cyan-500" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-          <span className="text-slate-400 font-medium">Cargando Tablero...</span>
+          <div className="relative flex items-center justify-center">
+            <div className="w-14 h-14 rounded-full border-4 border-slate-200 border-t-[#00cbb8] animate-spin" />
+            <img src={logoImg} className="w-7 h-7 object-contain absolute" alt="Cargando..." />
+          </div>
+          <span className="text-[#001b3a] font-bold tracking-wider text-xs uppercase animate-pulse">Cargando Tablero...</span>
         </div>
       </div>
     );
@@ -28,207 +47,230 @@ export const Tablero: React.FC = () => {
 
   if (!usuario) return null;
 
+  // Letra inicial del nombre del usuario para el avatar
+  const inicialUsuario = usuario.name ? usuario.name.charAt(0).toUpperCase() : 'U';
+
   return (
-    <div className="min-h-screen bg-[#070b12] text-slate-100 font-sans flex flex-col">
-      {/* Barra de Navegación Superior */}
-      <header className="bg-slate-900/40 backdrop-blur-md border-b border-slate-800/80 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-primary to-primary-container flex items-center justify-center shadow-lg shadow-primary-container/10">
-            <span className="text-white font-extrabold text-lg">LC</span>
-          </div>
-          <div>
-            <h1 className="text-lg font-bold tracking-tight text-white">LigaCenter</h1>
-            <span className="text-xs text-on-primary-container font-semibold tracking-wider uppercase">Tablero de Control</span>
-          </div>
-        </div>
+    <div className="min-h-screen bg-[#f4f6f7] text-slate-800 font-sans flex flex-col relative overflow-hidden">
+      
+      {/* Fondo Deportivo Ambiental sutil (Estilo Marca de Agua Profesional) */}
+      <div className="absolute inset-0 z-0 pointer-events-none select-none">
+        <img
+          src={deportesFondo}
+          alt=""
+          className="w-full h-full object-cover opacity-[0.015] mix-blend-multiply transition-transform duration-300 ease-out"
+          style={{
+            transform: `translate(${coordenadasMouse.x}px, ${coordenadasMouse.y}px) scale(1.02)`,
+          }}
+        />
+      </div>
 
-        <div className="flex items-center gap-4">
-          {/* Info del Perfil */}
-          <div className="hidden md:flex flex-col text-right">
-            <span className="text-sm font-semibold text-white">{usuario.name}</span>
-            <span className="text-xs text-slate-400 capitalize">{usuario.roles?.[0]?.replace('_', ' ') || 'Usuario'}</span>
-          </div>
-
-          <button
-            onClick={cerrarSesion}
-            className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-rose-950/40 border border-slate-700/80 hover:border-rose-900/50 text-slate-300 hover:text-rose-400 rounded-xl px-4 py-2 text-sm transition-all cursor-pointer shadow-xs"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            <span className="hidden sm:inline">Cerrar Sesión</span>
-          </button>
-        </div>
-      </header>
-
-      {/* Contenido Principal */}
-      <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
-        
-        {/* Banner de Bienvenida */}
-        <section className="relative rounded-2xl overflow-hidden bg-linear-to-r from-slate-900 via-primary-container/20 to-slate-900 border border-slate-800/80 p-8 shadow-xl">
-          <div className="absolute right-0 top-0 w-96 h-96 bg-primary-container/10 rounded-full blur-3xl -z-10 pointer-events-none"></div>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-2">
-            ¡Bienvenido de nuevo, {usuario.name}!
-          </h2>
-          <p className="text-slate-400 text-sm md:text-base max-w-2xl">
-            Desde aquí puedes gestionar los campeonatos, partidos, equipos y estadísticas según tu rol asignado en el sistema.
-          </p>
-
-          <div className="mt-6 flex flex-wrap gap-2">
-            {usuario.roles?.map((rol, i) => (
-              <span key={i} className="px-3 py-1 rounded-full bg-primary-container/10 border border-primary-container/20 text-on-primary-container text-xs font-semibold uppercase tracking-wider">
-                Rol: {rol.replace('_', ' ')}
-              </span>
-            ))}
-          </div>
-        </section>
-
-        {/* Sección de Resumen y Accesos Directos */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Card: Información Personal */}
-          <div className="bg-slate-900/30 backdrop-blur-lg border border-slate-800/80 rounded-2xl p-6 shadow-md flex flex-col justify-between">
+      <div className="relative z-10 flex flex-col min-h-screen w-full">
+        {/* Barra de Navegación Superior */}
+        <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 flex items-center justify-between sticky top-0 z-30 transition-all">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-[#001b3a] p-1.5 flex items-center justify-center shadow-xs border border-slate-200">
+              <img src={logoImg} className="w-full h-full object-contain" alt="Logo LigaCenter" />
+            </div>
             <div>
-              <h3 className="text-slate-200 font-bold text-lg mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5 text-on-primary-container" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                Información de Perfil
-              </h3>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <span className="text-slate-500 block text-xs uppercase font-semibold">Correo Electrónico</span>
-                  <span className="text-slate-200">{usuario.email}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-xs uppercase font-semibold">DNI / Identificación</span>
-                  <span className="text-slate-200">{usuario.dni || 'No registrado'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-xs uppercase font-semibold">Teléfono de Contacto</span>
-                  <span className="text-slate-200">{usuario.phone || 'No registrado'}</span>
-                </div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base font-extrabold tracking-tight text-slate-900 leading-none">LigaCenter</h1>
+                <span className="px-1.5 py-0.5 rounded-sm bg-slate-100 text-slate-600 text-[9px] font-bold border border-slate-200 uppercase tracking-wider">v1.0</span>
+              </div>
+              <span className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase mt-1 block">Tablero de Control</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {/* Info del Perfil */}
+            <div className="hidden md:flex flex-col text-right justify-center">
+              <span className="text-sm font-bold text-slate-900 flex items-center gap-1.5 justify-end">
+                {usuario.name}
+                <span className="w-2 h-2 rounded-full bg-[#70e000] border border-white shadow-xs"></span>
+              </span>
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                {usuario.roles?.[0]?.replace('_', ' ') || 'Usuario'}
+              </span>
+            </div>
+
+            {/* Avatar */}
+            <div className="w-9 h-9 rounded-full bg-slate-200 p-[1px] border border-slate-300">
+              <div className="w-full h-full rounded-full bg-[#001b3a] flex items-center justify-center font-bold text-xs text-white select-none">
+                {inicialUsuario}
               </div>
             </div>
-            
-            <div className="mt-6 pt-4 border-t border-slate-800/80 flex justify-between items-center text-xs text-slate-400">
-              <span>Estado de Cuenta:</span>
-              <span className="flex items-center gap-1.5 font-bold text-emerald-400">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-                Activa
-              </span>
-            </div>
+
+            {/* Botón Cerrar Sesión */}
+            <button
+              onClick={cerrarSesion}
+              className="flex items-center justify-center gap-1.5 bg-slate-50 hover:bg-rose-50 border border-slate-200 text-slate-600 hover:text-rose-600 hover:border-rose-200 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer shadow-xs active:scale-95 group"
+            >
+              <span className="material-symbols-outlined text-sm transition-transform group-hover:translate-x-0.5">logout</span>
+              <span className="hidden sm:inline">Cerrar Sesión</span>
+            </button>
           </div>
+        </header>
 
-          {/* Card: Acciones y Módulos según Permisos */}
-          <div className="lg:col-span-2 bg-slate-900/30 backdrop-blur-lg border border-slate-800/80 rounded-2xl p-6 shadow-md">
-            <h3 className="text-slate-200 font-bold text-lg mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-on-primary-container" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-              </svg>
-              Módulos Disponibles
-            </h3>
+        {/* Contenido Principal */}
+        <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+          
+          {/* Banner de Bienvenida Profesional Claro */}
+          <section className="relative rounded-2xl bg-white border border-slate-200/80 p-8 shadow-xs overflow-hidden group">
+            {/* Soft decorative line on top */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#00cbb8] via-[#001b3a] to-[#70e000]"></div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Módulo: Gestión de Usuarios (Solo Administrador) */}
-              {tienePermiso('gestionar_usuarios') && (
-                <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-800 hover:border-primary-container/35 hover:bg-slate-800/50 transition-all group flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary-container/15 text-on-primary-container flex items-center justify-center group-hover:scale-110 transition-all shrink-0">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-white">Gestión de Usuarios</h4>
-                    <p className="text-xs text-slate-400 mt-1">Administra accesos, roles y activa o desactiva usuarios.</p>
-                    <button className="mt-3 text-xs text-on-primary-container font-semibold flex items-center gap-1 group-hover:text-primary transition-all cursor-pointer">
-                      Acceder Módulo →
-                    </button>
-                  </div>
-                </div>
-              )}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+              <div className="space-y-2">
+                <h2 className="text-xl md:text-2.5xl font-black text-slate-900 tracking-tight leading-none">
+                  ¡Bienvenido de nuevo, <span className="text-[#001b3a]">{usuario.name}</span>!
+                </h2>
+                <p className="text-slate-600 text-sm md:text-base max-w-2xl font-medium leading-relaxed">
+                  Desde aquí puedes gestionar los campeonatos, partidos, equipos y estadísticas según tu rol asignado en el sistema LigaCenter.
+                </p>
+              </div>
 
-              {/* Módulo: Equipos y Jugadores (Organizador, Encargado, Publico) */}
-              {tienePermiso('ver_equipos') && (
-                <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-800 hover:border-indigo-500/30 hover:bg-slate-800/50 transition-all group flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-all shrink-0">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-white">Equipos y Jugadores</h4>
-                    <p className="text-xs text-slate-400 mt-1">Consulta los planteles, crea nuevos equipos e inscribe jugadores.</p>
-                    <button className="mt-3 text-xs text-indigo-400 font-semibold flex items-center gap-1 group-hover:text-indigo-300 transition-all cursor-pointer">
-                      Ver Equipos →
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Módulo: Gestión de Planillas y Partidos (Mesa, Organizador) */}
-              {tienePermiso('registrar_incidencias') && (
-                <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-800 hover:border-amber-500/30 hover:bg-slate-800/50 transition-all group flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-all shrink-0">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-white">Planilla de Partidos</h4>
-                    <p className="text-xs text-slate-400 mt-1">Registra goles, faltas, tarjetas e incidencias de los encuentros.</p>
-                    <button className="mt-3 text-xs text-amber-400 font-semibold flex items-center gap-1 group-hover:text-amber-300 transition-all cursor-pointer">
-                      Mesa de Control →
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Módulo: Tablas de Posición (Cualquiera) */}
-              {tienePermiso('ver_tablas') && (
-                <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-800 hover:border-emerald-500/30 hover:bg-slate-800/50 transition-all group flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-all shrink-0">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-white">Posiciones y Estadísticas</h4>
-                    <p className="text-xs text-slate-400 mt-1">Visualiza los resultados en vivo, goleadores y tablas oficiales.</p>
-                    <button className="mt-3 text-xs text-emerald-400 font-semibold flex items-center gap-1 group-hover:text-emerald-300 transition-all cursor-pointer">
-                      Ver Posiciones →
-                    </button>
-                  </div>
-                </div>
-              )}
+              <div className="flex flex-wrap gap-2 shrink-0">
+                {usuario.roles?.map((rol, i) => (
+                  <span 
+                    key={i} 
+                    className="px-3.5 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold uppercase tracking-wider"
+                  >
+                    Rol: {rol.replace('_', ' ')}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-        </div>
+          </section>
 
-        {/* Listado de Permisos Detallados para Transparencia en Desarrollo */}
-        <section className="bg-slate-900/20 border border-slate-800/60 rounded-2xl p-6">
-          <h3 className="text-slate-300 font-bold text-sm mb-4 uppercase tracking-wider">
-            Tus Permisos Específicos (Spatie API)
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {usuario.permissions && usuario.permissions.length > 0 ? (
-              usuario.permissions.map((permiso, index) => (
-                <span key={index} className="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/60 text-slate-300 text-xs font-mono">
-                  {permiso}
+          {/* Sección de Resumen y Accesos Directos */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Card: Información Personal */}
+            <div className="bg-white border border-slate-200/85 rounded-2xl p-6 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all duration-200">
+              <div>
+                <h3 className="text-slate-800 font-bold text-sm uppercase tracking-wider mb-6 flex items-center gap-2 border-b border-slate-100 pb-3">
+                  <div className="w-7 h-7 rounded bg-slate-100 flex items-center justify-center text-slate-700 border border-slate-200">
+                    <span className="material-symbols-outlined text-sm">badge</span>
+                  </div>
+                  Perfil de Usuario
+                </h3>
+                
+                <div className="space-y-3.5">
+                  <div className="p-3.5 rounded-lg bg-slate-50/50 border border-slate-150">
+                    <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Correo Electrónico</span>
+                    <span className="text-slate-700 text-xs font-semibold break-all">{usuario.email}</span>
+                  </div>
+                  <div className="p-3.5 rounded-lg bg-slate-50/50 border border-slate-150">
+                    <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wider mb-0.5">DNI / Identificación</span>
+                    <span className="text-slate-700 text-xs font-semibold">{usuario.dni || 'No registrado'}</span>
+                  </div>
+                  <div className="p-3.5 rounded-lg bg-slate-50/50 border border-slate-150">
+                    <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Teléfono de Contacto</span>
+                    <span className="text-slate-700 text-xs font-semibold">{usuario.phone || 'No registrado'}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-8 pt-4 border-t border-slate-100 flex justify-between items-center text-xs">
+                <span className="text-slate-500 font-medium">Estado de Cuenta</span>
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px] uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  Activo
                 </span>
-              ))
-            ) : (
-              <span className="text-slate-500 text-sm">Sin permisos adicionales.</span>
-            )}
+              </div>
+            </div>
+
+            {/* Card: Acciones y Módulos según Permisos */}
+            <div className="lg:col-span-2 bg-white border border-slate-200/85 rounded-2xl p-6 shadow-xs hover:border-slate-300 transition-all duration-200">
+              <h3 className="text-slate-800 font-bold text-sm uppercase tracking-wider mb-6 flex items-center gap-2 border-b border-slate-100 pb-3">
+                <div className="w-7 h-7 rounded bg-slate-100 flex items-center justify-center text-slate-700 border border-slate-200">
+                  <span className="material-symbols-outlined text-sm">sports_soccer</span>
+                </div>
+                Módulos Disponibles
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                {/* Módulo: Gestión de Usuarios (Solo Administrador) */}
+                {tienePermiso('gestionar_usuarios') && (
+                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-[#00cbb8]/60 hover:bg-[#00cbb8]/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs">
+                    <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-[#00cbb8]/10 group-hover:text-[#00cbb8] group-hover:border-[#00cbb8]/20 transition-all shrink-0">
+                      <span className="material-symbols-outlined text-lg">group</span>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-xs text-slate-900 group-hover:text-[#00cbb8] transition-colors uppercase tracking-wide">Gestión de Usuarios</h4>
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">Administra accesos, roles y activa o desactiva usuarios.</p>
+                      <button className="mt-3.5 text-xs text-[#00cbb8] font-bold tracking-wider uppercase flex items-center gap-1 group-hover:gap-1.5 transition-all cursor-pointer">
+                        <span>Acceder Módulo</span>
+                        <span>→</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Módulo: Equipos y Jugadores (Organizador, Encargado, Publico) */}
+                {tienePermiso('ver_equipos') && (
+                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-indigo-400/60 hover:bg-indigo-50/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs">
+                    <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-200 transition-all shrink-0">
+                      <span className="material-symbols-outlined text-lg">groups</span>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-xs text-slate-900 group-hover:text-indigo-600 transition-colors uppercase tracking-wide">Equipos y Jugadores</h4>
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">Consulta los planteles, crea nuevos equipos e inscribe jugadores.</p>
+                      <button className="mt-3.5 text-xs text-indigo-600 font-bold tracking-wider uppercase flex items-center gap-1 group-hover:gap-1.5 transition-all cursor-pointer">
+                        <span>Ver Equipos</span>
+                        <span>→</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Módulo: Gestión de Planillas y Partidos (Mesa, Organizador) */}
+                {tienePermiso('registrar_incidencias') && (
+                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-amber-400/60 hover:bg-amber-50/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs">
+                    <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-amber-50 group-hover:text-amber-600 group-hover:border-amber-200 transition-all shrink-0">
+                      <span className="material-symbols-outlined text-lg">assignment</span>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-xs text-slate-900 group-hover:text-amber-600 transition-colors uppercase tracking-wide">Planilla de Partidos</h4>
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">Registra goles, faltas, tarjetas e incidencias de los encuentros.</p>
+                      <button className="mt-3.5 text-xs text-amber-600 font-bold tracking-wider uppercase flex items-center gap-1 group-hover:gap-1.5 transition-all cursor-pointer">
+                        <span>Mesa de Control</span>
+                        <span>→</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Módulo: Tablas de Posición (Cualquiera) */}
+                {tienePermiso('ver_tablas') && (
+                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-[#70e000]/60 hover:bg-[#70e000]/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs">
+                    <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-[#70e000]/10 group-hover:text-[#70e000] group-hover:border-[#70e000]/20 transition-all shrink-0">
+                      <span className="material-symbols-outlined text-lg">leaderboard</span>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-xs text-slate-900 group-hover:text-[#70e000] transition-colors uppercase tracking-wide">Posiciones y Estadísticas</h4>
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">Visualiza los resultados en vivo, goleadores y tablas oficiales.</p>
+                      <button className="mt-3.5 text-xs text-[#70e000] font-bold tracking-wider uppercase flex items-center gap-1 group-hover:gap-1.5 transition-all cursor-pointer">
+                        <span>Ver Posiciones</span>
+                        <span>→</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </section>
 
-      </main>
 
-      {/* Pie de Página */}
-      <footer className="mt-auto bg-slate-950 border-t border-slate-900 py-6 text-center text-xs text-slate-500">
-        <p>&copy; 2026 LigaCenter. Desarrollado para la gestión de campeonatos. Arequipa, Perú.</p>
-      </footer>
+
+        </main>
+
+        {/* Pie de Página */}
+        <footer className="mt-auto bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
+          <p>&copy; 2026 LigaCenter. Desarrollado para la gestión de campeonatos. Arequipa, Perú.</p>
+        </footer>
+      </div>
     </div>
   );
 };
