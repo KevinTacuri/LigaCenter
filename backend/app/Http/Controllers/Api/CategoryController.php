@@ -18,6 +18,10 @@ class CategoryController extends Controller
         summary: "Listar categorías",
         description: "Retorna todas las categorías registradas en el sistema, incluyendo los equipos asociados a cada categoría.",
         tags: ["Categories"],
+        parameters: [
+            new OA\Parameter(name: "championship_id", in: "query", required: true, schema: new OA\Schema(type: "integer")),
+            new OA\Parameter(name: "discipline_id", in: "query", required: false, schema: new OA\Schema(type: "integer"))
+        ],
         responses: [
             new OA\Response(
                 response: 200,
@@ -25,11 +29,20 @@ class CategoryController extends Controller
             )
         ]
     )]
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(
-            Category::with('teams')->get()
-        );
+        $request->validate([
+            'championship_id' => 'required|exists:championships,id',
+            'discipline_id' => 'nullable|exists:disciplines,id',
+        ]);
+
+        $query = Category::where('championship_id', $request->championship_id);
+
+        if ($request->has('discipline_id')) {
+            $query->where('discipline_id', $request->discipline_id);
+        }
+
+        return response()->json($query->with('teams')->get());
     }
 
     #[OA\Post(
@@ -41,20 +54,15 @@ class CategoryController extends Controller
             required: true,
             description: "Datos necesarios para crear una categoría",
             content: new OA\JsonContent(
-                required: ["name", "age_range"],
+                required: ["championship_id", "discipline_id", "name"],
                 properties: [
-                    new OA\Property(
-                        property: "name",
-                        type: "string",
-                        description: "Nombre de la categoría (ej: Juvenil, Libre, Senior)",
-                        example: "Juvenil"
-                    ),
-                    new OA\Property(
-                        property: "age_range",
-                        type: "string",
-                        description: "Rango de edad permitido en formato mínimo-máximo (ej: 18-25)",
-                        example: "18-25"
-                    )
+                    new OA\Property(property: "championship_id", type: "integer", example: 1),
+                    new OA\Property(property: "discipline_id", type: "integer", example: 1),
+                    new OA\Property(property: "name", type: "string", description: "Nombre de la categoría", example: "Sub-15"),
+                    new OA\Property(property: "description", type: "string", description: "Descripción de la categoría", example: "Categoría para menores de 15 años"),
+                    new OA\Property(property: "gender_type", type: "string", description: "Género de la categoría", example: "Masculino"),
+                    new OA\Property(property: "age_min", type: "integer", example: 10),
+                    new OA\Property(property: "age_max", type: "integer", example: 15)
                 ]
             )
         ),
@@ -72,11 +80,13 @@ class CategoryController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'championship_id' => 'required|exists:championships,id',
+            'discipline_id' => 'required|exists:disciplines,id',
             'name' => 'required|string|max:255',
-            'age_range' => [
-                'required',
-                'regex:/^\d+\-\d+$/'
-            ]
+            'description' => 'nullable|string',
+            'gender_type' => 'nullable|string|in:Masculino,Femenino,Mixto',
+            'age_min' => 'nullable|integer|min:0',
+            'age_max' => 'nullable|integer|min:0',
         ]);
 
         $category = Category::create($validated);
@@ -119,7 +129,7 @@ class CategoryController extends Controller
     #[OA\Put(
         path: "/api/categories/{id}",
         summary: "Actualizar categoría",
-        description: "Permite actualizar la información de una categoría existente como nombre o rango de edad.",
+        description: "Permite actualizar la información de una categoría existente.",
         tags: ["Categories"],
         parameters: [
             new OA\Parameter(
@@ -135,18 +145,11 @@ class CategoryController extends Controller
             description: "Campos opcionales para actualizar la categoría",
             content: new OA\JsonContent(
                 properties: [
-                    new OA\Property(
-                        property: "name",
-                        type: "string",
-                        description: "Nuevo nombre de la categoría",
-                        example: "Juvenil A"
-                    ),
-                    new OA\Property(
-                        property: "age_range",
-                        type: "string",
-                        description: "Nuevo rango de edad",
-                        example: "18-23"
-                    )
+                    new OA\Property(property: "name", type: "string", description: "Nuevo nombre de la categoría", example: "Sub-15 A"),
+                    new OA\Property(property: "description", type: "string", description: "Nueva descripción", example: "Categoría actualizada"),
+                    new OA\Property(property: "gender_type", type: "string", description: "Nuevo género", example: "Femenino"),
+                    new OA\Property(property: "age_min", type: "integer", example: 12),
+                    new OA\Property(property: "age_max", type: "integer", example: 16)
                 ]
             )
         ),
@@ -167,10 +170,10 @@ class CategoryController extends Controller
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'age_range' => [
-                'sometimes',
-                'regex:/^\d+\-\d+$/'
-            ]
+            'description' => 'nullable|string',
+            'gender_type' => 'nullable|string|in:Masculino,Femenino,Mixto',
+            'age_min' => 'nullable|integer|min:0',
+            'age_max' => 'nullable|integer|min:0',
         ]);
 
         $category->update($validated);

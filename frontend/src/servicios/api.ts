@@ -68,6 +68,30 @@ clienteApi.interceptors.request.use(
     const championshipId = localStorage.getItem('campeonato_activo_id');
     if (championshipId && config.headers) {
       config.headers['X-Championship-ID'] = championshipId;
+
+      // Inyectar championship_id en los parámetros de consulta o en el cuerpo de la petición automáticamente
+      const method = config.method?.toLowerCase();
+      if (method === 'get') {
+        config.params = {
+          championship_id: championshipId,
+          ...config.params
+        };
+      } else if (method && ['post', 'put', 'patch', 'delete'].includes(method)) {
+        if (config.data && typeof config.data === 'object' && !(config.data instanceof FormData)) {
+          config.data = {
+            championship_id: championshipId,
+            ...config.data
+          };
+        } else if (!config.data) {
+          config.data = {
+            championship_id: championshipId
+          };
+        } else if (config.data instanceof FormData) {
+          if (!config.data.has('championship_id')) {
+            config.data.append('championship_id', championshipId);
+          }
+        }
+      }
     }
     return config;
   },

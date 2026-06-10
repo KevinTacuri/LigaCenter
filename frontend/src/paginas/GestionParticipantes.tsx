@@ -30,7 +30,7 @@ export const GestionParticipantes: React.FC = () => {
 
   // Estados de formularios
   const [nuevaDisc, setNuevaDisc] = useState({ name: '', description: '', rules: '', status: 'active' });
-  const [nuevaCat, setNuevaCat] = useState({ name: '', age_min: '', age_max: '', gender: 'Masculino' });
+  const [nuevaCat, setNuevaCat] = useState({ name: '', age_min: '', age_max: '', gender: 'Masculino', discipline_id: '' });
   const [nuevaOrg, setNuevaOrg] = useState({ name: '', representative: '', email: '', phone: '' });
   const [nuevoEq, setNuevoEq] = useState({ name: '', representative: '', organization_id: '', discipline_id: '', category_id: '' });
   const [nuevoJug, setNuevoJug] = useState({ name: '', dni: '', phone: '', team_id: '', number: '', position: 'Delantero' });
@@ -53,6 +53,8 @@ export const GestionParticipantes: React.FC = () => {
       } else if (tabActiva === 'categorias') {
         const res = await serviciosParticipantes.obtenerCategorias();
         if (res.success) setCategorias(res.data);
+        const resDisc = await serviciosParticipantes.obtenerDisciplinas();
+        if (resDisc.success) setDisciplinas(resDisc.data);
       } else if (tabActiva === 'organizaciones') {
         const res = await serviciosParticipantes.obtenerOrganizaciones();
         if (res.success) setOrganizaciones(res.data);
@@ -106,17 +108,21 @@ export const GestionParticipantes: React.FC = () => {
 
   const guardarCategoria = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevaCat.name) return;
+    if (!nuevaCat.name || !nuevaCat.discipline_id) {
+      mostrarMensaje('El nombre y la disciplina son obligatorios.', true);
+      return;
+    }
     try {
       const res = await serviciosParticipantes.crearCategoria({
         name: nuevaCat.name,
         age_min: nuevaCat.age_min ? parseInt(nuevaCat.age_min) : null,
         age_max: nuevaCat.age_max ? parseInt(nuevaCat.age_max) : null,
-        gender: nuevaCat.gender
+        gender_type: nuevaCat.gender,
+        discipline_id: parseInt(nuevaCat.discipline_id)
       });
       if (res.success) {
         mostrarMensaje('Categoría registrada exitosamente.');
-        setNuevaCat({ name: '', age_min: '', age_max: '', gender: 'Masculino' });
+        setNuevaCat({ name: '', age_min: '', age_max: '', gender: 'Masculino', discipline_id: '' });
         cargarDatos();
       }
     } catch (err) {
@@ -294,6 +300,20 @@ export const GestionParticipantes: React.FC = () => {
 
             {tabActiva === 'categorias' && (
               <form onSubmit={guardarCategoria} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Disciplina *</label>
+                  <select
+                    required
+                    value={nuevaCat.discipline_id}
+                    onChange={(e) => setNuevaCat({ ...nuevaCat, discipline_id: e.target.value })}
+                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                  >
+                    <option value="">-- Selecciona Disciplina --</option>
+                    {disciplinas.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 block">Nombre Categoría *</label>
                   <input

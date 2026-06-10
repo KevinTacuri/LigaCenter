@@ -120,24 +120,25 @@ class PlayerController extends Controller
         $team = Team::with('category')->findOrFail($validated['team_id']);
         $category = $team->category;
 
-        if (!$category || !$category->age_range) {
+        if (!$category) {
             return response()->json([
-                'message' => 'La categoría no tiene rango de edad definido.'
+                'message' => 'El equipo no tiene una categoría válida asignada.'
             ], 422);
         }
 
-        [$minAge, $maxAge] = explode('-', $category->age_range);
-
-        $minAge = (int) $minAge;
-        $maxAge = (int) $maxAge;
-
-        $isEligible =
-            $validated['age'] >= $minAge &&
-            $validated['age'] <= $maxAge;
+        $isEligible = true;
+        if ($category->age_min !== null && $validated['age'] < $category->age_min) {
+            $isEligible = false;
+        }
+        if ($category->age_max !== null && $validated['age'] > $category->age_max) {
+            $isEligible = false;
+        }
 
         if (!$isEligible) {
+            $minLabel = $category->age_min ?? '0';
+            $maxLabel = $category->age_max ?? 'sin límite';
             return response()->json([
-                'message' => 'La edad del jugador no corresponde a la categoría.'
+                'message' => "La edad del jugador no corresponde a la categoría (Rango permitido: {$minLabel} - {$maxLabel} años)."
             ], 422);
         }
 
