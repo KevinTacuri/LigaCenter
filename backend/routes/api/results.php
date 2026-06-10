@@ -12,6 +12,11 @@ use App\Http\Controllers\Api\StandingController;
 |--------------------------------------------------------------------------
 */
 
+Route::get(
+    'match-reports/by-match/{matchId}',
+    [MatchReportController::class, 'getByMatch']
+);
+
 Route::apiResource(
     'match-reports',
     MatchReportController::class

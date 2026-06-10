@@ -123,17 +123,31 @@ export const MesaControl: React.FC = () => {
     e.preventDefault();
     if (!partidoSeleccionado) return;
     try {
-      const res = await serviciosResultados.registrarActa({
-        match_id: partidoSeleccionado.id,
-        local_score: parseInt(golesLocal),
-        visitor_score: parseInt(golesVisita),
-        referee_signature: firmaArbitro || undefined,
-        delegate_signature: firmaDelegado || undefined,
-        observations: observaciones || undefined
-      });
-      if (res.success) {
-        setActa(res.data);
-        mostrarMensaje('Progreso de acta guardado exitosamente.');
+      if (acta) {
+        const res = await serviciosResultados.actualizarActa(acta.id, {
+          local_score: parseInt(golesLocal),
+          visitor_score: parseInt(golesVisita),
+          referee_signature: firmaArbitro || undefined,
+          delegate_signature: firmaDelegado || undefined,
+          observations: observaciones || undefined
+        });
+        if (res.success) {
+          setActa(res.data);
+          mostrarMensaje('Progreso de acta actualizado exitosamente.');
+        }
+      } else {
+        const res = await serviciosResultados.registrarActa({
+          match_id: partidoSeleccionado.id,
+          local_score: parseInt(golesLocal),
+          visitor_score: parseInt(golesVisita),
+          referee_signature: firmaArbitro || undefined,
+          delegate_signature: firmaDelegado || undefined,
+          observations: observaciones || undefined
+        });
+        if (res.success) {
+          setActa(res.data);
+          mostrarMensaje('Progreso de acta guardado exitosamente.');
+        }
       }
     } catch (err) {
       mostrarMensaje('Error al guardar acta de partido.', true);

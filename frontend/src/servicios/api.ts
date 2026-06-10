@@ -455,6 +455,16 @@ export const serviciosResultados = {
     const res = await clienteApi.post('/match-reports', datos);
     return res.data;
   },
+  actualizarActa: async (id: number, datos: {
+    local_score: number;
+    visitor_score: number;
+    referee_signature?: string;
+    delegate_signature?: string;
+    observations?: string;
+  }): Promise<RespuestaApi<ActaPartido>> => {
+    const res = await clienteApi.put(`/match-reports/${id}`, datos);
+    return res.data;
+  },
   bloquearActa: async (id: number): Promise<RespuestaApi<ActaPartido>> => {
     const res = await clienteApi.post(`/match-reports/${id}/lock`);
     return res.data;
