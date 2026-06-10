@@ -100,9 +100,29 @@ clienteApi.interceptors.request.use(
   }
 );
 
-// Interceptor para capturar respuestas con errores de autenticación
+// Interceptor para normalizar respuestas y capturar errores de autenticación
 clienteApi.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Normalizar la respuesta si no viene envuelta en { success, data }
+    if (response.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
+      const keys = Object.keys(response.data);
+      const isWrapped = keys.includes('success') && keys.includes('data');
+      if (!isWrapped) {
+        response.data = {
+          success: true,
+          data: response.data,
+          message: null
+        };
+      }
+    } else if (Array.isArray(response.data)) {
+      response.data = {
+        success: true,
+        data: response.data,
+        message: null
+      };
+    }
+    return response;
+  },
   (error) => {
     if (error.response && error.response.status === 401) {
       // Si el token es inválido o expiró, removemos los datos locales
