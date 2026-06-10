@@ -12,16 +12,14 @@ class Standing extends Model
         'team_id',
         'discipline_id',
         'category_id',
-
+        'championship_id',
         'matches_played',
         'matches_won',
         'matches_drawn',
         'matches_lost',
-
         'goals_for',
         'goals_against',
         'goal_difference',
-
         'total_points',
         'last_updated',
     ];
@@ -43,5 +41,10 @@ class Standing extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function championship()
+    {
+        return $this->belongsTo(Championship::class);
     }
 }

@@ -13,7 +13,7 @@ class PlayerStatistic extends Model
         'team_id',
         'discipline_id',
         'category_id',
-        'tournament_id',
+        'championship_id',
         'goals',
         'yellow_cards',
         'red_cards',
@@ -47,8 +47,8 @@ class PlayerStatistic extends Model
         return $this->belongsTo(Category::class);
     }
 
-    public function tournament()
+    public function championship()
     {
-        return $this->belongsTo(Tournament::class);
+        return $this->belongsTo(Championship::class);
     }
 }
