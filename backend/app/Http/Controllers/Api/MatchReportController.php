@@ -36,14 +36,30 @@ class MatchReportController extends Controller
         summary: 'Listar actas de partido',
         tags: ['Match Reports']
     )]
+    #[OA\Parameter(
+        name: 'championship_id',
+        description: 'ID del campeonato (opcional)',
+        in: 'query',
+        required: false,
+        schema: new OA\Schema(type: 'integer')
+    )]
     #[OA\Response(
         response: 200,
         description: 'Actas obtenidas exitosamente'
     )]
     #[OA\Security(name: 'sanctum')]
-    public function index()
+    public function index(Request $request)
     {
-        $reports = MatchReport::with('match')->get();
+        $query = MatchReport::with('match');
+
+        if ($request->has('championship_id')) {
+            $query->whereHas('match', function ($q) use ($request) {
+                $q->where('championship_id', $request->championship_id);
+            });
+        }
+
+        $reports = $query->get();
+
         return $this->successResponse($reports, 'Actas obtenidas exitosamente');
     }
 

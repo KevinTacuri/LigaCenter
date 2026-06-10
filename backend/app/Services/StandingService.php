@@ -12,36 +12,36 @@ class StandingService
         $localStanding = Standing::firstOrCreate(
             [
                 'team_id' => $match->local_team_id,
-                'discipline_id' => $match->discipline_id,
+                'championship_id' => $match->championship_id,
                 'category_id' => $match->category_id,
             ],
             [
                 'matches_played' => 0,
-                'matches_won' => 0,
-                'matches_drawn' => 0,
-                'matches_lost' => 0,
+                'wins' => 0,
+                'draws' => 0,
+                'losses' => 0,
                 'goals_for' => 0,
                 'goals_against' => 0,
                 'goal_difference' => 0,
-                'total_points' => 0,
+                'points' => 0,
             ]
         );
 
         $visitorStanding = Standing::firstOrCreate(
             [
                 'team_id' => $match->visitor_team_id,
-                'discipline_id' => $match->discipline_id,
+                'championship_id' => $match->championship_id,
                 'category_id' => $match->category_id,
             ],
             [
                 'matches_played' => 0,
-                'matches_won' => 0,
-                'matches_drawn' => 0,
-                'matches_lost' => 0,
+                'wins' => 0,
+                'draws' => 0,
+                'losses' => 0,
                 'goals_for' => 0,
                 'goals_against' => 0,
                 'goal_difference' => 0,
-                'total_points' => 0,
+                'points' => 0,
             ]
         );
 
@@ -55,35 +55,22 @@ class StandingService
         $visitorStanding->goals_against += $localScore;
 
         if ($localScore > $visitorScore) {
-
-            $localStanding->matches_won++;
-            $localStanding->total_points += 3;
-
-            $visitorStanding->matches_lost++;
-
+            $localStanding->wins++;
+            $localStanding->points += 3;
+            $visitorStanding->losses++;
         } elseif ($localScore < $visitorScore) {
-
-            $visitorStanding->matches_won++;
-            $visitorStanding->total_points += 3;
-
-            $localStanding->matches_lost++;
-
+            $visitorStanding->wins++;
+            $visitorStanding->points += 3;
+            $localStanding->losses++;
         } else {
-
-            $localStanding->matches_drawn++;
-            $visitorStanding->matches_drawn++;
-
-            $localStanding->total_points += 1;
-            $visitorStanding->total_points += 1;
+            $localStanding->draws++;
+            $visitorStanding->draws++;
+            $localStanding->points += 1;
+            $visitorStanding->points += 1;
         }
 
-        $localStanding->goal_difference =
-            $localStanding->goals_for -
-            $localStanding->goals_against;
-
-        $visitorStanding->goal_difference =
-            $visitorStanding->goals_for -
-            $visitorStanding->goals_against;
+        $localStanding->goal_difference = $localStanding->goals_for - $localStanding->goals_against;
+        $visitorStanding->goal_difference = $visitorStanding->goals_for - $visitorStanding->goals_against;
 
         $localStanding->last_updated = now();
         $visitorStanding->last_updated = now();

@@ -6,21 +6,32 @@ use App\Models\GameMatch;
 use App\Models\MatchIncidence;
 use App\Models\Player;
 use App\Models\PlayerStatistic;
+use App\Models\TeamPlayer;
 
 class PlayerStatisticService
 {
-    public function updateFromMatch(GameMatch $match, $tournamentId = null)
+    public function updateFromMatch(GameMatch $match, $championshipId = null)
     {
         $incidences = MatchIncidence::where('match_id', $match->id)->get();
 
-        $localPlayers = Player::where('team_id', $match->local_team_id)->get();
-        $visitorPlayers = Player::where('team_id', $match->visitor_team_id)->get();
+        $localTeamPlayers = TeamPlayer::where('team_id', $match->local_team_id)
+            ->with('player')
+            ->get();
 
-        $allPlayers = $localPlayers->merge($visitorPlayers);
+        $visitorTeamPlayers = TeamPlayer::where('team_id', $match->visitor_team_id)
+            ->with('player')
+            ->get();
 
+        $allTeamPlayers = $localTeamPlayers->merge($visitorTeamPlayers);
         $results = [];
 
-        foreach ($allPlayers as $player) {
+        foreach ($allTeamPlayers as $teamPlayer) {
+            $player = $teamPlayer->player;
+
+            if (!$player) {
+                continue;
+            }
+
             $player->total_matches_played += 1;
 
             $playerIncidences = $incidences->where('player_id', $player->id);
@@ -46,16 +57,15 @@ class PlayerStatisticService
             $player->total_goals += $goalsCount;
             $player->total_yellow_cards += $yellowCardsCount;
             $player->total_red_cards += $redCardsCount;
-
             $player->save();
 
-            $tournamentStat = PlayerStatistic::firstOrCreate(
+            $championshipStat = PlayerStatistic::firstOrCreate(
                 [
                     'player_id' => $player->id,
-                    'team_id' => $player->team_id,
+                    'team_id' => $teamPlayer->team_id,
                     'discipline_id' => $match->discipline_id,
                     'category_id' => $match->category_id,
-                    'tournament_id' => $tournamentId,
+                    'championship_id' => $championshipId,
                 ],
                 [
                     'goals' => 0,
@@ -65,16 +75,15 @@ class PlayerStatisticService
                 ]
             );
 
-            $tournamentStat->matches_played += 1;
-            $tournamentStat->goals += $goalsCount;
-            $tournamentStat->yellow_cards += $yellowCardsCount;
-            $tournamentStat->red_cards += $redCardsCount;
-
-            $tournamentStat->save();
+            $championshipStat->matches_played += 1;
+            $championshipStat->goals += $goalsCount;
+            $championshipStat->yellow_cards += $yellowCardsCount;
+            $championshipStat->red_cards += $redCardsCount;
+            $championshipStat->save();
 
             $results[$player->id] = [
                 'player' => $player,
-                'tournament_stat' => $tournamentStat,
+                'championship_stat' => $championshipStat,
                 'goals_in_match' => $goalsCount,
                 'yellow_cards_in_match' => $yellowCardsCount,
                 'red_cards_in_match' => $redCardsCount,
@@ -92,25 +101,25 @@ class PlayerStatisticService
             return null;
         }
 
-        $tournamentStats = PlayerStatistic::with(['discipline', 'category'])
+        $championshipStats = PlayerStatistic::with(['discipline', 'category', 'championship'])
             ->where('player_id', $playerId)
-            ->orderBy('tournament_id')
+            ->orderBy('championship_id')
             ->get();
 
         return [
             'player' => [
                 'id' => $player->id,
-                'full_name' => $player->full_name,
+                'full_name' => $player->names . ' ' . $player->last_names,
                 'total_goals' => $player->total_goals,
                 'total_yellow_cards' => $player->total_yellow_cards,
                 'total_red_cards' => $player->total_red_cards,
                 'total_matches_played' => $player->total_matches_played,
             ],
-            'tournament_history' => $tournamentStats->map(function ($stat) {
+            'championship_history' => $championshipStats->map(function ($stat) {
                 return [
+                    'championship' => $stat->championship->name ?? 'N/A',
                     'discipline' => $stat->discipline->name ?? 'N/A',
                     'category' => $stat->category->name ?? 'N/A',
-                    'tournament_id' => $stat->tournament_id,
                     'goals' => $stat->goals,
                     'yellow_cards' => $stat->yellow_cards,
                     'red_cards' => $stat->red_cards,
@@ -120,20 +129,16 @@ class PlayerStatisticService
         ];
     }
 
-    public function getTopScorers($disciplineId = null, $categoryId = null, $tournamentId = null, $limit = 10)
+    public function getTopScorers($championshipId = null, $categoryId = null, $limit = 10)
     {
         $query = PlayerStatistic::with('player');
 
-        if ($disciplineId) {
-            $query->where('discipline_id', $disciplineId);
+        if ($championshipId) {
+            $query->where('championship_id', $championshipId);
         }
 
         if ($categoryId) {
             $query->where('category_id', $categoryId);
-        }
-
-        if ($tournamentId) {
-            $query->where('tournament_id', $tournamentId);
         }
 
         $topScorers = $query->orderBy('goals', 'desc')
@@ -143,29 +148,24 @@ class PlayerStatisticService
         return $topScorers->map(function ($stat) {
             return [
                 'player_id' => $stat->player_id,
-                'player_name' => $stat->player->full_name ?? 'N/A',
+                'player_name' => ($stat->player->names ?? '') . ' ' . ($stat->player->last_names ?? ''),
                 'goals' => $stat->goals,
                 'matches' => $stat->matches_played,
-                'discipline' => $stat->discipline->name ?? 'N/A',
                 'category' => $stat->category->name ?? 'N/A',
             ];
         });
     }
 
-    public function getTopYellowCards($disciplineId = null, $categoryId = null, $tournamentId = null, $limit = 10)
+    public function getTopYellowCards($championshipId = null, $categoryId = null, $limit = 10)
     {
         $query = PlayerStatistic::with('player');
 
-        if ($disciplineId) {
-            $query->where('discipline_id', $disciplineId);
+        if ($championshipId) {
+            $query->where('championship_id', $championshipId);
         }
 
         if ($categoryId) {
             $query->where('category_id', $categoryId);
-        }
-
-        if ($tournamentId) {
-            $query->where('tournament_id', $tournamentId);
         }
 
         $topYellow = $query->orderBy('yellow_cards', 'desc')
@@ -175,27 +175,23 @@ class PlayerStatisticService
         return $topYellow->map(function ($stat) {
             return [
                 'player_id' => $stat->player_id,
-                'player_name' => $stat->player->full_name ?? 'N/A',
+                'player_name' => ($stat->player->names ?? '') . ' ' . ($stat->player->last_names ?? ''),
                 'yellow_cards' => $stat->yellow_cards,
                 'matches' => $stat->matches_played,
             ];
         });
     }
 
-    public function getTopRedCards($disciplineId = null, $categoryId = null, $tournamentId = null, $limit = 10)
+    public function getTopRedCards($championshipId = null, $categoryId = null, $limit = 10)
     {
         $query = PlayerStatistic::with('player');
 
-        if ($disciplineId) {
-            $query->where('discipline_id', $disciplineId);
+        if ($championshipId) {
+            $query->where('championship_id', $championshipId);
         }
 
         if ($categoryId) {
             $query->where('category_id', $categoryId);
-        }
-
-        if ($tournamentId) {
-            $query->where('tournament_id', $tournamentId);
         }
 
         $topRed = $query->orderBy('red_cards', 'desc')
@@ -205,7 +201,7 @@ class PlayerStatisticService
         return $topRed->map(function ($stat) {
             return [
                 'player_id' => $stat->player_id,
-                'player_name' => $stat->player->full_name ?? 'N/A',
+                'player_name' => ($stat->player->names ?? '') . ' ' . ($stat->player->last_names ?? ''),
                 'red_cards' => $stat->red_cards,
                 'matches' => $stat->matches_played,
             ];

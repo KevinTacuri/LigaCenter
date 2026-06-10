@@ -6,56 +6,11 @@ use App\Http\Controllers\Api\MatchIncidenceController;
 use App\Http\Controllers\Api\SanctionController;
 use App\Http\Controllers\Api\StandingController;
 
-/*
-|--------------------------------------------------------------------------
-| Match Reports
-|--------------------------------------------------------------------------
-*/
-
-Route::get(
-    'match-reports/by-match/{matchId}',
-    [MatchReportController::class, 'getByMatch']
-);
-
-Route::apiResource(
-    'match-reports',
-    MatchReportController::class
-);
-
-Route::post(
-    'match-reports/{id}/lock',
-    [MatchReportController::class, 'lock']
-);
-
-/*
-|--------------------------------------------------------------------------
-| Match Incidences
-|--------------------------------------------------------------------------
-*/
-
-Route::apiResource(
-    'match-incidences',
-    MatchIncidenceController::class
-);
-
-/*
-|--------------------------------------------------------------------------
-| Sanctions
-|--------------------------------------------------------------------------
-*/
-
-Route::apiResource(
-    'sanctions',
-    SanctionController::class
-);
-
-/*
-|--------------------------------------------------------------------------
-| Standings
-|--------------------------------------------------------------------------
-*/
-
-Route::apiResource(
-    'standings',
-    StandingController::class
-)->only(['index', 'show']);
+Route::middleware(['auth:sanctum', 'championship.access'])->group(function () {
+    Route::get('match-reports/by-match/{matchId}', [MatchReportController::class, 'getByMatch']);
+    Route::apiResource('match-reports', MatchReportController::class);
+    Route::post('match-reports/{id}/lock', [MatchReportController::class, 'lock']);
+    Route::apiResource('match-incidences', MatchIncidenceController::class);
+    Route::apiResource('sanctions', SanctionController::class);
+    Route::apiResource('standings', StandingController::class)->only(['index', 'show']);
+});

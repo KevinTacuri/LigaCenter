@@ -10,9 +10,15 @@ return new class extends Migration
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('championship_id')->constrained()->onDelete('cascade');
+            $table->foreignId('discipline_id')->constrained()->onDelete('cascade');
             $table->string('name');
-            $table->string('age_range')->nullable();
+            $table->text('description')->nullable();
+            $table->string('gender_type')->nullable();
+            $table->integer('age_min')->nullable();
+            $table->integer('age_max')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

@@ -8,9 +8,9 @@ use App\Models\Venue;
 
 class SchedulingService
 {
-    public function scheduleMatchesForRound($disciplineId, $categoryId, $round, $availableHours, $venueIds)
+    public function scheduleMatchesForRound($championshipId, $categoryId, $round, $availableHours, $venueIds)
     {
-        $matches = GameMatch::where('discipline_id', $disciplineId)
+        $matches = GameMatch::where('championship_id', $championshipId)
             ->where('category_id', $categoryId)
             ->where('round', $round)
             ->get();
@@ -21,8 +21,8 @@ class SchedulingService
 
         $matchesWithRelevance = [];
         foreach ($matches as $match) {
-            $localPoints = $this->getTeamPoints($match->local_team_id, $disciplineId, $categoryId);
-            $visitorPoints = $this->getTeamPoints($match->visitor_team_id, $disciplineId, $categoryId);
+            $localPoints = $this->getTeamPoints($match->local_team_id, $championshipId, $categoryId);
+            $visitorPoints = $this->getTeamPoints($match->visitor_team_id, $championshipId, $categoryId);
             $relevance = $localPoints + $visitorPoints;
 
             $matchesWithRelevance[] = [
@@ -63,10 +63,10 @@ class SchedulingService
         return $scheduledMatches;
     }
 
-    private function getTeamPoints($teamId, $disciplineId, $categoryId)
+    private function getTeamPoints($teamId, $championshipId, $categoryId)
     {
         $standing = Standing::where('team_id', $teamId)
-            ->where('discipline_id', $disciplineId)
+            ->where('championship_id', $championshipId)
             ->where('category_id', $categoryId)
             ->first();
 

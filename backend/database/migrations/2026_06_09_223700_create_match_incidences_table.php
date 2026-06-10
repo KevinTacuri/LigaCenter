@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('match_id')->constrained()->onDelete('cascade');
             $table->foreignId('player_id')->nullable()->constrained()->onDelete('set null');
             $table->foreignId('team_id')->constrained()->onDelete('cascade');
-            $table->string('incidence_type');
+            $table->string('type');
             $table->integer('minute');
             $table->integer('second')->default(0);
             $table->text('description')->nullable();

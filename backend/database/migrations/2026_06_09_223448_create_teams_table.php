@@ -10,10 +10,11 @@ return new class extends Migration
     {
         Schema::create('teams', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->constrained()->onDelete('cascade');
-            $table->foreignId('discipline_id')->constrained()->onDelete('cascade');
+            $table->foreignId('championship_id')->constrained()->onDelete('cascade');
             $table->foreignId('category_id')->constrained()->onDelete('cascade');
             $table->string('name');
+            $table->string('logo')->nullable();
+            $table->text('description')->nullable();
             $table->string('registration_status')->default('pendiente');
             $table->timestamps();
             $table->softDeletes();

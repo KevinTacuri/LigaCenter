@@ -15,6 +15,7 @@ class Venue extends Model
         'location',
         'capacity',
         'is_available',
+        'championship_id',
     ];
 
     protected $casts = [
@@ -25,5 +26,10 @@ class Venue extends Model
     public function matches()
     {
         return $this->hasMany(GameMatch::class, 'venue_id');
+    }
+
+    public function championship()
+    {
+        return $this->belongsTo(Championship::class);
     }
 }

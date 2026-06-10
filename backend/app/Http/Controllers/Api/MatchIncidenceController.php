@@ -19,18 +19,40 @@ class MatchIncidenceController extends Controller
         summary: 'Listar incidencias',
         tags: ['Match Incidences']
     )]
+    #[OA\Parameter(
+        name: 'match_id',
+        description: 'ID del partido (opcional)',
+        in: 'query',
+        required: false,
+        schema: new OA\Schema(type: 'integer')
+    )]
+    #[OA\Parameter(
+        name: 'championship_id',
+        description: 'ID del campeonato (opcional, filtra por partidos del campeonato)',
+        in: 'query',
+        required: false,
+        schema: new OA\Schema(type: 'integer')
+    )]
     #[OA\Response(
         response: 200,
         description: 'Incidencias obtenidas exitosamente'
     )]
     #[OA\Security(name: 'sanctum')]
-    public function index()
+    public function index(Request $request)
     {
-        $incidences = MatchIncidence::with([
-            'match',
-            'player',
-            'team'
-        ])->get();
+        $query = MatchIncidence::with(['match', 'player', 'team']);
+
+        if ($request->has('match_id')) {
+            $query->where('match_id', $request->match_id);
+        }
+
+        if ($request->has('championship_id')) {
+            $query->whereHas('match', function ($q) use ($request) {
+                $q->where('championship_id', $request->championship_id);
+            });
+        }
+
+        $incidences = $query->get();
 
         return $this->successResponse(
             $incidences,

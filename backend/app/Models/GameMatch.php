@@ -21,6 +21,7 @@ class GameMatch extends Model
         'match_time',
         'round',
         'status',
+        'championship_id',
     ];
 
     protected $casts = [
@@ -61,5 +62,10 @@ class GameMatch extends Model
     public function incidences()
     {
         return $this->hasMany(MatchIncidence::class);
+    }
+
+    public function championship()
+    {
+        return $this->belongsTo(Championship::class);
     }
 }

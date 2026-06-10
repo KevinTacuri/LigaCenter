@@ -8,9 +8,9 @@ use Carbon\Carbon;
 
 class FixtureService
 {
-    public function generateRoundRobin($disciplineId, $categoryId, $startDate, $venueIds)
+    public function generateRoundRobin($championshipId, $categoryId, $startDate, $venueIds)
     {
-        $teams = Team::where('discipline_id', $disciplineId)
+        $teams = Team::where('championship_id', $championshipId)
             ->where('category_id', $categoryId)
             ->where('registration_status', 'aprobado')
             ->get();
@@ -64,7 +64,7 @@ class FixtureService
         foreach ($allRounds as $roundIndex => $roundMatches) {
             foreach ($roundMatches as $match) {
                 $matchData = [
-                    'discipline_id' => $disciplineId,
+                    'championship_id' => $championshipId,
                     'category_id' => $categoryId,
                     'local_team_id' => $match['local'],
                     'visitor_team_id' => $match['visitor'],
@@ -79,10 +79,10 @@ class FixtureService
         return $matchesCreated;
     }
 
-    public function getFixture($disciplineId, $categoryId)
+    public function getFixture($championshipId, $categoryId)
     {
         return GameMatch::with(['localTeam', 'visitorTeam', 'venue'])
-            ->where('discipline_id', $disciplineId)
+            ->where('championship_id', $championshipId)
             ->where('category_id', $categoryId)
             ->orderBy('round')
             ->orderBy('match_date')

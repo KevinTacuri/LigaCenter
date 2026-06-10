@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Discipline extends Model
 {
-
     protected $fillable = [
         'name',
         'specific_rules',
@@ -16,5 +15,10 @@ class Discipline extends Model
     public function teams(): HasMany
     {
         return $this->hasMany(Team::class);
+    }
+
+    public function categories(): HasMany
+    {
+        return $this->hasMany(Category::class);
     }
 }

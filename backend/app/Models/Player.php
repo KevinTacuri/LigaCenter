@@ -10,12 +10,12 @@ class Player extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'team_id',
-        'full_name',
-        'dni',
-        'college_id',
-        'age',
-        'is_eligible',
+        'document_number',
+        'names',
+        'last_names',
+        'birth_date',
+        'gender',
+        'photo',
         'total_goals',
         'total_yellow_cards',
         'total_red_cards',
@@ -23,17 +23,18 @@ class Player extends Model
     ];
 
     protected $casts = [
-        'is_eligible' => 'boolean',
-        'age' => 'integer',
+        'birth_date' => 'date',
         'total_goals' => 'integer',
         'total_yellow_cards' => 'integer',
         'total_red_cards' => 'integer',
         'total_matches_played' => 'integer',
     ];
 
-    public function team()
+    public function teams()
     {
-        return $this->belongsTo(Team::class);
+        return $this->belongsToMany(Team::class, 'team_players')
+            ->withPivot('jersey_number', 'status')
+            ->withTimestamps();
     }
 
     public function statistics()
@@ -41,23 +42,18 @@ class Player extends Model
         return $this->hasMany(PlayerStatistic::class);
     }
 
-    public function getTotalGoalsAttribute($value)
+    public function sanctions()
     {
-        return $value ?? 0;
+        return $this->hasMany(Sanction::class);
     }
 
-    public function getTotalYellowCardsAttribute($value)
+    public function incidences()
     {
-        return $value ?? 0;
+        return $this->hasMany(MatchIncidence::class);
     }
 
-    public function getTotalRedCardsAttribute($value)
+    public function getFullNameAttribute()
     {
-        return $value ?? 0;
-    }
-
-    public function getTotalMatchesPlayedAttribute($value)
-    {
-        return $value ?? 0;
+        return $this->names . ' ' . $this->last_names;
     }
 }

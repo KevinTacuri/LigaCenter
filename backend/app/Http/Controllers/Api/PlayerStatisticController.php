@@ -23,7 +23,7 @@ class PlayerStatisticController extends Controller
         path: '/api/players/{id}/history',
         operationId: 'getPlayerHistory',
         summary: 'Historial del jugador',
-        description: 'Obtiene el historial completo del jugador (totales y desglose por torneo)',
+        description: 'Obtiene el historial completo del jugador (totales y desglose por campeonato)',
         tags: ['Player Statistics']
     )]
     #[OA\Parameter(
@@ -65,7 +65,7 @@ class PlayerStatisticController extends Controller
         schema: new OA\Schema(type: 'integer')
     )]
     #[OA\Parameter(
-        name: 'tournament_id',
+        name: 'championship_id',
         in: 'query',
         required: false,
         schema: new OA\Schema(type: 'integer')
@@ -83,7 +83,7 @@ class PlayerStatisticController extends Controller
         $topScorers = $this->playerStatisticService->getTopScorers(
             $request->discipline_id,
             $request->category_id,
-            $request->tournament_id,
+            $request->championship_id,
             $request->limit ?? 10
         );
 
@@ -109,7 +109,7 @@ class PlayerStatisticController extends Controller
         schema: new OA\Schema(type: 'integer')
     )]
     #[OA\Parameter(
-        name: 'tournament_id',
+        name: 'championship_id',
         in: 'query',
         required: false,
         schema: new OA\Schema(type: 'integer')
@@ -127,7 +127,7 @@ class PlayerStatisticController extends Controller
         $topYellow = $this->playerStatisticService->getTopYellowCards(
             $request->discipline_id,
             $request->category_id,
-            $request->tournament_id,
+            $request->championship_id,
             $request->limit ?? 10
         );
 
@@ -153,7 +153,7 @@ class PlayerStatisticController extends Controller
         schema: new OA\Schema(type: 'integer')
     )]
     #[OA\Parameter(
-        name: 'tournament_id',
+        name: 'championship_id',
         in: 'query',
         required: false,
         schema: new OA\Schema(type: 'integer')
@@ -171,7 +171,7 @@ class PlayerStatisticController extends Controller
         $topRed = $this->playerStatisticService->getTopRedCards(
             $request->discipline_id,
             $request->category_id,
-            $request->tournament_id,
+            $request->championship_id,
             $request->limit ?? 10
         );
 
