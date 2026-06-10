@@ -2,12 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 
+import { useCampeonato } from '../contexto/ContextoCampeonato';
+
 // Importación de recursos
 import logoImg from '../assets/logo.svg';
 import deportesFondo from '../assets/deportes_fondo.png';
 
 export const Tablero: React.FC = () => {
   const { usuario, cerrarSesion, cargando, tienePermiso } = useAutenticacion();
+  const { campeonatoActivo, limpiarCampeonato } = useCampeonato();
   const navegar = useNavigate();
   const [coordenadasMouse, setCoordenadasMouse] = useState({ x: 0, y: 0 });
 
@@ -28,8 +31,10 @@ export const Tablero: React.FC = () => {
   useEffect(() => {
     if (!cargando && !usuario) {
       navegar('/login');
+    } else if (!cargando && usuario && !campeonatoActivo) {
+      navegar('/seleccion-campeonato');
     }
-  }, [usuario, cargando, navegar]);
+  }, [usuario, cargando, navegar, campeonatoActivo]);
 
   if (cargando) {
     return (
@@ -77,11 +82,13 @@ export const Tablero: React.FC = () => {
                 <h1 className="text-base font-extrabold tracking-tight text-slate-900 leading-none">LigaCenter</h1>
                 <span className="px-1.5 py-0.5 rounded-sm bg-slate-100 text-slate-600 text-[9px] font-bold border border-slate-200 uppercase tracking-wider">v1.0</span>
               </div>
-              <span className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase mt-1 block">Tablero de Control</span>
+              <span className="text-[10px] text-primary font-bold uppercase mt-1 block tracking-wider truncate max-w-[200px] sm:max-w-md">
+                🏆 {campeonatoActivo?.name || 'Tablero de Control'}
+              </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {/* Info del Perfil */}
             <div className="hidden md:flex flex-col text-right justify-center">
               <span className="text-sm font-bold text-slate-900 flex items-center gap-1.5 justify-end">
@@ -99,6 +106,15 @@ export const Tablero: React.FC = () => {
                 {inicialUsuario}
               </div>
             </div>
+
+            {/* Botón Cambiar Torneo */}
+            <button
+              onClick={limpiarCampeonato}
+              className="flex items-center justify-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer shadow-xs active:scale-95 group"
+            >
+              <span className="material-symbols-outlined text-sm">swap_horiz</span>
+              <span className="hidden sm:inline">Cambiar Torneo</span>
+            </button>
 
             {/* Botón Cerrar Sesión */}
             <button
@@ -202,6 +218,23 @@ export const Tablero: React.FC = () => {
                       <p className="text-xs text-slate-500 mt-1 leading-relaxed">Administra accesos, roles y activa o desactiva usuarios.</p>
                       <button className="mt-3.5 text-xs text-primary font-bold tracking-wider uppercase flex items-center gap-1 group-hover:gap-1.5 transition-all cursor-pointer">
                         <span>Acceder Módulo</span>
+                        <span>→</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Módulo: Consola SaaS (Solo Super Administrador / App Owner) */}
+                {tienePermiso('gestionar_usuarios') && (
+                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-secondary/60 hover:bg-secondary/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs cursor-pointer" onClick={() => navegar('/tablero/saas-admin')}>
+                    <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-secondary/10 group-hover:text-secondary group-hover:border-secondary/20 transition-all shrink-0">
+                      <span className="material-symbols-outlined text-lg">admin_panel_settings</span>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-xs text-slate-900 group-hover:text-secondary transition-colors uppercase tracking-wide">Consola SaaS Administrador</h4>
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">Supervisa organizadores, estadísticas globales de torneos y licencias.</p>
+                      <button className="mt-3.5 text-xs text-secondary font-bold tracking-wider uppercase flex items-center gap-1 group-hover:gap-1.5 transition-all cursor-pointer">
+                        <span>Auditar SaaS</span>
                         <span>→</span>
                       </button>
                     </div>

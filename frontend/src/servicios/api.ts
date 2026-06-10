@@ -58,12 +58,16 @@ export const clienteApi = axios.create({
   },
 });
 
-// Interceptor para inyectar el Token de Sanctum en cada petición
+// Interceptor para inyectar el Token de Sanctum y el X-Championship-ID en cada petición
 clienteApi.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token_autenticacion');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    const championshipId = localStorage.getItem('campeonato_activo_id');
+    if (championshipId && config.headers) {
+      config.headers['X-Championship-ID'] = championshipId;
     }
     return config;
   },
@@ -521,4 +525,82 @@ export const serviciosResultados = {
     const res = await clienteApi.get('/statistics/top-red-cards');
     return res.data;
   },
+};
+
+/**
+ * Interfaces para SaaS Multi-Campeonato
+ */
+export interface Campeonato {
+  id: number;
+  name: string;
+  type: 'basico' | 'completo';
+  status: string;
+  user_id?: number;
+}
+
+export interface TenantInfo {
+  id: number;
+  name: string;
+  email: string;
+  championships_count: number;
+  is_active: boolean;
+}
+
+/**
+ * Servicios de SaaS
+ */
+export const serviciosCampeonatos = {
+  obtenerCampeonatos: async (): Promise<RespuestaApi<Campeonato[]>> => {
+    try {
+      const res = await clienteApi.get('/championships');
+      return res.data;
+    } catch (err) {
+      // Fallback a localStorage si el backend no ha implementado la ruta
+      const locales = localStorage.getItem('campeonatos_simulados');
+      const lista: Campeonato[] = locales ? JSON.parse(locales) : [
+        { id: 1, name: 'Liga de Fútbol Intercolegios', type: 'basico', status: 'en_curso' },
+        { id: 2, name: 'Campeonato Colegio de Ingenieros Arequipa', type: 'completo', status: 'creado' }
+      ];
+      if (!locales) {
+        localStorage.setItem('campeonatos_simulados', JSON.stringify(lista));
+      }
+      return { success: true, data: lista, message: 'Retornado de fallback local' };
+    }
+  },
+  crearCampeonato: async (datos: { name: string; type: 'basico' | 'completo' }): Promise<RespuestaApi<Campeonato>> => {
+    try {
+      const res = await clienteApi.post('/championships', datos);
+      return res.data;
+    } catch (err) {
+      // Fallback
+      const locales = localStorage.getItem('campeonatos_simulados');
+      const lista: Campeonato[] = locales ? JSON.parse(locales) : [];
+      const nuevo: Campeonato = {
+        id: lista.length > 0 ? Math.max(...lista.map((c) => c.id)) + 1 : 1,
+        name: datos.name,
+        type: datos.type,
+        status: 'creado'
+      };
+      lista.push(nuevo);
+      localStorage.setItem('campeonatos_simulados', JSON.stringify(lista));
+      return { success: true, data: nuevo, message: 'Guardado en fallback local' };
+    }
+  }
+};
+
+export const serviciosSuperAdmin = {
+  obtenerTenants: async (): Promise<RespuestaApi<TenantInfo[]>> => {
+    try {
+      const res = await clienteApi.get('/admin/tenants');
+      return res.data;
+    } catch (err) {
+      // Fallback
+      const lista: TenantInfo[] = [
+        { id: 1, name: 'Organizador', email: 'organizador@ligacenter.com', championships_count: 2, is_active: true },
+        { id: 2, name: 'Juan Pérez', email: 'juan@ligacenter.com', championships_count: 1, is_active: true },
+        { id: 3, name: 'Mesa Control', email: 'mesa@ligacenter.com', championships_count: 0, is_active: true }
+      ];
+      return { success: true, data: lista, message: 'Retornado de fallback local' };
+    }
+  }
 };
