@@ -6,6 +6,11 @@ import { Registro } from './paginas/Registro';
 import { Tablero } from './paginas/Tablero';
 import { RecuperarContrasenia } from './paginas/RecuperarContrasenia';
 import { RestablecerContrasenia } from './paginas/RestablecerContrasenia';
+import { GestionUsuarios } from './paginas/GestionUsuarios';
+import { GestionParticipantes } from './paginas/GestionParticipantes';
+import { ProgramacionFixture } from './paginas/ProgramacionFixture';
+import { MesaControl } from './paginas/MesaControl';
+import { VisualizacionPublica } from './paginas/VisualizacionPublica';
 
 const App: React.FC = () => {
   return (
@@ -20,6 +25,11 @@ const App: React.FC = () => {
 
           {/* Rutas Privadas / Protegidas */}
           <Route path="/tablero" element={<Tablero />} />
+          <Route path="/tablero/usuarios" element={<GestionUsuarios />} />
+          <Route path="/tablero/participantes" element={<GestionParticipantes />} />
+          <Route path="/tablero/fixture" element={<ProgramacionFixture />} />
+          <Route path="/tablero/mesa" element={<MesaControl />} />
+          <Route path="/tablero/publico" element={<VisualizacionPublica />} />
 
           {/* Redirección por defecto */}
           <Route path="*" element={<Navigate to="/tablero" replace />} />

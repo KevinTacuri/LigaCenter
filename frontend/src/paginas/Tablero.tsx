@@ -193,7 +193,7 @@ export const Tablero: React.FC = () => {
                 
                 {/* Módulo: Gestión de Usuarios (Solo Administrador) */}
                 {tienePermiso('gestionar_usuarios') && (
-                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-primary/60 hover:bg-primary/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs">
+                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-primary/60 hover:bg-primary/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs cursor-pointer" onClick={() => navegar('/tablero/usuarios')}>
                     <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary group-hover:border-primary/20 transition-all shrink-0">
                       <span className="material-symbols-outlined text-lg">group</span>
                     </div>
@@ -210,7 +210,7 @@ export const Tablero: React.FC = () => {
 
                 {/* Módulo: Equipos y Jugadores (Organizador, Encargado, Publico) */}
                 {tienePermiso('ver_equipos') && (
-                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-indigo-400/60 hover:bg-indigo-50/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs">
+                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-indigo-400/60 hover:bg-indigo-50/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs cursor-pointer" onClick={() => navegar('/tablero/participantes')}>
                     <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-200 transition-all shrink-0">
                       <span className="material-symbols-outlined text-lg">groups</span>
                     </div>
@@ -225,9 +225,26 @@ export const Tablero: React.FC = () => {
                   </div>
                 )}
 
+                {/* Módulo: Fixture y Escenarios (Organizador, Administrador) */}
+                {tienePermiso('ver_equipos') && (
+                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-emerald-500/60 hover:bg-emerald-50/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs cursor-pointer" onClick={() => navegar('/tablero/fixture')}>
+                    <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-emerald-50 group-hover:text-emerald-600 group-hover:border-emerald-200 transition-all shrink-0">
+                      <span className="material-symbols-outlined text-lg">calendar_today</span>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-xs text-slate-900 group-hover:text-emerald-600 transition-colors uppercase tracking-wide">Fixture y Calendario</h4>
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">Genera emparejamientos y programa canchas y horarios oficiales.</p>
+                      <button className="mt-3.5 text-xs text-emerald-600 font-bold tracking-wider uppercase flex items-center gap-1 group-hover:gap-1.5 transition-all cursor-pointer">
+                        <span>Gestionar Fixture</span>
+                        <span>→</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Módulo: Gestión de Planillas y Partidos (Mesa, Organizador) */}
                 {tienePermiso('registrar_incidencias') && (
-                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-amber-400/60 hover:bg-amber-50/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs">
+                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-amber-400/60 hover:bg-amber-50/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs cursor-pointer" onClick={() => navegar('/tablero/mesa')}>
                     <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-amber-50 group-hover:text-amber-600 group-hover:border-amber-200 transition-all shrink-0">
                       <span className="material-symbols-outlined text-lg">assignment</span>
                     </div>
@@ -244,7 +261,7 @@ export const Tablero: React.FC = () => {
 
                 {/* Módulo: Tablas de Posición (Cualquiera) */}
                 {tienePermiso('ver_tablas') && (
-                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-secondary/60 hover:bg-secondary/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs">
+                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-secondary/60 hover:bg-secondary/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs cursor-pointer" onClick={() => navegar('/tablero/publico')}>
                     <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-secondary/10 group-hover:text-secondary group-hover:border-secondary/20 transition-all shrink-0">
                       <span className="material-symbols-outlined text-lg">leaderboard</span>
                     </div>

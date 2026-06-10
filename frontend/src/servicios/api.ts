@@ -172,3 +172,343 @@ export const serviciosUsuarios = {
     return respuesta.data;
   },
 };
+
+/**
+ * Interfaces para los nuevos módulos
+ */
+export interface Disciplina {
+  id: number;
+  name: string;
+  description?: string | null;
+  rules?: string | null;
+  status: string;
+}
+
+export interface Categoria {
+  id: number;
+  name: string;
+  age_min?: number | null;
+  age_max?: number | null;
+  gender: string;
+}
+
+export interface Organizacion {
+  id: number;
+  name: string;
+  representative: string;
+  email?: string | null;
+  phone?: string | null;
+}
+
+export interface Equipo {
+  id: number;
+  name: string;
+  logo_url?: string | null;
+  representative?: string | null;
+  organization_id: number;
+  organization?: Organizacion;
+}
+
+export interface Jugador {
+  id: number;
+  name: string;
+  dni?: string | null;
+  phone?: string | null;
+  team_id: number;
+  number?: number | null;
+  position?: string | null;
+  team?: Equipo;
+}
+
+export interface Escenario {
+  id: number;
+  name: string;
+  location?: string | null;
+  capacity?: number | null;
+  status: string;
+}
+
+export interface Partido {
+  id: number;
+  venue_id?: number | null;
+  discipline_id: number;
+  category_id: number;
+  local_team_id: number;
+  visitor_team_id: number;
+  match_date?: string | null;
+  match_time?: string | null;
+  round: number;
+  status: string;
+  venue?: Escenario;
+  discipline?: Disciplina;
+  category?: Categoria;
+  local_team?: Equipo;
+  visitor_team?: Equipo;
+  report?: ActaPartido;
+  incidences?: Incidencia[];
+}
+
+export interface ActaPartido {
+  id: number;
+  match_id: number;
+  local_score: number;
+  visitor_score: number;
+  referee_signature?: string | null;
+  delegate_signature?: string | null;
+  observations?: string | null;
+  is_locked: boolean;
+}
+
+export interface Incidencia {
+  id: number;
+  match_id: number;
+  player_id?: number | null;
+  team_id: number;
+  incidence_type: 'goal' | 'yellow_card' | 'red_card' | 'foul' | 'injury';
+  minute: number;
+  description?: string | null;
+  player?: Jugador;
+}
+
+export interface Sancion {
+  id: number;
+  player_id: number;
+  origin_match_id: number;
+  sanction_type: string;
+  reason: string;
+  start_date: string;
+  end_date?: string | null;
+  duration?: number | null;
+  status: string;
+  player?: Jugador;
+  match?: Partido;
+}
+
+export interface Posicion {
+  id: number;
+  team_id: number;
+  discipline_id: number;
+  category_id: number;
+  matches_played: number;
+  matches_won: number;
+  matches_drawn: number;
+  matches_lost: number;
+  goals_for: number;
+  goals_against: number;
+  goal_difference: number;
+  total_points: number;
+  team?: Equipo;
+}
+
+export interface EstadisticaJugador {
+  id: number;
+  player_id: number;
+  matches_played: number;
+  goals: number;
+  yellow_cards: number;
+  red_cards: number;
+  player?: Jugador;
+}
+
+/**
+ * Servicios de Gestión de Participantes
+ */
+export const serviciosParticipantes = {
+  // Disciplinas
+  obtenerDisciplinas: async (): Promise<RespuestaApi<Disciplina[]>> => {
+    const res = await clienteApi.get('/disciplines');
+    return res.data;
+  },
+  crearDisciplina: async (datos: any): Promise<RespuestaApi<Disciplina>> => {
+    const res = await clienteApi.post('/disciplines', datos);
+    return res.data;
+  },
+  eliminarDisciplina: async (id: number): Promise<RespuestaApi<null>> => {
+    const res = await clienteApi.delete(`/disciplines/${id}`);
+    return res.data;
+  },
+
+  // Categorías
+  obtenerCategorias: async (): Promise<RespuestaApi<Categoria[]>> => {
+    const res = await clienteApi.get('/categories');
+    return res.data;
+  },
+  crearCategoria: async (datos: any): Promise<RespuestaApi<Categoria>> => {
+    const res = await clienteApi.post('/categories', datos);
+    return res.data;
+  },
+  eliminarCategoria: async (id: number): Promise<RespuestaApi<null>> => {
+    const res = await clienteApi.delete(`/categories/${id}`);
+    return res.data;
+  },
+
+  // Organizaciones
+  obtenerOrganizaciones: async (): Promise<RespuestaApi<Organizacion[]>> => {
+    const res = await clienteApi.get('/organizations');
+    return res.data;
+  },
+  crearOrganizacion: async (datos: any): Promise<RespuestaApi<Organizacion>> => {
+    const res = await clienteApi.post('/organizations', datos);
+    return res.data;
+  },
+  eliminarOrganizacion: async (id: number): Promise<RespuestaApi<null>> => {
+    const res = await clienteApi.delete(`/organizations/${id}`);
+    return res.data;
+  },
+
+  // Equipos
+  obtenerEquipos: async (): Promise<RespuestaApi<Equipo[]>> => {
+    const res = await clienteApi.get('/teams');
+    return res.data;
+  },
+  crearEquipo: async (datos: any): Promise<RespuestaApi<Equipo>> => {
+    const res = await clienteApi.post('/teams', datos);
+    return res.data;
+  },
+  eliminarEquipo: async (id: number): Promise<RespuestaApi<null>> => {
+    const res = await clienteApi.delete(`/teams/${id}`);
+    return res.data;
+  },
+
+  // Jugadores
+  obtenerJugadores: async (): Promise<RespuestaApi<Jugador[]>> => {
+    const res = await clienteApi.get('/players');
+    return res.data;
+  },
+  crearJugador: async (datos: any): Promise<RespuestaApi<Jugador>> => {
+    const res = await clienteApi.post('/players', datos);
+    return res.data;
+  },
+  eliminarJugador: async (id: number): Promise<RespuestaApi<null>> => {
+    const res = await clienteApi.delete(`/players/${id}`);
+    return res.data;
+  },
+};
+
+/**
+ * Servicios de Fixture y Programación
+ */
+export const serviciosFixture = {
+  // Escenarios
+  obtenerEscenarios: async (): Promise<RespuestaApi<Escenario[]>> => {
+    const res = await clienteApi.get('/venues');
+    return res.data;
+  },
+  crearEscenario: async (datos: any): Promise<RespuestaApi<Escenario>> => {
+    const res = await clienteApi.post('/venues', datos);
+    return res.data;
+  },
+  eliminarEscenario: async (id: number): Promise<RespuestaApi<null>> => {
+    const res = await clienteApi.delete(`/venues/${id}`);
+    return res.data;
+  },
+
+  // Partidos
+  obtenerPartidos: async (): Promise<RespuestaApi<Partido[]>> => {
+    const res = await clienteApi.get('/matches');
+    return res.data;
+  },
+  reprogramarPartido: async (id: number, datos: { match_date: string; match_time: string; venue_id: number }): Promise<RespuestaApi<Partido>> => {
+    const res = await clienteApi.put(`/matches/${id}/reschedule`, datos);
+    return res.data;
+  },
+
+  // Fixture
+  generarFixture: async (datos: {
+    discipline_id: number;
+    category_id: number;
+    start_date: string;
+    venue_ids: number[];
+  }): Promise<RespuestaApi<any>> => {
+    const res = await clienteApi.post('/fixture/generate', datos);
+    return res.data;
+  },
+  obtenerFixture: async (disciplineId: number, categoryId: number): Promise<RespuestaApi<Partido[]>> => {
+    const res = await clienteApi.get(`/fixture?discipline_id=${disciplineId}&category_id=${categoryId}`);
+    return res.data;
+  },
+  programarFecha: async (datos: {
+    discipline_id: number;
+    category_id: number;
+    round: number;
+    available_hours: string[];
+    venue_ids: number[];
+  }): Promise<RespuestaApi<any>> => {
+    const res = await clienteApi.post('/fixture/schedule-round', datos);
+    return res.data;
+  },
+};
+
+/**
+ * Servicios de Resultados, Incidencias y Sanciones
+ */
+export const serviciosResultados = {
+  // Actas de Partido
+  registrarActa: async (datos: {
+    match_id: number;
+    local_score: number;
+    visitor_score: number;
+    referee_signature?: string;
+    delegate_signature?: string;
+    observations?: string;
+  }): Promise<RespuestaApi<ActaPartido>> => {
+    const res = await clienteApi.post('/match-reports', datos);
+    return res.data;
+  },
+  bloquearActa: async (id: number): Promise<RespuestaApi<ActaPartido>> => {
+    const res = await clienteApi.post(`/match-reports/${id}/lock`);
+    return res.data;
+  },
+  obtenerActaPorPartido: async (matchId: number): Promise<RespuestaApi<ActaPartido>> => {
+    const res = await clienteApi.get(`/match-reports/by-match/${matchId}`);
+    return res.data;
+  },
+
+  // Incidencias
+  registrarIncidencia: async (datos: {
+    match_id: number;
+    player_id?: number | null;
+    team_id: number;
+    incidence_type: string;
+    minute: number;
+    description?: string;
+  }): Promise<RespuestaApi<Incidencia>> => {
+    const res = await clienteApi.post('/match-incidences', datos);
+    return res.data;
+  },
+  eliminarIncidencia: async (id: number): Promise<RespuestaApi<null>> => {
+    const res = await clienteApi.delete(`/match-incidences/${id}`);
+    return res.data;
+  },
+
+  // Sanciones
+  obtenerSanciones: async (): Promise<RespuestaApi<Sancion[]>> => {
+    const res = await clienteApi.get('/sanctions');
+    return res.data;
+  },
+
+  // Tabla de posiciones
+  obtenerPosiciones: async (disciplineId?: number, categoryId?: number): Promise<RespuestaApi<Posicion[]>> => {
+    let url = '/standings';
+    const params: string[] = [];
+    if (disciplineId) params.push(`discipline_id=${disciplineId}`);
+    if (categoryId) params.push(`category_id=${categoryId}`);
+    if (params.length > 0) url += `?${params.join('&')}`;
+    const res = await clienteApi.get(url);
+    return res.data;
+  },
+
+  // Estadísticas generales
+  obtenerGoleadores: async (): Promise<RespuestaApi<EstadisticaJugador[]>> => {
+    const res = await clienteApi.get('/statistics/top-scorers');
+    return res.data;
+  },
+  obtenerTarjetasAmarillas: async (): Promise<RespuestaApi<EstadisticaJugador[]>> => {
+    const res = await clienteApi.get('/statistics/top-yellow-cards');
+    return res.data;
+  },
+  obtenerTarjetasRojas: async (): Promise<RespuestaApi<EstadisticaJugador[]>> => {
+    const res = await clienteApi.get('/statistics/top-red-cards');
+    return res.data;
+  },
+};
