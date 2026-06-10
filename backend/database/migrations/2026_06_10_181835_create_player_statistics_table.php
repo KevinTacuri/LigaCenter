@@ -14,17 +14,14 @@ return new class extends Migration
             $table->foreignId('team_id')->constrained()->onDelete('cascade');
             $table->foreignId('discipline_id')->constrained()->onDelete('cascade');
             $table->foreignId('category_id')->constrained()->onDelete('cascade');
-            $table->unsignedBigInteger('tournament_id')->nullable();
+            $table->foreignId('championship_id')->constrained()->onDelete('cascade');
             $table->integer('goals')->default(0);
             $table->integer('yellow_cards')->default(0);
             $table->integer('red_cards')->default(0);
             $table->integer('matches_played')->default(0);
             $table->timestamps();
 
-            $table->unique(
-                ['player_id', 'discipline_id', 'category_id', 'tournament_id'],
-                'player_stats_unique'
-            );
+            $table->unique(['player_id', 'championship_id', 'category_id'], 'player_stats_unique');
         });
     }
 
