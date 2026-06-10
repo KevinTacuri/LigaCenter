@@ -1,0 +1,249 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\MatchReport;
+use App\Models\GameMatch;
+use App\Traits\ApiResponse;
+use OpenApi\Attributes as OA;
+
+class MatchReportController extends Controller
+{
+    use ApiResponse;
+
+    #[OA\Get(
+        path: '/api/match-reports',
+        operationId: 'getMatchReports',
+        summary: 'Listar actas de partido',
+        tags: ['Match Reports']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Actas obtenidas exitosamente'
+    )]
+    #[OA\Security(name: 'sanctum')]
+    public function index()
+    {
+        $reports = MatchReport::with('match')->get();
+        return $this->successResponse($reports, 'Actas obtenidas exitosamente');
+    }
+
+    #[OA\Post(
+        path: '/api/match-reports',
+        operationId: 'createMatchReport',
+        summary: 'Registrar acta de partido',
+        tags: ['Match Reports']
+    )]
+    #[OA\Response(
+        response: 201,
+        description: 'Acta registrada exitosamente'
+    )]
+    #[OA\Response(
+        response: 400,
+        description: 'Ya existe un acta para este partido'
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Error de validación'
+    )]
+    #[OA\Security(name: 'sanctum')]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['match_id', 'local_score', 'visitor_score'],
+            properties: [
+                new OA\Property(property: 'match_id', type: 'integer', example: 1),
+                new OA\Property(property: 'local_score', type: 'integer', example: 2),
+                new OA\Property(property: 'visitor_score', type: 'integer', example: 1),
+                new OA\Property(property: 'referee_signature', type: 'string', example: 'Juan Perez'),
+                new OA\Property(property: 'delegate_signature', type: 'string', example: 'Maria Gomez'),
+                new OA\Property(property: 'observations', type: 'string', example: 'Partido disputado'),
+                new OA\Property(property: 'is_locked', type: 'boolean', example: false)
+            ]
+        )
+    )]
+    public function store(Request $request)
+    {
+        $request->validate([
+            'match_id' => 'required|exists:matches,id',
+            'local_score' => 'required|integer|min:0',
+            'visitor_score' => 'required|integer|min:0',
+            'referee_signature' => 'nullable|string',
+            'delegate_signature' => 'nullable|string',
+            'observations' => 'nullable|string',
+            'is_locked' => 'boolean',
+        ]);
+
+        $existing = MatchReport::where('match_id', $request->match_id)->first();
+        if ($existing) {
+            return $this->errorResponse('Ya existe un acta para este partido', 400);
+        }
+
+        $report = MatchReport::create($request->all());
+        return $this->successResponse($report, 'Acta registrada exitosamente', 201);
+    }
+
+    #[OA\Get(
+        path: '/api/match-reports/{id}',
+        operationId: 'getMatchReport',
+        summary: 'Obtener acta por ID',
+        tags: ['Match Reports']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Acta obtenida exitosamente'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Acta no encontrada'
+    )]
+    #[OA\Security(name: 'sanctum')]
+    public function show($id)
+    {
+        $report = MatchReport::with('match')->find($id);
+        if (!$report) {
+            return $this->errorResponse('Acta no encontrada', 404);
+        }
+        return $this->successResponse($report, 'Acta obtenida exitosamente');
+    }
+
+    #[OA\Get(
+        path: '/api/match-reports/by-match/{matchId}',
+        operationId: 'getMatchReportByMatch',
+        summary: 'Obtener acta por partido',
+        tags: ['Match Reports']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Acta obtenida exitosamente'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Acta no encontrada'
+    )]
+    #[OA\Security(name: 'sanctum')]
+    public function getByMatch($matchId)
+    {
+        $report = MatchReport::with('match')->where('match_id', $matchId)->first();
+        if (!$report) {
+            return $this->errorResponse('Acta no encontrada', 404);
+        }
+        return $this->successResponse($report, 'Acta obtenida exitosamente');
+    }
+
+    #[OA\Put(
+        path: '/api/match-reports/{id}',
+        operationId: 'updateMatchReport',
+        summary: 'Actualizar acta',
+        tags: ['Match Reports']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Acta actualizada exitosamente'
+    )]
+    #[OA\Response(
+        response: 400,
+        description: 'El acta ya está bloqueada'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Acta no encontrada'
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Error de validación'
+    )]
+    #[OA\Security(name: 'sanctum')]
+    public function update(Request $request, $id)
+    {
+        $report = MatchReport::find($id);
+        if (!$report) {
+            return $this->errorResponse('Acta no encontrada', 404);
+        }
+
+        if ($report->is_locked) {
+            return $this->errorResponse('El acta ya está bloqueada', 400);
+        }
+
+        $request->validate([
+            'local_score' => 'integer|min:0',
+            'visitor_score' => 'integer|min:0',
+            'referee_signature' => 'nullable|string',
+            'delegate_signature' => 'nullable|string',
+            'observations' => 'nullable|string',
+            'is_locked' => 'boolean',
+        ]);
+
+        $report->update($request->all());
+        return $this->successResponse($report, 'Acta actualizada exitosamente');
+    }
+
+    #[OA\Post(
+        path: '/api/match-reports/{id}/lock',
+        operationId: 'lockMatchReport',
+        summary: 'Bloquear acta',
+        description: 'Bloquea el acta para evitar modificaciones adicionales',
+        tags: ['Match Reports']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Acta bloqueada exitosamente'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Acta no encontrada'
+    )]
+    #[OA\Security(name: 'sanctum')]
+    public function lock($id)
+    {
+        $report = MatchReport::find($id);
+        if (!$report) {
+            return $this->errorResponse('Acta no encontrada', 404);
+        }
+
+        $report->update(['is_locked' => true]);
+
+        $match = GameMatch::find($report->match_id);
+        if ($match) {
+            $match->update(['status' => 'finalizado']);
+        }
+
+        return $this->successResponse($report, 'Acta bloqueada exitosamente');
+    }
+
+    #[OA\Delete(
+        path: '/api/match-reports/{id}',
+        operationId: 'deleteMatchReport',
+        summary: 'Eliminar acta',
+        tags: ['Match Reports']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Acta eliminada exitosamente'
+    )]
+    #[OA\Response(
+        response: 400,
+        description: 'No se puede eliminar un acta bloqueada'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Acta no encontrada'
+    )]
+    #[OA\Security(name: 'sanctum')]
+    public function destroy($id)
+    {
+        $report = MatchReport::find($id);
+        if (!$report) {
+            return $this->errorResponse('Acta no encontrada', 404);
+        }
+
+        if ($report->is_locked) {
+            return $this->errorResponse('No se puede eliminar un acta bloqueada', 400);
+        }
+
+        $report->delete();
+        return $this->successResponse(null, 'Acta eliminada exitosamente');
+    }
+}

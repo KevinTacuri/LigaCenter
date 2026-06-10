@@ -1,0 +1,263 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Player;
+use App\Models\Team;
+use Illuminate\Http\Request;
+use OpenApi\Attributes as OA;
+
+#[OA\Tag(
+    name: "Players",
+    description: "Gestión de jugadores registrados en equipos, incluyendo validación de edad según categoría"
+)]
+class PlayerController extends Controller
+{
+    #[OA\Get(
+        path: "/api/players",
+        summary: "Listar jugadores",
+        description: "Retorna todos los jugadores registrados en el sistema con información del equipo, organización, categoría y disciplina.",
+        tags: ["Players"],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Listado de jugadores obtenido correctamente"
+            )
+        ]
+    )]
+    public function index()
+    {
+        return response()->json(
+            Player::with([
+                'team.organization',
+                'team.category',
+                'team.discipline'
+            ])->get()
+        );
+    }
+
+    #[OA\Post(
+        path: "/api/players",
+        summary: "Registrar jugador",
+        description: "Registra un nuevo jugador en un equipo validando automáticamente su elegibilidad según el rango de edad de la categoría.",
+        tags: ["Players"],
+        requestBody: new OA\RequestBody(
+            required: true,
+            description: "Datos necesarios para registrar un jugador",
+            content: new OA\JsonContent(
+                required: ["team_id", "full_name", "age"],
+                properties: [
+                    new OA\Property(
+                        property: "team_id",
+                        type: "integer",
+                        description: "ID del equipo al que pertenece el jugador",
+                        example: 1
+                    ),
+                    new OA\Property(
+                        property: "full_name",
+                        type: "string",
+                        description: "Nombre completo del jugador",
+                        example: "Juan Pérez"
+                    ),
+                    new OA\Property(
+                        property: "dni",
+                        type: "string",
+                        description: "Documento de identidad (opcional)",
+                        example: "12345678"
+                    ),
+                    new OA\Property(
+                        property: "college_id",
+                        type: "string",
+                        description: "Código universitario o ID institucional",
+                        example: "UNI2024001"
+                    ),
+                    new OA\Property(
+                        property: "age",
+                        type: "integer",
+                        description: "Edad del jugador (validada contra la categoría del equipo)",
+                        example: 20
+                    )
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: "Jugador registrado correctamente"
+            ),
+            new OA\Response(
+                response: 422,
+                description: "Error de validación o jugador no elegible por edad"
+            )
+        ]
+    )]
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'team_id' => 'required|exists:teams,id',
+            'full_name' => 'required|string|max:255',
+            'dni' => 'nullable|string|max:20|unique:players,dni',
+            'college_id' => 'nullable|string|max:50',
+            'age' => 'required|integer|min:1'
+        ]);
+
+        $team = Team::with('category')->findOrFail($validated['team_id']);
+        $category = $team->category;
+
+        if (!$category || !$category->age_range) {
+            return response()->json([
+                'message' => 'La categoría no tiene rango de edad definido.'
+            ], 422);
+        }
+
+        [$minAge, $maxAge] = explode('-', $category->age_range);
+
+        $minAge = (int) $minAge;
+        $maxAge = (int) $maxAge;
+
+        $isEligible =
+            $validated['age'] >= $minAge &&
+            $validated['age'] <= $maxAge;
+
+        if (!$isEligible) {
+            return response()->json([
+                'message' => 'La edad del jugador no corresponde a la categoría.'
+            ], 422);
+        }
+
+        $player = Player::create([
+            ...$validated,
+            'is_eligible' => true
+        ]);
+
+        return response()->json($player, 201);
+    }
+
+    #[OA\Get(
+        path: "/api/players/{id}",
+        summary: "Obtener jugador por ID",
+        description: "Devuelve la información detallada de un jugador junto con su equipo, categoría, organización y disciplina.",
+        tags: ["Players"],
+        parameters: [
+            new OA\Parameter(
+                name: "id",
+                description: "ID del jugador",
+                in: "path",
+                required: true,
+                schema: new OA\Schema(type: "integer")
+            )
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Jugador encontrado correctamente"
+            ),
+            new OA\Response(
+                response: 404,
+                description: "Jugador no encontrado"
+            )
+        ]
+    )]
+    public function show($id)
+    {
+        return response()->json(
+            Player::with([
+                'team.organization',
+                'team.category',
+                'team.discipline'
+            ])->findOrFail($id)
+        );
+    }
+
+    #[OA\Put(
+        path: "/api/players/{id}",
+        summary: "Actualizar jugador",
+        description: "Permite actualizar los datos de un jugador registrado en el sistema.",
+        tags: ["Players"],
+        parameters: [
+            new OA\Parameter(
+                name: "id",
+                description: "ID del jugador a actualizar",
+                in: "path",
+                required: true,
+                schema: new OA\Schema(type: "integer")
+            )
+        ],
+        requestBody: new OA\RequestBody(
+            required: false,
+            description: "Campos opcionales para actualizar el jugador",
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: "team_id", type: "integer", example: 1),
+                    new OA\Property(property: "full_name", type: "string", example: "Juan Pérez"),
+                    new OA\Property(property: "dni", type: "string", example: "12345678"),
+                    new OA\Property(property: "college_id", type: "string", example: "UNI2024001"),
+                    new OA\Property(property: "age", type: "integer", example: 21)
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Jugador actualizado correctamente"
+            ),
+            new OA\Response(
+                response: 404,
+                description: "Jugador no encontrado"
+            )
+        ]
+    )]
+    public function update(Request $request, $id)
+    {
+        $player = Player::findOrFail($id);
+
+        $validated = $request->validate([
+            'team_id' => 'sometimes|exists:teams,id',
+            'full_name' => 'sometimes|string|max:255',
+            'dni' => 'nullable|string|max:20|unique:players,dni,' . $player->id,
+            'college_id' => 'nullable|string|max:50',
+            'age' => 'sometimes|integer|min:1'
+        ]);
+
+        $player->update($validated);
+
+        return response()->json($player);
+    }
+
+    #[OA\Delete(
+        path: "/api/players/{id}",
+        summary: "Eliminar jugador",
+        description: "Elimina un jugador del sistema. Esta acción es permanente.",
+        tags: ["Players"],
+        parameters: [
+            new OA\Parameter(
+                name: "id",
+                description: "ID del jugador a eliminar",
+                in: "path",
+                required: true,
+                schema: new OA\Schema(type: "integer")
+            )
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Jugador eliminado correctamente"
+            ),
+            new OA\Response(
+                response: 404,
+                description: "Jugador no encontrado"
+            )
+        ]
+    )]
+    public function destroy($id)
+    {
+        $player = Player::findOrFail($id);
+
+        $player->delete();
+
+        return response()->json([
+            'message' => 'Jugador eliminado correctamente'
+        ]);
+    }
+}
