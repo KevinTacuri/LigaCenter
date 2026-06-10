@@ -7,11 +7,28 @@ use Illuminate\Http\Request;
 use App\Models\MatchReport;
 use App\Models\GameMatch;
 use App\Traits\ApiResponse;
+use App\Services\StandingService;
+use App\Services\SanctionService;
+use App\Services\PlayerStatisticService;
 use OpenApi\Attributes as OA;
 
 class MatchReportController extends Controller
 {
     use ApiResponse;
+
+    protected $standingService;
+    protected $sanctionService;
+    protected $playerStatisticService;
+
+    public function __construct(
+        StandingService $standingService,
+        SanctionService $sanctionService,
+        PlayerStatisticService $playerStatisticService
+    ) {
+        $this->standingService = $standingService;
+        $this->sanctionService = $sanctionService;
+        $this->playerStatisticService = $playerStatisticService;
+    }
 
     #[OA\Get(
         path: '/api/match-reports',
@@ -184,7 +201,7 @@ class MatchReportController extends Controller
         path: '/api/match-reports/{id}/lock',
         operationId: 'lockMatchReport',
         summary: 'Bloquear acta',
-        description: 'Bloquea el acta para evitar modificaciones adicionales',
+        description: 'Bloquea el acta, actualiza tabla de posiciones, estadísticas de jugadores y genera sanciones',
         tags: ['Match Reports']
     )]
     #[OA\Response(
@@ -192,25 +209,50 @@ class MatchReportController extends Controller
         description: 'Acta bloqueada exitosamente'
     )]
     #[OA\Response(
+        response: 400,
+        description: 'El acta ya está bloqueada o no hay resultados'
+    )]
+    #[OA\Response(
         response: 404,
         description: 'Acta no encontrada'
     )]
     #[OA\Security(name: 'sanctum')]
-    public function lock($id)
+    public function lock(Request $request, $id)
     {
         $report = MatchReport::find($id);
         if (!$report) {
             return $this->errorResponse('Acta no encontrada', 404);
         }
 
-        $report->update(['is_locked' => true]);
-
-        $match = GameMatch::find($report->match_id);
-        if ($match) {
-            $match->update(['status' => 'finalizado']);
+        if ($report->is_locked) {
+            return $this->errorResponse('El acta ya está bloqueada', 400);
         }
 
-        return $this->successResponse($report, 'Acta bloqueada exitosamente');
+        if ($report->local_score === null || $report->visitor_score === null) {
+            return $this->errorResponse('No hay resultados registrados para este partido', 400);
+        }
+
+        $match = GameMatch::find($report->match_id);
+        if (!$match) {
+            return $this->errorResponse('Partido no encontrado', 404);
+        }
+
+        $tournamentId = $request->input('tournament_id', null);
+
+        $this->standingService->updateFromMatch($match, $report->local_score, $report->visitor_score);
+
+        $this->playerStatisticService->updateFromMatch($match, $tournamentId);
+
+        $this->sanctionService->generateAutomaticSanctions($match->id);
+
+        $report->update(['is_locked' => true]);
+
+        $match->update(['status' => 'finalizado']);
+
+        return $this->successResponse([
+            'report' => $report,
+            'match' => $match,
+        ], 'Acta bloqueada exitosamente. Tabla de posiciones, estadísticas de jugadores y sanciones actualizadas.');
     }
 
     #[OA\Delete(
