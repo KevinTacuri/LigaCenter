@@ -18,17 +18,40 @@ class SanctionController extends Controller
         summary: 'Listar sanciones',
         tags: ['Sanctions']
     )]
+    #[OA\Parameter(
+        name: 'championship_id',
+        description: 'ID del campeonato (opcional)',
+        in: 'query',
+        required: false,
+        schema: new OA\Schema(type: 'integer')
+    )]
+    #[OA\Parameter(
+        name: 'player_id',
+        description: 'ID del jugador (opcional)',
+        in: 'query',
+        required: false,
+        schema: new OA\Schema(type: 'integer')
+    )]
     #[OA\Response(
         response: 200,
         description: 'Sanciones obtenidas exitosamente'
     )]
     #[OA\Security(name: 'sanctum')]
-    public function index()
+    public function index(Request $request)
     {
-        $sanctions = Sanction::with([
-            'player',
-            'match'
-        ])->get();
+        $query = Sanction::with(['player', 'match']);
+
+        if ($request->has('championship_id')) {
+            $query->whereHas('match', function ($q) use ($request) {
+                $q->where('championship_id', $request->championship_id);
+            });
+        }
+
+        if ($request->has('player_id')) {
+            $query->where('player_id', $request->player_id);
+        }
+
+        $sanctions = $query->get();
 
         return $this->successResponse(
             $sanctions,

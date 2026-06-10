@@ -33,9 +33,9 @@ class FixtureController extends Controller
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
-            required: ['discipline_id', 'category_id', 'start_date', 'venue_ids'],
+            required: ['championship_id', 'category_id', 'start_date', 'venue_ids'],
             properties: [
-                new OA\Property(property: 'discipline_id', type: 'integer', example: 1),
+                new OA\Property(property: 'championship_id', type: 'integer', example: 1),
                 new OA\Property(property: 'category_id', type: 'integer', example: 1),
                 new OA\Property(property: 'start_date', type: 'string', format: 'date', example: '2026-06-15'),
                 new OA\Property(property: 'venue_ids', type: 'array', items: new OA\Items(type: 'integer'), example: [1, 2])
@@ -48,7 +48,7 @@ class FixtureController extends Controller
     public function generate(Request $request)
     {
         $request->validate([
-            'discipline_id' => 'required|exists:disciplines,id',
+            'championship_id' => 'required|exists:championships,id',
             'category_id' => 'required|exists:categories,id',
             'start_date' => 'required|date',
             'venue_ids' => 'required|array',
@@ -57,7 +57,7 @@ class FixtureController extends Controller
 
         try {
             $matches = $this->fixtureService->generateRoundRobin(
-                $request->discipline_id,
+                $request->championship_id,
                 $request->category_id,
                 $request->start_date,
                 $request->venue_ids
@@ -73,13 +73,13 @@ class FixtureController extends Controller
         path: '/api/fixture',
         operationId: 'getFixture',
         summary: 'Obtener fixture',
-        description: 'Obtiene el fixture generado para una disciplina y categoría específicas.',
+        description: 'Obtiene el fixture generado para un campeonato y categoría específicos.',
         tags: ['Fixture']
     )]
     #[OA\Security(name: 'sanctum')]
     #[OA\Parameter(
-        name: 'discipline_id',
-        description: 'ID de la disciplina',
+        name: 'championship_id',
+        description: 'ID del campeonato',
         in: 'query',
         required: true,
         schema: new OA\Schema(type: 'integer')
@@ -96,12 +96,12 @@ class FixtureController extends Controller
     public function getFixture(Request $request)
     {
         $request->validate([
-            'discipline_id' => 'required|exists:disciplines,id',
+            'championship_id' => 'required|exists:championships,id',
             'category_id' => 'required|exists:categories,id',
         ]);
 
         $fixture = $this->fixtureService->getFixture(
-            $request->discipline_id,
+            $request->championship_id,
             $request->category_id
         );
 
@@ -119,9 +119,9 @@ class FixtureController extends Controller
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
-            required: ['discipline_id', 'category_id', 'round', 'available_hours', 'venue_ids'],
+            required: ['championship_id', 'category_id', 'round', 'available_hours', 'venue_ids'],
             properties: [
-                new OA\Property(property: 'discipline_id', type: 'integer', example: 1),
+                new OA\Property(property: 'championship_id', type: 'integer', example: 1),
                 new OA\Property(property: 'category_id', type: 'integer', example: 1),
                 new OA\Property(property: 'round', type: 'integer', example: 1),
                 new OA\Property(property: 'available_hours', type: 'array', items: new OA\Items(type: 'string'), example: ['08:00', '10:00', '12:00']),
@@ -135,7 +135,7 @@ class FixtureController extends Controller
     public function scheduleRound(Request $request)
     {
         $request->validate([
-            'discipline_id' => 'required|exists:disciplines,id',
+            'championship_id' => 'required|exists:championships,id',
             'category_id' => 'required|exists:categories,id',
             'round' => 'required|integer|min:1',
             'available_hours' => 'required|array',
@@ -146,7 +146,7 @@ class FixtureController extends Controller
 
         try {
             $scheduled = $this->schedulingService->scheduleMatchesForRound(
-                $request->discipline_id,
+                $request->championship_id,
                 $request->category_id,
                 $request->round,
                 $request->available_hours,

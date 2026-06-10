@@ -48,6 +48,13 @@ class GameMatchController extends Controller
         required: false,
         schema: new OA\Schema(type: 'string', enum: ['programado', 'en_curso', 'finalizado', 'cancelado', 'reprogramado'])
     )]
+    #[OA\Parameter(
+        name: 'championship_id',
+        description: 'ID del campeonato (opcional, para filtrar)',
+        in: 'query',
+        required: false,
+        schema: new OA\Schema(type: 'integer')
+    )]
     #[OA\Response(
         response: 200,
         description: 'Partidos obtenidos exitosamente'
@@ -56,6 +63,9 @@ class GameMatchController extends Controller
     {
         $query = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'discipline', 'category']);
 
+        if ($request->has('championship_id')) {
+            $query->where('championship_id', $request->championship_id);
+        }
         if ($request->has('discipline_id')) {
             $query->where('discipline_id', $request->discipline_id);
         }
@@ -92,7 +102,7 @@ class GameMatchController extends Controller
     #[OA\Response(response: 404, description: 'Partido no encontrado')]
     public function show($id)
     {
-        $match = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'discipline', 'category'])->find($id);
+        $match = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'discipline', 'category', 'championship'])->find($id);
         if (!$match) {
             return $this->errorResponse('Partido no encontrado', 404);
         }

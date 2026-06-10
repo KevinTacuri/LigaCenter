@@ -19,14 +19,28 @@ class VenueController extends Controller
         description: 'Obtiene una lista de todos los escenarios deportivos.',
         tags: ['Escenarios']
     )]
+    #[OA\Parameter(
+        name: 'championship_id',
+        description: 'ID del campeonato (opcional)',
+        in: 'query',
+        required: false,
+        schema: new OA\Schema(type: 'integer')
+    )]
     #[OA\Security(name: 'sanctum')]
     #[OA\Response(
         response: 200,
         description: 'Escenarios obtenidos exitosamente'
     )]
-    public function index()
+    public function index(Request $request)
     {
-        $venues = Venue::all();
+        $query = Venue::query();
+
+        if ($request->has('championship_id')) {
+            $query->where('championship_id', $request->championship_id);
+        }
+
+        $venues = $query->get();
+
         return $this->successResponse($venues, 'Escenarios obtenidos exitosamente');
     }
 
@@ -41,8 +55,9 @@ class VenueController extends Controller
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
-            required: ['name', 'venue_type', 'location'],
+            required: ['name', 'venue_type', 'location', 'championship_id'],
             properties: [
+                new OA\Property(property: 'championship_id', type: 'integer', example: 1),
                 new OA\Property(property: 'name', type: 'string', example: 'Estadio Nacional'),
                 new OA\Property(property: 'venue_type', type: 'string', example: 'estadio'),
                 new OA\Property(property: 'location', type: 'string', example: 'Lima'),
@@ -56,6 +71,7 @@ class VenueController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            'championship_id' => 'required|exists:championships,id',
             'name' => 'required|string|max:255',
             'venue_type' => 'required|string',
             'location' => 'required|string',
@@ -175,14 +191,28 @@ class VenueController extends Controller
         description: 'Obtiene una lista de escenarios deportivos disponibles.',
         tags: ['Escenarios']
     )]
+    #[OA\Parameter(
+        name: 'championship_id',
+        description: 'ID del campeonato (opcional)',
+        in: 'query',
+        required: false,
+        schema: new OA\Schema(type: 'integer')
+    )]
     #[OA\Security(name: 'sanctum')]
     #[OA\Response(
         response: 200,
         description: 'Escenarios disponibles obtenidos exitosamente'
     )]
-    public function getAvailableVenues()
+    public function getAvailableVenues(Request $request)
     {
-        $venues = Venue::where('is_available', true)->get();
+        $query = Venue::where('is_available', true);
+
+        if ($request->has('championship_id')) {
+            $query->where('championship_id', $request->championship_id);
+        }
+
+        $venues = $query->get();
+
         return $this->successResponse($venues, 'Escenarios disponibles obtenidos');
     }
 }

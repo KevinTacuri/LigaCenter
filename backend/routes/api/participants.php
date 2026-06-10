@@ -7,12 +7,10 @@ use App\Http\Controllers\Api\PlayerController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DisciplineController;
 
-Route::middleware('auth:sanctum')->group(function () {
-
+Route::middleware(['auth:sanctum', 'championship.access'])->group(function () {
     Route::apiResource('organizations', OrganizationController::class);
     Route::apiResource('teams', TeamController::class);
     Route::apiResource('players', PlayerController::class);
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('disciplines', DisciplineController::class);
-
 });

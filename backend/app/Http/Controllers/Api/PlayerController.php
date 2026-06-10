@@ -19,6 +19,15 @@ class PlayerController extends Controller
         summary: "Listar jugadores",
         description: "Retorna todos los jugadores registrados en el sistema con información del equipo, organización, categoría y disciplina.",
         tags: ["Players"],
+        parameters: [
+            new OA\Parameter(
+                name: "championship_id",
+                description: "ID del campeonato (opcional)",
+                in: "query",
+                required: false,
+                schema: new OA\Schema(type: "integer")
+            )
+        ],
         responses: [
             new OA\Response(
                 response: 200,
@@ -26,15 +35,21 @@ class PlayerController extends Controller
             )
         ]
     )]
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(
-            Player::with([
-                'team.organization',
-                'team.category',
-                'team.discipline'
-            ])->get()
-        );
+        $query = Player::with([
+            'team.organization',
+            'team.category',
+            'team.discipline'
+        ]);
+
+        if ($request->has('championship_id')) {
+            $query->whereHas('team', function ($q) use ($request) {
+                $q->where('championship_id', $request->championship_id);
+            });
+        }
+
+        return response()->json($query->get());
     }
 
     #[OA\Post(

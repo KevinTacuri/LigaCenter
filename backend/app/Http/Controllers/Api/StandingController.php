@@ -18,6 +18,27 @@ class StandingController extends Controller
         summary: 'Tabla de posiciones',
         tags: ['Standings']
     )]
+    #[OA\Parameter(
+        name: 'championship_id',
+        description: 'ID del campeonato (opcional)',
+        in: 'query',
+        required: false,
+        schema: new OA\Schema(type: 'integer')
+    )]
+    #[OA\Parameter(
+        name: 'discipline_id',
+        description: 'ID de la disciplina (opcional)',
+        in: 'query',
+        required: false,
+        schema: new OA\Schema(type: 'integer')
+    )]
+    #[OA\Parameter(
+        name: 'category_id',
+        description: 'ID de la categoría (opcional)',
+        in: 'query',
+        required: false,
+        schema: new OA\Schema(type: 'integer')
+    )]
     #[OA\Response(
         response: 200,
         description: 'Tabla de posiciones obtenida exitosamente'
@@ -30,6 +51,10 @@ class StandingController extends Controller
             'discipline',
             'category'
         ]);
+
+        if ($request->has('championship_id')) {
+            $query->where('championship_id', $request->championship_id);
+        }
 
         if ($request->has('discipline_id')) {
             $query->where('discipline_id', $request->discipline_id);
@@ -93,6 +118,27 @@ class StandingController extends Controller
         summary: 'Obtener posición por equipo',
         tags: ['Standings']
     )]
+    #[OA\Parameter(
+        name: 'championship_id',
+        description: 'ID del campeonato (opcional)',
+        in: 'query',
+        required: false,
+        schema: new OA\Schema(type: 'integer')
+    )]
+    #[OA\Parameter(
+        name: 'discipline_id',
+        description: 'ID de la disciplina (opcional)',
+        in: 'query',
+        required: false,
+        schema: new OA\Schema(type: 'integer')
+    )]
+    #[OA\Parameter(
+        name: 'category_id',
+        description: 'ID de la categoría (opcional)',
+        in: 'query',
+        required: false,
+        schema: new OA\Schema(type: 'integer')
+    )]
     #[OA\Response(
         response: 200,
         description: 'Registro obtenido exitosamente'
@@ -109,6 +155,10 @@ class StandingController extends Controller
             'discipline',
             'category'
         ])->where('team_id', $teamId);
+
+        if ($request->has('championship_id')) {
+            $query->where('championship_id', $request->championship_id);
+        }
 
         if ($request->has('discipline_id')) {
             $query->where('discipline_id', $request->discipline_id);
