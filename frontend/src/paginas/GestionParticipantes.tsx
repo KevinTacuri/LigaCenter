@@ -32,7 +32,7 @@ export const GestionParticipantes: React.FC = () => {
   const [nuevaDisc, setNuevaDisc] = useState({ name: '', description: '', rules: '', status: 'active' });
   const [nuevaCat, setNuevaCat] = useState({ name: '', age_min: '', age_max: '', gender: 'Masculino' });
   const [nuevaOrg, setNuevaOrg] = useState({ name: '', representative: '', email: '', phone: '' });
-  const [nuevoEq, setNuevoEq] = useState({ name: '', representative: '', organization_id: '' });
+  const [nuevoEq, setNuevoEq] = useState({ name: '', representative: '', organization_id: '', discipline_id: '', category_id: '' });
   const [nuevoJug, setNuevoJug] = useState({ name: '', dni: '', phone: '', team_id: '', number: '', position: 'Delantero' });
 
   useEffect(() => {
@@ -61,6 +61,10 @@ export const GestionParticipantes: React.FC = () => {
         if (resEq.success) setEquipos(resEq.data);
         const resOrg = await serviciosParticipantes.obtenerOrganizaciones();
         if (resOrg.success) setOrganizaciones(resOrg.data);
+        const resDisc = await serviciosParticipantes.obtenerDisciplinas();
+        if (resDisc.success) setDisciplinas(resDisc.data);
+        const resCat = await serviciosParticipantes.obtenerCategorias();
+        if (resCat.success) setCategorias(resCat.data);
       } else if (tabActiva === 'jugadores') {
         const resJug = await serviciosParticipantes.obtenerJugadores();
         if (resJug.success) setJugadores(resJug.data);
@@ -137,16 +141,21 @@ export const GestionParticipantes: React.FC = () => {
 
   const guardarEquipo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevoEq.name || !nuevoEq.organization_id) return;
+    if (!nuevoEq.name || !nuevoEq.organization_id || !nuevoEq.discipline_id || !nuevoEq.category_id) {
+      mostrarMensaje('Complete todos los campos obligatorios para el equipo.', true);
+      return;
+    }
     try {
       const res = await serviciosParticipantes.crearEquipo({
         name: nuevoEq.name,
         organization_id: parseInt(nuevoEq.organization_id),
+        discipline_id: parseInt(nuevoEq.discipline_id),
+        category_id: parseInt(nuevoEq.category_id),
         representative: nuevoEq.representative || null
       });
       if (res.success) {
         mostrarMensaje('Equipo registrado exitosamente.');
-        setNuevoEq({ name: '', representative: '', organization_id: '' });
+        setNuevoEq({ name: '', representative: '', organization_id: '', discipline_id: '', category_id: '' });
         cargarDatos();
       }
     } catch (err) {
@@ -390,6 +399,34 @@ export const GestionParticipantes: React.FC = () => {
                       <option key={o.id} value={o.id}>{o.name}</option>
                     ))}
                   </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Disciplina *</label>
+                    <select
+                      required value={nuevoEq.discipline_id}
+                      onChange={(e) => setNuevoEq({ ...nuevoEq, discipline_id: e.target.value })}
+                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                    >
+                      <option value="">Seleccionar Disciplina</option>
+                      {disciplinas.map((d) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Categoría *</label>
+                    <select
+                      required value={nuevoEq.category_id}
+                      onChange={(e) => setNuevoEq({ ...nuevoEq, category_id: e.target.value })}
+                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                    >
+                      <option value="">Seleccionar Categoría</option>
+                      {categorias.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer">
                   Guardar Equipo
