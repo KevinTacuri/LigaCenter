@@ -19,6 +19,10 @@ class MatchIncidenceController extends Controller
         summary: 'Listar incidencias',
         tags: ['Match Incidences']
     )]
+    #[OA\Response(
+        response: 200,
+        description: 'Incidencias obtenidas exitosamente'
+    )]
     #[OA\Security(name: 'sanctum')]
     public function index()
     {
@@ -39,6 +43,18 @@ class MatchIncidenceController extends Controller
         operationId: 'createMatchIncidence',
         summary: 'Registrar incidencia',
         tags: ['Match Incidences']
+    )]
+    #[OA\Response(
+        response: 201,
+        description: 'Incidencia registrada exitosamente'
+    )]
+    #[OA\Response(
+        response: 400,
+        description: 'El partido ya fue oficializado'
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Error de validación'
     )]
     #[OA\Security(name: 'sanctum')]
     #[OA\RequestBody(
@@ -74,12 +90,6 @@ class MatchIncidenceController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        /*
-        |----------------------------------------------------------
-        | EDU-0008
-        | No permitir incidencias si el partido ya fue cerrado
-        |----------------------------------------------------------
-        */
         $report = MatchReport::where(
             'match_id',
             $request->match_id
@@ -116,6 +126,14 @@ class MatchIncidenceController extends Controller
         summary: 'Obtener incidencia',
         tags: ['Match Incidences']
     )]
+    #[OA\Response(
+        response: 200,
+        description: 'Incidencia obtenida exitosamente'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Incidencia no encontrada'
+    )]
     #[OA\Security(name: 'sanctum')]
     public function show($id)
     {
@@ -143,6 +161,22 @@ class MatchIncidenceController extends Controller
         operationId: 'updateMatchIncidence',
         summary: 'Actualizar incidencia',
         tags: ['Match Incidences']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Incidencia actualizada exitosamente'
+    )]
+    #[OA\Response(
+        response: 400,
+        description: 'El partido ya fue oficializado'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Incidencia no encontrada'
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Error de validación'
     )]
     #[OA\Security(name: 'sanctum')]
     public function update(Request $request, $id)
@@ -190,6 +224,18 @@ class MatchIncidenceController extends Controller
         operationId: 'deleteMatchIncidence',
         summary: 'Eliminar incidencia',
         tags: ['Match Incidences']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Incidencia eliminada exitosamente'
+    )]
+    #[OA\Response(
+        response: 400,
+        description: 'El partido ya fue oficializado'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Incidencia no encontrada'
     )]
     #[OA\Security(name: 'sanctum')]
     public function destroy($id)

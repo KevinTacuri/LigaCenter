@@ -18,6 +18,10 @@ class SanctionController extends Controller
         summary: 'Listar sanciones',
         tags: ['Sanctions']
     )]
+    #[OA\Response(
+        response: 200,
+        description: 'Sanciones obtenidas exitosamente'
+    )]
     #[OA\Security(name: 'sanctum')]
     public function index()
     {
@@ -38,7 +42,31 @@ class SanctionController extends Controller
         summary: 'Registrar sanción',
         tags: ['Sanctions']
     )]
+    #[OA\Response(
+        response: 201,
+        description: 'Sanción registrada exitosamente'
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Error de validación'
+    )]
     #[OA\Security(name: 'sanctum')]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['player_id', 'origin_match_id', 'sanction_type', 'reason', 'start_date', 'status'],
+            properties: [
+                new OA\Property(property: 'player_id', type: 'integer', example: 1),
+                new OA\Property(property: 'origin_match_id', type: 'integer', example: 1),
+                new OA\Property(property: 'sanction_type', type: 'string', example: 'tarjeta_roja'),
+                new OA\Property(property: 'reason', type: 'string', example: 'Conducta violenta'),
+                new OA\Property(property: 'start_date', type: 'string', format: 'date', example: '2026-06-10'),
+                new OA\Property(property: 'end_date', type: 'string', format: 'date', example: '2026-06-17'),
+                new OA\Property(property: 'duration', type: 'integer', example: 7),
+                new OA\Property(property: 'status', type: 'string', example: 'activa')
+            ]
+        )
+    )]
     public function store(Request $request)
     {
         $request->validate([
@@ -69,6 +97,14 @@ class SanctionController extends Controller
         summary: 'Obtener sanción',
         tags: ['Sanctions']
     )]
+    #[OA\Response(
+        response: 200,
+        description: 'Sanción obtenida exitosamente'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Sanción no encontrada'
+    )]
     #[OA\Security(name: 'sanctum')]
     public function show($id)
     {
@@ -95,6 +131,18 @@ class SanctionController extends Controller
         operationId: 'updateSanction',
         summary: 'Actualizar sanción',
         tags: ['Sanctions']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Sanción actualizada exitosamente'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Sanción no encontrada'
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Error de validación'
     )]
     #[OA\Security(name: 'sanctum')]
     public function update(Request $request, $id)
@@ -132,6 +180,14 @@ class SanctionController extends Controller
         operationId: 'deleteSanction',
         summary: 'Eliminar sanción',
         tags: ['Sanctions']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Sanción eliminada exitosamente'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Sanción no encontrada'
     )]
     #[OA\Security(name: 'sanctum')]
     public function destroy($id)
