@@ -37,6 +37,14 @@ class Player extends Model
             ->withTimestamps();
     }
 
+    public function team()
+    {
+        return $this->belongsToMany(Team::class, 'team_players')
+            ->withPivot('jersey_number', 'status')
+            ->withTimestamps()
+            ->one();
+    }
+
     public function statistics()
     {
         return $this->hasMany(PlayerStatistic::class);

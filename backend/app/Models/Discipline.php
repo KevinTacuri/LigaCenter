@@ -12,9 +12,9 @@ class Discipline extends Model
         'specific_rules',
     ];
 
-    public function teams(): HasMany
+    public function teams()
     {
-        return $this->hasMany(Team::class);
+        return $this->hasManyThrough(Team::class, Category::class);
     }
 
     public function categories(): HasMany
