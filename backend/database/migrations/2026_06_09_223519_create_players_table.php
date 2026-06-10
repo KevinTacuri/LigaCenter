@@ -16,6 +16,12 @@ return new class extends Migration
             $table->string('college_id')->nullable();
             $table->integer('age')->nullable();
             $table->boolean('is_eligible')->default(true);
+
+            $table->integer('total_goals')->default(0);
+            $table->integer('total_yellow_cards')->default(0);
+            $table->integer('total_red_cards')->default(0);
+            $table->integer('total_matches_played')->default(0);
+
             $table->timestamps();
             $table->softDeletes();
         });
