@@ -243,9 +243,7 @@ export interface Categoria {
 export interface Organizacion {
   id: number;
   name: string;
-  representative: string;
-  email?: string | null;
-  phone?: string | null;
+  delegate_name: string;
 }
 
 export interface Equipo {

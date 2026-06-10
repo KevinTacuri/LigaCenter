@@ -31,7 +31,7 @@ export const GestionParticipantes: React.FC = () => {
   // Estados de formularios
   const [nuevaDisc, setNuevaDisc] = useState({ name: '', description: '', rules: '', status: 'active' });
   const [nuevaCat, setNuevaCat] = useState({ name: '', age_min: '', age_max: '', gender: 'Masculino', discipline_id: '' });
-  const [nuevaOrg, setNuevaOrg] = useState({ name: '', representative: '', email: '', phone: '' });
+  const [nuevaOrg, setNuevaOrg] = useState({ name: '', delegate_name: '' });
   const [nuevoEq, setNuevoEq] = useState({ name: '', representative: '', organization_id: '', discipline_id: '', category_id: '' });
   const [nuevoJug, setNuevoJug] = useState({ name: '', dni: '', phone: '', team_id: '', number: '', position: 'Delantero' });
 
@@ -132,12 +132,15 @@ export const GestionParticipantes: React.FC = () => {
 
   const guardarOrganizacion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevaOrg.name || !nuevaOrg.representative) return;
+    if (!nuevaOrg.name || !nuevaOrg.delegate_name) return;
     try {
-      const res = await serviciosParticipantes.crearOrganizacion(nuevaOrg);
+      const res = await serviciosParticipantes.crearOrganizacion({
+        name: nuevaOrg.name,
+        delegate_name: nuevaOrg.delegate_name
+      });
       if (res.success) {
         mostrarMensaje('Organización registrada exitosamente.');
-        setNuevaOrg({ name: '', representative: '', email: '', phone: '' });
+        setNuevaOrg({ name: '', delegate_name: '' });
         cargarDatos();
       }
     } catch (err) {
@@ -368,18 +371,10 @@ export const GestionParticipantes: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Representante *</label>
+                  <label className="text-xs font-bold text-slate-700 block">Delegado Responsable *</label>
                   <input
                     type="text" required placeholder="Nombre del Delegado"
-                    value={nuevaOrg.representative} onChange={(e) => setNuevaOrg({ ...nuevaOrg, representative: e.target.value })}
-                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Email</label>
-                  <input
-                    type="email" placeholder="correo@ejemplo.com"
-                    value={nuevaOrg.email} onChange={(e) => setNuevaOrg({ ...nuevaOrg, email: e.target.value })}
+                    value={nuevaOrg.delegate_name} onChange={(e) => setNuevaOrg({ ...nuevaOrg, delegate_name: e.target.value })}
                     className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
                   />
                 </div>
@@ -556,7 +551,7 @@ export const GestionParticipantes: React.FC = () => {
                       <tr key={o.id} className="hover:bg-slate-50/40">
                         <td className="p-3 pl-4">
                           <div className="font-bold text-slate-900">{o.name}</div>
-                          <div className="text-xs text-slate-500">Representante: {o.representative}</div>
+                          <div className="text-xs text-slate-500">Delegado: {o.delegate_name}</div>
                         </td>
                         <td className="p-3 pr-4 text-right">
                           <button onClick={() => eliminarElemento(o.id)} className="text-xs font-bold text-rose-600 hover:underline cursor-pointer">Eliminar</button>
