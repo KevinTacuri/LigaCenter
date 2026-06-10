@@ -115,8 +115,8 @@ export const serviciosAutenticacion = {
   },
 
   // Solicitar recuperación de contraseña (envía enlace al correo)
-  solicitarRecuperacion: async (correo: string): Promise<RespuestaApi<null>> => {
-    const respuesta: AxiosResponse<RespuestaApi<null>> = await clienteApi.post('/forgot-password', { email: correo });
+  solicitarRecuperacion: async (correo: string): Promise<RespuestaApi<any>> => {
+    const respuesta: AxiosResponse<RespuestaApi<any>> = await clienteApi.post('/forgot-password', { email: correo });
     return respuesta.data;
   },
 

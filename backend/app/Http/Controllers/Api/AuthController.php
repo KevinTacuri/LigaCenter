@@ -116,6 +116,22 @@ class AuthController extends Controller
     {
         $request->validate(['email' => 'required|email']);
 
+        $user = User::where('email', $request->email)->first();
+
+        // En desarrollo local, generamos y retornamos el enlace directamente para facilitar las pruebas del frontend
+        if (config('app.env') === 'local') {
+            if (!$user) {
+                return $this->errorResponse('No se encontró un usuario registrado con ese correo electrónico', 404);
+            }
+            $token = Password::getRepository()->create($user);
+            $resetUrl = "http://localhost:5173/restablecer-contrasenia?token={$token}&email=" . urlencode($user->email);
+            return $this->successResponse([
+                'dev_mode' => true,
+                'url' => $resetUrl,
+                'token' => $token
+            ], 'Modo desarrollo: enlace generado directamente');
+        }
+
         $status = Password::sendResetLink(
             $request->only('email')
         );

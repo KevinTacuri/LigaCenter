@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #001b3a;                 /* Azul Marino del Logo */
-  --color-primary-container: #002855;       /* Azul Marino Claro */
-  --color-on-primary-container: #00cbb8;    /* Verde Agua / Turquesa del Logo */
+  --color-primary: #41000c;                 /* Rojo Vino / Carmesí Oscuro */
+  --color-primary-container: #650a1b;       /* Rojo Carmesí */
+  --color-on-primary-container: #ed737b;    /* Rosa Carmesí Claro */
   --color-on-primary: #ffffff;
   
-  --color-secondary: #00bfa5;
-  --color-secondary-container: #70e000;     /* Verde Limón del Logo */
-  --color-on-secondary-container: #1b4d00;
+  --color-secondary: #831023;               /* Carmesí Medio */
+  --color-secondary-container: #b31934;     /* Carmesí Brillante */
+  --color-on-secondary-container: #ffffff;
 
   --color-surface: #f4f6f7;
   --color-surface-dim: #e2e8f0;

@@ -36,10 +36,10 @@ export const Tablero: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-[#f4f6f7] text-slate-800">
         <div className="flex flex-col items-center gap-4">
           <div className="relative flex items-center justify-center">
-            <div className="w-14 h-14 rounded-full border-4 border-slate-200 border-t-[#00cbb8] animate-spin" />
+            <div className="w-14 h-14 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
             <img src={logoImg} className="w-7 h-7 object-contain absolute" alt="Cargando..." />
           </div>
-          <span className="text-[#001b3a] font-bold tracking-wider text-xs uppercase animate-pulse">Cargando Tablero...</span>
+          <span className="text-primary font-bold tracking-wider text-xs uppercase animate-pulse">Cargando Tablero...</span>
         </div>
       </div>
     );
@@ -69,7 +69,7 @@ export const Tablero: React.FC = () => {
         {/* Barra de Navegación Superior */}
         <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 flex items-center justify-between sticky top-0 z-30 transition-all">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-[#001b3a] p-1.5 flex items-center justify-center shadow-xs border border-slate-200">
+            <div className="w-12 h-12 flex items-center justify-center">
               <img src={logoImg} className="w-full h-full object-contain" alt="Logo LigaCenter" />
             </div>
             <div>
@@ -95,7 +95,7 @@ export const Tablero: React.FC = () => {
 
             {/* Avatar */}
             <div className="w-9 h-9 rounded-full bg-slate-200 p-[1px] border border-slate-300">
-              <div className="w-full h-full rounded-full bg-[#001b3a] flex items-center justify-center font-bold text-xs text-white select-none">
+              <div className="w-full h-full rounded-full bg-primary flex items-center justify-center font-bold text-xs text-white select-none">
                 {inicialUsuario}
               </div>
             </div>
@@ -117,12 +117,12 @@ export const Tablero: React.FC = () => {
           {/* Banner de Bienvenida Profesional Claro */}
           <section className="relative rounded-2xl bg-white border border-slate-200/80 p-8 shadow-xs overflow-hidden group">
             {/* Soft decorative line on top */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#00cbb8] via-[#001b3a] to-[#70e000]"></div>
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary-container to-secondary"></div>
             
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
               <div className="space-y-2">
                 <h2 className="text-xl md:text-2.5xl font-black text-slate-900 tracking-tight leading-none">
-                  ¡Bienvenido de nuevo, <span className="text-[#001b3a]">{usuario.name}</span>!
+                  ¡Bienvenido de nuevo, <span className="text-primary">{usuario.name}</span>!
                 </h2>
                 <p className="text-slate-600 text-sm md:text-base max-w-2xl font-medium leading-relaxed">
                   Desde aquí puedes gestionar los campeonatos, partidos, equipos y estadísticas según tu rol asignado en el sistema LigaCenter.
@@ -193,14 +193,14 @@ export const Tablero: React.FC = () => {
                 
                 {/* Módulo: Gestión de Usuarios (Solo Administrador) */}
                 {tienePermiso('gestionar_usuarios') && (
-                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-[#00cbb8]/60 hover:bg-[#00cbb8]/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs">
-                    <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-[#00cbb8]/10 group-hover:text-[#00cbb8] group-hover:border-[#00cbb8]/20 transition-all shrink-0">
+                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-primary/60 hover:bg-primary/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs">
+                    <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary group-hover:border-primary/20 transition-all shrink-0">
                       <span className="material-symbols-outlined text-lg">group</span>
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-xs text-slate-900 group-hover:text-[#00cbb8] transition-colors uppercase tracking-wide">Gestión de Usuarios</h4>
+                      <h4 className="font-bold text-xs text-slate-900 group-hover:text-primary transition-colors uppercase tracking-wide">Gestión de Usuarios</h4>
                       <p className="text-xs text-slate-500 mt-1 leading-relaxed">Administra accesos, roles y activa o desactiva usuarios.</p>
-                      <button className="mt-3.5 text-xs text-[#00cbb8] font-bold tracking-wider uppercase flex items-center gap-1 group-hover:gap-1.5 transition-all cursor-pointer">
+                      <button className="mt-3.5 text-xs text-primary font-bold tracking-wider uppercase flex items-center gap-1 group-hover:gap-1.5 transition-all cursor-pointer">
                         <span>Acceder Módulo</span>
                         <span>→</span>
                       </button>
@@ -244,14 +244,14 @@ export const Tablero: React.FC = () => {
 
                 {/* Módulo: Tablas de Posición (Cualquiera) */}
                 {tienePermiso('ver_tablas') && (
-                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-[#70e000]/60 hover:bg-[#70e000]/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs">
-                    <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-[#70e000]/10 group-hover:text-[#70e000] group-hover:border-[#70e000]/20 transition-all shrink-0">
+                  <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-secondary/60 hover:bg-secondary/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs">
+                    <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-secondary/10 group-hover:text-secondary group-hover:border-secondary/20 transition-all shrink-0">
                       <span className="material-symbols-outlined text-lg">leaderboard</span>
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-xs text-slate-900 group-hover:text-[#70e000] transition-colors uppercase tracking-wide">Posiciones y Estadísticas</h4>
+                      <h4 className="font-bold text-xs text-slate-900 group-hover:text-secondary transition-colors uppercase tracking-wide">Posiciones y Estadísticas</h4>
                       <p className="text-xs text-slate-500 mt-1 leading-relaxed">Visualiza los resultados en vivo, goleadores y tablas oficiales.</p>
-                      <button className="mt-3.5 text-xs text-[#70e000] font-bold tracking-wider uppercase flex items-center gap-1 group-hover:gap-1.5 transition-all cursor-pointer">
+                      <button className="mt-3.5 text-xs text-secondary font-bold tracking-wider uppercase flex items-center gap-1 group-hover:gap-1.5 transition-all cursor-pointer">
                         <span>Ver Posiciones</span>
                         <span>→</span>
                       </button>

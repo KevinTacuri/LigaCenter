@@ -11,6 +11,7 @@ export const RecuperarContrasenia: React.FC = () => {
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
   const [procesando, setProcesando] = useState(false);
+  const [urlDesarrollo, setUrlDesarrollo] = useState<string | null>(null);
 
   const imagenRef = useRef<HTMLImageElement | null>(null);
 
@@ -40,12 +41,18 @@ export const RecuperarContrasenia: React.FC = () => {
     setProcesando(true);
     setErrorLocal(null);
     setMensajeExito(null);
+    setUrlDesarrollo(null);
 
     try {
       const respuesta = await serviciosAutenticacion.solicitarRecuperacion(correo);
       if (respuesta.success) {
         setMensajeExito(respuesta.message || 'Enlace de recuperación enviado exitosamente.');
         setCorreo('');
+        
+        // Si el API retorna la URL de desarrollo, la guardamos
+        if (respuesta.data && respuesta.data.dev_mode && respuesta.data.url) {
+          setUrlDesarrollo(respuesta.data.url);
+        }
       } else {
         setErrorLocal(respuesta.message || 'No se pudo enviar el enlace de recuperación.');
       }
@@ -79,15 +86,15 @@ export const RecuperarContrasenia: React.FC = () => {
           style={{ transform: 'scale(1.1) translate(0px, 0px)' }}
         />
         <div className="relative z-10 p-12 text-center md:text-left max-w-2xl">
-          <header className="flex flex-col md:flex-row items-center gap-4 mb-6 justify-center md:justify-start">
-            <div className="w-28 h-28 bg-white/10 backdrop-blur-md rounded-2xl p-3 flex items-center justify-center border border-white/20 shadow-xl shadow-black/10">
+          <header className="flex flex-col md:flex-row items-center gap-5 mb-6 justify-center md:justify-start">
+            <div className="w-40 h-40 flex items-center justify-center">
               <img src={logoImg} className="w-full h-full object-contain" alt="Logo LigaCenter" />
             </div>
             <div className="text-center md:text-left">
-              <h1 className="text-3xl font-extrabold text-white tracking-tight">
+              <h1 className="text-4xl font-extrabold text-white tracking-tight">
                 Recuperar Contraseña
               </h1>
-              <span className="text-xs text-secondary font-bold tracking-widest uppercase">Gestión Deportiva</span>
+              <span className="text-sm text-secondary font-bold tracking-widest uppercase mt-1 block">Gestión Deportiva</span>
             </div>
           </header>
           <div className="space-y-3">
@@ -140,7 +147,7 @@ export const RecuperarContrasenia: React.FC = () => {
             <button
               type="submit"
               disabled={procesando}
-              className="w-full bg-linear-to-r from-secondary to-[#00a38f] text-white font-bold py-3.5 rounded-lg shadow-sm hover:shadow-md hover:shadow-secondary/15 hover:brightness-105 active:scale-[0.98] transition-all duration-150 mt-2 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-base"
+              className="w-full bg-linear-to-r from-primary-container to-secondary text-white font-bold py-3.5 rounded-lg shadow-sm hover:shadow-md hover:shadow-secondary/15 hover:brightness-105 active:scale-[0.98] transition-all duration-150 mt-2 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-base"
             >
               {procesando ? (
                 <>
@@ -155,6 +162,25 @@ export const RecuperarContrasenia: React.FC = () => {
               )}
             </button>
           </form>
+
+          {urlDesarrollo && (
+            <div className="mt-5 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-950 text-sm space-y-2 animate-fadeIn">
+              <p className="font-bold flex items-center gap-1 text-secondary">
+                <span className="material-symbols-outlined text-base">construction</span>
+                <span>Atajo de Desarrollo:</span>
+              </p>
+              <p className="text-xs text-slate-700 leading-relaxed">
+                ¡Estás en modo de desarrollo local! Haz clic en el botón de abajo para saltar directamente al formulario de cambio de contraseña sin tener que abrir logs:
+              </p>
+              <a
+                href={urlDesarrollo}
+                className="inline-flex w-full justify-center items-center gap-1.5 bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-sm transition-all text-center shadow-xs cursor-pointer"
+              >
+                <span>Restablecer Contraseña Directo</span>
+                <span>→</span>
+              </a>
+            </div>
+          )}
 
           {/* Enlace Volver */}
           <div className="mt-8 pt-6 border-t border-outline-variant/60 text-center">

@@ -111,15 +111,15 @@ export const RestablecerContrasenia: React.FC = () => {
           style={{ transform: 'scale(1.1) translate(0px, 0px)' }}
         />
         <div className="relative z-10 p-12 text-center md:text-left max-w-2xl">
-          <header className="flex flex-col md:flex-row items-center gap-4 mb-6 justify-center md:justify-start">
-            <div className="w-28 h-28 bg-white/10 backdrop-blur-md rounded-2xl p-3 flex items-center justify-center border border-white/20 shadow-xl shadow-black/10">
+          <header className="flex flex-col md:flex-row items-center gap-5 mb-6 justify-center md:justify-start">
+            <div className="w-40 h-40 flex items-center justify-center">
               <img src={logoImg} className="w-full h-full object-contain" alt="Logo LigaCenter" />
             </div>
             <div className="text-center md:text-left">
-              <h1 className="text-3xl font-extrabold text-white tracking-tight">
+              <h1 className="text-4xl font-extrabold text-white tracking-tight">
                 Nueva Contraseña
               </h1>
-              <span className="text-xs text-secondary font-bold tracking-widest uppercase">Gestión Deportiva</span>
+              <span className="text-sm text-secondary font-bold tracking-widest uppercase mt-1 block">Gestión Deportiva</span>
             </div>
           </header>
           <div className="space-y-3">
@@ -207,7 +207,7 @@ export const RestablecerContrasenia: React.FC = () => {
             <button
               type="submit"
               disabled={procesando}
-              className="w-full bg-linear-to-r from-secondary to-[#00a38f] text-white font-bold py-3.5 rounded-lg shadow-sm hover:shadow-md hover:shadow-secondary/15 hover:brightness-105 active:scale-[0.98] transition-all duration-150 mt-4 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-base"
+              className="w-full bg-linear-to-r from-primary-container to-secondary text-white font-bold py-3.5 rounded-lg shadow-sm hover:shadow-md hover:shadow-secondary/15 hover:brightness-150 active:scale-[0.98] transition-all duration-150 mt-4 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-base"
             >
               {procesando ? (
                 <>
