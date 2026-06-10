@@ -79,6 +79,11 @@ class TeamController extends Controller
             'registration_status' => 'nullable|string',
         ]);
 
+        $category = \App\Models\Category::findOrFail($request->category_id);
+        if ($category->championship_id != $request->championship_id) {
+            return $this->errorResponse('La categoría no pertenece a este campeonato', 422);
+        }
+
         $team = Team::create([
             'championship_id' => $request->championship_id,
             'category_id' => $request->category_id,

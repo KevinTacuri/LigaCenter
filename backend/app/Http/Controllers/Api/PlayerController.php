@@ -120,6 +120,12 @@ class PlayerController extends Controller
         $team = Team::with('category')->findOrFail($validated['team_id']);
         $category = $team->category;
 
+        if ($request->has('championship_id') && $team->championship_id != $request->championship_id) {
+            return response()->json([
+                'message' => 'El equipo no pertenece al campeonato activo.'
+            ], 422);
+        }
+
         if (!$category) {
             return response()->json([
                 'message' => 'El equipo no tiene una categoría válida asignada.'

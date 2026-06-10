@@ -31,7 +31,7 @@ export const Tablero: React.FC = () => {
   useEffect(() => {
     if (!cargando && !usuario) {
       navegar('/login');
-    } else if (!cargando && usuario && !campeonatoActivo) {
+    } else if (!cargando && usuario && !campeonatoActivo && !usuario.roles?.includes('administrador')) {
       navegar('/seleccion-campeonato');
     }
   }, [usuario, cargando, navegar, campeonatoActivo]);
@@ -107,14 +107,24 @@ export const Tablero: React.FC = () => {
               </div>
             </div>
 
-            {/* Botón Cambiar Torneo */}
-            <button
-              onClick={limpiarCampeonato}
-              className="flex items-center justify-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer shadow-xs active:scale-95 group"
-            >
-              <span className="material-symbols-outlined text-sm">swap_horiz</span>
-              <span className="hidden sm:inline">Cambiar Torneo</span>
-            </button>
+            {/* Botón Seleccionar / Cambiar Torneo */}
+            {campeonatoActivo ? (
+              <button
+                onClick={limpiarCampeonato}
+                className="flex items-center justify-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer shadow-xs active:scale-95 group"
+              >
+                <span className="material-symbols-outlined text-sm">swap_horiz</span>
+                <span className="hidden sm:inline">Cambiar Torneo</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => navegar('/seleccion-campeonato')}
+                className="flex items-center justify-center gap-1.5 bg-primary hover:bg-primary-container text-white rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all duration-200 cursor-pointer shadow-xs active:scale-95 flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-sm">sports_soccer</span>
+                <span>Seleccionar Campeonato</span>
+              </button>
+            )}
 
             {/* Botón Cerrar Sesión */}
             <button
@@ -242,7 +252,7 @@ export const Tablero: React.FC = () => {
                 )}
 
                 {/* Módulo: Equipos y Jugadores (Organizador, Encargado, Publico) */}
-                {tienePermiso('ver_equipos') && (
+                {campeonatoActivo && tienePermiso('ver_equipos') && (
                   <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-indigo-400/60 hover:bg-indigo-50/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs cursor-pointer" onClick={() => navegar('/tablero/participantes')}>
                     <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-200 transition-all shrink-0">
                       <span className="material-symbols-outlined text-lg">groups</span>
@@ -259,7 +269,7 @@ export const Tablero: React.FC = () => {
                 )}
 
                 {/* Módulo: Fixture y Escenarios (Organizador, Administrador) */}
-                {tienePermiso('ver_equipos') && (
+                {campeonatoActivo && tienePermiso('ver_equipos') && (
                   <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-emerald-500/60 hover:bg-emerald-50/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs cursor-pointer" onClick={() => navegar('/tablero/fixture')}>
                     <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-emerald-50 group-hover:text-emerald-600 group-hover:border-emerald-200 transition-all shrink-0">
                       <span className="material-symbols-outlined text-lg">calendar_today</span>
@@ -276,7 +286,7 @@ export const Tablero: React.FC = () => {
                 )}
 
                 {/* Módulo: Gestión de Planillas y Partidos (Mesa, Organizador) */}
-                {tienePermiso('registrar_incidencias') && (
+                {campeonatoActivo && tienePermiso('registrar_incidencias') && (
                   <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-amber-400/60 hover:bg-amber-50/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs cursor-pointer" onClick={() => navegar('/tablero/mesa')}>
                     <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-amber-50 group-hover:text-amber-600 group-hover:border-amber-200 transition-all shrink-0">
                       <span className="material-symbols-outlined text-lg">assignment</span>
@@ -293,7 +303,7 @@ export const Tablero: React.FC = () => {
                 )}
 
                 {/* Módulo: Tablas de Posición (Cualquiera) */}
-                {tienePermiso('ver_tablas') && (
+                {campeonatoActivo && tienePermiso('ver_tablas') && (
                   <div className="p-5 rounded-xl bg-white border border-slate-200 hover:border-secondary/60 hover:bg-secondary/2 transition-all duration-200 group flex items-start gap-4 hover:shadow-xs cursor-pointer" onClick={() => navegar('/tablero/publico')}>
                     <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center group-hover:bg-secondary/10 group-hover:text-secondary group-hover:border-secondary/20 transition-all shrink-0">
                       <span className="material-symbols-outlined text-lg">leaderboard</span>
@@ -306,6 +316,26 @@ export const Tablero: React.FC = () => {
                         <span>→</span>
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {/* Mensaje Informativo si no hay Campeonato seleccionado */}
+                {!campeonatoActivo && (
+                  <div className="md:col-span-2 p-8 rounded-2xl bg-amber-50/50 border border-amber-200/60 text-amber-900 flex flex-col items-center justify-center text-center gap-3">
+                    <span className="material-symbols-outlined text-3xl text-amber-500">warning_amber</span>
+                    <div>
+                      <h4 className="font-extrabold text-sm uppercase tracking-wider text-amber-950">Sin Campeonato Seleccionado</h4>
+                      <p className="text-xs text-amber-700 mt-1.5 max-w-md leading-relaxed font-medium">
+                        Para poder gestionar equipos, jugadores, fixtures y actas de partidos, por favor selecciona un campeonato de trabajo.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => navegar('/seleccion-campeonato')}
+                      className="mt-2 bg-amber-600 hover:bg-amber-750 text-white font-bold text-xs px-5 py-2.5 rounded-lg transition-all shadow-xs cursor-pointer active:scale-95 flex items-center gap-1.5"
+                    >
+                      <span className="material-symbols-outlined text-sm font-bold">sports_soccer</span>
+                      <span>Seleccionar / Crear Campeonato</span>
+                    </button>
                   </div>
                 )}
               </div>
