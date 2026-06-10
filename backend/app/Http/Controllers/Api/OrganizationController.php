@@ -28,7 +28,7 @@ class OrganizationController extends Controller
     public function index()
     {
         return response()->json(
-            Organization::with('teams')->get()
+            Organization::all()
         );
     }
 
@@ -109,7 +109,7 @@ class OrganizationController extends Controller
     public function show($id)
     {
         return response()->json(
-            Organization::with('teams')->findOrFail($id)
+            Organization::findOrFail($id)
         );
     }
 
