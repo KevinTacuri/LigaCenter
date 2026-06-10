@@ -10,14 +10,13 @@ return new class extends Migration
     {
         Schema::create('matches', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('venue_id')->constrained()->onDelete('cascade');
-            $table->foreignId('discipline_id')->constrained()->onDelete('cascade');
+            $table->foreignId('championship_id')->constrained()->onDelete('cascade');
             $table->foreignId('category_id')->constrained()->onDelete('cascade');
-            $table->foreignId('local_team_id')->constrained('teams')->onDelete('cascade');
-            $table->foreignId('visitor_team_id')->constrained('teams')->onDelete('cascade');
+            $table->foreignId('venue_id')->constrained()->onDelete('cascade');
+            $table->foreignId('home_team_id')->constrained('teams')->onDelete('cascade');
+            $table->foreignId('away_team_id')->constrained('teams')->onDelete('cascade');
             $table->date('match_date');
-            $table->time('match_time');
-            $table->integer('round');
+            $table->integer('round')->nullable();
             $table->string('status')->default('programado');
             $table->timestamps();
             $table->softDeletes();

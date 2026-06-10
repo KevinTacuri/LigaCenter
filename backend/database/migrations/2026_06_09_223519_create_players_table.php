@@ -10,13 +10,12 @@ return new class extends Migration
     {
         Schema::create('players', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('team_id')->constrained()->onDelete('cascade');
-            $table->string('full_name');
-            $table->string('dni')->unique()->nullable();
-            $table->string('college_id')->nullable();
-            $table->integer('age')->nullable();
-            $table->boolean('is_eligible')->default(true);
-
+            $table->string('document_number')->unique()->nullable();
+            $table->string('names');
+            $table->string('last_names');
+            $table->date('birth_date')->nullable();
+            $table->string('gender')->nullable();
+            $table->string('photo')->nullable();
             $table->integer('total_goals')->default(0);
             $table->integer('total_yellow_cards')->default(0);
             $table->integer('total_red_cards')->default(0);

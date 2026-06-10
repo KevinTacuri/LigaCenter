@@ -11,8 +11,8 @@ return new class extends Migration
         Schema::create('match_reports', function (Blueprint $table) {
             $table->id();
             $table->foreignId('match_id')->constrained()->onDelete('cascade');
-            $table->integer('local_score')->default(0);
-            $table->integer('visitor_score')->default(0);
+            $table->integer('home_score')->default(0);
+            $table->integer('away_score')->default(0);
             $table->string('referee_signature')->nullable();
             $table->string('delegate_signature')->nullable();
             $table->string('official_pdf_url')->nullable();
