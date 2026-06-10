@@ -1,0 +1,836 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "LigaCenter API",
+        "description": "API para la gestión de campeonatos deportivos",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000",
+            "description": "Servidor Local"
+        }
+    ],
+    "paths": {
+        "/api/fixture/generate": {
+            "post": {
+                "tags": [
+                    "Fixture"
+                ],
+                "summary": "Generar fixture",
+                "description": "Genera el fixture completo usando el algoritmo Round Robin (todos contra todos).",
+                "operationId": "generateFixture",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "discipline_id",
+                                    "category_id",
+                                    "start_date",
+                                    "venue_ids"
+                                ],
+                                "properties": {
+                                    "discipline_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "category_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-06-15"
+                                    },
+                                    "venue_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "example": [
+                                            1,
+                                            2
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Fixture generado exitosamente"
+                    },
+                    "400": {
+                        "description": "Error en la generación"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            }
+        },
+        "/api/fixture": {
+            "get": {
+                "tags": [
+                    "Fixture"
+                ],
+                "summary": "Obtener fixture",
+                "description": "Obtiene el fixture generado para una disciplina y categoría específicas.",
+                "operationId": "getFixture",
+                "parameters": [
+                    {
+                        "name": "discipline_id",
+                        "in": "query",
+                        "description": "ID de la disciplina",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "description": "ID de la categoría",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Fixture obtenido exitosamente"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            }
+        },
+        "/api/fixture/schedule-round": {
+            "post": {
+                "tags": [
+                    "Fixture"
+                ],
+                "summary": "Programar horarios",
+                "description": "Asigna horarios y escenarios a los partidos de una fecha según su relevancia (suma de puntos).",
+                "operationId": "scheduleRound",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "discipline_id",
+                                    "category_id",
+                                    "round",
+                                    "available_hours",
+                                    "venue_ids"
+                                ],
+                                "properties": {
+                                    "discipline_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "category_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "round": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "available_hours": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "example": [
+                                            "08:00",
+                                            "10:00",
+                                            "12:00"
+                                        ]
+                                    },
+                                    "venue_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "example": [
+                                            1,
+                                            2
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Horarios asignados exitosamente"
+                    },
+                    "400": {
+                        "description": "Error en la programación"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            }
+        },
+        "/api/matches": {
+            "get": {
+                "tags": [
+                    "Partidos"
+                ],
+                "summary": "Listar partidos",
+                "description": "Obtiene una lista de partidos con filtros opcionales por disciplina, categoría, fecha y estado.",
+                "operationId": "getMatches",
+                "parameters": [
+                    {
+                        "name": "discipline_id",
+                        "in": "query",
+                        "description": "ID de la disciplina",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "description": "ID de la categoría",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "round",
+                        "in": "query",
+                        "description": "Número de fecha",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Estado del partido",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "programado",
+                                "en_curso",
+                                "finalizado",
+                                "cancelado",
+                                "reprogramado"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Partidos obtenidos exitosamente"
+                    }
+                }
+            }
+        },
+        "/api/matches/{id}": {
+            "get": {
+                "tags": [
+                    "Partidos"
+                ],
+                "summary": "Obtener partido",
+                "description": "Obtiene la información detallada de un partido específico.",
+                "operationId": "getMatchById",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del partido",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Partido obtenido exitosamente"
+                    },
+                    "404": {
+                        "description": "Partido no encontrado"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Partidos"
+                ],
+                "summary": "Actualizar partido",
+                "description": "Actualiza la información de un partido.",
+                "operationId": "updateMatch",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "match_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-06-20"
+                                    },
+                                    "match_time": {
+                                        "type": "string",
+                                        "example": "15:00"
+                                    },
+                                    "venue_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "example": "programado",
+                                        "enum": [
+                                            "programado",
+                                            "en_curso",
+                                            "finalizado",
+                                            "cancelado"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Partido actualizado exitosamente"
+                    },
+                    "404": {
+                        "description": "Partido no encontrado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            }
+        },
+        "/api/matches/{id}/reschedule": {
+            "put": {
+                "tags": [
+                    "Partidos"
+                ],
+                "summary": "Reprogramar partido",
+                "description": "Cambia la fecha, hora y/o escenario de un partido.",
+                "operationId": "rescheduleMatch",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "match_date",
+                                    "match_time",
+                                    "venue_id"
+                                ],
+                                "properties": {
+                                    "match_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-06-25"
+                                    },
+                                    "match_time": {
+                                        "type": "string",
+                                        "example": "16:00"
+                                    },
+                                    "venue_id": {
+                                        "type": "integer",
+                                        "example": 2
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Partido reprogramado exitosamente"
+                    },
+                    "404": {
+                        "description": "Partido no encontrado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            }
+        },
+        "/api/users": {
+            "get": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Listar usuarios",
+                "description": "Obtiene una lista paginada de usuarios con sus roles.",
+                "operationId": "getUsers",
+                "responses": {
+                    "200": {
+                        "description": "Usuarios obtenidos exitosamente"
+                    }
+                }
+            }
+        },
+        "/api/users/{id}": {
+            "get": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Obtener usuario",
+                "description": "Obtiene la información detallada de un usuario.",
+                "operationId": "getUserById",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del usuario",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Usuario encontrado"
+                    },
+                    "404": {
+                        "description": "Usuario no encontrado"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Actualizar usuario",
+                "description": "Actualiza la información de un usuario.",
+                "operationId": "updateUser",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Juan Pérez"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "juan@gmail.com"
+                                    },
+                                    "dni": {
+                                        "type": "string",
+                                        "example": "12345678"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "987654321"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "Password123"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Usuario actualizado exitosamente"
+                    },
+                    "404": {
+                        "description": "Usuario no encontrado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Eliminar usuario",
+                "description": "Elimina un usuario del sistema.",
+                "operationId": "deleteUser",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Usuario eliminado exitosamente"
+                    },
+                    "400": {
+                        "description": "No puedes eliminarte a ti mismo"
+                    },
+                    "404": {
+                        "description": "Usuario no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/users/{id}/role": {
+            "put": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Cambiar rol de usuario",
+                "description": "Actualiza el rol asignado a un usuario.",
+                "operationId": "changeUserRole",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "role"
+                                ],
+                                "properties": {
+                                    "role": {
+                                        "type": "string",
+                                        "example": "administrador"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Rol actualizado exitosamente"
+                    },
+                    "404": {
+                        "description": "Usuario no encontrado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            }
+        },
+        "/api/roles": {
+            "get": {
+                "tags": [
+                    "Roles"
+                ],
+                "summary": "Listar roles",
+                "description": "Obtiene los roles disponibles del sistema.",
+                "operationId": "getRoles",
+                "responses": {
+                    "200": {
+                        "description": "Roles obtenidos exitosamente"
+                    }
+                }
+            }
+        },
+        "/api/venues": {
+            "get": {
+                "tags": [
+                    "Escenarios"
+                ],
+                "summary": "Listar escenarios",
+                "description": "Obtiene una lista de todos los escenarios deportivos.",
+                "operationId": "getVenues",
+                "responses": {
+                    "200": {
+                        "description": "Escenarios obtenidos exitosamente"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Escenarios"
+                ],
+                "summary": "Crear escenario",
+                "description": "Registra un nuevo escenario deportivo en el sistema.",
+                "operationId": "createVenue",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "venue_type",
+                                    "location"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Estadio Nacional"
+                                    },
+                                    "venue_type": {
+                                        "type": "string",
+                                        "example": "estadio"
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "example": "Lima"
+                                    },
+                                    "capacity": {
+                                        "type": "integer",
+                                        "example": 50000
+                                    },
+                                    "is_available": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Escenario creado exitosamente"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            }
+        },
+        "/api/venues/{id}": {
+            "get": {
+                "tags": [
+                    "Escenarios"
+                ],
+                "summary": "Obtener escenario",
+                "description": "Obtiene la información detallada de un escenario deportivo.",
+                "operationId": "getVenueById",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del escenario",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Escenario obtenido exitosamente"
+                    },
+                    "404": {
+                        "description": "Escenario no encontrado"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Escenarios"
+                ],
+                "summary": "Actualizar escenario",
+                "description": "Actualiza la información de un escenario deportivo.",
+                "operationId": "updateVenue",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Estadio Monumental"
+                                    },
+                                    "venue_type": {
+                                        "type": "string",
+                                        "example": "estadio"
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "example": "Arequipa"
+                                    },
+                                    "capacity": {
+                                        "type": "integer",
+                                        "example": 60000
+                                    },
+                                    "is_available": {
+                                        "type": "boolean",
+                                        "example": false
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Escenario actualizado exitosamente"
+                    },
+                    "404": {
+                        "description": "Escenario no encontrado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Escenarios"
+                ],
+                "summary": "Eliminar escenario",
+                "description": "Elimina un escenario deportivo del sistema.",
+                "operationId": "deleteVenue",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Escenario eliminado exitosamente"
+                    },
+                    "404": {
+                        "description": "Escenario no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/venues-available": {
+            "get": {
+                "tags": [
+                    "Escenarios"
+                ],
+                "summary": "Escenarios disponibles",
+                "description": "Obtiene una lista de escenarios deportivos disponibles.",
+                "operationId": "getAvailableVenues",
+                "responses": {
+                    "200": {
+                        "description": "Escenarios disponibles obtenidos exitosamente"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "sanctum": {
+                "type": "http",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Fixture",
+            "description": "Fixture"
+        },
+        {
+            "name": "Partidos",
+            "description": "Partidos"
+        },
+        {
+            "name": "Usuarios",
+            "description": "Usuarios"
+        },
+        {
+            "name": "Roles",
+            "description": "Roles"
+        },
+        {
+            "name": "Escenarios",
+            "description": "Escenarios"
+        }
+    ]
+}
