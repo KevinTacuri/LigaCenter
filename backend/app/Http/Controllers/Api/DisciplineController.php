@@ -5,9 +5,26 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Discipline;
 use Illuminate\Http\Request;
+use OpenApi\Attributes as OA;
 
+#[OA\Tag(
+    name: "Disciplines",
+    description: "Gestión de disciplinas deportivas como fútbol, vóley, básquet, etc."
+)]
 class DisciplineController extends Controller
 {
+    #[OA\Get(
+        path: "/api/disciplines",
+        summary: "Listar disciplinas",
+        description: "Retorna todas las disciplinas registradas en el sistema junto con los equipos asociados a cada disciplina.",
+        tags: ["Disciplines"],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Listado de disciplinas obtenido correctamente"
+            )
+        ]
+    )]
     public function index()
     {
         return response()->json(
@@ -15,6 +32,43 @@ class DisciplineController extends Controller
         );
     }
 
+    #[OA\Post(
+        path: "/api/disciplines",
+        summary: "Crear disciplina",
+        description: "Registra una nueva disciplina deportiva en el sistema (ej: fútbol, vóley, básquet).",
+        tags: ["Disciplines"],
+        requestBody: new OA\RequestBody(
+            required: true,
+            description: "Datos necesarios para crear una disciplina",
+            content: new OA\JsonContent(
+                required: ["name"],
+                properties: [
+                    new OA\Property(
+                        property: "name",
+                        type: "string",
+                        description: "Nombre de la disciplina",
+                        example: "Fútbol"
+                    ),
+                    new OA\Property(
+                        property: "specific_rules",
+                        type: "string",
+                        description: "Reglas específicas de la disciplina",
+                        example: "11 jugadores por equipo"
+                    )
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: "Disciplina creada correctamente"
+            ),
+            new OA\Response(
+                response: 422,
+                description: "Error de validación"
+            )
+        ]
+    )]
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -27,6 +81,31 @@ class DisciplineController extends Controller
         return response()->json($discipline, 201);
     }
 
+    #[OA\Get(
+        path: "/api/disciplines/{id}",
+        summary: "Obtener disciplina por ID",
+        description: "Devuelve la información detallada de una disciplina específica junto con sus equipos asociados.",
+        tags: ["Disciplines"],
+        parameters: [
+            new OA\Parameter(
+                name: "id",
+                description: "ID de la disciplina",
+                in: "path",
+                required: true,
+                schema: new OA\Schema(type: "integer")
+            )
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Disciplina encontrada correctamente"
+            ),
+            new OA\Response(
+                response: 404,
+                description: "Disciplina no encontrada"
+            )
+        ]
+    )]
     public function show($id)
     {
         return response()->json(
@@ -34,6 +113,49 @@ class DisciplineController extends Controller
         );
     }
 
+    #[OA\Put(
+        path: "/api/disciplines/{id}",
+        summary: "Actualizar disciplina",
+        description: "Permite actualizar el nombre o reglas específicas de una disciplina existente.",
+        tags: ["Disciplines"],
+        parameters: [
+            new OA\Parameter(
+                name: "id",
+                description: "ID de la disciplina a actualizar",
+                in: "path",
+                required: true,
+                schema: new OA\Schema(type: "integer")
+            )
+        ],
+        requestBody: new OA\RequestBody(
+            required: false,
+            description: "Campos opcionales para actualizar la disciplina",
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(
+                        property: "name",
+                        type: "string",
+                        example: "Fútbol sala"
+                    ),
+                    new OA\Property(
+                        property: "specific_rules",
+                        type: "string",
+                        example: "5 jugadores por equipo"
+                    )
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Disciplina actualizada correctamente"
+            ),
+            new OA\Response(
+                response: 404,
+                description: "Disciplina no encontrada"
+            )
+        ]
+    )]
     public function update(Request $request, $id)
     {
         $discipline = Discipline::findOrFail($id);
@@ -48,6 +170,31 @@ class DisciplineController extends Controller
         return response()->json($discipline);
     }
 
+    #[OA\Delete(
+        path: "/api/disciplines/{id}",
+        summary: "Eliminar disciplina",
+        description: "Elimina una disciplina del sistema. Esto puede afectar a los equipos asociados.",
+        tags: ["Disciplines"],
+        parameters: [
+            new OA\Parameter(
+                name: "id",
+                description: "ID de la disciplina a eliminar",
+                in: "path",
+                required: true,
+                schema: new OA\Schema(type: "integer")
+            )
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Disciplina eliminada correctamente"
+            ),
+            new OA\Response(
+                response: 404,
+                description: "Disciplina no encontrada"
+            )
+        ]
+    )]
     public function destroy($id)
     {
         $discipline = Discipline::findOrFail($id);
