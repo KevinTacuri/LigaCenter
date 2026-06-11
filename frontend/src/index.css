@@ -1,37 +1,52 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #41000c;                 /* Rojo Vino / Carmesí Oscuro */
-  --color-primary-container: #650a1b;       /* Rojo Carmesí */
-  --color-on-primary-container: #ed737b;    /* Rosa Carmesí Claro */
+  --color-primary: #800f2f;                 /* Rojo Carmesí/Vino Premium */
+  --color-primary-container: #11131c;       /* Fondo de Tarjeta */
+  --color-on-primary-container: #f1f5f9;    /* Texto Claro Slate */
   --color-on-primary: #ffffff;
   
-  --color-secondary: #831023;               /* Carmesí Medio */
-  --color-secondary-container: #b31934;     /* Carmesí Brillante */
+  --color-secondary: #b2224d;               /* Vino/Carmesí Acento */
+  --color-secondary-container: #171a26;     /* Gris-Vino Oscuro */
   --color-on-secondary-container: #ffffff;
 
-  --color-surface: #f4f6f7;
-  --color-surface-dim: #e2e8f0;
-  --color-surface-bright: #ffffff;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f8fafc;
-  --color-surface-container-high: #e2e8f0;
-  --color-surface-container-highest: #cbd5e1;
+  --color-surface: #0a0b10;                 /* Fondo Oscuro Profundo */
+  --color-surface-dim: #07080c;             /* Sección Interna */
+  --color-surface-bright: #171a26;          /* Fondo Inputs */
+  --color-surface-container-lowest: #11131c; /* Tarjetas Base */
+  --color-surface-container-low: #07080c;
+  --color-surface-container-high: #1c1f2e;
+  --color-surface-container-highest: #2a2e3f;
 
-  --color-on-surface: #0f172a;
-  --color-on-surface-variant: #475569;
+  --color-on-surface: #f1f5f9;              /* Texto Principal */
+  --color-on-surface-variant: #94a3b8;      /* Texto Muted */
 
-  --color-outline: #cbd5e1;
-  --color-outline-variant: #e2e8f0;
+  --color-outline: #1e2235;                 /* Bordes */
+  --color-outline-variant: #1e2235;
 
   --color-error: #ba1a1a;
   --color-error-container: #ffdad6;
   --color-on-error: #ffffff;
   --color-on-error-container: #93000a;
+
+  /* Redireccionar el color indigo (azul-morado) a la familia del vino/carmesí para uniformizar toda la app */
+  --color-indigo-50: #fff0f3;
+  --color-indigo-100: #ffccd5;
+  --color-indigo-200: #ffb3c1;
+  --color-indigo-300: #ff758f;
+  --color-indigo-400: #cc3965;
+  --color-indigo-500: #b2224d;
+  --color-indigo-600: #800f2f;
+  --color-indigo-650: #800f2f;
+  --color-indigo-700: #660c25;
+  --color-indigo-800: #590d22;
+  --color-indigo-900: #3f0713;
+  --color-indigo-950: #1a0208;
 }
 
 body {
-  background-color: #f4f6f7;
+  background-color: #0a0b10;
+  color: #f1f5f9;
   overflow-x: hidden;
 }
 
@@ -59,4 +74,172 @@ body {
     flex-grow: 1;
     padding: 3rem 1.5rem;
   }
+}
+
+/* ==========================================================================
+   GLOBAL DARK MODE OVERRIDES (MOCKUP COMPLIANCE)
+   ========================================================================== */
+
+/* 1. Backgrounds & Containers */
+body, html {
+  background-color: #0a0b10 !important;
+  color: #f1f5f9 !important;
+}
+
+.bg-\[\#f4f6f7\], 
+.bg-slate-50, 
+.bg-slate-100 {
+  background-color: #0a0b10 !important;
+}
+
+.bg-white, 
+.bg-white\/90, 
+.bg-surface-container-lowest,
+.bg-surface-bright {
+  background-color: #11131c !important;
+}
+
+.bg-slate-50\/50,
+.bg-slate-100\/60,
+.bg-\[\#07080c\] {
+  background-color: #07080c !important;
+}
+
+/* 2. Borders */
+.border-slate-200, 
+.border-slate-200\/80, 
+.border-slate-100, 
+.border-slate-150,
+.border-slate-300,
+.border-outline-variant,
+.border-outline-variant\/60 {
+  border-color: #1e2235 !important;
+}
+
+/* 3. Text Colors */
+.text-slate-900, 
+.text-slate-800, 
+.text-slate-950,
+.text-slate-900:hover {
+  color: #ffffff !important;
+}
+
+.text-slate-700, 
+.text-slate-600 {
+  color: #cbd5e1 !important;
+}
+
+.text-slate-500,
+.text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+/* 4. Form Controls (Inputs, Selects, Textareas) */
+input, select, textarea {
+  background-color: #171a26 !important;
+  color: #ffffff !important;
+  border-color: #1e2235 !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #4f46e5 !important;
+  outline: none !important;
+}
+
+select option {
+  background-color: #11131c !important;
+  color: #ffffff !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #475569 !important;
+}
+
+/* 5. Badges & Status Indicators */
+.bg-emerald-50,
+.bg-emerald-500\/10 {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+.text-emerald-600, .text-emerald-700, .text-emerald-800 {
+  color: #34d399 !important;
+}
+
+.bg-rose-50,
+.bg-rose-500\/10 {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+}
+.text-rose-600, .text-rose-700, .text-rose-800 {
+  color: #f87171 !important;
+}
+
+.bg-amber-50,
+.bg-amber-500\/10 {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.2) !important;
+}
+.text-amber-600, .text-amber-700, .text-amber-800, .text-amber-900 {
+  color: #fbbf24 !important;
+}
+
+.bg-blue-50,
+.bg-blue-500\/10 {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+  color: #60a5fa !important;
+  border-color: rgba(59, 130, 246, 0.2) !important;
+}
+.text-blue-600, .text-blue-700, .text-blue-800 {
+  color: #60a5fa !important;
+}
+
+/* 6. Navigation Tabs & Interactive Elements hover */
+.hover\:bg-slate-100:hover,
+.hover\:bg-slate-50:hover {
+  background-color: #171a26 !important;
+  color: #ffffff !important;
+}
+
+/* 7. Buttons contrast preservation */
+button.bg-primary, 
+button.bg-secondary,
+.bg-primary-container,
+.bg-indigo-650 {
+  color: #ffffff !important;
+}
+
+button.bg-amber-650,
+button.bg-amber-600,
+button.bg-amber-500 {
+  color: #ffffff !important;
+}
+
+/* ==========================================================================
+   INTERACTIVE GRID BACKGROUND (MODERN SUITE DESIGN)
+   ========================================================================== */
+.interactive-grid-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-size: 50px 50px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  z-index: 0;
+}
+
+.interactive-grid-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    600px circle at var(--mouse-x, 0px) var(--mouse-y, 0px),
+    rgba(178, 34, 77, 0.09), /* Vino sutil, muy elegante */
+    transparent 80%
+  );
+  z-index: 1;
+  pointer-events: none;
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { serviciosAutenticacion } from '../servicios/api';
 
@@ -14,28 +14,12 @@ export const RestablecerContrasenia: React.FC = () => {
   const [correo, setCorreo] = useState('');
   const [contrasenia, setContrasenia] = useState('');
   const [confirmarContrasenia, setConfirmarContrasenia] = useState('');
+  const [verContrasenia, setVerContrasenia] = useState(false);
+  const [verConfirmarContrasenia, setVerConfirmarContrasenia] = useState(false);
   
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
   const [procesando, setProcesando] = useState(false);
-
-  const imagenRef = useRef<HTMLImageElement | null>(null);
-
-  // Parallax interactivo sutil en el fondo
-  useEffect(() => {
-    const manejarMovimientoMouse = (e: MouseEvent) => {
-      if (imagenRef.current) {
-        const x = (window.innerWidth - e.pageX * 2) / 120;
-        const y = (window.innerHeight - e.pageY * 2) / 120;
-        imagenRef.current.style.transform = `scale(1.1) translate(${x}px, ${y}px)`;
-      }
-    };
-
-    window.addEventListener('mousemove', manejarMovimientoMouse);
-    return () => {
-      window.removeEventListener('mousemove', manejarMovimientoMouse);
-    };
-  }, []);
 
   useEffect(() => {
     const tokenQuery = parametros.get('token') || '';
@@ -89,125 +73,149 @@ export const RestablecerContrasenia: React.FC = () => {
   };
 
   return (
-    <main className="golden-grid font-sans min-h-screen text-on-surface select-none">
+    <main className="golden-grid font-sans min-h-screen text-on-surface select-none relative bg-surface">
       
       {/* Toast de Éxito Flotante */}
       {mensajeExito && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-bounce">
-          <div className="bg-surface border border-outline-variant px-6 py-3 rounded-full shadow-lg flex items-center gap-2">
-            <span className="material-symbols-outlined text-emerald-600" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-            <span className="text-sm font-semibold text-on-surface">{mensajeExito} Redirigiendo...</span>
+          <div className="bg-[#11131c] border border-slate-800 px-6 py-3 rounded-full shadow-lg flex items-center gap-2">
+            <span className="material-symbols-outlined text-emerald-500" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+            <span className="text-sm font-semibold text-white">{mensajeExito} Redirigiendo...</span>
           </div>
         </div>
       )}
 
-      {/* Sección 1: Banner Izquierdo */}
-      <section className="bg-primary relative flex items-center justify-center overflow-hidden">
+      {/* Sección 1: Banner Izquierdo con imagen de estadio en escala de grises */}
+      <section className="relative flex items-end p-8 md:p-16 overflow-hidden bg-black border-r border-slate-900/40">
         <img
-          ref={imagenRef}
-          alt="Campeonato Deportivo"
-          className="absolute inset-0 w-full h-full object-cover opacity-35 mix-blend-overlay transition-transform duration-300 ease-out"
+          alt="Estadio de fútbol"
+          className="absolute inset-0 w-full h-full object-cover filter grayscale brightness-[0.35] pointer-events-none select-none z-0"
           src={deportesFondo}
-          style={{ transform: 'scale(1.1) translate(0px, 0px)' }}
         />
-        <div className="relative z-10 p-12 text-center md:text-left max-w-2xl">
-          <header className="flex flex-col md:flex-row items-center gap-5 mb-6 justify-center md:justify-start">
-            <div className="w-40 h-40 flex items-center justify-center">
-              <img src={logoImg} className="w-full h-full object-contain" alt="Logo LigaCenter" />
-            </div>
-            <div className="text-center md:text-left">
-              <h1 className="text-4xl font-extrabold text-white tracking-tight">
-                Nueva Contraseña
-              </h1>
-              <span className="text-sm text-secondary font-bold tracking-widest uppercase mt-1 block">Gestión Deportiva</span>
-            </div>
-          </header>
-          <div className="space-y-3">
-            <p className="text-xl font-medium text-slate-200">LigaCenter</p>
-            <p className="text-sm text-slate-300/90 leading-relaxed">
-              Ingresa tu nueva clave de acceso para tu cuenta y recupera el acceso de inmediato a todas las funciones.
-            </p>
-          </div>
+        {/* Degradado para mejorar legibilidad */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0b10] via-transparent to-[#0a0b10]/40 z-0" />
+        
+        {/* Contenido de texto en la esquina inferior izquierda */}
+        <div className="relative z-10 text-left max-w-lg space-y-3">
+          <h2 className="text-3xl md:text-4.5xl font-black text-white tracking-tight leading-tight">
+            Domina el juego con LigaCenter
+          </h2>
+          <p className="text-xs md:text-sm text-slate-350 leading-relaxed font-medium">
+            La plataforma definitiva para la gestión de torneos de alto rendimiento. Diseñada por y para profesionales del deporte.
+          </p>
         </div>
-        <div className="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-primary to-transparent opacity-60"></div>
       </section>
 
-      {/* Sección 2: Formulario Derecho */}
-      <section className="flex flex-col items-center justify-center p-6 md:p-12 relative bg-surface-container-low">
-        <div className="w-full max-w-[460px] bg-surface-container-lowest p-6 sm:p-10 rounded-2xl shadow-md border border-outline-variant/40">
+      {/* Sección 2: Formulario (Limpio y centrado sin tarjeta) */}
+      <section className="flex flex-col items-center justify-center p-6 md:p-12 relative z-10">
+        <div className="w-full max-w-[360px] space-y-7">
           
-          <div className="mb-6">
-            <h2 className="text-2.5xl font-black text-slate-900 mb-1">Nueva Contraseña</h2>
-            <p className="text-sm md:text-base text-on-surface-variant font-medium">Ingrese sus nuevos datos para cambiar la clave de acceso.</p>
+          {/* Logo y Encabezado del Mockup */}
+          <div className="text-center space-y-1.5">
+            <header className="flex flex-col items-center justify-center gap-3 mb-2">
+              <img src={logoImg} className="w-24 h-24 object-contain" alt="Logo LigaCenter" />
+              <span className="text-2.5xl font-black text-white tracking-tight">
+                Liga<span className="text-primary">Center</span>
+              </span>
+            </header>
+            <h2 className="text-xl font-bold text-white tracking-tight">Nueva Contraseña</h2>
+            <p className="text-xs text-slate-400">Ingrese sus nuevos datos para cambiar la clave</p>
           </div>
 
           {errorLocal && (
-            <div className="mb-5 p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 text-sm flex items-center gap-2">
+            <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-450 text-xs font-semibold flex items-center gap-2 animate-fadeIn">
               <span className="material-symbols-outlined text-sm shrink-0">error</span>
               <span>{errorLocal}</span>
             </div>
           )}
 
-          <form onSubmit={manejarEnvio} className="space-y-5">
+          <form onSubmit={manejarEnvio} className="space-y-4">
             
             <input type="hidden" value={token} />
 
             {/* Campo: Correo */}
-            <div className="space-y-2 transition-transform duration-200 focus-within:scale-[1.01]">
-              <label className="block text-sm font-bold text-slate-700 tracking-wide" htmlFor="email">
+            <div className="space-y-1.5">
+              <label className="block text-[9px] font-extrabold text-slate-400 uppercase tracking-widest" htmlFor="email">
                 Correo Electrónico
               </label>
-              <input
-                id="email"
-                type="email"
-                required
-                disabled={procesando}
-                className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface-bright text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary outline-hidden text-base shadow-xs transition-all"
-                placeholder="ejemplo@ligacenter.com"
-                value={correo}
-                onChange={(e) => setCorreo(e.target.value)}
-              />
+              <div className="relative flex items-center text-slate-400 focus-within:text-white transition-colors">
+                <span className="material-symbols-outlined absolute left-3.5 text-lg pointer-events-none">mail</span>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  disabled={procesando}
+                  className="w-full pl-11 pr-4 py-3 rounded-lg border border-slate-800 bg-[#0c0e17] text-white focus:border-primary focus:ring-1 focus:ring-primary outline-hidden text-sm shadow-xs transition-all placeholder-slate-650 font-medium"
+                  placeholder="ejemplo@ligacenter.com"
+                  value={correo}
+                  onChange={(e) => setCorreo(e.target.value)}
+                />
+              </div>
             </div>
 
             {/* Campo: Nueva Contraseña */}
-            <div className="space-y-2 transition-transform duration-200 focus-within:scale-[1.01]">
-              <label className="block text-sm font-bold text-slate-700 tracking-wide" htmlFor="password">
+            <div className="space-y-1.5">
+              <label className="block text-[9px] font-extrabold text-slate-400 uppercase tracking-widest" htmlFor="password">
                 Nueva Contraseña *
               </label>
-              <input
-                id="password"
-                type="password"
-                required
-                disabled={procesando}
-                className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface-bright text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary outline-hidden text-base shadow-xs transition-all"
-                placeholder="Mínimo 8 caracteres"
-                value={contrasenia}
-                onChange={(e) => setContrasenia(e.target.value)}
-              />
+              <div className="relative flex items-center text-slate-400 focus-within:text-white transition-colors">
+                <span className="material-symbols-outlined absolute left-3.5 text-lg pointer-events-none">lock</span>
+                <input
+                  id="password"
+                  type={verContrasenia ? 'text' : 'password'}
+                  required
+                  disabled={procesando}
+                  className="w-full pl-11 pr-11 py-3 rounded-lg border border-slate-800 bg-[#0c0e17] text-white focus:border-primary focus:ring-1 focus:ring-primary outline-hidden text-sm shadow-xs transition-all placeholder-slate-650 font-medium"
+                  placeholder="Mínimo 8 caracteres"
+                  value={contrasenia}
+                  onChange={(e) => setContrasenia(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setVerContrasenia(!verContrasenia)}
+                  className="absolute right-3.5 text-slate-500 hover:text-slate-200 transition-colors flex items-center justify-center cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-lg">
+                    {verContrasenia ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Campo: Confirmar Contraseña */}
-            <div className="space-y-2 transition-transform duration-200 focus-within:scale-[1.01]">
-              <label className="block text-sm font-bold text-slate-700 tracking-wide" htmlFor="password_confirmation">
+            <div className="space-y-1.5">
+              <label className="block text-[9px] font-extrabold text-slate-400 uppercase tracking-widest" htmlFor="password_confirmation">
                 Confirmar Contraseña *
               </label>
-              <input
-                id="password_confirmation"
-                type="password"
-                required
-                disabled={procesando}
-                className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface-bright text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary outline-hidden text-base shadow-xs transition-all"
-                placeholder="••••••••"
-                value={confirmarContrasenia}
-                onChange={(e) => setConfirmarContrasenia(e.target.value)}
-              />
+              <div className="relative flex items-center text-slate-400 focus-within:text-white transition-colors">
+                <span className="material-symbols-outlined absolute left-3.5 text-lg pointer-events-none">lock</span>
+                <input
+                  id="password_confirmation"
+                  type={verConfirmarContrasenia ? 'text' : 'password'}
+                  required
+                  disabled={procesando}
+                  className="w-full pl-11 pr-11 py-3 rounded-lg border border-slate-800 bg-[#0c0e17] text-white focus:border-primary focus:ring-1 focus:ring-primary outline-hidden text-sm shadow-xs transition-all placeholder-slate-650 font-medium"
+                  placeholder="••••••••"
+                  value={confirmarContrasenia}
+                  onChange={(e) => setConfirmarContrasenia(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setVerConfirmarContrasenia(!verConfirmarContrasenia)}
+                  className="absolute right-3.5 text-slate-500 hover:text-slate-200 transition-colors flex items-center justify-center cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-lg">
+                    {verConfirmarContrasenia ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Botón Cambiar */}
             <button
               type="submit"
               disabled={procesando}
-              className="w-full bg-linear-to-r from-primary-container to-secondary text-white font-bold py-3.5 rounded-lg shadow-sm hover:shadow-md hover:shadow-secondary/15 hover:brightness-150 active:scale-[0.98] transition-all duration-150 mt-4 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-base"
+              className="w-full bg-primary hover:bg-[#99153c] text-white font-extrabold py-3.5 rounded-lg shadow-md active:scale-[0.98] transition-all duration-200 mt-6 flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-pointer disabled:opacity-50"
             >
               {procesando ? (
                 <>
@@ -221,10 +229,10 @@ export const RestablecerContrasenia: React.FC = () => {
           </form>
 
           {/* Enlace Volver */}
-          <div className="mt-6 pt-4 border-t border-outline-variant/60 text-center">
-            <p className="text-sm md:text-base text-on-surface-variant font-medium">
-              ¿Recordaste tu contraseña? <br />
-              <Link to="/login" className="text-secondary font-bold hover:underline">
+          <div className="text-center text-xs pt-4 border-t border-slate-900/60">
+            <p className="text-slate-400 font-medium">
+              ¿Recordaste tu contraseña?{' '}
+              <Link to="/login" className="text-primary font-bold hover:underline">
                 Inicia sesión aquí
               </Link>
             </p>
@@ -233,12 +241,12 @@ export const RestablecerContrasenia: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <footer className="absolute bottom-6 left-0 w-full hidden lg:block">
-          <div className="flex justify-center items-center gap-3 text-on-surface-variant/60 text-xs">
-            <a href="#" className="hover:underline">Privacidad</a>
-            <span className="w-1.5 h-1.5 bg-outline-variant rounded-full"></span>
-            <a href="#" className="hover:underline">Soporte</a>
-            <span className="w-1.5 h-1.5 bg-outline-variant rounded-full"></span>
+        <footer className="absolute bottom-6 left-0 w-full hidden md:block">
+          <div className="flex justify-center items-center gap-3 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+            <a href="#" className="hover:text-slate-400 transition-colors">Privacidad</a>
+            <span className="w-1.5 h-1.5 bg-slate-800 rounded-full"></span>
+            <a href="#" className="hover:text-slate-400 transition-colors">Soporte</a>
+            <span className="w-1.5 h-1.5 bg-slate-800 rounded-full"></span>
             <span>© 2026 LigaCenter</span>
           </div>
         </footer>

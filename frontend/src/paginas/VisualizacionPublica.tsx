@@ -78,19 +78,19 @@ export const VisualizacionPublica: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f6f7] text-slate-800 font-sans flex flex-col">
+    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans flex flex-col">
       {/* Cabecera */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+      <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navegar('/tablero')}
-            className="w-10 h-10 rounded-lg flex items-center justify-center border border-slate-200 hover:bg-slate-50 transition-all cursor-pointer"
+            className="w-10 h-10 rounded-lg flex items-center justify-center border border-slate-800 hover:bg-[#171a26] transition-all cursor-pointer"
           >
-            <span className="material-symbols-outlined text-slate-700">arrow_back</span>
+            <span className="material-symbols-outlined text-slate-300">arrow_back</span>
           </button>
           <div>
-            <h1 className="text-lg font-black text-slate-900 leading-none">Estadísticas y Posiciones</h1>
-            <span className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase mt-1 block">
+            <h1 className="text-lg font-black text-white leading-none">Estadísticas y Posiciones</h1>
+            <span className="text-[10px] text-slate-450 font-semibold tracking-wider uppercase mt-1 block">
               Consulta Pública de Resultados en Tiempo Real
             </span>
           </div>
@@ -98,13 +98,13 @@ export const VisualizacionPublica: React.FC = () => {
       </header>
 
       {/* Tabs */}
-      <div className="bg-white border-b border-slate-200 px-6 py-2 flex flex-wrap gap-2">
+      <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2">
         {(['posiciones', 'goleadores', 'tarjetas', 'sanciones'] as TabType[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setTabActiva(tab)}
             className={`px-4 py-2 text-xs font-bold rounded-lg uppercase tracking-wide cursor-pointer transition-all ${
-              tabActiva === tab ? 'bg-primary text-white' : 'text-slate-600 hover:bg-slate-100'
+              tabActiva === tab ? 'bg-indigo-650 text-white' : 'text-slate-400 hover:bg-[#171a26] hover:text-white'
             }`}
           >
             {tab === 'posiciones' ? 'Tabla de Posiciones' : tab === 'goleadores' ? 'Goleadores' : tab === 'tarjetas' ? 'Tarjetas acumuladas' : 'Suspendidos / Sanciones'}
@@ -116,7 +116,7 @@ export const VisualizacionPublica: React.FC = () => {
       <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
 
         {errorLocal && (
-          <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 text-sm flex items-center gap-2">
+          <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-455 text-sm flex items-center gap-2">
             <span className="material-symbols-outlined text-sm">error</span>
             <span>{errorLocal}</span>
           </div>
@@ -124,25 +124,25 @@ export const VisualizacionPublica: React.FC = () => {
 
         {/* Filtros para la Tabla de Posiciones */}
         {tabActiva === 'posiciones' && (
-          <div className="bg-white border border-slate-200 p-4 rounded-2xl flex flex-wrap gap-4 shadow-xs">
+          <div className="bg-[#11131c] border border-slate-900 p-4 rounded-2xl flex flex-wrap gap-4 shadow-xs">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Filtrar Disciplina</label>
+              <label className="text-[10px] font-bold text-slate-450 uppercase">Filtrar Disciplina</label>
               <select
                 value={filtroDisc} onChange={(e) => {
                   setFiltroDisc(e.target.value);
                   setFiltroCat('');
                 }}
-                className="text-xs border border-slate-200 bg-white rounded-lg p-2 cursor-pointer outline-hidden"
+                className="text-xs border border-slate-800 bg-[#171a26] text-white rounded-lg p-2 cursor-pointer outline-hidden"
               >
                 <option value="">Todas las disciplinas</option>
                 {disciplinas.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Filtrar Categoría</label>
+              <label className="text-[10px] font-bold text-slate-450 uppercase">Filtrar Categoría</label>
               <select
                 value={filtroCat} onChange={(e) => setFiltroCat(e.target.value)}
-                className="text-xs border border-slate-200 bg-white rounded-lg p-2 cursor-pointer outline-hidden"
+                className="text-xs border border-slate-800 bg-[#171a26] text-white rounded-lg p-2 cursor-pointer outline-hidden"
               >
                 <option value="">Todas las categorías</option>
                 {categorias
@@ -155,12 +155,12 @@ export const VisualizacionPublica: React.FC = () => {
         )}
 
         {/* Tabla principal */}
-        <section className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <section className="bg-[#11131c] rounded-2xl border border-slate-900 shadow-xs overflow-hidden">
           
           {cargando ? (
             <div className="p-12 flex flex-col items-center justify-center gap-3">
-              <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
-              <span className="text-xs text-slate-500 uppercase tracking-widest font-bold">Cargando datos oficiales...</span>
+              <div className="w-8 h-8 rounded-full border-4 border-slate-800 border-t-indigo-500 animate-spin" />
+              <span className="text-xs text-slate-450 uppercase tracking-widest font-bold">Cargando datos oficiales...</span>
             </div>
           ) : (
             <>
@@ -168,7 +168,7 @@ export const VisualizacionPublica: React.FC = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+                      <tr className="bg-[#171a26] border-b border-slate-900 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
                         <th className="p-3.5 pl-6 text-center w-12">Pos</th>
                         <th className="p-3.5">Equipo</th>
                         <th className="p-3.5 text-center">PJ</th>
@@ -181,24 +181,24 @@ export const VisualizacionPublica: React.FC = () => {
                         <th className="p-3.5 text-center pr-6">Puntos</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
+                    <tbody className="divide-y divide-slate-900 text-sm">
                       {posiciones.map((pos, idx) => (
-                        <tr key={pos.id} className="hover:bg-slate-50/40">
+                        <tr key={pos.id} className="hover:bg-[#171a26]/40">
                           <td className="p-3.5 pl-6 text-center font-bold text-slate-400">{idx + 1}</td>
-                          <td className="p-3.5 font-bold text-slate-900">{pos.team?.name}</td>
-                          <td className="p-3.5 text-center text-slate-600">{pos.matches_played}</td>
-                          <td className="p-3.5 text-center text-emerald-600 font-semibold">{pos.matches_won}</td>
-                          <td className="p-3.5 text-center text-slate-500">{pos.matches_drawn}</td>
+                          <td className="p-3.5 font-bold text-white">{pos.team?.name}</td>
+                          <td className="p-3.5 text-center text-slate-300">{pos.matches_played}</td>
+                          <td className="p-3.5 text-center text-emerald-450 font-semibold">{pos.matches_won}</td>
+                          <td className="p-3.5 text-center text-slate-400">{pos.matches_drawn}</td>
                           <td className="p-3.5 text-center text-rose-500">{pos.matches_lost}</td>
-                          <td className="p-3.5 text-center text-slate-600">{pos.goals_for}</td>
-                          <td className="p-3.5 text-center text-slate-600">{pos.goals_against}</td>
-                          <td className="p-3.5 text-center text-slate-800 font-bold">{pos.goal_difference > 0 ? `+${pos.goal_difference}` : pos.goal_difference}</td>
-                          <td className="p-3.5 text-center font-extrabold text-primary text-base pr-6">{pos.total_points}</td>
+                          <td className="p-3.5 text-center text-slate-300">{pos.goals_for}</td>
+                          <td className="p-3.5 text-center text-slate-300">{pos.goals_against}</td>
+                          <td className="p-3.5 text-center text-white font-bold">{pos.goal_difference > 0 ? `+${pos.goal_difference}` : pos.goal_difference}</td>
+                          <td className="p-3.5 text-center font-extrabold text-indigo-400 text-base pr-6">{pos.total_points}</td>
                         </tr>
                       ))}
                       {posiciones.length === 0 && (
                         <tr>
-                          <td colSpan={10} className="p-10 text-center text-slate-500 text-xs">No hay posiciones registradas para estos filtros.</td>
+                          <td colSpan={10} className="p-10 text-center text-slate-450 text-xs">No hay posiciones registradas para estos filtros.</td>
                         </tr>
                       )}
                     </tbody>
@@ -210,25 +210,25 @@ export const VisualizacionPublica: React.FC = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+                      <tr className="bg-[#171a26] border-b border-slate-900 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
                         <th className="p-3.5 pl-6 text-center w-12">Pos</th>
                         <th className="p-3.5">Jugador</th>
                         <th className="p-3.5">Equipo</th>
                         <th className="p-3.5 text-center pr-6">Goles Registrados</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
+                    <tbody className="divide-y divide-slate-900 text-sm">
                       {goleadores.map((g, idx) => (
-                        <tr key={g.id} className="hover:bg-slate-50/40">
+                        <tr key={g.id} className="hover:bg-[#171a26]/40">
                           <td className="p-3.5 pl-6 text-center font-bold text-slate-400">{idx + 1}</td>
-                          <td className="p-3.5 font-bold text-slate-900">{g.player?.name}</td>
-                          <td className="p-3.5 text-slate-600">{g.player?.team?.name}</td>
-                          <td className="p-3.5 text-center font-extrabold text-emerald-600 text-base pr-6">{g.goals}</td>
+                          <td className="p-3.5 font-bold text-white">{g.player?.name}</td>
+                          <td className="p-3.5 text-slate-305">{g.player?.team?.name}</td>
+                          <td className="p-3.5 text-center font-extrabold text-emerald-450 text-base pr-6">{g.goals}</td>
                         </tr>
                       ))}
                       {goleadores.length === 0 && (
                         <tr>
-                          <td colSpan={4} className="p-10 text-center text-slate-500 text-xs">No hay estadísticas de goleadores registradas.</td>
+                          <td colSpan={4} className="p-10 text-center text-slate-450 text-xs">No hay estadísticas de goleadores registradas.</td>
                         </tr>
                       )}
                     </tbody>
@@ -240,7 +240,7 @@ export const VisualizacionPublica: React.FC = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+                      <tr className="bg-[#171a26] border-b border-slate-900 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
                         <th className="p-3.5 pl-6 text-center w-12">Pos</th>
                         <th className="p-3.5">Jugador</th>
                         <th className="p-3.5">Equipo</th>
@@ -248,19 +248,19 @@ export const VisualizacionPublica: React.FC = () => {
                         <th className="p-3.5 text-center pr-6">Tarjetas Rojas</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
+                    <tbody className="divide-y divide-slate-900 text-sm">
                       {tarjetas.map((t, idx) => (
-                        <tr key={t.id} className="hover:bg-slate-50/40">
+                        <tr key={t.id} className="hover:bg-[#171a26]/40">
                           <td className="p-3.5 pl-6 text-center font-bold text-slate-400">{idx + 1}</td>
-                          <td className="p-3.5 font-bold text-slate-900">{t.player?.name}</td>
-                          <td className="p-3.5 text-slate-600">{t.player?.team?.name}</td>
-                          <td className="p-3.5 text-center font-extrabold text-amber-500 text-base">{t.yellow_cards}</td>
-                          <td className="p-3.5 text-center font-extrabold text-rose-600 text-base pr-6">{t.red_cards}</td>
+                          <td className="p-3.5 font-bold text-white">{t.player?.name}</td>
+                          <td className="p-3.5 text-slate-305">{t.player?.team?.name}</td>
+                          <td className="p-3.5 text-center font-extrabold text-amber-450 text-base">{t.yellow_cards}</td>
+                          <td className="p-3.5 text-center font-extrabold text-rose-500 text-base pr-6">{t.red_cards}</td>
                         </tr>
                       ))}
                       {tarjetas.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="p-10 text-center text-slate-500 text-xs">No hay estadísticas de tarjetas registradas.</td>
+                          <td colSpan={5} className="p-10 text-center text-slate-450 text-xs">No hay estadísticas de tarjetas registradas.</td>
                         </tr>
                       )}
                     </tbody>
@@ -272,7 +272,7 @@ export const VisualizacionPublica: React.FC = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+                      <tr className="bg-[#171a26] border-b border-slate-900 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
                         <th className="p-3.5 pl-6">Jugador</th>
                         <th className="p-3">Equipo</th>
                         <th className="p-3">Motivo / Causa de la Sanción</th>
@@ -281,16 +281,16 @@ export const VisualizacionPublica: React.FC = () => {
                         <th className="p-3 pr-6 text-right">Estado</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
+                    <tbody className="divide-y divide-slate-900 text-sm">
                       {sanciones.map((s) => (
-                        <tr key={s.id} className="hover:bg-slate-50/40">
-                          <td className="p-3.5 pl-6 font-bold text-slate-900">{s.player?.name}</td>
-                          <td className="p-3 text-slate-600">{s.player?.team?.name}</td>
-                          <td className="p-3 text-slate-600 text-xs">{s.reason}</td>
-                          <td className="p-3 text-slate-500 text-xs">{new Date(s.start_date).toLocaleDateString()}</td>
-                          <td className="p-3 text-slate-600 font-semibold">{s.duration} {s.duration === 1 ? 'partido' : 'partidos'}</td>
+                        <tr key={s.id} className="hover:bg-[#171a26]/40">
+                          <td className="p-3.5 pl-6 font-bold text-white">{s.player?.name}</td>
+                          <td className="p-3 text-slate-305">{s.player?.team?.name}</td>
+                          <td className="p-3 text-slate-400 text-xs">{s.reason}</td>
+                          <td className="p-3 text-slate-450 text-xs">{new Date(s.start_date).toLocaleDateString()}</td>
+                          <td className="p-3 text-slate-300 font-semibold">{s.duration} {s.duration === 1 ? 'partido' : 'partidos'}</td>
                           <td className="p-3 pr-6 text-right">
-                            <span className="bg-rose-50 border border-rose-200 text-rose-700 font-bold px-2.5 py-0.5 rounded-full text-[9px] uppercase tracking-wider">
+                            <span className="bg-rose-500/10 border border-rose-500/20 text-rose-455 font-bold px-2.5 py-0.5 rounded-full text-[9px] uppercase tracking-wider">
                               {s.status}
                             </span>
                           </td>
@@ -298,7 +298,7 @@ export const VisualizacionPublica: React.FC = () => {
                       ))}
                       {sanciones.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="p-10 text-center text-slate-500 text-xs">No hay sanciones activas en este momento.</td>
+                          <td colSpan={6} className="p-10 text-center text-slate-450 text-xs">No hay sanciones activas en este momento.</td>
                         </tr>
                       )}
                     </tbody>

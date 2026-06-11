@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import {
   serviciosFixture,
@@ -491,13 +492,20 @@ export const MesaControl: React.FC = () => {
   };
 
   const mostrarMensaje = (msg: string, esError: boolean = false) => {
-    if (esError) {
-      setErrorLocal(msg);
-      setTimeout(() => setErrorLocal(null), 4000);
-    } else {
-      setMensajeExito(msg);
-      setTimeout(() => setMensajeExito(null), 3000);
-    }
+    Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.onmouseenter = Swal.stopTimer;
+        toast.onmouseleave = Swal.resumeTimer;
+      }
+    }).fire({
+      icon: esError ? 'error' : 'success',
+      title: msg
+    });
   };
 
   const guardarProgresoActa = async (e: React.FormEvent) => {
@@ -540,7 +548,19 @@ export const MesaControl: React.FC = () => {
       mostrarMensaje('Guarde el progreso del acta primero antes de bloquear.', true);
       return;
     }
-    if (!window.confirm('¿Desea cerrar el acta? Esto es irreversible, recalculará la tabla y registrará las sanciones.')) return;
+    const result = await Swal.fire({
+      title: '¿Desea cerrar el acta?',
+      text: 'Esto es irreversible, recalculará la tabla y registrará las sanciones.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#4f46e5',
+      cancelButtonColor: '#ef4444',
+      confirmButtonText: 'Sí, cerrar acta',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       const res = await serviciosResultados.bloquearActa(acta.id);
       if (res.success) {
@@ -557,7 +577,19 @@ export const MesaControl: React.FC = () => {
 
 
   const eliminarIncidencia = async (id: number) => {
-    if (!window.confirm('¿Desea quitar esta incidencia?')) return;
+    const result = await Swal.fire({
+      title: '¿Desea quitar esta incidencia?',
+      text: 'Esta acción no se puede deshacer.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#4f46e5',
+      cancelButtonColor: '#ef4444',
+      confirmButtonText: 'Sí, quitar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       const res = await serviciosResultados.eliminarIncidencia(id);
       if (res.success) {
@@ -569,12 +601,10 @@ export const MesaControl: React.FC = () => {
     }
   };
 
-
-
   return (
-    <div className="min-h-screen bg-[#f4f6f7] text-slate-800 font-sans flex flex-col">
+    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans flex flex-col">
       {/* Cabecera */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+      <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
@@ -584,17 +614,17 @@ export const MesaControl: React.FC = () => {
                 navegar('/tablero');
               }
             }}
-            className="w-10 h-10 rounded-lg flex items-center justify-center border border-slate-200 hover:bg-slate-50 transition-all cursor-pointer"
+            className="w-10 h-10 rounded-lg flex items-center justify-center border border-slate-800 hover:bg-[#171a26] transition-all cursor-pointer"
           >
-            <span className="material-symbols-outlined text-slate-700">arrow_back</span>
+            <span className="material-symbols-outlined text-slate-300">arrow_back</span>
           </button>
           <div>
-            <h1 className="text-lg font-black text-slate-900 leading-none">
+            <h1 className="text-lg font-black text-white leading-none">
               {partidoSeleccionado 
                 ? `${partidoSeleccionado.local_team?.name} vs ${partidoSeleccionado.visitor_team?.name}` 
                 : 'Mesa de Control'}
             </h1>
-            <span className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase mt-1 block">
+            <span className="text-[10px] text-slate-450 font-semibold tracking-wider uppercase mt-1 block">
               {partidoSeleccionado 
                 ? `${partidoSeleccionado.discipline?.name || 'Deporte'} - Jornada ${partidoSeleccionado.round} (${partidoSeleccionado.match_date ? new Date(partidoSeleccionado.match_date).toLocaleDateString() : ''})` 
                 : 'Registro de Resultados y Planillaje Oficial'}
@@ -608,14 +638,14 @@ export const MesaControl: React.FC = () => {
         
         {/* Toasts */}
         {mensajeExito && (
-          <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 text-sm flex items-center gap-2">
+          <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-450 text-sm flex items-center gap-2">
             <span className="material-symbols-outlined text-sm">check_circle</span>
             <span>{mensajeExito}</span>
           </div>
         )}
 
         {errorLocal && (
-          <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 text-sm flex items-center gap-2">
+          <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-450 text-sm flex items-center gap-2">
             <span className="material-symbols-outlined text-sm">error</span>
             <span>{errorLocal}</span>
           </div>
@@ -626,13 +656,13 @@ export const MesaControl: React.FC = () => {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-xl font-extrabold text-slate-900">Partidos Programados</h2>
-                <p className="text-xs text-slate-500 font-medium">Seleccione un partido para abrir su mesa de control y comenzar a planillar el encuentro.</p>
+                <h2 className="text-xl font-extrabold text-white">Partidos Programados</h2>
+                <p className="text-xs text-slate-400 font-medium">Seleccione un partido para abrir su mesa de control y comenzar a planillar el encuentro.</p>
               </div>
             </div>
 
             {cargando ? (
-              <div className="py-20 text-center text-sm text-slate-500 font-bold animate-pulse">
+              <div className="py-20 text-center text-sm text-slate-400 font-bold animate-pulse">
                 Cargando partidos de la mesa de control...
               </div>
             ) : (
@@ -644,47 +674,47 @@ export const MesaControl: React.FC = () => {
                     <div
                       key={part.id}
                       onClick={() => seleccionarPartido(part)}
-                      className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:shadow-md hover:border-primary/50 transition-all cursor-pointer flex flex-col justify-between gap-4 group"
+                      className="bg-[#11131c] rounded-2xl border border-slate-900 p-5 shadow-xs hover:shadow-md hover:border-[#800f2f]/60 transition-all cursor-pointer flex flex-col justify-between gap-4 group"
                     >
                       <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                         <span>Jornada {part.round}</span>
                         <span className={`px-2 py-0.5 rounded-md font-extrabold text-[8px] uppercase tracking-wider border ${
                           part.status === 'finalizado' 
-                            ? 'bg-slate-100 text-slate-500 border-slate-200' 
+                            ? 'bg-[#1c1f2e] text-slate-350 border-slate-800' 
                             : part.status === 'jugando'
-                            ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20 animate-pulse'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 animate-pulse'
                             : part.status === 'descanso'
-                            ? 'bg-amber-500/10 text-amber-700 border-amber-500/20'
-                            : 'bg-blue-500/10 text-blue-700 border-blue-500/20'
+                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                            : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
                         }`}>{part.status}</span>
                       </div>
 
                       <div className="space-y-3 my-2">
                         <div className="flex items-center justify-between">
-                          <span className="font-extrabold text-slate-800 text-sm group-hover:text-primary transition-colors">{part.local_team?.name}</span>
+                          <span className="font-extrabold text-slate-200 text-sm group-hover:text-primary transition-colors">{part.local_team?.name}</span>
                           {part.status === 'finalizado' || part.status === 'jugando' || part.status === 'descanso' ? (
-                            <span className="font-black text-slate-700 text-xs bg-slate-100 px-2 py-1 rounded-md">
+                            <span className="font-black text-slate-200 text-xs bg-[#1c1f2e] px-2 py-1 rounded-md">
                               {localScore}
                             </span>
                           ) : null}
                         </div>
-                        <div className="flex items-center justify-between border-t border-slate-100 pt-2">
-                          <span className="font-extrabold text-slate-800 text-sm group-hover:text-primary transition-colors">{part.visitor_team?.name}</span>
+                        <div className="flex items-center justify-between border-t border-slate-900 pt-2">
+                          <span className="font-extrabold text-slate-200 text-sm group-hover:text-primary transition-colors">{part.visitor_team?.name}</span>
                           {part.status === 'finalizado' || part.status === 'jugando' || part.status === 'descanso' ? (
-                            <span className="font-black text-slate-700 text-xs bg-slate-100 px-2 py-1 rounded-md">
+                            <span className="font-black text-slate-200 text-xs bg-[#1c1f2e] px-2 py-1 rounded-md">
                               {visitorScore}
                             </span>
                           ) : null}
                         </div>
                       </div>
 
-                      <div className="border-t border-slate-100 pt-3 flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                      <div className="border-t border-slate-900 pt-3 flex items-center justify-between text-[10px] text-slate-400 font-medium">
                         <div className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[13px] text-slate-400">calendar_today</span>
+                          <span className="material-symbols-outlined text-[13px] text-slate-550">calendar_today</span>
                           <span>{part.match_date ? new Date(part.match_date).toLocaleDateString() : 'N/A'} - {part.match_time || 'N/A'}</span>
                         </div>
                         <div className="flex items-center gap-1 max-w-[120px] truncate" title={part.venue?.name}>
-                          <span className="material-symbols-outlined text-[13px] text-slate-400">location_on</span>
+                          <span className="material-symbols-outlined text-[13px] text-slate-550">location_on</span>
                           <span className="truncate">{part.venue?.name || 'N/A'}</span>
                         </div>
                       </div>
@@ -692,7 +722,7 @@ export const MesaControl: React.FC = () => {
                   );
                 })}
                 {partidos.length === 0 && (
-                  <div className="col-span-full bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500 italic text-sm">
+                  <div className="col-span-full bg-[#11131c] rounded-2xl border border-slate-900 p-12 text-center text-slate-400 italic text-sm">
                     No hay partidos programados en este momento.
                   </div>
                 )}
@@ -704,18 +734,18 @@ export const MesaControl: React.FC = () => {
           <form onSubmit={guardarProgresoActa} className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
             {/* Columnas Izquierda: Marcador, Cronómetro, Incidencias Rápidas */}
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
-                <div className="border-b border-slate-100 pb-2 flex justify-between items-center">
-                  <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900">Acta de Partido Oficial</h2>
+              <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-6 shadow-xs space-y-5">
+                <div className="border-b border-slate-900 pb-2 flex justify-between items-center">
+                  <h2 className="font-extrabold text-sm uppercase tracking-wider text-white">Acta de Partido Oficial</h2>
                   {acta?.is_locked && (
-                    <span className="bg-rose-50 border border-rose-200 text-rose-700 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wider">Acta Cerrada</span>
+                    <span className="bg-rose-500/10 border border-rose-500/20 text-rose-450 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wider">Acta Cerrada</span>
                   )}
                 </div>
 
                 {/* Cronómetro y Controles de Estado de Estadio */}
-                <div className="bg-slate-950 border border-slate-800 text-white p-6 rounded-2xl flex flex-col items-center justify-center gap-4 relative overflow-hidden shadow-md">
+                <div className="bg-slate-950 border border-slate-900 text-white p-6 rounded-2xl flex flex-col items-center justify-center gap-4 relative overflow-hidden shadow-md">
                   <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                    <span className={`w-2.5 h-2.5 rounded-full ${subEstadoPartido === 'jugando' ? 'bg-[#70e000] animate-pulse' : 'bg-rose-500'}`} />
+                    <span className={`w-2.5 h-2.5 rounded-full ${subEstadoPartido === 'jugando' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
                     <span className="text-[9px] uppercase font-bold text-slate-400 tracking-widest">
                       {subEstadoPartido === 'jugando' ? 'EN JUEGO' : 
                        subEstadoPartido === 'descanso' ? 'EN DESCANSO' : 
@@ -724,7 +754,7 @@ export const MesaControl: React.FC = () => {
                   </div>
 
                   {/* Selector de Periodo / Set */}
-                  <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl mt-4 z-10">
+                  <div className="flex items-center gap-3 bg-slate-900 border border-slate-850 px-4 py-2 rounded-xl mt-4 z-10">
                     <button
                       type="button"
                       disabled={periodoActualIdx === 0}
@@ -756,7 +786,7 @@ export const MesaControl: React.FC = () => {
                   {/* Reloj y Controles (Si tiene cronómetro) */}
                   {obtenerNormasDeporte().hasTimer ? (
                     <div className="flex flex-col items-center gap-2 z-10">
-                      <div className="text-4xl sm:text-5xl font-mono font-black tracking-widest text-[#70e000] drop-shadow-[0_2px_8px_rgba(112,224,0,0.3)]">
+                      <div className="text-4xl sm:text-5xl font-mono font-black tracking-widest text-white">
                         {formatearTiempo(segundosTranscurridos)}
                       </div>
                       
@@ -766,7 +796,7 @@ export const MesaControl: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => cambiarEstadoPartidoMesa('jugando')}
-                              className="flex items-center gap-1 bg-[#70e000] hover:bg-[#5ec200] text-slate-950 px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shadow-lg hover:shadow-[#70e000]/25"
+                              className="flex items-center gap-1 bg-indigo-650 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shadow-lg hover:shadow-indigo-650/25"
                             >
                               <span className="material-symbols-outlined text-sm">play_arrow</span>
                               Iniciar / Continuar
@@ -816,7 +846,7 @@ export const MesaControl: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => cambiarEstadoPartidoMesa('jugando')}
-                              className="flex items-center gap-1 bg-[#70e000] hover:bg-[#5ec200] text-slate-950 px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer"
+                              className="flex items-center gap-1 bg-indigo-650 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer"
                             >
                               Iniciar Juego
                             </button>
@@ -846,50 +876,50 @@ export const MesaControl: React.FC = () => {
                 </div>
 
                 {/* Scoreboard Digital */}
-                <div className="grid grid-cols-3 gap-4 bg-slate-50 border border-slate-150 p-6 rounded-2xl items-center text-center">
-                  <div className="font-extrabold text-sm text-slate-950 truncate">{partidoSeleccionado.local_team?.name}</div>
+                <div className="grid grid-cols-3 gap-4 bg-[#07080c] border border-slate-900 p-6 rounded-2xl items-center text-center">
+                  <div className="font-extrabold text-sm text-slate-200 truncate">{partidoSeleccionado.local_team?.name}</div>
                   <div className="flex flex-col items-center justify-center gap-1">
                     <div className="flex items-center justify-center gap-3">
                       <input
                         type="text"
                         readOnly
                         value={golesLocal}
-                        className="w-14 text-center text-2xl font-black border border-slate-200 bg-slate-100 text-slate-800 rounded-lg p-2 outline-hidden cursor-not-allowed select-none"
+                        className="w-14 text-center text-2xl font-black border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 outline-hidden cursor-not-allowed select-none"
                         title="El marcador se calcula automáticamente a partir de las incidencias registradas"
                       />
-                      <span className="font-black text-slate-400 text-lg">-</span>
+                      <span className="font-black text-slate-600 text-lg">-</span>
                       <input
                         type="text"
                         readOnly
                         value={golesVisita}
-                        className="w-14 text-center text-2xl font-black border border-slate-200 bg-slate-100 text-slate-800 rounded-lg p-2 outline-hidden cursor-not-allowed select-none"
+                        className="w-14 text-center text-2xl font-black border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 outline-hidden cursor-not-allowed select-none"
                         title="El marcador se calcula automáticamente a partir de las incidencias registradas"
                       />
                     </div>
-                    <span className="text-[9px] text-slate-550 font-bold uppercase tracking-widest mt-1 block">
+                    <span className="text-[9px] text-slate-450 font-bold uppercase tracking-widest mt-1 block">
                       {obtenerNormasDeporte().scoreLabel}
                     </span>
                   </div>
-                  <div className="font-extrabold text-sm text-slate-950 truncate">{partidoSeleccionado.visitor_team?.name}</div>
+                  <div className="font-extrabold text-sm text-slate-200 truncate">{partidoSeleccionado.visitor_team?.name}</div>
                 </div>
 
                 {/* Botones de Incidencia Rápida (Eventos Rápidos de un Clic) */}
                 {!acta?.is_locked && (
-                  <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl space-y-3 shadow-xs">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-1.5 border-b border-slate-200 pb-2">
-                      <h3 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                  <div className="p-4 bg-[#07080c] border border-slate-900 rounded-2xl space-y-3 shadow-xs">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-1.5 border-b border-slate-900 pb-2">
+                      <h3 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
                         Registrar Evento Rápido ({partidoSeleccionado.discipline?.name || 'Deporte General'})
                       </h3>
                       {subEstadoPartido !== 'jugando' && (
-                        <span className="bg-amber-100 text-amber-800 text-[8px] font-bold px-1.5 py-0.5 rounded border border-amber-200">
+                        <span className="bg-amber-500/10 text-amber-400 text-[8px] font-bold px-1.5 py-0.5 rounded border border-amber-500/20">
                           Reloj detenido (capturará {formatearTiempo(segundosTranscurridos)})
                         </span>
                       )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       {/* Eventos Equipo Local */}
-                      <div className="space-y-2 border-r border-slate-200 pr-2">
-                        <span className="text-[10px] font-bold text-slate-800 block text-center truncate">{partidoSeleccionado.local_team?.name}</span>
+                      <div className="space-y-2 border-r border-slate-900 pr-2">
+                        <span className="text-[10px] font-bold text-slate-200 block text-center truncate">{partidoSeleccionado.local_team?.name}</span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
                           {obtenerTiposIncidenciaDeporte().map((inc) => (
                             <button
@@ -907,7 +937,7 @@ export const MesaControl: React.FC = () => {
 
                       {/* Eventos Equipo Visitante */}
                       <div className="space-y-2 pl-2">
-                        <span className="text-[10px] font-bold text-slate-800 block text-center truncate">{partidoSeleccionado.visitor_team?.name}</span>
+                        <span className="text-[10px] font-bold text-slate-200 block text-center truncate">{partidoSeleccionado.visitor_team?.name}</span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
                           {obtenerTiposIncidenciaDeporte().map((inc) => (
                             <button
@@ -931,45 +961,45 @@ export const MesaControl: React.FC = () => {
             {/* Columna Derecha: Signatures, Observations, and Event History */}
             <div className="lg:col-span-1 space-y-6">
               {/* Firmas y Observaciones */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-                <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-2">Firmas y Cierre</h3>
+              <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-6 shadow-xs space-y-4">
+                <h3 className="font-extrabold text-sm uppercase tracking-wider text-white border-b border-slate-900 pb-2">Firmas y Cierre</h3>
                 
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Firma Árbitro Principal</label>
+                    <label className="text-xs font-bold text-slate-300 block">Firma Árbitro Principal</label>
                     <input
                       type="text" placeholder="Firma / Nombre" disabled={acta?.is_locked}
                       value={firmaArbitro} onChange={(e) => setFirmaArbitro(e.target.value)}
-                      className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-white text-slate-800"
+                      className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 placeholder:text-slate-600"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Firma Delegado de Mesa</label>
+                    <label className="text-xs font-bold text-slate-300 block">Firma Delegado de Mesa</label>
                     <input
                       type="text" placeholder="Firma / Nombre" disabled={acta?.is_locked}
                       value={firmaDelegado} onChange={(e) => setFirmaDelegado(e.target.value)}
-                      className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-white text-slate-800"
+                      className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 placeholder:text-slate-600"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Observaciones del Encuentro</label>
+                  <label className="text-xs font-bold text-slate-300 block">Observaciones del Encuentro</label>
                   <textarea
                     placeholder="Ej: Retraso por clima, incidencias fuera del campo..." disabled={acta?.is_locked}
                     value={observaciones} onChange={(e) => setObservaciones(e.target.value)}
-                    className="w-full text-xs border border-slate-200 rounded-lg p-2 min-h-[60px] text-slate-800"
+                    className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 min-h-[60px] placeholder:text-slate-600"
                   />
                 </div>
 
                 {!acta?.is_locked && (
                   <div className="flex flex-col gap-2 pt-2">
-                    <button type="submit" className="w-full bg-slate-800 hover:bg-slate-950 text-white font-bold py-2.5 rounded-lg text-xs cursor-pointer transition-all">
+                    <button type="submit" className="w-full bg-[#1c1f2e] hover:bg-[#282d42] border border-slate-900 text-white font-bold py-2.5 rounded-lg text-xs cursor-pointer transition-all">
                       Guardar Marcador y Firmas
                     </button>
                     <button
                       type="button" onClick={bloquearActaFinal}
-                      className="w-full bg-primary hover:bg-primary-container text-white font-bold py-2.5 rounded-lg text-xs cursor-pointer transition-all"
+                      className="w-full bg-[#800f2f] hover:bg-[#a4133c] text-white font-bold py-2.5 rounded-lg text-xs cursor-pointer transition-all"
                     >
                       Cerrar y Bloquear Acta
                     </button>
@@ -978,25 +1008,25 @@ export const MesaControl: React.FC = () => {
               </div>
 
               {/* Registro de Incidencias / Historial */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-                <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-2">Historial de Sucesos</h2>
+              <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-6 shadow-xs space-y-4">
+                <h2 className="font-extrabold text-sm uppercase tracking-wider text-white border-b border-slate-900 pb-2">Historial de Sucesos</h2>
                 
                 {incidencias.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic p-4 text-center">No hay incidencias registradas en este encuentro.</p>
+                  <p className="text-xs text-slate-400 italic p-4 text-center">No hay incidencias registradas en este encuentro.</p>
                 ) : (
-                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white max-h-[300px] overflow-y-auto">
+                  <div className="divide-y divide-slate-900 border border-slate-900 rounded-xl overflow-hidden bg-[#11131c] max-h-[300px] overflow-y-auto">
                     {incidencias.map((i) => {
                       const config = obtenerEtiquetaIncidencia(i.incidence_type, i.description);
                       return (
-                        <div key={i.id} className="p-3 text-xs flex justify-between items-center hover:bg-slate-50/50">
+                        <div key={i.id} className="p-3 text-xs flex justify-between items-center hover:bg-[#171a26]/30">
                           <div className="min-w-0 flex-1 pr-2">
                             <span className="font-bold text-secondary mr-2 shrink-0">
                               {i.minute}' {i.second !== undefined && i.second !== null && i.second > 0 ? `${i.second.toString().padStart(2, '0')}"` : ''}
                             </span>
-                            <span className="font-semibold text-slate-900 truncate inline-block max-w-[120px] align-middle" title={i.player?.name}>
+                            <span className="font-semibold text-slate-200 truncate inline-block max-w-[120px] align-middle" title={i.player?.name}>
                               {i.player?.name || 'Jugador no especificado'}
                             </span>
-                            <span className="text-slate-300 mx-1.5">|</span>
+                            <span className="text-slate-700 mx-1.5">|</span>
                             <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border align-middle ${config.color}`}>
                               <span className="material-symbols-outlined text-[9px] shrink-0">
                                 {config.icon}
@@ -1005,7 +1035,7 @@ export const MesaControl: React.FC = () => {
                             </span>
                           </div>
                           {!acta?.is_locked && (
-                            <button type="button" onClick={() => eliminarIncidencia(i.id)} className="text-[10px] text-rose-600 font-bold hover:underline cursor-pointer shrink-0 ml-2">
+                            <button type="button" onClick={() => eliminarIncidencia(i.id)} className="text-[10px] text-rose-450 font-bold hover:underline cursor-pointer shrink-0 ml-2">
                               Quitar
                             </button>
                           )}
@@ -1024,7 +1054,7 @@ export const MesaControl: React.FC = () => {
       {/* Botón Flotante de Ayuda */}
       <button
         onClick={() => setMostrarAyuda(true)}
-        className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-primary hover:bg-primary-container text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95 z-40 cursor-pointer"
+        className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-[#800f2f] hover:bg-[#a4133c] text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95 z-40 cursor-pointer"
         title="¿Cómo usar esta sección?"
       >
         <span className="material-symbols-outlined text-lg">question_mark</span>
@@ -1032,47 +1062,47 @@ export const MesaControl: React.FC = () => {
 
       {/* Drawer de Ayuda */}
       {mostrarAyuda && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex justify-end animate-fadeIn">
-          <div className="w-full max-w-sm bg-white h-full shadow-2xl flex flex-col animate-slideLeft">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex justify-end animate-fadeIn">
+          <div className="w-full max-w-sm bg-[#11131c] border-l border-slate-900 h-full shadow-2xl flex flex-col animate-slideLeft">
             {/* Cabecera del Drawer */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-900 bg-[#07080c]">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-base">help</span>
-                <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Ayuda: Mesa de Control</h3>
+                <span className="material-symbols-outlined text-[#c9244b] text-base">help</span>
+                <h3 className="font-extrabold text-sm text-white uppercase tracking-wide">Ayuda: Mesa de Control</h3>
               </div>
               <button
                 onClick={() => setMostrarAyuda(false)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all cursor-pointer"
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-800 text-slate-400 hover:bg-[#171a26] hover:text-slate-200 transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
             </div>
 
             {/* Contenido del Drawer */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-3">
+            <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-[#11131c]">
               <p className="text-[10px] text-slate-400 font-semibold leading-relaxed mb-4">
                 Sigue estos pasos para registrar y finalizar los partidos oficiales de tu torneo:
               </p>
               {PASOS_AYUDA_MESA.map((p) => (
-                <div key={p.paso} className="flex gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100/60 transition-colors">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
+                <div key={p.paso} className="flex gap-3 p-3 rounded-xl bg-[#07080c] border border-slate-900 hover:bg-[#171a26]/40 transition-colors">
+                  <div className="w-6 h-6 rounded-full bg-[#800f2f]/20 text-[#c9244b] border border-[#800f2f]/30 text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
                     {p.paso}
                   </div>
                   <div className="flex-1">
-                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-xs text-slate-400">{p.icono}</span>
+                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-xs text-slate-500">{p.icono}</span>
                       {p.titulo}
                     </h4>
-                    <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed font-medium">{p.desc}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed font-medium">{p.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Pie del Drawer */}
-            <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50">
-              <p className="text-[10px] text-slate-400 font-semibold mb-1">⚠️ Importante:</p>
-              <p className="text-[10px] text-slate-500 leading-normal font-medium">
+            <div className="px-5 py-4 border-t border-slate-900 bg-[#07080c]/50">
+              <p className="text-[10px] text-[#c9244b] font-semibold mb-1">⚠️ Importante:</p>
+              <p className="text-[10px] text-slate-400 leading-normal font-medium">
                 Cerrar y bloquear el acta es un paso irreversible que calcula los puntos finales del standing y genera sanciones aplicables a los jugadores para las siguientes fechas.
               </p>
             </div>
@@ -1082,13 +1112,13 @@ export const MesaControl: React.FC = () => {
 
       {/* Modal Emergente de Incidencia Rápida (Selección de Jugador) */}
       {modalIncidenciaRapida && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[85vh] animate-scaleIn">
+        <div className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#11131c] rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-[#222738] flex flex-col max-h-[85vh] animate-scaleIn">
             {/* Cabecera */}
-            <div className="px-5 py-4 border-b border-slate-150 flex items-center justify-between bg-slate-50">
+            <div className="px-5 py-4 border-b border-slate-900 flex items-center justify-between bg-[#07080c]">
               <div>
-                <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-primary">
+                <h3 className="font-extrabold text-sm text-white uppercase tracking-wide flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[#c9244b]">
                     {modalIncidenciaRapida.type === 'goal' ? 'sports_soccer' :
                      modalIncidenciaRapida.type === 'yellow_card' ? 'square' :
                      modalIncidenciaRapida.type === 'red_card' ? 'square' :
@@ -1102,23 +1132,23 @@ export const MesaControl: React.FC = () => {
                     modalIncidenciaRapida.type === 'foul' ? 'Falta' : 'Lesión'
                   }
                 </h3>
-                <span className="text-[10px] font-bold text-slate-500 uppercase mt-0.5 block">
+                <span className="text-[10px] font-bold text-slate-400 uppercase mt-0.5 block">
                   {modalIncidenciaRapida.teamName}
                 </span>
               </div>
               <button
                 onClick={() => setModalIncidenciaRapida(null)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-[#171a26] transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
             </div>
 
             {/* Contenido / Listado de Jugadores del Equipo */}
-            <div className="p-5 overflow-y-auto space-y-4 flex-1">
+            <div className="p-5 overflow-y-auto space-y-4 flex-1 bg-[#11131c]">
               {/* Ajustar Tiempo Capturado */}
-              <div className="bg-slate-50 border border-slate-150 p-3 rounded-xl">
-                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-2 text-center">Ajustar Tiempo del Suceso</span>
+              <div className="bg-[#07080c] border border-slate-900 p-3 rounded-xl">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-2 text-center">Ajustar Tiempo del Suceso</span>
                 <div className="flex gap-3 justify-center items-center">
                   <div className="w-20">
                     <label className="text-[8px] font-bold text-slate-450 uppercase block mb-0.5 text-center">Minuto</label>
@@ -1129,10 +1159,10 @@ export const MesaControl: React.FC = () => {
                         ...modalIncidenciaRapida,
                         capturedMinute: Math.min(Math.max(parseInt(e.target.value) || 1, 1), 130)
                       })}
-                      className="w-full text-xs font-bold border border-slate-200 rounded-lg p-1.5 bg-white text-slate-800 text-center focus:ring-1 focus:ring-primary focus:outline-hidden"
+                      className="w-full text-xs font-bold border border-slate-800 rounded-lg p-1.5 bg-[#171a26] text-white text-center focus:ring-1 focus:ring-[#800f2f] focus:outline-hidden"
                     />
                   </div>
-                  <span className="font-bold text-slate-450 mt-3">:</span>
+                  <span className="font-bold text-slate-650 mt-3">:</span>
                   <div className="w-20">
                     <label className="text-[8px] font-bold text-slate-450 uppercase block mb-0.5 text-center">Segundo</label>
                     <input 
@@ -1142,7 +1172,7 @@ export const MesaControl: React.FC = () => {
                         ...modalIncidenciaRapida,
                         capturedSecond: Math.min(Math.max(parseInt(e.target.value) || 0, 0), 59)
                       })}
-                      className="w-full text-xs font-bold border border-slate-200 rounded-lg p-1.5 bg-white text-slate-800 text-center focus:ring-1 focus:ring-primary focus:outline-hidden"
+                      className="w-full text-xs font-bold border border-slate-800 rounded-lg p-1.5 bg-[#171a26] text-white text-center focus:ring-1 focus:ring-[#800f2f] focus:outline-hidden"
                     />
                   </div>
                 </div>
@@ -1150,19 +1180,19 @@ export const MesaControl: React.FC = () => {
 
               {/* Filtro/Buscador Rápido */}
               <div className="space-y-1">
-                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Buscar Jugador</label>
+                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Buscar Jugador</label>
                 <input
                   type="text"
                   placeholder="🔍 Ingrese nombre o número..."
                   value={filtroJugadorModal}
                   onChange={(e) => setFiltroJugadorModal(e.target.value)}
-                  className="w-full text-xs border border-slate-200 rounded-xl p-2.5 bg-white text-slate-800 focus:ring-1 focus:ring-primary focus:outline-hidden"
+                  className="w-full text-xs border border-slate-800 rounded-xl p-2.5 bg-[#171a26] text-white focus:ring-1 focus:ring-[#800f2f] focus:outline-hidden"
                 />
               </div>
 
               {/* Lista */}
               <div className="space-y-1.5">
-                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block pb-1">Seleccionar:</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block pb-1">Seleccionar:</span>
                 <div className="space-y-1 max-h-[200px] overflow-y-auto pr-1">
                   {((modalIncidenciaRapida.teamId === (partidoSeleccionado?.local_team_id || (partidoSeleccionado as any)?.home_team_id)
                     ? jugadoresLocal 
@@ -1176,14 +1206,15 @@ export const MesaControl: React.FC = () => {
                   })).map((jug) => (
                     <button
                       key={jug.id}
+                      type="button"
                       onClick={() => confirmarIncidenciaRapida(jug.id)}
-                      className="w-full text-left p-2.5 rounded-xl border border-slate-150 hover:border-primary/60 hover:bg-primary/2 flex justify-between items-center transition-all cursor-pointer group"
+                      className="w-full text-left p-2.5 rounded-xl border border-slate-900 hover:border-[#800f2f]/60 hover:bg-[#800f2f]/5 flex justify-between items-center transition-all cursor-pointer group"
                     >
                       <div>
-                        <span className="font-bold text-slate-900 group-hover:text-primary transition-colors text-xs">{jug.name}</span>
-                        <span className="text-slate-400 text-[9px] block mt-0.5 uppercase font-medium">{jug.position || 'Jugador'}</span>
+                        <span className="font-bold text-slate-200 group-hover:text-[#c9244b] transition-colors text-xs">{jug.name}</span>
+                        <span className="text-slate-500 text-[9px] block mt-0.5 uppercase font-medium">{jug.position || 'Jugador'}</span>
                       </div>
-                      <span className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center font-extrabold text-[10px] text-slate-600 border border-slate-200 group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
+                      <span className="w-7 h-7 rounded-full bg-[#171a26] flex items-center justify-center font-extrabold text-[10px] text-slate-350 border border-slate-800 group-hover:bg-[#800f2f] group-hover:text-white group-hover:border-[#800f2f] transition-all">
                         {jug.number || '#'}
                       </span>
                     </button>
@@ -1193,7 +1224,7 @@ export const MesaControl: React.FC = () => {
                     ? jugadoresLocal.length 
                     : jugadoresVisita.length
                   ) === 0) && (
-                    <div className="text-center py-6 text-xs text-slate-500 italic">
+                    <div className="text-center py-6 text-xs text-slate-400 italic">
                       No hay jugadores registrados para este equipo.
                     </div>
                   )}
@@ -1207,7 +1238,7 @@ export const MesaControl: React.FC = () => {
                       (j.number && j.number.toString().includes(search)) ||
                       (j.position && j.position.toLowerCase().includes(search));
                   }).length === 0) && (
-                    <div className="text-center py-6 text-xs text-slate-500 italic">
+                    <div className="text-center py-6 text-xs text-slate-400 italic">
                       Ningún jugador coincide con la búsqueda.
                     </div>
                   )}
@@ -1216,10 +1247,11 @@ export const MesaControl: React.FC = () => {
             </div>
 
             {/* Acciones */}
-            <div className="px-5 py-3.5 border-t border-slate-150 bg-slate-50/50 flex justify-end gap-2">
+            <div className="px-5 py-3.5 border-t border-slate-900 bg-[#07080c] flex justify-end gap-2">
               <button
+                type="button"
                 onClick={() => setModalIncidenciaRapida(null)}
-                className="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                className="px-4 py-2 border border-slate-800 hover:bg-[#171a26] text-slate-300 rounded-lg text-xs font-bold transition-all cursor-pointer"
               >
                 Cancelar
               </button>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProveedorAutenticacion } from './contexto/ContextoAutenticacion';
 import { ProveedorCampeonato } from './contexto/ContextoCampeonato';
@@ -17,6 +17,17 @@ import { ConsolaSaaS } from './paginas/ConsolaSaaS';
 import { Configuracion } from './paginas/Configuracion';
 
 const App: React.FC = () => {
+  useEffect(() => {
+    const manejarMovimientoMouse = (e: MouseEvent) => {
+      document.documentElement.style.setProperty('--mouse-x', `${e.clientX}px`);
+      document.documentElement.style.setProperty('--mouse-y', `${e.clientY}px`);
+    };
+    window.addEventListener('mousemove', manejarMovimientoMouse);
+    return () => {
+      window.removeEventListener('mousemove', manejarMovimientoMouse);
+    };
+  }, []);
+
   return (
     <ProveedorAutenticacion>
       <ProveedorCampeonato>

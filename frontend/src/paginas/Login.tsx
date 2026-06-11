@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 
@@ -9,28 +9,11 @@ import deportesFondo from '../assets/deportes_fondo.png';
 export const Login: React.FC = () => {
   const [correo, setCorreo] = useState('');
   const [contrasenia, setContrasenia] = useState('');
+  const [verContrasenia, setVerContrasenia] = useState(false);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
   const [procesando, setProcesando] = useState(false);
   const { iniciarSesion } = useAutenticacion();
   const navegar = useNavigate();
-
-  const imagenRef = useRef<HTMLImageElement | null>(null);
-
-  // Parallax interactivo sutil en el fondo
-  useEffect(() => {
-    const manejarMovimientoMouse = (e: MouseEvent) => {
-      if (imagenRef.current) {
-        const x = (window.innerWidth - e.pageX * 2) / 120;
-        const y = (window.innerHeight - e.pageY * 2) / 120;
-        imagenRef.current.style.transform = `scale(1.1) translate(${x}px, ${y}px)`;
-      }
-    };
-
-    window.addEventListener('mousemove', manejarMovimientoMouse);
-    return () => {
-      window.removeEventListener('mousemove', manejarMovimientoMouse);
-    };
-  }, []);
 
   const manejarEnvio = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,103 +40,115 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <main className="golden-grid font-sans min-h-screen text-on-surface select-none">
+    <main className="golden-grid font-sans min-h-screen text-on-surface select-none relative bg-surface">
       
-      {/* Sección 1: Banner Izquierdo con Parallax deportivo */}
-      <section className="bg-primary relative flex items-center justify-center overflow-hidden">
+      {/* Sección 1: Banner Izquierdo con imagen de estadio en escala de grises */}
+      <section className="relative flex items-end p-8 md:p-16 overflow-hidden bg-black border-r border-slate-900/40">
         <img
-          ref={imagenRef}
-          alt="Campeonato Deportivo"
-          className="absolute inset-0 w-full h-full object-cover opacity-35 mix-blend-overlay transition-transform duration-300 ease-out"
+          alt="Estadio de fútbol"
+          className="absolute inset-0 w-full h-full object-cover filter grayscale brightness-[0.35] pointer-events-none select-none z-0"
           src={deportesFondo}
-          style={{ transform: 'scale(1.1) translate(0px, 0px)' }}
         />
-        <div className="relative z-10 p-12 text-center md:text-left max-w-2xl">
-          <header className="flex flex-col md:flex-row items-center gap-5 mb-6 justify-center md:justify-start">
-            <div className="w-40 h-40 flex items-center justify-center">
-              <img src={logoImg} className="w-full h-full object-contain" alt="Logo LigaCenter" />
-            </div>
-            <div className="text-center md:text-left">
-              <h1 className="text-4xl font-extrabold text-white tracking-tight">
-                LigaCenter
-              </h1>
-              <span className="text-sm text-secondary font-bold tracking-widest uppercase mt-1 block">Gestión Deportiva</span>
-            </div>
-          </header>
-          <div className="space-y-3">
-            <p className="text-xl font-medium text-slate-200">El control total de tus campeonatos</p>
-            <p className="text-sm text-slate-300/90 leading-relaxed">
-              Administra equipos, inscripciones de jugadores, cronogramas de partidos, estadísticas en vivo y tablas de posiciones desde una plataforma unificada.
-            </p>
-          </div>
+        {/* Degradado para mejorar legibilidad */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0b10] via-transparent to-[#0a0b10]/40 z-0" />
+        
+        {/* Contenido de texto en la esquina inferior izquierda */}
+        <div className="relative z-10 text-left max-w-lg space-y-3">
+          <h2 className="text-3xl md:text-4.5xl font-black text-white tracking-tight leading-tight">
+            Domina el juego con LigaCenter
+          </h2>
+          <p className="text-xs md:text-sm text-slate-350 leading-relaxed font-medium">
+            La plataforma definitiva para la gestión de torneos de alto rendimiento. Diseñada por y para profesionales del deporte.
+          </p>
         </div>
-        <div className="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-primary to-transparent opacity-60"></div>
       </section>
 
-      {/* Sección 2: Formulario Derecho */}
-      <section className="flex flex-col items-center justify-center p-6 md:p-12 relative bg-[#f4f6f7]">
-        <div className="w-full max-w-[460px] bg-surface-container-lowest p-6 sm:p-10 rounded-2xl shadow-md border border-outline-variant/60">
+      {/* Sección 2: Formulario de Acceso (Limpio y centrado sin tarjeta) */}
+      <section className="flex flex-col items-center justify-center p-6 md:p-12 relative z-10">
+        <div className="w-full max-w-[360px] space-y-7">
           
-          <div className="mb-8 text-center">
-            <h2 className="text-2.5xl font-black text-slate-900 mb-1">Bienvenido</h2>
-            <p className="text-sm md:text-base text-on-surface-variant font-medium">Ingrese sus credenciales para continuar</p>
+          {/* Logo y Encabezado del Mockup */}
+          <div className="text-center space-y-1.5">
+            <header className="flex flex-col items-center justify-center gap-3 mb-2">
+              <img src={logoImg} className="w-24 h-24 object-contain" alt="Logo LigaCenter" />
+              <span className="text-2.5xl font-black text-white tracking-tight">
+                Liga<span className="text-primary">Center</span>
+              </span>
+            </header>
+            <h2 className="text-xl font-bold text-white tracking-tight">Acceso Élite Deportiva</h2>
+            <p className="text-xs text-slate-400">Inicia sesión para gestionar tus campeonatos</p>
           </div>
 
           {errorLocal && (
-            <div className="mb-5 p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 text-sm flex items-center gap-2">
+            <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-450 text-xs font-semibold flex items-center gap-2 animate-fadeIn">
               <span className="material-symbols-outlined text-sm shrink-0">error</span>
               <span>{errorLocal}</span>
             </div>
           )}
 
-          <form onSubmit={manejarEnvio} className="space-y-6">
+          <form onSubmit={manejarEnvio} className="space-y-5">
             {/* Campo: Correo */}
-            <div className="space-y-2 transition-transform duration-200 focus-within:scale-[1.01]">
-              <label className="block text-sm font-bold text-slate-700 tracking-wide" htmlFor="email">
+            <div className="space-y-1.5">
+              <label className="block text-[9px] font-extrabold text-slate-400 uppercase tracking-widest" htmlFor="email">
                 Correo Electrónico
               </label>
-              <input
-                id="email"
-                type="email"
-                required
-                disabled={procesando}
-                className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface-bright text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary outline-hidden text-base shadow-xs transition-all"
-                placeholder="ejemplo@ligacenter.com"
-                value={correo}
-                onChange={(e) => setCorreo(e.target.value)}
-              />
+              <div className="relative flex items-center text-slate-400 focus-within:text-white transition-colors">
+                <span className="material-symbols-outlined absolute left-3.5 text-lg pointer-events-none">mail</span>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  disabled={procesando}
+                  className="w-full pl-11 pr-4 py-3 rounded-lg border border-slate-800 bg-[#0c0e17] text-white focus:border-primary focus:ring-1 focus:ring-primary outline-hidden text-sm shadow-xs transition-all placeholder-slate-650 font-medium"
+                  placeholder="ejemplo@ligacenter.com"
+                  value={correo}
+                  onChange={(e) => setCorreo(e.target.value)}
+                />
+              </div>
             </div>
 
             {/* Campo: Contraseña */}
-            <div className="space-y-2 transition-transform duration-200 focus-within:scale-[1.01]">
+            <div className="space-y-1.5">
               <div className="flex justify-between items-center">
-                <label className="block text-sm font-bold text-slate-700 tracking-wide" htmlFor="password">
+                <label className="block text-[9px] font-extrabold text-slate-400 uppercase tracking-widest" htmlFor="password">
                   Contraseña
                 </label>
                 <Link
                   to="/recuperar-contrasenia"
-                  className="text-xs md:text-sm text-secondary hover:underline transition-all font-bold"
+                  className="text-[9px] text-primary hover:text-indigo-300 hover:underline transition-colors font-extrabold tracking-wider uppercase"
                 >
                   ¿Olvidaste tu contraseña?
                 </Link>
               </div>
-              <input
-                id="password"
-                type="password"
-                required
-                disabled={procesando}
-                className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface-bright text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary outline-hidden text-base shadow-xs transition-all"
-                placeholder="••••••••"
-                value={contrasenia}
-                onChange={(e) => setContrasenia(e.target.value)}
-              />
+              <div className="relative flex items-center text-slate-400 focus-within:text-white transition-colors">
+                <span className="material-symbols-outlined absolute left-3.5 text-lg pointer-events-none">lock</span>
+                <input
+                  id="password"
+                  type={verContrasenia ? 'text' : 'password'}
+                  required
+                  disabled={procesando}
+                  className="w-full pl-11 pr-11 py-3 rounded-lg border border-slate-800 bg-[#0c0e17] text-white focus:border-primary focus:ring-1 focus:ring-primary outline-hidden text-sm shadow-xs transition-all placeholder-slate-650 font-medium"
+                  placeholder="••••••••"
+                  value={contrasenia}
+                  onChange={(e) => setContrasenia(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setVerContrasenia(!verContrasenia)}
+                  className="absolute right-3.5 text-slate-500 hover:text-slate-200 transition-colors flex items-center justify-center cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-lg">
+                    {verContrasenia ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Botón Ingresar */}
             <button
               type="submit"
               disabled={procesando}
-              className="w-full bg-linear-to-r from-primary-container to-secondary text-white font-bold py-3.5 rounded-lg shadow-sm hover:shadow-md hover:shadow-secondary/15 hover:brightness-105 active:scale-[0.98] transition-all duration-150 mt-2 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-base"
+              className="w-full bg-primary hover:bg-[#99153c] text-white font-extrabold py-3.5 rounded-lg shadow-md active:scale-[0.98] transition-all duration-200 mt-4 flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-pointer disabled:opacity-50"
             >
               {procesando ? (
                 <>
@@ -161,17 +156,46 @@ export const Login: React.FC = () => {
                   <span>Ingresando...</span>
                 </>
               ) : (
-                <span>Ingresar</span>
+                <span>Iniciar Sesión</span>
               )}
             </button>
           </form>
 
+          {/* Divisor O ACCEDE CON */}
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-slate-900/60"></div>
+            <span className="flex-shrink mx-4 text-[9px] text-slate-500 font-extrabold tracking-widest uppercase">O accede con</span>
+            <div className="flex-grow border-t border-slate-900/60"></div>
+          </div>
+
+          {/* Botones de Social Login (Google y Apple) */}
+          <div className="flex gap-4">
+            <button
+              type="button"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg border border-slate-800 bg-[#0c0e17] text-slate-350 hover:bg-[#11131c] hover:text-white text-xs font-bold transition-all cursor-pointer"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.187 4.114-3.578 0-6.478-2.883-6.478-6.478s2.9-6.48 6.478-6.48c1.58 0 3.03.572 4.17 1.57l3.078-3.078C19.299 2.22 15.908 1 12.24 1 6.033 1 12.24s5.033 11.24 11.24 11.24c5.895 0 10.865-4.04 10.865-11.24 0-.668-.06-1.3-.18-1.955H12.24z"/>
+              </svg>
+              <span>Google</span>
+            </button>
+            <button
+              type="button"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg border border-slate-800 bg-[#0c0e17] text-slate-350 hover:bg-[#11131c] hover:text-white text-xs font-bold transition-all cursor-pointer"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.21.67-2.93 1.49-.62.69-1.16 1.84-1.01 2.96 1.12.09 2.27-.57 2.95-1.39z"/>
+              </svg>
+              <span>Apple</span>
+            </button>
+          </div>
+
           {/* Enlace para Registro */}
-          <div className="mt-8 pt-6 border-t border-outline-variant/60 text-center">
-            <p className="text-sm md:text-base text-on-surface-variant font-medium">
-              ¿No tienes una cuenta? <br />
-              <Link to="/registro" className="text-secondary font-bold hover:underline">
-                Regístrate aquí
+          <div className="text-center text-xs pt-4">
+            <p className="text-slate-400 font-medium">
+              ¿No tienes una cuenta?{' '}
+              <Link to="/registro" className="text-primary font-bold hover:underline">
+                Regístrate gratis
               </Link>
             </p>
           </div>
@@ -180,23 +204,16 @@ export const Login: React.FC = () => {
 
         {/* Footer */}
         <footer className="absolute bottom-6 left-0 w-full hidden md:block">
-          <div className="flex justify-center items-center gap-3 text-on-surface-variant/60 text-xs">
-            <a href="#" className="hover:underline">Privacidad</a>
-            <span className="w-1.5 h-1.5 bg-outline-variant rounded-full"></span>
-            <a href="#" className="hover:underline">Regulaciones</a>
-            <span className="w-1.5 h-1.5 bg-outline-variant rounded-full"></span>
+          <div className="flex justify-center items-center gap-3 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+            <a href="#" className="hover:text-slate-400 transition-colors">Privacidad</a>
+            <span className="w-1.5 h-1.5 bg-slate-800 rounded-full"></span>
+            <a href="#" className="hover:text-slate-400 transition-colors">Regulaciones</a>
+            <span className="w-1.5 h-1.5 bg-slate-800 rounded-full"></span>
             <span>© 2026 LigaCenter</span>
           </div>
         </footer>
 
       </section>
-
-      {/* FAB Flotante de Ayuda */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <button aria-label="Ayuda" className="bg-primary-container text-white border border-white/10 p-3 rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer">
-          <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>help</span>
-        </button>
-      </div>
 
     </main>
   );

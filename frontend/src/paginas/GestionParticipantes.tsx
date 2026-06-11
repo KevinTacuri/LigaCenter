@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { serviciosParticipantes } from '../servicios/api';
 import type {
@@ -90,13 +91,20 @@ export const GestionParticipantes: React.FC = () => {
   };
 
   const mostrarMensaje = (msg: string, esError: boolean = false) => {
-    if (esError) {
-      setErrorLocal(msg);
-      setTimeout(() => setErrorLocal(null), 4000);
-    } else {
-      setMensajeExito(msg);
-      setTimeout(() => setMensajeExito(null), 3000);
-    }
+    Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.onmouseenter = Swal.stopTimer;
+        toast.onmouseleave = Swal.resumeTimer;
+      }
+    }).fire({
+      icon: esError ? 'error' : 'success',
+      title: msg
+    });
   };
 
   // Creación de recursos
@@ -222,7 +230,19 @@ export const GestionParticipantes: React.FC = () => {
 
   // Eliminación de recursos
   const eliminarElemento = async (id: number) => {
-    if (!window.confirm('¿Está seguro de que desea eliminar este registro?')) return;
+    const result = await Swal.fire({
+      title: '¿Está seguro de que desea eliminar este registro?',
+      text: 'Esta acción no se puede deshacer y podría afectar a otros registros vinculados.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#4f46e5',
+      cancelButtonColor: '#ef4444',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       let res;
       if (tabActiva === 'disciplinas') res = await serviciosParticipantes.eliminarDisciplina(id);
@@ -241,19 +261,19 @@ export const GestionParticipantes: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f6f7] text-slate-800 font-sans flex flex-col">
+    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans flex flex-col">
       {/* Cabecera */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+      <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navegar('/tablero')}
-            className="w-10 h-10 rounded-lg flex items-center justify-center border border-slate-200 hover:bg-slate-50 transition-all cursor-pointer"
+            className="w-10 h-10 rounded-lg flex items-center justify-center border border-slate-800 hover:bg-[#171a26] transition-all cursor-pointer"
           >
-            <span className="material-symbols-outlined text-slate-700">arrow_back</span>
+            <span className="material-symbols-outlined text-slate-300">arrow_back</span>
           </button>
           <div>
-            <h1 className="text-lg font-black text-slate-900 leading-none">Gestión de Participantes</h1>
-            <span className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase mt-1 block">
+            <h1 className="text-lg font-black text-white leading-none">Gestión de Participantes</h1>
+            <span className="text-[10px] text-slate-455 font-semibold tracking-wider uppercase mt-1 block">
               Inscripciones y Configuración del Campeonato
             </span>
           </div>
@@ -261,15 +281,15 @@ export const GestionParticipantes: React.FC = () => {
       </header>
 
       {/* Tabs */}
-      <div className="bg-white border-b border-slate-200 px-6 py-2 flex flex-wrap gap-2">
+      <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2">
         {(['disciplinas', 'categorias', 'organizaciones', 'equipos', 'jugadores'] as TabType[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setTabActiva(tab)}
             className={`px-4 py-2 text-xs font-bold rounded-lg uppercase tracking-wide cursor-pointer transition-all ${
               tabActiva === tab
-                ? 'bg-primary text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-indigo-650 text-white shadow-xs'
+                : 'text-slate-400 hover:bg-[#171a26] hover:text-white'
             }`}
           >
             {tab}
