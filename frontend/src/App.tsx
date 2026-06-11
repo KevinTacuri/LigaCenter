@@ -14,6 +14,7 @@ import { MesaControl } from './paginas/MesaControl';
 import { VisualizacionPublica } from './paginas/VisualizacionPublica';
 import { SeleccionCampeonato } from './paginas/SeleccionCampeonato';
 import { ConsolaSaaS } from './paginas/ConsolaSaaS';
+import { Configuracion } from './paginas/Configuracion';
 
 const App: React.FC = () => {
   return (
@@ -36,6 +37,7 @@ const App: React.FC = () => {
             <Route path="/tablero/mesa" element={<MesaControl />} />
             <Route path="/tablero/publico" element={<VisualizacionPublica />} />
             <Route path="/tablero/saas-admin" element={<ConsolaSaaS />} />
+            <Route path="/tablero/configuracion" element={<Configuracion />} />
 
             {/* Redirección por defecto */}
             <Route path="*" element={<Navigate to="/tablero" replace />} />

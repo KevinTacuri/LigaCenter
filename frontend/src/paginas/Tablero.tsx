@@ -2,76 +2,27 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../contexto/ContextoCampeonato';
-import { serviciosUsuarios } from '../servicios/api';
 
 // Importación de recursos
 import logoImg from '../assets/logo.svg';
 import deportesFondo from '../assets/deportes_fondo.png';
 
+const PASOS_TORNEO = [
+  { step: '1', title: 'Disciplinas y Categorías', desc: 'Registra deportes y define los rangos de edad y género de cada categoría.', icon: 'sports' },
+  { step: '2', title: 'Registrar Instituciones', desc: 'Crea organizaciones participantes y asigna un delegado a cada una.', icon: 'corporate_fare' },
+  { step: '3', title: 'Equipos y Jugadores', desc: 'Inscribe equipos por categoría y agrega jugadores con dorsal validado.', icon: 'groups' },
+  { step: '4', title: 'Generar Fixture', desc: 'Genera el fixture Round Robin automático por disciplina y categoría.', icon: 'calendar_today' },
+  { step: '5', title: 'Programar Fechas y Canchas', desc: 'Registra escenarios y asigna horarios a cada partido del fixture.', icon: 'schedule' },
+  { step: '6', title: 'Mesa de Control (Planillas)', desc: 'Registra goles, tarjetas e incidencias durante los partidos en tiempo real.', icon: 'edit_note' },
+  { step: '7', title: 'Resultados y Tabla de Posiciones', desc: 'Consulta posiciones, goleadores y sanciones actualizados al instante.', icon: 'leaderboard' },
+];
+
 export const Tablero: React.FC = () => {
-  const { usuario, cerrarSesion, cargando, tienePermiso, tieneRol, recargarUsuario } = useAutenticacion();
+  const { usuario, cerrarSesion, cargando, tienePermiso, tieneRol } = useAutenticacion();
   const { campeonatoActivo, limpiarCampeonato } = useCampeonato();
   const navegar = useNavigate();
   const [coordenadasMouse, setCoordenadasMouse] = useState({ x: 0, y: 0 });
-
-  // Estados del modal de perfil
-  const [mostrarPerfil, setMostrarPerfil] = useState(false);
-  const [datosPerfil, setDatosPerfil] = useState({ name: '', dni: '', phone: '', password: '', password_confirmation: '' });
-  const [guardandoPerfil, setGuardandoPerfil] = useState(false);
-  const [errorPerfil, setErrorPerfil] = useState<string | null>(null);
-  const [exitoPerfil, setExitoPerfil] = useState<string | null>(null);
-
-  const abrirPerfil = () => {
-    if (usuario) {
-      setDatosPerfil({
-        name: usuario.name || '',
-        dni: usuario.dni || '',
-        phone: usuario.phone || '',
-        password: '',
-        password_confirmation: ''
-      });
-      setErrorPerfil(null);
-      setExitoPerfil(null);
-      setMostrarPerfil(true);
-    }
-  };
-
-  const guardarPerfil = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setGuardandoPerfil(true);
-    setErrorPerfil(null);
-    setExitoPerfil(null);
-
-    if (datosPerfil.password && datosPerfil.password !== datosPerfil.password_confirmation) {
-      setErrorPerfil('Las contraseñas no coinciden.');
-      setGuardandoPerfil(false);
-      return;
-    }
-
-    try {
-      const payload: any = {
-        name: datosPerfil.name,
-        dni: datosPerfil.dni || null,
-        phone: datosPerfil.phone || null
-      };
-      if (datosPerfil.password) {
-        payload.password = datosPerfil.password;
-      }
-
-      const res = await serviciosUsuarios.actualizarUsuario(usuario.id, payload);
-      if (res.success) {
-        await recargarUsuario();
-        setExitoPerfil('Perfil actualizado con éxito.');
-        setTimeout(() => {
-          setMostrarPerfil(false);
-        }, 1500);
-      }
-    } catch (err: any) {
-      setErrorPerfil(err.response?.data?.message || 'Error al actualizar el perfil.');
-    } finally {
-      setGuardandoPerfil(false);
-    }
-  };
+  const [mostrarGuia, setMostrarGuia] = useState(false);
 
   // Parallax interactivo sutil en el fondo
   useEffect(() => {
@@ -148,9 +99,9 @@ export const Tablero: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Info y Avatar de Perfil Clickable */}
+            {/* Info y Avatar — navega a Configuración */}
             <button
-              onClick={abrirPerfil}
+              onClick={() => navegar('/tablero/configuracion')}
               className="flex items-center gap-2 border border-slate-200 hover:bg-slate-50 px-2 py-1 rounded-lg transition-all cursor-pointer group text-left bg-transparent shrink-0"
             >
               <div className="hidden md:flex flex-col text-right justify-center">
@@ -233,58 +184,10 @@ export const Tablero: React.FC = () => {
           </section>
 
           {/* Sección de Resumen y Accesos Directos */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Card: Guía de Pasos (solo para Organizadores/Mesa/Publico) */}
-            {!tieneRol('administrador') && (
-              <div className="bg-white border border-slate-200/85 rounded-2xl p-6 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all duration-200 lg:col-span-1 h-fit">
-                <div>
-                  <h3 className="text-slate-800 font-bold text-xs uppercase tracking-wider mb-5 flex items-center gap-2 border-b border-slate-100 pb-3">
-                    <div className="w-7 h-7 rounded bg-slate-100 flex items-center justify-center text-slate-700 border border-slate-200">
-                      <span className="material-symbols-outlined text-sm">assignment_turned_in</span>
-                    </div>
-                    Guía de Ciclo del Torneo
-                  </h3>
-                  
-                  <p className="text-[10px] text-slate-500 font-semibold mb-4 leading-relaxed">
-                    Sigue esta secuencia paso a paso para configurar tu campeonato y registrar partidos:
-                  </p>
-
-                  <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
-                    {[
-                      { step: '1', title: 'Disciplinas y Categorías', desc: 'Registra deportes (fútbol, vóley) y define sus edades/géneros.', icon: 'sports' },
-                      { step: '2', title: 'Registrar Instituciones', desc: 'Crea los clubes u organizaciones asociadas y sus delegados.', icon: 'corporate_fare' },
-                      { step: '3', title: 'Equipos y Jugadores', desc: 'Inscribe equipos por categoría y agrega jugadores con su dorsal.', icon: 'groups' },
-                      { step: '4', title: 'Generar Fixture', desc: 'Genera el fixture completo Round Robin (todos contra todos) por categoría.', icon: 'calendar_today' },
-                      { step: '5', title: 'Programar Fechas', desc: 'Asigna canchas, horarios y fechas a los partidos del fixture.', icon: 'schedule' },
-                      { step: '6', title: 'Mesa de Control (Planillas)', desc: 'Registra goles, incidencias (tarjetas) y oficializa resultados.', icon: 'edit_note' },
-                      { step: '7', title: 'Resultados y Tabla', desc: 'Consulta la tabla de posiciones y goleadores calculados al instante.', icon: 'leaderboard' },
-                    ].map((s) => (
-                      <div key={s.step} className="flex gap-2.5 p-2 rounded-lg bg-slate-50 border border-slate-150 hover:bg-slate-100/50 transition-colors">
-                        <div className="w-5 h-5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold flex items-center justify-center shrink-0">
-                          {s.step}
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="text-[11px] font-bold text-slate-900 flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[11px] text-slate-500">{s.icon}</span>
-                            {s.title}
-                          </h4>
-                          <p className="text-[9px] text-slate-500 mt-0.5 leading-relaxed font-medium">{s.desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="mt-6 pt-3 border-t border-slate-100 flex justify-between items-center text-[9px] text-slate-500 font-bold uppercase tracking-wider">
-                  <span>Soporte Técnico</span>
-                  <a href="mailto:soporte@ligacenter.com" className="text-primary hover:underline">soporte@ligacenter.com</a>
-                </div>
-              </div>
-            )}
+          <div className="grid grid-cols-1 gap-6">
 
             {/* Card: Acciones y Módulos según Permisos */}
-            <div className={`${tieneRol('administrador') ? 'lg:col-span-3' : 'lg:col-span-2'} bg-white border border-slate-200/85 rounded-2xl p-6 shadow-xs hover:border-slate-300 transition-all duration-200`}>
+            <div className="bg-white border border-slate-200/85 rounded-2xl p-6 shadow-xs hover:border-slate-300 transition-all duration-200">
               <h3 className="text-slate-800 font-bold text-sm uppercase tracking-wider mb-6 flex items-center gap-2 border-b border-slate-100 pb-3">
                 <div className="w-7 h-7 rounded bg-slate-100 flex items-center justify-center text-slate-700 border border-slate-200">
                   <span className="material-symbols-outlined text-sm">sports_soccer</span>
@@ -423,110 +326,75 @@ export const Tablero: React.FC = () => {
 
         </main>
 
-        {/* Modal: Mi Perfil */}
-        {mostrarPerfil && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fadeIn">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4">
-              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-950 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">person</span>
-                  Configurar Mi Perfil
-                </h3>
-                <button
-                  onClick={() => setMostrarPerfil(false)}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-sm">close</span>
-                </button>
+        {/* Botón flotante de Ayuda / Guía ? */}
+        {!tieneRol('administrador') && (
+          <>
+            <button
+              onClick={() => setMostrarGuia(true)}
+              title="Guía del torneo"
+              className="fixed bottom-6 right-6 z-40 w-12 h-12 rounded-full bg-primary text-white shadow-lg hover:bg-primary-container hover:scale-110 transition-all duration-200 flex items-center justify-center cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-xl">help</span>
+            </button>
+
+            {/* Drawer lateral de Guía */}
+            {mostrarGuia && (
+              <div className="fixed inset-0 z-50 flex justify-end">
+                {/* Backdrop */}
+                <div
+                  className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs"
+                  onClick={() => setMostrarGuia(false)}
+                />
+                {/* Panel */}
+                <div className="relative w-full max-w-sm bg-white h-full shadow-2xl flex flex-col overflow-hidden animate-slideInRight">
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary text-base">help</span>
+                      <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Guía del Torneo</h3>
+                    </div>
+                    <button
+                      onClick={() => setMostrarGuia(false)}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-5 space-y-3">
+                    <p className="text-[10px] text-slate-400 font-semibold leading-relaxed mb-4">
+                      Sigue estos pasos en orden para configurar y gestionar tu campeonato:
+                    </p>
+                    {PASOS_TORNEO.map((s) => (
+                      <div key={s.step} className="flex gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100/60 transition-colors">
+                        <div className="w-6 h-6 rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
+                          {s.step}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-xs text-slate-400">{s.icon}</span>
+                            {s.title}
+                          </h4>
+                          <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed font-medium">{s.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50">
+                    <p className="text-[10px] text-slate-400 font-semibold mb-2">¿Necesitas más ayuda?</p>
+                    <a
+                      href="/tablero/configuracion"
+                      onClick={(e) => { e.preventDefault(); setMostrarGuia(false); navegar('/tablero/configuracion?tab=guia'); }}
+                      className="text-xs text-primary font-bold hover:underline flex items-center gap-1"
+                    >
+                      <span className="material-symbols-outlined text-xs">open_in_new</span>
+                      Ver guía completa en Configuración
+                    </a>
+                  </div>
+                </div>
               </div>
-
-              {exitoPerfil && (
-                <div className="p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 text-xs font-semibold flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm">check_circle</span>
-                  <span>{exitoPerfil}</span>
-                </div>
-              )}
-
-              {errorPerfil && (
-                <div className="p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 text-xs font-semibold flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm">error</span>
-                  <span>{errorPerfil}</span>
-                </div>
-              )}
-
-              <form onSubmit={guardarPerfil} className="space-y-4 text-xs font-bold text-slate-700">
-                <div className="space-y-1">
-                  <label className="block text-slate-700">Nombre Completo *</label>
-                  <input
-                    type="text" required placeholder="Nombre"
-                    value={datosPerfil.name}
-                    onChange={(e) => setDatosPerfil({ ...datosPerfil, name: e.target.value })}
-                    className="w-full text-xs font-medium border border-slate-200 rounded-lg p-2.5 outline-hidden focus:border-primary focus:ring-1 focus:ring-primary bg-white text-slate-800"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="block text-slate-700">DNI / Documento</label>
-                    <input
-                      type="text" placeholder="DNI"
-                      value={datosPerfil.dni}
-                      onChange={(e) => setDatosPerfil({ ...datosPerfil, dni: e.target.value })}
-                      className="w-full text-xs font-medium border border-slate-200 rounded-lg p-2.5 outline-hidden bg-white text-slate-800"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block text-slate-700">Teléfono</label>
-                    <input
-                      type="text" placeholder="Teléfono"
-                      value={datosPerfil.phone}
-                      onChange={(e) => setDatosPerfil({ ...datosPerfil, phone: e.target.value })}
-                      className="w-full text-xs font-medium border border-slate-200 rounded-lg p-2.5 outline-hidden bg-white text-slate-800"
-                    />
-                  </div>
-                </div>
-
-                <div className="border-t border-slate-100 pt-3.5 space-y-3">
-                  <h4 className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Cambiar Contraseña (Opcional)</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="block text-slate-700">Nueva Contraseña</label>
-                      <input
-                        type="password" placeholder="Mínimo 8 caracteres"
-                        value={datosPerfil.password}
-                        onChange={(e) => setDatosPerfil({ ...datosPerfil, password: e.target.value })}
-                        className="w-full text-xs font-medium border border-slate-200 rounded-lg p-2.5 outline-hidden bg-white text-slate-800"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="block text-slate-700">Confirmar Contraseña</label>
-                      <input
-                        type="password" placeholder="Confirmación"
-                        value={datosPerfil.password_confirmation}
-                        onChange={(e) => setDatosPerfil({ ...datosPerfil, password_confirmation: e.target.value })}
-                        className="w-full text-xs font-medium border border-slate-200 rounded-lg p-2.5 outline-hidden bg-white text-slate-800"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={guardandoPerfil}
-                  className="w-full bg-primary hover:bg-primary-container text-white py-2.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer mt-2 flex items-center justify-center gap-1.5"
-                >
-                  {guardandoPerfil ? (
-                    <>
-                      <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin"></div>
-                      <span>Guardando...</span>
-                    </>
-                  ) : (
-                    <span>Guardar Cambios</span>
-                  )}
-                </button>
-              </form>
-            </div>
-          </div>
+            )}
+          </>
         )}
 
         {/* Pie de Página */}
