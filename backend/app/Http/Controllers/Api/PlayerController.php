@@ -112,7 +112,7 @@ class PlayerController extends Controller
         $validated = $request->validate([
             'team_id' => 'required|exists:teams,id',
             'full_name' => 'required|string|max:255',
-            'dni' => 'nullable|string|max:20|unique:players,dni',
+            'dni' => 'nullable|string|max:20|unique:players,document_number',
             'college_id' => 'nullable|string|max:50',
             'age' => 'required|integer|min:1'
         ]);
@@ -148,10 +148,27 @@ class PlayerController extends Controller
             ], 422);
         }
 
+        $parts = explode(' ', $validated['full_name'], 2);
+        $names = $parts[0];
+        $lastNames = isset($parts[1]) ? $parts[1] : '';
+
+        $birthDate = now()->subYears($validated['age'])->format('Y-m-d');
+
         $player = Player::create([
-            ...$validated,
-            'is_eligible' => true
+            'names' => $names,
+            'last_names' => $lastNames,
+            'document_number' => $validated['dni'] ?? null,
+            'birth_date' => $birthDate,
+            'gender' => $team->category->gender_type ?? null,
         ]);
+
+        // Associate player to team via team_players pivot table
+        $player->teams()->attach($validated['team_id'], [
+            'jersey_number' => $request->input('number') ?? $request->input('jersey_number') ?? null,
+            'status' => 'activo'
+        ]);
+
+        $player->load('team');
 
         return response()->json($player, 201);
     }
@@ -237,12 +254,41 @@ class PlayerController extends Controller
         $validated = $request->validate([
             'team_id' => 'sometimes|exists:teams,id',
             'full_name' => 'sometimes|string|max:255',
-            'dni' => 'nullable|string|max:20|unique:players,dni,' . $player->id,
+            'dni' => 'nullable|string|max:20|unique:players,document_number,' . $player->id,
             'college_id' => 'nullable|string|max:50',
             'age' => 'sometimes|integer|min:1'
         ]);
 
-        $player->update($validated);
+        $updateData = [];
+
+        if (isset($validated['full_name'])) {
+            $parts = explode(' ', $validated['full_name'], 2);
+            $updateData['names'] = $parts[0];
+            $updateData['last_names'] = isset($parts[1]) ? $parts[1] : '';
+        }
+
+        if (array_key_exists('dni', $validated)) {
+            $updateData['document_number'] = $validated['dni'];
+        }
+
+        if (isset($validated['age'])) {
+            $updateData['birth_date'] = now()->subYears($validated['age'])->format('Y-m-d');
+        }
+
+        if (!empty($updateData)) {
+            $player->update($updateData);
+        }
+
+        if (isset($validated['team_id'])) {
+            $player->teams()->sync([
+                $validated['team_id'] => [
+                    'jersey_number' => $request->input('number') ?? $request->input('jersey_number') ?? null,
+                    'status' => 'activo'
+                ]
+            ]);
+        }
+
+        $player->load('team');
 
         return response()->json($player);
     }

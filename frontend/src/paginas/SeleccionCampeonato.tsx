@@ -6,7 +6,7 @@ import { serviciosCampeonatos, type Campeonato } from '../servicios/api';
 import logoImg from '../assets/logo.svg';
 
 export const SeleccionCampeonato: React.FC = () => {
-  const { usuario, cerrarSesion } = useAutenticacion();
+  const { usuario, cerrarSesion, tieneRol } = useAutenticacion();
   const { seleccionarCampeonato, campeonatoActivo } = useCampeonato();
   const navegar = useNavigate();
 
@@ -22,6 +22,10 @@ export const SeleccionCampeonato: React.FC = () => {
   useEffect(() => {
     if (!usuario) {
       navegar('/login');
+      return;
+    }
+    if (tieneRol('administrador')) {
+      navegar('/tablero');
       return;
     }
     if (campeonatoActivo) {

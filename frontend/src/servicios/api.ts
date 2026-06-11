@@ -238,6 +238,10 @@ export interface Categoria {
   age_min?: number | null;
   age_max?: number | null;
   gender: string;
+  gender_type?: string;
+  discipline_id: number;
+  championship_id: number;
+  discipline?: Disciplina;
 }
 
 export interface Organizacion {
@@ -269,9 +273,10 @@ export interface Jugador {
 export interface Escenario {
   id: number;
   name: string;
-  location?: string | null;
+  venue_type: string;
+  location: string;
   capacity?: number | null;
-  status: string;
+  is_available: boolean;
 }
 
 export interface Partido {

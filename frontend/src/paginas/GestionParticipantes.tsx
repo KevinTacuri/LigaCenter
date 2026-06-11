@@ -13,7 +13,7 @@ import type {
 type TabType = 'disciplinas' | 'categorias' | 'organizaciones' | 'equipos' | 'jugadores';
 
 export const GestionParticipantes: React.FC = () => {
-  const { tienePermiso } = useAutenticacion();
+  const { tienePermiso, tieneRol } = useAutenticacion();
   const navegar = useNavigate();
 
   const [tabActiva, setTabActiva] = useState<TabType>('disciplinas');
@@ -33,10 +33,10 @@ export const GestionParticipantes: React.FC = () => {
   const [nuevaCat, setNuevaCat] = useState({ name: '', age_min: '', age_max: '', gender: 'Masculino', discipline_id: '' });
   const [nuevaOrg, setNuevaOrg] = useState({ name: '', delegate_name: '' });
   const [nuevoEq, setNuevoEq] = useState({ name: '', representative: '', organization_id: '', discipline_id: '', category_id: '' });
-  const [nuevoJug, setNuevoJug] = useState({ name: '', dni: '', phone: '', team_id: '', number: '', position: 'Delantero' });
+  const [nuevoJug, setNuevoJug] = useState({ name: '', dni: '', age: '', phone: '', team_id: '', number: '', position: 'Delantero' });
 
   useEffect(() => {
-    if (!tienePermiso('ver_equipos')) {
+    if (!tienePermiso('ver_equipos') || tieneRol('administrador')) {
       navegar('/tablero');
     } else {
       cargarDatos();
@@ -174,23 +174,27 @@ export const GestionParticipantes: React.FC = () => {
 
   const guardarJugador = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevoJug.name || !nuevoJug.team_id) return;
+    if (!nuevoJug.name || !nuevoJug.team_id || !nuevoJug.age) {
+      mostrarMensaje('El nombre, el equipo y la edad son obligatorios.', true);
+      return;
+    }
     try {
       const res = await serviciosParticipantes.crearJugador({
-        name: nuevoJug.name,
+        full_name: nuevoJug.name,
         team_id: parseInt(nuevoJug.team_id),
         dni: nuevoJug.dni || null,
-        phone: nuevoJug.phone || null,
+        age: parseInt(nuevoJug.age),
         number: nuevoJug.number ? parseInt(nuevoJug.number) : null,
         position: nuevoJug.position
       });
       if (res.success) {
         mostrarMensaje('Jugador inscrito exitosamente.');
-        setNuevoJug({ name: '', dni: '', phone: '', team_id: '', number: '', position: 'Delantero' });
+        setNuevoJug({ name: '', dni: '', age: '', phone: '', team_id: '', number: '', position: 'Delantero' });
         cargarDatos();
       }
-    } catch (err) {
-      mostrarMensaje('Error al inscribir jugador.', true);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Error al inscribir jugador.';
+      mostrarMensaje(msg, true);
     }
   };
 
@@ -420,7 +424,7 @@ export const GestionParticipantes: React.FC = () => {
                     <label className="text-xs font-bold text-slate-700 block">Disciplina *</label>
                     <select
                       required value={nuevoEq.discipline_id}
-                      onChange={(e) => setNuevoEq({ ...nuevoEq, discipline_id: e.target.value })}
+                      onChange={(e) => setNuevoEq({ ...nuevoEq, discipline_id: e.target.value, category_id: '' })}
                       className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
                     >
                       <option value="">Seleccionar Disciplina</option>
@@ -437,9 +441,12 @@ export const GestionParticipantes: React.FC = () => {
                       className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
                     >
                       <option value="">Seleccionar Categoría</option>
-                      {categorias.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
+                      {categorias
+                        .filter((c) => !nuevoEq.discipline_id || c.discipline_id === parseInt(nuevoEq.discipline_id))
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))
+                      }
                     </select>
                   </div>
                 </div>
@@ -459,9 +466,9 @@ export const GestionParticipantes: React.FC = () => {
                     className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">DNI / Documento</label>
+                    <label className="text-[10px] font-bold text-slate-700 block">DNI / Documento</label>
                     <input
                       type="text" placeholder="DNI"
                       value={nuevoJug.dni} onChange={(e) => setNuevoJug({ ...nuevoJug, dni: e.target.value })}
@@ -469,7 +476,15 @@ export const GestionParticipantes: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Dorsal / Número</label>
+                    <label className="text-[10px] font-bold text-slate-700 block">Edad *</label>
+                    <input
+                      type="number" required placeholder="Edad" min="1"
+                      value={nuevoJug.age} onChange={(e) => setNuevoJug({ ...nuevoJug, age: e.target.value })}
+                      className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-700 block">Dorsal</label>
                     <input
                       type="number" placeholder="Ej: 10"
                       value={nuevoJug.number} onChange={(e) => setNuevoJug({ ...nuevoJug, number: e.target.value })}
@@ -538,7 +553,7 @@ export const GestionParticipantes: React.FC = () => {
                         <td className="p-3 pl-4">
                           <div className="font-bold text-slate-900">{c.name}</div>
                           <div className="text-xs text-slate-500">
-                            Edades: {c.age_min ?? 'N/A'} - {c.age_max ?? 'N/A'} | Género: {c.gender}
+                            Edades: {c.age_min ?? 'N/A'} - {c.age_max ?? 'N/A'} | Género: {c.gender_type || c.gender || 'N/A'} | Disciplina: {c.discipline?.name || 'N/A'}
                           </div>
                         </td>
                         <td className="p-3 pr-4 text-right">

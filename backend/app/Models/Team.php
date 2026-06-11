@@ -14,6 +14,7 @@ class Team extends Model
 
     protected $fillable = [
         'organization_id',
+        'representative',
         'discipline_id',
         'category_id',
         'name',

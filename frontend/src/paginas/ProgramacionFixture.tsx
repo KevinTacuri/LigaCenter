@@ -15,7 +15,7 @@ import type {
 type TabType = 'escenarios' | 'generar' | 'programar' | 'partidos';
 
 export const ProgramacionFixture: React.FC = () => {
-  const { tienePermiso } = useAutenticacion();
+  const { tienePermiso, tieneRol } = useAutenticacion();
   const navegar = useNavigate();
 
   const [tabActiva, setTabActiva] = useState<TabType>('escenarios');
@@ -30,7 +30,7 @@ export const ProgramacionFixture: React.FC = () => {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
 
   // Estados de formularios
-  const [nuevoEsc, setNuevoEsc] = useState({ name: '', location: '', capacity: '', status: 'active' });
+  const [nuevoEsc, setNuevoEsc] = useState({ name: '', venue_type: 'cancha', location: '', capacity: '', status: 'active' });
   const [datosFixture, setDatosFixture] = useState({ discipline_id: '', category_id: '', start_date: '', venue_ids: [] as number[] });
   
   // Asignar fecha
@@ -41,7 +41,7 @@ export const ProgramacionFixture: React.FC = () => {
   const [datosReprog, setDatosReprog] = useState({ match_date: '', match_time: '', venue_id: '' });
 
   useEffect(() => {
-    if (!tienePermiso('ver_equipos')) {
+    if (!tienePermiso('ver_equipos') || tieneRol('administrador')) {
       navegar('/tablero');
     } else {
       cargarDatos();
@@ -95,13 +95,14 @@ export const ProgramacionFixture: React.FC = () => {
   // Escenarios
   const guardarEscenario = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevoEsc.name) return;
+    if (!nuevoEsc.name || !nuevoEsc.location || !nuevoEsc.venue_type) return;
     try {
       const res = await serviciosFixture.crearEscenario({
         name: nuevoEsc.name,
-        location: nuevoEsc.location || null,
+        venue_type: nuevoEsc.venue_type,
+        location: nuevoEsc.location,
         capacity: nuevoEsc.capacity ? parseInt(nuevoEsc.capacity) : null,
-        status: nuevoEsc.status
+        is_available: nuevoEsc.status === 'active'
       });
       if (res.success) {
         mostrarMensaje('Escenario registrado con éxito.');
@@ -345,13 +346,48 @@ export const ProgramacionFixture: React.FC = () => {
                     className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Tipo *</label>
+                    <select
+                      required
+                      value={nuevoEsc.venue_type}
+                      onChange={(e) => setNuevoEsc({ ...nuevoEsc, venue_type: e.target.value })}
+                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                    >
+                      <option value="cancha">Cancha</option>
+                      <option value="estadio">Estadio</option>
+                      <option value="coliseo">Coliseo</option>
+                      <option value="gimnasio">Gimnasio</option>
+                      <option value="otro">Otro</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Capacidad</label>
+                    <input
+                      type="number" placeholder="Ej: 50" min="0"
+                      value={nuevoEsc.capacity} onChange={(e) => setNuevoEsc({ ...nuevoEsc, capacity: e.target.value })}
+                      className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Ubicación</label>
+                  <label className="text-xs font-bold text-slate-700 block">Ubicación *</label>
                   <input
-                    type="text" placeholder="Ej: Complejo Deportivo Norte"
+                    type="text" required placeholder="Ej: Complejo Deportivo Norte"
                     value={nuevoEsc.location} onChange={(e) => setNuevoEsc({ ...nuevoEsc, location: e.target.value })}
                     className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
                   />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Estado *</label>
+                  <select
+                    value={nuevoEsc.status} onChange={(e) => setNuevoEsc({ ...nuevoEsc, status: e.target.value })}
+                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                  >
+                    <option value="active">Disponible / Activo</option>
+                    <option value="inactive">No Disponible</option>
+                  </select>
                 </div>
                 <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer">
                   Guardar Escenario
@@ -402,7 +438,7 @@ export const ProgramacionFixture: React.FC = () => {
                   <label className="text-xs font-bold text-slate-700 block">Disciplina *</label>
                   <select
                     required value={datosFixture.discipline_id}
-                    onChange={(e) => setDatosFixture({ ...datosFixture, discipline_id: e.target.value })}
+                    onChange={(e) => setDatosFixture({ ...datosFixture, discipline_id: e.target.value, category_id: '' })}
                     className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
                   >
                     <option value="">Seleccionar Disciplina</option>
@@ -417,7 +453,10 @@ export const ProgramacionFixture: React.FC = () => {
                     className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
                   >
                     <option value="">Seleccionar Categoría</option>
-                    {categorias.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {categorias
+                      .filter((c) => !datosFixture.discipline_id || c.discipline_id === parseInt(datosFixture.discipline_id))
+                      .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)
+                    }
                   </select>
                 </div>
               </div>
@@ -464,7 +503,7 @@ export const ProgramacionFixture: React.FC = () => {
                   <label className="text-xs font-bold text-slate-700 block">Disciplina *</label>
                   <select
                     required value={datosFecha.discipline_id}
-                    onChange={(e) => setDatosFecha({ ...datosFecha, discipline_id: e.target.value })}
+                    onChange={(e) => setDatosFecha({ ...datosFecha, discipline_id: e.target.value, category_id: '' })}
                     className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
                   >
                     <option value="">Seleccionar Disciplina</option>
@@ -479,7 +518,10 @@ export const ProgramacionFixture: React.FC = () => {
                     className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
                   >
                     <option value="">Seleccionar Categoría</option>
-                    {categorias.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {categorias
+                      .filter((c) => !datosFecha.discipline_id || c.discipline_id === parseInt(datosFecha.discipline_id))
+                      .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)
+                    }
                   </select>
                 </div>
               </div>

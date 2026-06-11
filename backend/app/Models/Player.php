@@ -4,10 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Player extends Model
 {
     use SoftDeletes;
+
+    protected $appends = ['name', 'dni', 'number'];
 
     protected $fillable = [
         'document_number',
@@ -39,10 +42,14 @@ class Player extends Model
 
     public function team()
     {
-        return $this->belongsToMany(Team::class, 'team_players')
-            ->withPivot('jersey_number', 'status')
-            ->withTimestamps()
-            ->one();
+        return $this->hasOneThrough(
+            Team::class,
+            TeamPlayer::class,
+            'player_id', // Foreign key on team_players (pivot)
+            'id',        // Foreign key on teams (target)
+            'id',        // Local key on players (source)
+            'team_id'    // Local key on team_players (pivot)
+        );
     }
 
     public function statistics()
@@ -63,5 +70,22 @@ class Player extends Model
     public function getFullNameAttribute()
     {
         return $this->names . ' ' . $this->last_names;
+    }
+
+    public function getNameAttribute()
+    {
+        return trim($this->names . ' ' . $this->last_names);
+    }
+
+    public function getDniAttribute()
+    {
+        return $this->document_number;
+    }
+
+    public function getNumberAttribute()
+    {
+        return DB::table('team_players')
+            ->where('player_id', $this->id)
+            ->value('jersey_number');
     }
 }

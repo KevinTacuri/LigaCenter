@@ -128,7 +128,10 @@ export const VisualizacionPublica: React.FC = () => {
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-500 uppercase">Filtrar Disciplina</label>
               <select
-                value={filtroDisc} onChange={(e) => setFiltroDisc(e.target.value)}
+                value={filtroDisc} onChange={(e) => {
+                  setFiltroDisc(e.target.value);
+                  setFiltroCat('');
+                }}
                 className="text-xs border border-slate-200 bg-white rounded-lg p-2 cursor-pointer outline-hidden"
               >
                 <option value="">Todas las disciplinas</option>
@@ -142,7 +145,10 @@ export const VisualizacionPublica: React.FC = () => {
                 className="text-xs border border-slate-200 bg-white rounded-lg p-2 cursor-pointer outline-hidden"
               >
                 <option value="">Todas las categorías</option>
-                {categorias.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {categorias
+                  .filter((c) => !filtroDisc || c.discipline_id === parseInt(filtroDisc))
+                  .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)
+                }
               </select>
             </div>
           </div>

@@ -35,7 +35,7 @@ class AuthController extends Controller
             'is_active' => true,
         ]);
 
-        $user->assignRole('usuario_publico');
+        $user->assignRole('organizador');
 
         $token = $user->createToken('auth_token')->plainTextToken;
 

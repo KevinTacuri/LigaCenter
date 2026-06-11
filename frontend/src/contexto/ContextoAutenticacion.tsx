@@ -12,6 +12,7 @@ interface PropiedadesContextoAutenticacion {
   cerrarSesion: () => Promise<void>;
   tieneRol: (rol: string) => boolean;
   tienePermiso: (permiso: string) => boolean;
+  recargarUsuario: () => Promise<void>;
 }
 
 // Creación del Contexto
@@ -150,6 +151,18 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
     return usuario.permissions.includes(permiso);
   };
 
+  // Recargar la información del usuario autenticado
+  const recargarUsuario = async (): Promise<void> => {
+    try {
+      const respuesta = await serviciosAutenticacion.obtenerUsuarioAutenticado();
+      if (respuesta.success) {
+        setUsuario(respuesta.data);
+      }
+    } catch (e) {
+      console.error('Error al recargar el usuario:', e);
+    }
+  };
+
   return (
     <ContextoAutenticacion.Provider
       value={{
@@ -162,6 +175,7 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
         cerrarSesion,
         tieneRol,
         tienePermiso,
+        recargarUsuario,
       }}
     >
       {children}

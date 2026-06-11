@@ -42,7 +42,7 @@ class CategoryController extends Controller
             $query->where('discipline_id', $request->discipline_id);
         }
 
-        return response()->json($query->with('teams')->get());
+        return response()->json($query->with(['teams', 'discipline'])->get());
     }
 
     #[OA\Post(
@@ -122,7 +122,7 @@ class CategoryController extends Controller
     public function show($id)
     {
         return response()->json(
-            Category::with('teams')->findOrFail($id)
+            Category::with(['teams', 'discipline'])->findOrFail($id)
         );
     }
 

@@ -37,7 +37,7 @@ class TeamController extends Controller
         ]);
 
         $teams = Team::where('championship_id', $request->championship_id)
-            ->with(['category.discipline', 'players'])
+            ->with(['category.discipline', 'players', 'organization'])
             ->get();
 
         return $this->successResponse($teams, 'Equipos obtenidos exitosamente');
@@ -73,6 +73,8 @@ class TeamController extends Controller
         $request->validate([
             'championship_id' => 'required|exists:championships,id',
             'category_id' => 'required|exists:categories,id',
+            'organization_id' => 'nullable|exists:organizations,id',
+            'representative' => 'nullable|string|max:255',
             'name' => 'required|string|max:255',
             'logo' => 'nullable|string',
             'description' => 'nullable|string',
@@ -87,11 +89,15 @@ class TeamController extends Controller
         $team = Team::create([
             'championship_id' => $request->championship_id,
             'category_id' => $request->category_id,
+            'organization_id' => $request->organization_id,
+            'representative' => $request->representative,
             'name' => $request->name,
             'logo' => $request->logo,
             'description' => $request->description,
             'registration_status' => $request->registration_status ?? 'pendiente',
         ]);
+
+        $team->load('organization');
 
         return $this->successResponse($team, 'Equipo creado exitosamente', 201);
     }
@@ -112,7 +118,7 @@ class TeamController extends Controller
     )]
     public function show($id)
     {
-        $team = Team::with(['category.discipline', 'players'])->find($id);
+        $team = Team::with(['category.discipline', 'players', 'organization'])->find($id);
 
         if (!$team) {
             return $this->errorResponse('Equipo no encontrado', 404);
@@ -155,6 +161,8 @@ class TeamController extends Controller
         }
 
         $request->validate([
+            'organization_id' => 'nullable|exists:organizations,id',
+            'representative' => 'nullable|string|max:255',
             'name' => 'sometimes|string|max:255',
             'logo' => 'nullable|string',
             'description' => 'nullable|string',
@@ -162,8 +170,10 @@ class TeamController extends Controller
         ]);
 
         $team->update($request->only([
-            'name', 'logo', 'description', 'registration_status'
+            'organization_id', 'representative', 'name', 'logo', 'description', 'registration_status'
         ]));
+
+        $team->load('organization');
 
         return $this->successResponse($team, 'Equipo actualizado exitosamente');
     }

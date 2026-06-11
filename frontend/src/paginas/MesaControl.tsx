@@ -14,7 +14,7 @@ import type {
 } from '../servicios/api';
 
 export const MesaControl: React.FC = () => {
-  const { tienePermiso } = useAutenticacion();
+  const { tienePermiso, tieneRol } = useAutenticacion();
   const navegar = useNavigate();
 
   const [partidos, setPartidos] = useState<Partido[]>([]);
@@ -45,7 +45,7 @@ export const MesaControl: React.FC = () => {
   });
 
   useEffect(() => {
-    if (!tienePermiso('registrar_incidencias')) {
+    if ((!tienePermiso('registrar_incidencias') && !tieneRol('organizador')) || tieneRol('administrador')) {
       navegar('/tablero');
     } else {
       cargarPartidos();
