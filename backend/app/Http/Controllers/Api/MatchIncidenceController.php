@@ -128,12 +128,14 @@ class MatchIncidenceController extends Controller
             'match_id' => $request->match_id,
             'player_id' => $request->player_id,
             'team_id' => $request->team_id,
-            'incidence_type' => $request->incidence_type,
+            'type' => $request->incidence_type,
             'minute' => $request->minute,
             'second' => $request->second,
             'description' => $request->description,
             'created_by_user_id' => auth()->id(),
         ]);
+
+        $incidence->load(['player', 'team']);
 
         return $this->successResponse(
             $incidence,
@@ -233,7 +235,15 @@ class MatchIncidenceController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        $incidence->update($request->all());
+        $data = $request->all();
+        if ($request->has('incidence_type')) {
+            $data['type'] = $request->incidence_type;
+            unset($data['incidence_type']);
+        }
+
+        $incidence->update($data);
+
+        $incidence->load(['player', 'team']);
 
         return $this->successResponse(
             $incidence,

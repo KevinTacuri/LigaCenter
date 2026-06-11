@@ -61,18 +61,24 @@ class FixtureService
         $date = Carbon::parse($startDate);
         $matchesCreated = [];
 
+        $venues = array_values($venueIds);
+        $venueCount = count($venues);
+        $venueIndex = 0;
+
         foreach ($allRounds as $roundIndex => $roundMatches) {
             foreach ($roundMatches as $match) {
                 $matchData = [
                     'championship_id' => $championshipId,
                     'category_id' => $categoryId,
-                    'local_team_id' => $match['local'],
-                    'visitor_team_id' => $match['visitor'],
+                    'home_team_id' => $match['local'],
+                    'away_team_id' => $match['visitor'],
+                    'venue_id' => $venueCount > 0 ? $venues[$venueIndex % $venueCount] : null,
                     'round' => $roundIndex + 1,
                     'match_date' => $date->copy()->addDays($roundIndex * 7)->toDateString(),
                     'status' => 'programado',
                 ];
                 $matchesCreated[] = GameMatch::create($matchData);
+                $venueIndex++;
             }
         }
 

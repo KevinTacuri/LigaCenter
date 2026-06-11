@@ -13,12 +13,25 @@ class MatchIncidence extends Model
         'match_id',
         'player_id',
         'team_id',
+        'type',
         'incidence_type',
         'minute',
         'second',
         'description',
         'created_by_user_id',
     ];
+
+    protected $appends = ['incidence_type'];
+
+    public function getIncidenceTypeAttribute()
+    {
+        return $this->attributes['type'] ?? null;
+    }
+
+    public function setIncidenceTypeAttribute($value)
+    {
+        $this->attributes['type'] = $value;
+    }
 
     public function match()
     {

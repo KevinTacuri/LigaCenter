@@ -53,12 +53,12 @@ class Team extends Model
 
     public function homeMatches()
     {
-        return $this->hasMany(GameMatch::class, 'local_team_id');
+        return $this->hasMany(GameMatch::class, 'home_team_id');
     }
 
     public function awayMatches()
     {
-        return $this->hasMany(GameMatch::class, 'visitor_team_id');
+        return $this->hasMany(GameMatch::class, 'away_team_id');
     }
 
     public function standing()

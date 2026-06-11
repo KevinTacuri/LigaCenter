@@ -257,6 +257,7 @@ export interface Equipo {
   representative?: string | null;
   organization_id: number;
   organization?: Organizacion;
+  registration_status?: 'pendiente' | 'aprobado' | 'rechazado';
 }
 
 export interface Jugador {
@@ -416,6 +417,10 @@ export const serviciosParticipantes = {
     const res = await clienteApi.post('/teams', datos);
     return res.data;
   },
+  actualizarEquipo: async (id: number, datos: any): Promise<RespuestaApi<Equipo>> => {
+    const res = await clienteApi.put(`/teams/${id}`, datos);
+    return res.data;
+  },
   eliminarEquipo: async (id: number): Promise<RespuestaApi<null>> => {
     const res = await clienteApi.delete(`/teams/${id}`);
     return res.data;
@@ -457,6 +462,10 @@ export const serviciosFixture = {
   // Partidos
   obtenerPartidos: async (): Promise<RespuestaApi<Partido[]>> => {
     const res = await clienteApi.get('/matches');
+    return res.data;
+  },
+  actualizarPartido: async (id: number, datos: any): Promise<RespuestaApi<Partido>> => {
+    const res = await clienteApi.put(`/matches/${id}`, datos);
     return res.data;
   },
   reprogramarPartido: async (id: number, datos: { match_date: string; match_time: string; venue_id: number }): Promise<RespuestaApi<Partido>> => {
@@ -532,6 +541,7 @@ export const serviciosResultados = {
     team_id: number;
     incidence_type: string;
     minute: number;
+    second?: number;
     description?: string;
   }): Promise<RespuestaApi<Incidencia>> => {
     const res = await clienteApi.post('/match-incidences', datos);
@@ -539,6 +549,10 @@ export const serviciosResultados = {
   },
   eliminarIncidencia: async (id: number): Promise<RespuestaApi<null>> => {
     const res = await clienteApi.delete(`/match-incidences/${id}`);
+    return res.data;
+  },
+  obtenerIncidenciasPorPartido: async (matchId: number): Promise<RespuestaApi<Incidencia[]>> => {
+    const res = await clienteApi.get(`/match-incidences?match_id=${matchId}`);
     return res.data;
   },
 

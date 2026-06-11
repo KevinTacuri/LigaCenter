@@ -20,6 +20,15 @@ export const GestionParticipantes: React.FC = () => {
   const [cargando, setCargando] = useState(false);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+  const [mostrarAyuda, setMostrarAyuda] = useState(false);
+
+  const PASOS_AYUDA_PARTICIPANTES = [
+    { paso: '1', titulo: 'Disciplinas (Deportes)', desc: 'Registra los deportes que se jugarán (ej. Fútbol, Vóley). Son el pilar para agrupar las categorías.', icono: 'sports' },
+    { paso: '2', titulo: 'Categorías', desc: 'Define los rangos de edad y el género para cada deporte (ej. Sub-15 Masculino, Libre Femenino).', icono: 'category' },
+    { paso: '3', titulo: 'Organizaciones', desc: 'Crea los clubes, colegios o instituciones a los que representarán los equipos delegados.', icono: 'corporate_fare' },
+    { paso: '4', titulo: 'Equipos', desc: 'Registra los equipos asociándolos a una organización y su categoría. IMPORTANTE: Una vez registrados, debes hacer clic en "Aprobar" para que puedan ser incluidos en el fixture.', icono: 'groups' },
+    { paso: '5', titulo: 'Jugadores', desc: 'Inscribe a los jugadores en su respectivo equipo. El sistema validará automáticamente que cumplan con la edad máxima/mínima de la categoría.', icono: 'person' },
+  ];
 
   // Estados de datos
   const [disciplinas, setDisciplinas] = useState<Disciplina[]>([]);
@@ -160,10 +169,11 @@ export const GestionParticipantes: React.FC = () => {
         organization_id: parseInt(nuevoEq.organization_id),
         discipline_id: parseInt(nuevoEq.discipline_id),
         category_id: parseInt(nuevoEq.category_id),
-        representative: nuevoEq.representative || null
+        representative: nuevoEq.representative || null,
+        registration_status: 'aprobado'
       });
       if (res.success) {
-        mostrarMensaje('Equipo registrado exitosamente.');
+        mostrarMensaje('Equipo registrado y aprobado exitosamente.');
         setNuevoEq({ name: '', representative: '', organization_id: '', discipline_id: '', category_id: '' });
         cargarDatos();
       }
@@ -195,6 +205,18 @@ export const GestionParticipantes: React.FC = () => {
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Error al inscribir jugador.';
       mostrarMensaje(msg, true);
+    }
+  };
+
+  const cambiarEstadoEquipo = async (id: number, nuevoEstado: 'aprobado' | 'rechazado') => {
+    try {
+      const res = await serviciosParticipantes.actualizarEquipo(id, { registration_status: nuevoEstado });
+      if (res.success) {
+        mostrarMensaje(`Equipo ${nuevoEstado === 'aprobado' ? 'aprobado' : 'rechazado'} con éxito.`);
+        cargarDatos();
+      }
+    } catch (err) {
+      mostrarMensaje('Error al cambiar el estado del equipo.', true);
     }
   };
 
@@ -531,6 +553,7 @@ export const GestionParticipantes: React.FC = () => {
                     <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
                       <th className="p-3 pl-4">Detalles</th>
                       {tabActiva === 'equipos' && <th className="p-3">Organización</th>}
+                      {tabActiva === 'equipos' && <th className="p-3">Estado</th>}
                       {tabActiva === 'jugadores' && <th className="p-3">Equipo</th>}
                       <th className="p-3 pr-4 text-right">Acciones</th>
                     </tr>
@@ -581,7 +604,22 @@ export const GestionParticipantes: React.FC = () => {
                           <div className="text-xs text-slate-500">Delegado: {eq.representative || 'No registrado'}</div>
                         </td>
                         <td className="p-3 text-slate-700">{eq.organization?.name || 'Independiente'}</td>
-                        <td className="p-3 pr-4 text-right">
+                        <td className="p-3">
+                          {eq.registration_status === 'aprobado' ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wide">Aprobado</span>
+                          ) : eq.registration_status === 'rechazado' ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 uppercase tracking-wide">Rechazado</span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wide">Pendiente</span>
+                          )}
+                        </td>
+                        <td className="p-3 pr-4 text-right space-x-2">
+                          {eq.registration_status !== 'aprobado' && (
+                            <button onClick={() => cambiarEstadoEquipo(eq.id, 'aprobado')} className="text-xs font-bold text-emerald-600 hover:underline cursor-pointer">Aprobar</button>
+                          )}
+                          {eq.registration_status === 'pendiente' && (
+                            <button onClick={() => cambiarEstadoEquipo(eq.id, 'rechazado')} className="text-xs font-bold text-amber-600 hover:underline cursor-pointer">Rechazar</button>
+                          )}
                           <button onClick={() => eliminarElemento(eq.id)} className="text-xs font-bold text-rose-600 hover:underline cursor-pointer">Eliminar</button>
                         </td>
                       </tr>
@@ -623,6 +661,65 @@ export const GestionParticipantes: React.FC = () => {
         </div>
 
       </main>
+
+      {/* Botón Flotante de Ayuda */}
+      <button
+        onClick={() => setMostrarAyuda(true)}
+        className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-primary hover:bg-primary-container text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95 z-40 cursor-pointer"
+        title="¿Cómo usar esta sección?"
+      >
+        <span className="material-symbols-outlined text-lg">question_mark</span>
+      </button>
+
+      {/* Drawer de Ayuda */}
+      {mostrarAyuda && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex justify-end animate-fadeIn">
+          <div className="w-full max-w-sm bg-white h-full shadow-2xl flex flex-col animate-slideLeft">
+            {/* Cabecera del Drawer */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">help</span>
+                <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Ayuda: Equipos y Jugadores</h3>
+              </div>
+              <button
+                onClick={() => setMostrarAyuda(false)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+
+            {/* Contenido del Drawer */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-3">
+              <p className="text-[10px] text-slate-400 font-semibold leading-relaxed mb-4">
+                Sigue estos pasos en orden para inscribir correctamente a los competidores de tu torneo:
+              </p>
+              {PASOS_AYUDA_PARTICIPANTES.map((p) => (
+                <div key={p.paso} className="flex gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100/60 transition-colors">
+                  <div className="w-6 h-6 rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
+                    {p.paso}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-xs text-slate-400">{p.icono}</span>
+                      {p.titulo}
+                    </h4>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed font-medium">{p.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Pie del Drawer */}
+            <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50">
+              <p className="text-[10px] text-slate-400 font-semibold mb-1">💡 Consejo rápido:</p>
+              <p className="text-[10px] text-slate-500 leading-normal font-medium">
+                Si un jugador no aparece para registrar, asegúrate de que el equipo esté aprobado. El fixture Round Robin solo se podrá generar con equipos aprobados.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

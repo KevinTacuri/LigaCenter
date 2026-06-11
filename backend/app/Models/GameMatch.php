@@ -11,12 +11,17 @@ class GameMatch extends Model
 
     protected $table = 'matches';
 
+    protected $appends = [
+        'local_team_id',
+        'visitor_team_id',
+    ];
+
     protected $fillable = [
         'venue_id',
         'discipline_id',
         'category_id',
-        'local_team_id',
-        'visitor_team_id',
+        'home_team_id',
+        'away_team_id',
         'match_date',
         'match_time',
         'round',
@@ -28,6 +33,27 @@ class GameMatch extends Model
         'match_date' => 'date',
         'match_time' => 'string',
     ];
+
+    // Accesores y mutadores para compatibilidad con código que use local_team_id y visitor_team_id
+    public function getLocalTeamIdAttribute()
+    {
+        return $this->attributes['home_team_id'] ?? null;
+    }
+
+    public function setLocalTeamIdAttribute($value)
+    {
+        $this->attributes['home_team_id'] = $value;
+    }
+
+    public function getVisitorTeamIdAttribute()
+    {
+        return $this->attributes['away_team_id'] ?? null;
+    }
+
+    public function setVisitorTeamIdAttribute($value)
+    {
+        $this->attributes['away_team_id'] = $value;
+    }
 
     public function venue()
     {
@@ -46,17 +72,17 @@ class GameMatch extends Model
 
     public function localTeam()
     {
-        return $this->belongsTo(Team::class, 'local_team_id');
+        return $this->belongsTo(Team::class, 'home_team_id');
     }
 
     public function visitorTeam()
     {
-        return $this->belongsTo(Team::class, 'visitor_team_id');
+        return $this->belongsTo(Team::class, 'away_team_id');
     }
 
     public function report()
     {
-        return $this->hasOne(MatchReport::class);
+        return $this->hasOne(MatchReport::class, 'match_id');
     }
 
     public function incidences()

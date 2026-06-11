@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('home_team_id')->constrained('teams')->onDelete('cascade');
             $table->foreignId('away_team_id')->constrained('teams')->onDelete('cascade');
             $table->date('match_date');
+            $table->string('match_time')->nullable();
             $table->integer('round')->nullable();
             $table->string('status')->default('programado');
             $table->timestamps();

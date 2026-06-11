@@ -22,6 +22,14 @@ export const ProgramacionFixture: React.FC = () => {
   const [cargando, setCargando] = useState(false);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+  const [mostrarAyuda, setMostrarAyuda] = useState(false);
+
+  const PASOS_AYUDA_FIXTURE = [
+    { paso: '1', titulo: 'Registrar Escenarios', desc: 'Agrega las canchas o recintos deportivos con su ubicación, tipo y capacidad en la pestaña "Escenarios".', icono: 'stadium' },
+    { paso: '2', titulo: 'Generar el Fixture', desc: 'Ve a "Generar Fixture", selecciona la disciplina y categoría, define la fecha de inicio del campeonato y marca las canchas utilizables. NOTA: Debes tener al menos 2 equipos aprobados en la categoría.', icono: 'calendar_today' },
+    { paso: '3', titulo: 'Programación de Fechas', desc: 'En "Programar Horarios" puedes asignar automáticamente canchas y horas (separadas por comas, ej: 08:00, 10:00) a los partidos de una fecha en específico.', icono: 'schedule' },
+    { paso: '4', titulo: 'Ver y Reprogramar Partidos', desc: 'En la pestaña "Partidos" verás el fixture programado. Puedes usar "Reprogramar" para ajustar manualmente la fecha, hora o escenario de un partido.', icono: 'edit' },
+  ];
 
   // Estados de datos
   const [escenarios, setEscenarios] = useState<Escenario[]>([]);
@@ -627,6 +635,65 @@ export const ProgramacionFixture: React.FC = () => {
         )}
 
       </main>
+
+      {/* Botón Flotante de Ayuda */}
+      <button
+        onClick={() => setMostrarAyuda(true)}
+        className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-primary hover:bg-primary-container text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95 z-40 cursor-pointer"
+        title="¿Cómo usar esta sección?"
+      >
+        <span className="material-symbols-outlined text-lg">question_mark</span>
+      </button>
+
+      {/* Drawer de Ayuda */}
+      {mostrarAyuda && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex justify-end animate-fadeIn">
+          <div className="w-full max-w-sm bg-white h-full shadow-2xl flex flex-col animate-slideLeft">
+            {/* Cabecera del Drawer */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">help</span>
+                <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Ayuda: Fixture y Fechas</h3>
+              </div>
+              <button
+                onClick={() => setMostrarAyuda(false)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+
+            {/* Contenido del Drawer */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-3">
+              <p className="text-[10px] text-slate-400 font-semibold leading-relaxed mb-4">
+                Sigue estos pasos en orden para estructurar y programar los partidos del campeonato:
+              </p>
+              {PASOS_AYUDA_FIXTURE.map((p) => (
+                <div key={p.paso} className="flex gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100/60 transition-colors">
+                  <div className="w-6 h-6 rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
+                    {p.paso}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-xs text-slate-400">{p.icono}</span>
+                      {p.titulo}
+                    </h4>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed font-medium">{p.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Pie del Drawer */}
+            <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50">
+              <p className="text-[10px] text-slate-400 font-semibold mb-1">💡 Consejo rápido:</p>
+              <p className="text-[10px] text-slate-500 leading-normal font-medium">
+                La asignación de horarios calcula los partidos basándose en la relevancia de cada equipo. Los partidos de alta expectación o puntaje acumulado suelen asignarse de manera optimizada en horarios centrales.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

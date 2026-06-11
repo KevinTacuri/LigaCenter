@@ -61,7 +61,7 @@ class GameMatchController extends Controller
     )]
     public function index(Request $request)
     {
-        $query = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'discipline', 'category']);
+        $query = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'discipline', 'category', 'report']);
 
         if ($request->has('championship_id')) {
             $query->where('championship_id', $request->championship_id);
@@ -102,7 +102,7 @@ class GameMatchController extends Controller
     #[OA\Response(response: 404, description: 'Partido no encontrado')]
     public function show($id)
     {
-        $match = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'discipline', 'category', 'championship'])->find($id);
+        $match = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'discipline', 'category', 'championship', 'report'])->find($id);
         if (!$match) {
             return $this->errorResponse('Partido no encontrado', 404);
         }

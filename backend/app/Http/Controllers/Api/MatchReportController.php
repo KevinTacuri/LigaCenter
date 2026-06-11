@@ -160,9 +160,6 @@ class MatchReportController extends Controller
     public function getByMatch($matchId)
     {
         $report = MatchReport::with('match')->where('match_id', $matchId)->first();
-        if (!$report) {
-            return $this->errorResponse('Acta no encontrada', 404);
-        }
         return $this->successResponse($report, 'Acta obtenida exitosamente');
     }
 
