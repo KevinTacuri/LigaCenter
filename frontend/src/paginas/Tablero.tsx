@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../contexto/ContextoCampeonato';
+import { BarraLateral } from '../componentes/BarraLateral';
 
 // Importación de recursos
 import logoImg from '../assets/logo.svg';
@@ -49,80 +50,47 @@ export const Tablero: React.FC = () => {
   const inicialUsuario = usuario.name ? usuario.name.charAt(0).toUpperCase() : 'U';
 
   return (
-    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans flex flex-col relative overflow-hidden">
-      
-      {/* Fondo de cuadrícula interactiva moderno */}
+    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans relative overflow-hidden">
       <div className="interactive-grid-bg" />
 
-      <div className="relative z-10 flex flex-col min-h-screen w-full">
-        {/* Barra de Navegación Superior */}
-        <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 transition-all">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 flex items-center justify-center">
-              <img src={logoImg} className="w-full h-full object-contain" alt="Logo LigaCenter" />
-            </div>
+      {/* Barra lateral integrada */}
+      <BarraLateral />
+
+      {/* Contenido principal con margen izquierdo en desktop */}
+      <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
+        {/* Header simplificado (sin logout, sin logo repetido) */}
+        <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 sticky top-0 z-30">
+          <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-extrabold tracking-tight text-white leading-none">LigaCenter</h1>
-                <span className="px-1.5 py-0.5 rounded-sm bg-[#171a26] text-slate-300 text-[9px] font-bold border border-slate-800 uppercase tracking-wider">v1.0</span>
-              </div>
-              <span className="text-[10px] text-indigo-400 font-bold uppercase mt-1 block tracking-wider truncate max-w-[200px] sm:max-w-md">
-                🏆 {campeonatoActivo?.name || 'Tablero de Control'}
-              </span>
+              <h2 className="text-lg font-black text-white tracking-tight">
+                {campeonatoActivo?.name || 'Tablero de Control'}
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {usuario.name} • {usuario.roles?.[0]?.replace('_', ' ') || 'Usuario'}
+              </p>
             </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Info y Avatar — navega a Configuración */}
-            <button
-              onClick={() => navegar('/tablero/configuracion')}
-              className="flex items-center gap-2 border border-slate-800 hover:bg-[#171a26] px-2 py-1 rounded-lg transition-all cursor-pointer group text-left bg-transparent shrink-0"
-            >
-              <div className="hidden md:flex flex-col text-right justify-center">
-                <span className="text-xs font-extrabold text-slate-200 group-hover:text-indigo-400 transition-colors flex items-center gap-1.5 justify-end">
-                  {usuario.name}
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 border border-slate-900 shadow-xs"></span>
-                </span>
-                <span className="text-[9px] text-slate-450 font-bold uppercase tracking-wider">
-                  {usuario.roles?.[0]?.replace('_', ' ') || 'Usuario'}
-                </span>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-[#1c1f2e] p-[1px] border border-slate-800">
-                <div className="w-full h-full rounded-full bg-indigo-650 flex items-center justify-center font-extrabold text-xs text-white select-none group-hover:bg-indigo-600 transition-colors">
-                  {inicialUsuario}
-                </div>
-              </div>
-            </button>
-
-            {/* Botón Seleccionar / Cambiar Torneo (Solo si NO es administrador) */}
-            {!tieneRol('administrador') && (
-              campeonatoActivo ? (
-                <button
-                  onClick={limpiarCampeonato}
-                  className="flex items-center justify-center gap-1.5 bg-[#171a26] hover:bg-[#1c1f2e] border border-slate-800 text-slate-300 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer shadow-xs active:scale-95 group"
-                >
-                  <span className="material-symbols-outlined text-sm">swap_horiz</span>
-                  <span className="hidden sm:inline">Cambiar Torneo</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => navegar('/seleccion-campeonato')}
-                  className="flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all duration-200 cursor-pointer shadow-xs active:scale-95 flex items-center gap-1"
-                >
-                  <span className="material-symbols-outlined text-sm">sports_soccer</span>
-                  <span>Seleccionar Campeonato</span>
-                </button>
-              )
-            )}
-
-            {/* Botón Cerrar Sesión */}
-            <button
-              onClick={cerrarSesion}
-              className="flex items-center justify-center gap-1 bg-transparent hover:bg-rose-950/20 text-slate-400 hover:text-rose-400 border border-transparent hover:border-rose-900/30 rounded-md px-2 py-1.5 text-[10px] sm:text-xs font-semibold transition-all duration-200 cursor-pointer active:scale-95 group"
-            >
-              <span className="material-symbols-outlined text-xs sm:text-sm transition-transform group-hover:translate-x-0.5">logout</span>
-              <span className="hidden sm:inline">Cerrar Sesión</span>
-            </button>
+            <div className="flex items-center gap-3">
+              {!tieneRol('administrador') && (
+                campeonatoActivo ? (
+                  <button
+                    onClick={limpiarCampeonato}
+                    className="flex items-center gap-1.5 bg-[#171a26] hover:bg-[#1c1f2e] border border-slate-800 text-slate-300 rounded-lg px-3 py-1.5 text-xs font-semibold"
+                  >
+                    <span className="material-symbols-outlined text-sm">swap_horiz</span>
+                    <span className="hidden sm:inline">Cambiar Torneo</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => navegar('/seleccion-campeonato')}
+                    className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-3.5 py-1.5 text-xs font-bold"
+                  >
+                    <span className="material-symbols-outlined text-sm">sports_soccer</span>
+                    <span>Seleccionar Campeonato</span>
+                  </button>
+                )
+              )}
+              {/* El botón de cerrar sesión ahora está en la barra lateral */}
+            </div>
           </div>
         </header>
 
