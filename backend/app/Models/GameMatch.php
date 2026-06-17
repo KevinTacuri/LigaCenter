@@ -25,16 +25,21 @@ class GameMatch extends Model
         'match_date',
         'match_time',
         'round',
+        'phase',
+        'group_id',
         'status',
         'championship_id',
+        'home_score',
+        'away_score',
     ];
 
     protected $casts = [
         'match_date' => 'date',
         'match_time' => 'string',
+        'home_score' => 'integer',
+        'away_score' => 'integer',
     ];
 
-    // Accesores y mutadores para compatibilidad con código que use local_team_id y visitor_team_id
     public function getLocalTeamIdAttribute()
     {
         return $this->attributes['home_team_id'] ?? null;
@@ -93,5 +98,10 @@ class GameMatch extends Model
     public function championship()
     {
         return $this->belongsTo(Championship::class);
+    }
+
+    public function group()
+    {
+        return $this->belongsTo(Group::class);
     }
 }

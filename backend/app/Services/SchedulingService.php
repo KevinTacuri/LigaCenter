@@ -21,8 +21,8 @@ class SchedulingService
 
         $matchesWithRelevance = [];
         foreach ($matches as $match) {
-            $localPoints = $this->getTeamPoints($match->local_team_id, $championshipId, $categoryId);
-            $visitorPoints = $this->getTeamPoints($match->visitor_team_id, $championshipId, $categoryId);
+            $localPoints = $this->getTeamPoints($match->home_team_id, $championshipId, $categoryId);
+            $visitorPoints = $this->getTeamPoints($match->away_team_id, $championshipId, $categoryId);
             $relevance = $localPoints + $visitorPoints;
 
             $matchesWithRelevance[] = [
@@ -52,8 +52,8 @@ class SchedulingService
 
             $scheduledMatches[] = [
                 'match_id' => $match->id,
-                'local' => $match->localTeam->name ?? 'N/A',
-                'visitor' => $match->visitorTeam->name ?? 'N/A',
+                'local' => $match->homeTeam->name ?? 'N/A',
+                'visitor' => $match->awayTeam->name ?? 'N/A',
                 'time' => $hour,
                 'venue' => $venue->name ?? 'N/A',
                 'relevance' => $item['relevance'],

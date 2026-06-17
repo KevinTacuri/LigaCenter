@@ -18,7 +18,11 @@ return new class extends Migration
             $table->date('match_date');
             $table->string('match_time')->nullable();
             $table->integer('round')->nullable();
+            $table->string('phase')->nullable();
+            $table->foreignId('group_id')->nullable()->constrained()->onDelete('cascade');
             $table->string('status')->default('programado');
+            $table->integer('home_score')->nullable();
+            $table->integer('away_score')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });
