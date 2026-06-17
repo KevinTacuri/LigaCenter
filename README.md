@@ -94,6 +94,26 @@ php artisan test
 
 ---
 
+### 7 Instalar PNPM
+
+Si no se tiene PNPM instalado globalmente:
+
+```bash
+npm install -g pnpm
+```
+
+### 8 Instalar dependencias frontend
+
+```bash
+pnpm install
+```
+
+### 9 Compilar assets
+
+```bash
+pnpm run dev
+```
+
 ## Seeders y usuario administrador por defecto
 
 Este proyecto incluye **seeders** para cargar datos iniciales necesarios para el funcionamiento del sistema, como roles, sucursales, productos y medios de pago.
@@ -136,3 +156,4 @@ Los seeders ejecutados por defecto son:
 Estos seeders haran que el sistema arranque con datos mínimos funcionales.
 
 ---
+
