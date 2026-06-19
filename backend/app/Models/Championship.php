@@ -16,6 +16,7 @@ class Championship extends Model
         'start_date',
         'end_date',
         'is_public',
+        'rules_pdf',
     ];
 
     protected $casts = [
