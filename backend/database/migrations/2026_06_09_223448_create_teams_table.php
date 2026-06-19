@@ -12,7 +12,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('championship_id')->constrained()->onDelete('cascade');
             $table->foreignId('category_id')->constrained()->onDelete('cascade');
-            $table->foreignId('organization_id')->nullable()->constrained()->onDelete('set null');
             $table->string('representative')->nullable();
             $table->string('name');
             $table->string('logo')->nullable();
