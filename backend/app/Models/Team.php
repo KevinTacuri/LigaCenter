@@ -13,7 +13,6 @@ class Team extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'organization_id',
         'representative',
         'discipline_id',
         'category_id',
@@ -23,11 +22,6 @@ class Team extends Model
         'logo',
         'description',
     ];
-
-    public function organization(): BelongsTo
-    {
-        return $this->belongsTo(Organization::class);
-    }
 
     public function discipline(): BelongsTo
     {
