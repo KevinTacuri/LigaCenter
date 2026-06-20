@@ -59,6 +59,13 @@ class CategoryController extends Controller
                     new OA\Property(property: "championship_id", type: "integer", example: 1),
                     new OA\Property(property: "discipline_id", type: "integer", example: 1),
                     new OA\Property(property: "name", type: "string", description: "Nombre de la categoría", example: "Sub-15"),
+                    new OA\Property(property: "format", type: "string", description: "Formato de competición", enum: ["liga", "grupos", "eliminacion_directa"], example: "grupos"),
+                    new OA\Property(
+                        property: "format_settings", 
+                        type: "object", 
+                        description: "Configuración JSON según el formato elegido",
+                        example: '{"num_groups": 4, "advance_per_group": 2, "third_place": true}'
+                    ),
                     new OA\Property(property: "description", type: "string", description: "Descripción de la categoría", example: "Categoría para menores de 15 años"),
                     new OA\Property(property: "gender_type", type: "string", description: "Género de la categoría", example: "Masculino"),
                     new OA\Property(property: "age_min", type: "integer", example: 10),
@@ -83,6 +90,11 @@ class CategoryController extends Controller
             'championship_id' => 'required|exists:championships,id',
             'discipline_id' => 'required|exists:disciplines,id',
             'name' => 'required|string|max:255',
+            'format' => 'nullable|string|in:liga,grupos,eliminacion_directa',
+            'format_settings' => 'nullable|array',
+            'format_settings.num_groups' => 'required_if:format,grupos|integer|min:1',
+            'format_settings.advance_per_group' => 'required_if:format,grupos|integer|min:1',
+            'format_settings.third_place' => 'nullable|boolean',
             'description' => 'nullable|string',
             'gender_type' => 'nullable|string|in:Masculino,Femenino,Mixto',
             'age_min' => 'nullable|integer|min:0',
@@ -129,7 +141,7 @@ class CategoryController extends Controller
     #[OA\Put(
         path: "/api/categories/{id}",
         summary: "Actualizar categoría",
-        description: "Permite actualizar la información de una categoría existente.",
+        description: "Permite actualizar la información de una categoría existente, incluyendo su formato de competición.",
         tags: ["Categories"],
         parameters: [
             new OA\Parameter(
@@ -146,6 +158,13 @@ class CategoryController extends Controller
             content: new OA\JsonContent(
                 properties: [
                     new OA\Property(property: "name", type: "string", description: "Nuevo nombre de la categoría", example: "Sub-15 A"),
+                    new OA\Property(property: "format", type: "string", enum: ["liga", "grupos", "eliminacion_directa"], example: "liga"),
+                    new OA\Property(
+                        property: "format_settings", 
+                        type: "object", 
+                        description: "Configuración JSON según el formato elegido",
+                        example: '{"num_groups": 4, "advance_per_group": 2, "third_place": true}'
+                    ),
                     new OA\Property(property: "description", type: "string", description: "Nueva descripción", example: "Categoría actualizada"),
                     new OA\Property(property: "gender_type", type: "string", description: "Nuevo género", example: "Femenino"),
                     new OA\Property(property: "age_min", type: "integer", example: 12),
@@ -161,6 +180,10 @@ class CategoryController extends Controller
             new OA\Response(
                 response: 404,
                 description: "Categoría no encontrada"
+            ),
+            new OA\Response(
+                response: 422, 
+                description: "Error de validación"
             )
         ]
     )]
@@ -170,6 +193,11 @@ class CategoryController extends Controller
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
+            'format' => 'sometimes|string|in:liga,grupos,eliminacion_directa',
+            'format_settings' => 'nullable|array',
+            'format_settings.num_groups' => 'required_if:format,grupos|integer|min:1',
+            'format_settings.advance_per_group' => 'required_if:format,grupos|integer|min:1',
+            'format_settings.third_place' => 'nullable|boolean',
             'description' => 'nullable|string',
             'gender_type' => 'nullable|string|in:Masculino,Femenino,Mixto',
             'age_min' => 'nullable|integer|min:0',
