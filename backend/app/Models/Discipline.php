@@ -21,4 +21,11 @@ class Discipline extends Model
     {
         return $this->hasMany(Category::class);
     }
+
+    public function statistics(): HasMany
+    {
+        return $this->hasMany(DisciplineStatistic::class)
+            ->with('statisticType')
+            ->orderBy('order');
+    }
 }

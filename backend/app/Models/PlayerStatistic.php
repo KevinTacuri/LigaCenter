@@ -14,17 +14,16 @@ class PlayerStatistic extends Model
         'discipline_id',
         'category_id',
         'championship_id',
-        'goals',
-        'yellow_cards',
-        'red_cards',
-        'matches_played',
+        'discipline_statistic_id',
+        'value',    
+        #'goals',
+        #'yellow_cards',
+        #'red_cards',
+        #'matches_played',
     ];
 
     protected $casts = [
-        'goals' => 'integer',
-        'yellow_cards' => 'integer',
-        'red_cards' => 'integer',
-        'matches_played' => 'integer',
+        'value' => 'integer',
     ];
 
     public function player()
@@ -50,5 +49,10 @@ class PlayerStatistic extends Model
     public function championship()
     {
         return $this->belongsTo(Championship::class);
+    }
+
+    public function statistic()
+    {
+        return $this->belongsTo(DisciplineStatistic::class, 'discipline_statistic_id');
     }
 }
