@@ -177,4 +177,85 @@ class PlayerStatisticController extends Controller
 
         return $this->successResponse($topRed, 'Top tarjetas rojas obtenido exitosamente');
     }
+
+    // pero json modifica
+
+    #[OA\Get(
+        path: '/api/statistics/ranking',
+        operationId: 'getRanking',
+        summary: 'Ranking de jugadores',
+        tags: ['Player Statistics'],
+        parameters: [
+            new OA\Parameter(
+                name: 'discipline_id',
+                in: 'query',
+                required: true,
+                schema: new OA\Schema(type: 'integer'),
+                example: 1
+            ),
+            new OA\Parameter(
+                name: 'statistic_slug',
+                in: 'query',
+                required: true,
+                schema: new OA\Schema(type: 'string'),
+                description: 'Slug de la estadística (ejemplo: "goals", "yellow_cards", "red_cards")',
+                example: 'goals'
+            ),
+            new OA\Parameter(
+                name: 'championship_id',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'integer'),
+                example: 1
+            ),
+            new OA\Parameter(
+                name: 'category_id',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'integer'),
+                example: 1
+            ),
+            new OA\Parameter(
+                name: 'limit',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'integer', default: 10),
+                description: 'Número máximo de jugadores a mostrar en el ranking (default 10)',
+                example: 10
+             )
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Ranking obtenido exitosamente'
+            ),
+            new OA\Response(
+                response: 422,
+                description: 'Error de validación'
+            )
+        ],
+    )]
+    public function getRanking(Request $request)
+    {
+        $request->validate([
+            'discipline_id' => 'required|integer|exists:disciplines,id',
+            'statistic_slug' => 'required|string',
+            'category_id' => 'nullable|integer|exists:categories,id',
+            'championship_id' => 'nullable|integer|exists:championships,id',
+            'limit' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $ranking = $this->playerStatisticService->getRanking(
+            disciplineId: $request->discipline_id,
+            slug: $request->statistic_slug,
+            championshipId: $request->championship_id,
+            categoryId: $request->category_id,
+            limit: $request->limit ?? 10,
+        );
+
+        return $this->successResponse(
+            $ranking,
+            'Ranking obtenido exitosamente'
+        );
+    }
 }
