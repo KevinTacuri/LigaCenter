@@ -12,6 +12,8 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
             UserSeeder::class,
             DisciplineSeeder::class,
+            StatisticTypeSeeder::class,
+            DisciplineStatisticSeeder::class,
         ]);
     }
 }
