@@ -51,7 +51,7 @@ class PlayerStatistic extends Model
         return $this->belongsTo(Championship::class);
     }
 
-    public function statistic()
+    public function disciplineStatistic()
     {
         return $this->belongsTo(DisciplineStatistic::class, 'discipline_statistic_id');
     }

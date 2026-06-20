@@ -46,140 +46,7 @@ class PlayerStatisticController extends Controller
         return $this->successResponse($history, 'Historial obtenido exitosamente');
     }
 
-    #[OA\Get(
-        path: '/api/statistics/top-scorers',
-        operationId: 'getTopScorers',
-        summary: 'Top goleadores',
-        tags: ['Player Statistics']
-    )]
-    #[OA\Parameter(
-        name: 'discipline_id',
-        in: 'query',
-        required: false,
-        schema: new OA\Schema(type: 'integer')
-    )]
-    #[OA\Parameter(
-        name: 'category_id',
-        in: 'query',
-        required: false,
-        schema: new OA\Schema(type: 'integer')
-    )]
-    #[OA\Parameter(
-        name: 'championship_id',
-        in: 'query',
-        required: false,
-        schema: new OA\Schema(type: 'integer')
-    )]
-    #[OA\Parameter(
-        name: 'limit',
-        in: 'query',
-        required: false,
-        schema: new OA\Schema(type: 'integer', default: 10)
-    )]
-    #[OA\Response(response: 200, description: 'Top goleadores obtenido exitosamente')]
-    #[OA\Security(name: 'sanctum')]
-    public function getTopScorers(Request $request)
-    {
-        $topScorers = $this->playerStatisticService->getTopScorers(
-            $request->discipline_id,
-            $request->category_id,
-            $request->championship_id,
-            $request->limit ?? 10
-        );
-
-        return $this->successResponse($topScorers, 'Top goleadores obtenido exitosamente');
-    }
-
-    #[OA\Get(
-        path: '/api/statistics/top-yellow-cards',
-        operationId: 'getTopYellowCards',
-        summary: 'Top tarjetas amarillas',
-        tags: ['Player Statistics']
-    )]
-    #[OA\Parameter(
-        name: 'discipline_id',
-        in: 'query',
-        required: false,
-        schema: new OA\Schema(type: 'integer')
-    )]
-    #[OA\Parameter(
-        name: 'category_id',
-        in: 'query',
-        required: false,
-        schema: new OA\Schema(type: 'integer')
-    )]
-    #[OA\Parameter(
-        name: 'championship_id',
-        in: 'query',
-        required: false,
-        schema: new OA\Schema(type: 'integer')
-    )]
-    #[OA\Parameter(
-        name: 'limit',
-        in: 'query',
-        required: false,
-        schema: new OA\Schema(type: 'integer', default: 10)
-    )]
-    #[OA\Response(response: 200, description: 'Top tarjetas amarillas obtenido exitosamente')]
-    #[OA\Security(name: 'sanctum')]
-    public function getTopYellowCards(Request $request)
-    {
-        $topYellow = $this->playerStatisticService->getTopYellowCards(
-            $request->discipline_id,
-            $request->category_id,
-            $request->championship_id,
-            $request->limit ?? 10
-        );
-
-        return $this->successResponse($topYellow, 'Top tarjetas amarillas obtenido exitosamente');
-    }
-
-    #[OA\Get(
-        path: '/api/statistics/top-red-cards',
-        operationId: 'getTopRedCards',
-        summary: 'Top tarjetas rojas',
-        tags: ['Player Statistics']
-    )]
-    #[OA\Parameter(
-        name: 'discipline_id',
-        in: 'query',
-        required: false,
-        schema: new OA\Schema(type: 'integer')
-    )]
-    #[OA\Parameter(
-        name: 'category_id',
-        in: 'query',
-        required: false,
-        schema: new OA\Schema(type: 'integer')
-    )]
-    #[OA\Parameter(
-        name: 'championship_id',
-        in: 'query',
-        required: false,
-        schema: new OA\Schema(type: 'integer')
-    )]
-    #[OA\Parameter(
-        name: 'limit',
-        in: 'query',
-        required: false,
-        schema: new OA\Schema(type: 'integer', default: 10)
-    )]
-    #[OA\Response(response: 200, description: 'Top tarjetas rojas obtenido exitosamente')]
-    #[OA\Security(name: 'sanctum')]
-    public function getTopRedCards(Request $request)
-    {
-        $topRed = $this->playerStatisticService->getTopRedCards(
-            $request->discipline_id,
-            $request->category_id,
-            $request->championship_id,
-            $request->limit ?? 10
-        );
-
-        return $this->successResponse($topRed, 'Top tarjetas rojas obtenido exitosamente');
-    }
-
-    // pero json modifica
-
+    // Función para obtener el ranking de jugadores según una estadística específica
     #[OA\Get(
         path: '/api/statistics/ranking',
         operationId: 'getRanking',
@@ -194,12 +61,11 @@ class PlayerStatisticController extends Controller
                 example: 1
             ),
             new OA\Parameter(
-                name: 'statistic_slug',
+                name: 'statistic_type_id',
                 in: 'query',
                 required: true,
-                schema: new OA\Schema(type: 'string'),
-                description: 'Slug de la estadística (ejemplo: "goals", "yellow_cards", "red_cards")',
-                example: 'goals'
+                schema: new OA\Schema(type: 'integer'),
+                example: 1
             ),
             new OA\Parameter(
                 name: 'championship_id',
@@ -238,24 +104,25 @@ class PlayerStatisticController extends Controller
     public function getRanking(Request $request)
     {
         $request->validate([
-            'discipline_id' => 'required|integer|exists:disciplines,id',
-            'statistic_slug' => 'required|string',
-            'category_id' => 'nullable|integer|exists:categories,id',
-            'championship_id' => 'nullable|integer|exists:championships,id',
+            'discipline_id' => 'required|exists:disciplines,id',
+            'statistic_type_id' => 'required|exists:statistic_types,id',
+            'category_id' => 'nullable|exists:categories,id',
+            'championship_id' => 'nullable|exists:championships,id',
             'limit' => 'nullable|integer|min:1|max:100',
         ]);
 
         $ranking = $this->playerStatisticService->getRanking(
             disciplineId: $request->discipline_id,
-            slug: $request->statistic_slug,
+            statisticTypeId: $request->statistic_type_id,
             championshipId: $request->championship_id,
             categoryId: $request->category_id,
-            limit: $request->limit ?? 10,
+            limit: $request->limit ?? 10
         );
 
         return $this->successResponse(
             $ranking,
-            'Ranking obtenido exitosamente'
+            'Ranking obtenido correctamente.'
         );
     }
+
 }

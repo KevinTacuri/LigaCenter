@@ -170,10 +170,10 @@ class PlayerStatisticService
             'discipline',
             'category',
             'championship',
-            'statistic',
+            'disciplineStatistic.statisticType',
         ])
-            ->where('player_id', $playerId)
-            ->get();
+        ->where('player_id', $playerId)
+        ->get();
 
         $history = $statistics
             ->groupBy(function ($item) {
@@ -194,8 +194,9 @@ class PlayerStatisticService
 
                     'statistics' => $group->map(function ($stat) {
                         return [
-                            'slug' => $stat->statistic->slug,
-                            'display_name' => $stat->statistic->display_name,
+                            'id' => $stat->disciplineStatistic->statisticType->id,
+                            'slug'=> $stat->disciplineStatistic->statisticType->slug,
+                            'display_name' => $stat->disciplineStatistic->statisticType->display_name,
                             'value' => $stat->value,
                         ];
                     })->values(),
@@ -329,15 +330,13 @@ class PlayerStatisticService
 
     public function getRanking(
         int $disciplineId,
-        string $slug,
+        int $statisticTypeId,
         ?int $championshipId = null,
         ?int $categoryId = null,
         int $limit = 10
     ) {
         $disciplineStatistic = DisciplineStatistic::where('discipline_id', $disciplineId)
-            ->whereHas('statisticType', function ($query) use ($slug) {
-                $query->where('slug', $slug);
-            })
+            ->where('statistic_type_id', $statisticTypeId)
             ->first();
 
         if (!$disciplineStatistic) {
@@ -346,12 +345,10 @@ class PlayerStatisticService
 
         $query = PlayerStatistic::with([
             'player',
-            'category',
-            'statistic',
-        ])->where(
-            'discipline_statistic_id',
-            $disciplineStatistic->id
-        );
+            'team',
+            'disciplineStatistic.statisticType',
+        ])
+        ->where('discipline_statistic_id', $disciplineStatistic->id);
 
         if ($championshipId) {
             $query->where('championship_id', $championshipId);
@@ -367,21 +364,17 @@ class PlayerStatisticService
             ->get()
             ->map(function ($stat) {
                 return [
-                    'player_id' => $stat->player_id,
-
+                    'player_id' => $stat->player->id,
                     'player_name' => trim(
-                        ($stat->player->names ?? '') . ' ' .
-                        ($stat->player->last_names ?? '')
+                        $stat->player->names . ' ' . $stat->player->last_names
                     ),
-
+                    'team' => $stat->team?->name,
                     'value' => $stat->value,
-
                     'statistic' => [
-                        'slug' => $stat->statistic->slug,
-                        'display_name' => $stat->statistic->display_name,
+                        'id' => $stat->disciplineStatistic->statisticType->id,
+                        'slug' => $stat->disciplineStatistic->statisticType->slug,
+                        'display_name' => $stat->disciplineStatistic->statisticType->display_name,
                     ],
-
-                    'category' => $stat->category->name ?? null,
                 ];
             });
     }

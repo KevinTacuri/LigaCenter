@@ -19,7 +19,7 @@ class DisciplineStatistic extends Model
 
     public function statisticType()
     {
-        return $this->belongsTo(StatisticType::class);
+        return $this->belongsTo(StatisticType::class, 'statistic_type_id');
     }
 
     public function discipline()
@@ -31,4 +31,5 @@ class DisciplineStatistic extends Model
     {
         return $this->hasMany(PlayerStatistic::class);
     }
+
 }
