@@ -383,9 +383,12 @@ body {
 .light .border-outline-variant {
   border-color: #e2e8f0 !important; /* Soft slate border */
 }
-.light .text-white {
+
+/* Text white overrides - Only applied to non-interactive text elements, preserving white text on buttons */
+.light .text-white:not(button):not(a):not(.bg-indigo-650):not(.bg-indigo-600):not(.bg-primary):not(.bg-secondary):not(.bg-emerald-600):not(.bg-rose-600):not(.bg-rose-500):not(.bg-emerald-500) {
   color: #0f172a !important; /* Dark text */
 }
+
 .light .text-indigo-400 {
   color: #193b70 !important; /* E.g. active menu items */
 }
@@ -394,6 +397,21 @@ body {
 }
 .light .bg-rose-500\/10 {
   background-color: rgba(239, 68, 68, 0.08) !important;
+}
+
+/* Force high contrast white text for buttons with dark backgrounds */
+.light button.bg-primary, 
+.light button.bg-secondary,
+.light button.bg-indigo-650,
+.light button.bg-indigo-600,
+.light button.bg-emerald-600,
+.light button.bg-emerald-500,
+.light button.bg-rose-600,
+.light button.bg-rose-500,
+.light .bg-indigo-650,
+.light .bg-indigo-600,
+.light button.text-white {
+  color: #ffffff !important;
 }
 
 /* Gray colors text mapping */
