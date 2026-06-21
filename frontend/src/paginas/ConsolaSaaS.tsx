@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { serviciosSuperAdmin, serviciosUsuarios, type TenantInfo } from '../servicios/api';
 import { BarraLateral } from '../componentes/BarraLateral';
+import { BotonTema } from '../componentes/BotonTema';
 
 export const ConsolaSaaS: React.FC = () => {
   const { usuario, tienePermiso } = useAutenticacion();
@@ -82,6 +83,7 @@ export const ConsolaSaaS: React.FC = () => {
               </span>
             </div>
           </div>
+          <BotonTema />
         </header>
 
       {/* Contenido Principal */}

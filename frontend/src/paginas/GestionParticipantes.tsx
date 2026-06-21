@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { serviciosParticipantes } from '../servicios/api';
 import { BarraLateral } from '../componentes/BarraLateral';
+import { BotonTema } from '../componentes/BotonTema';
 import type {
   Disciplina,
   Categoria,
@@ -663,15 +664,16 @@ export const GestionParticipantes: React.FC = () => {
       <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
         {/* Cabecera */}
         <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div>
-            <h1 className="text-lg font-black text-white leading-none">Gestión de Participantes</h1>
-            <span className="text-[10px] text-slate-455 font-semibold tracking-wider uppercase mt-1 block">
-              Inscripciones y Configuración del Campeonato
-            </span>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-lg font-black text-white leading-none">Gestión de Participantes</h1>
+              <span className="text-[10px] text-slate-455 font-semibold tracking-wider uppercase mt-1 block">
+                Inscripciones y Configuración del Campeonato
+              </span>
+            </div>
           </div>
-        </div>
-      </header>
+          <BotonTema />
+        </header>
 
       {/* Tabs (visibles solo en móvil ya que en desktop se navega por la barra lateral) */}
       <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2 lg:hidden">

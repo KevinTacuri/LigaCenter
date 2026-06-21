@@ -72,23 +72,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
   const [seccionAdminAbierta, setSeccionAdminAbierta] = useState(true);
   const [seccionAjustesAbierta, setSeccionAjustesAbierta] = useState(true);
 
-  // Estado del Tema (Modo Claro / Oscuro)
-  const [tema, setTema] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('theme') as 'light' | 'dark') || 'dark';
-  });
-
-  useEffect(() => {
-    const htmlEl = document.documentElement;
-    if (tema === 'light') {
-      htmlEl.classList.add('light');
-      htmlEl.classList.remove('dark');
-    } else {
-      htmlEl.classList.add('dark');
-      htmlEl.classList.remove('light');
-    }
-    localStorage.setItem('theme', tema);
-  }, [tema]);
-
   // --- Agrupación de ítems ---
   const itemsTorneo: ItemMenu[] = [
     {
@@ -396,23 +379,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
             )}
           </div>
 
-          {/* Selector de Tema */}
-          <div className="px-3 pb-2">
-            <button
-              onClick={() => setTema(tema === 'light' ? 'dark' : 'light')}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 text-slate-400 hover:bg-indigo-500/10 hover:text-indigo-400 cursor-pointer ${colapsado ? 'justify-center' : 'justify-start'}`}
-              title={colapsado ? `Cambiar a tema ${tema === 'light' ? 'oscuro' : 'claro'}` : ''}
-            >
-              <span className="material-symbols-outlined text-xl">
-                {tema === 'light' ? 'dark_mode' : 'light_mode'}
-              </span>
-              {!colapsado && (
-                <span className="text-xs font-bold uppercase tracking-wider">
-                  Modo {tema === 'light' ? 'Oscuro' : 'Claro'}
-                </span>
-              )}
-            </button>
-          </div>
 
           {/* Botón Logout al fondo */}
           <div className="px-3 pb-3">
@@ -488,18 +454,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
               <p className="text-xs font-bold text-white truncate leading-none">{usuario?.name}</p>
               <p className="text-[9px] text-slate-500 font-bold uppercase truncate mt-1 leading-none">{rol.replace('_', ' ')}</p>
             </div>
-          </div>
-          {/* Selector de Tema Móvil */}
-          <div className="px-4 pb-2">
-            <button
-              onClick={() => setTema(tema === 'light' ? 'dark' : 'light')}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400 text-xs font-extrabold uppercase tracking-wider cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-sm">
-                {tema === 'light' ? 'dark_mode' : 'light_mode'}
-              </span>
-              Modo {tema === 'light' ? 'Oscuro' : 'Claro'}
-            </button>
           </div>
 
           <div className="px-4 pb-4">

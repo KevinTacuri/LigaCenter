@@ -4,6 +4,7 @@ import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../contexto/ContextoCampeonato';
 import { serviciosCampeonatos, type Campeonato } from '../servicios/api';
 import logoImg from '../assets/logo.svg';
+import { BotonTema } from '../componentes/BotonTema';
 
 export const SeleccionCampeonato: React.FC = () => {
   const { usuario, cerrarSesion, tieneRol } = useAutenticacion();
@@ -90,12 +91,15 @@ export const SeleccionCampeonato: React.FC = () => {
           <img src={logoImg} className="w-8 h-8 object-contain" alt="LigaCenter" />
           <h1 className="text-base font-black text-white tracking-tight">LigaCenter SaaS</h1>
         </div>
-        <button
-          onClick={cerrarSesion}
-          className="text-xs font-bold text-rose-400 hover:bg-rose-950/20 border border-rose-950/30 px-3 py-1.5 rounded-lg cursor-pointer transition-all"
-        >
-          Cerrar Sesión
-        </button>
+        <div className="flex items-center gap-3">
+          <BotonTema />
+          <button
+            onClick={cerrarSesion}
+            className="text-xs font-bold text-rose-400 hover:bg-rose-950/20 border border-rose-950/30 px-3 py-1.5 rounded-lg cursor-pointer transition-all"
+          >
+            Cerrar Sesión
+          </button>
+        </div>
       </header>
 
       {/* Contenido Principal */}

@@ -4,6 +4,7 @@ import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { serviciosUsuarios } from '../servicios/api';
 import type { Usuario, Rol } from '../servicios/api';
 import { BarraLateral } from '../componentes/BarraLateral';
+import { BotonTema } from '../componentes/BotonTema';
 
 export const GestionUsuarios: React.FC = () => {
   const { usuario, tienePermiso } = useAutenticacion();
@@ -99,6 +100,7 @@ export const GestionUsuarios: React.FC = () => {
               </span>
             </div>
           </div>
+          <BotonTema />
         </header>
 
       {/* Contenido Principal */}

@@ -40,6 +40,15 @@
   --indigo-800: #590d22;
   --indigo-900: #3f0713;
   --indigo-950: #1a0208;
+
+  /* Colores de compatibilidad personalizados */
+  --rose-455: #fb7185;                /* Rosa en modo oscuro */
+  --slate-305: #cbd5e1;
+  --slate-350: #cbd5e1;
+  --slate-450: #94a3b8;
+  --slate-455: #94a3b8;
+  --slate-850: #1e293b;
+  --slate-905: #0f172a;
 }
 
 .light {
@@ -82,6 +91,15 @@
   --indigo-800: #0f2547;
   --indigo-900: #0a1a33;
   --indigo-950: #050d1a;
+
+  /* Colores de compatibilidad en modo claro - Oscurecidos para legibilidad contrastada */
+  --rose-455: #e11d48;                /* Rosa/Rojo oscuro para alta visibilidad (cerrar sesión) */
+  --slate-305: #475569;               /* Slate 600 */
+  --slate-350: #334155;               /* Slate 700 */
+  --slate-450: #475569;
+  --slate-455: #475569;
+  --slate-850: #e2e8f0;               /* Slate 200 (bordes claros) */
+  --slate-905: #e2e8f0;
 }
 
 @theme {
@@ -125,6 +143,15 @@
   --color-error-container: #ffdad6;
   --color-on-error: #ffffff;
   --color-on-error-container: #93000a;
+
+  /* Mapeo de colores personalizados utilizados en la app */
+  --color-rose-455: var(--rose-455);
+  --color-slate-305: var(--slate-305);
+  --color-slate-350: var(--slate-350);
+  --color-slate-450: var(--slate-450);
+  --color-slate-455: var(--slate-455);
+  --color-slate-850: var(--slate-850);
+  --color-slate-905: var(--slate-905);
 }
 
 body {

@@ -4,6 +4,7 @@ import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { serviciosUsuarios } from '../servicios/api';
 import logoImg from '../assets/logo.svg';
 import { BarraLateral } from '../componentes/BarraLateral';
+import { BotonTema } from '../componentes/BotonTema';
 
 type TabConfigType = 'perfil' | 'guia';
 
@@ -123,7 +124,8 @@ export const Perfil: React.FC = () => {
         </div>
 
         {/* Avatar del usuario */}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-3">
+          <BotonTema />
           <div className="hidden md:flex flex-col text-right">
             <span className="text-xs font-extrabold text-slate-200">{usuario.name}</span>
             <span className="text-[9px] text-slate-455 font-bold uppercase tracking-wider">

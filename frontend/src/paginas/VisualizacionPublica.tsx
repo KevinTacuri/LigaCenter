@@ -15,6 +15,7 @@ import type {
 } from '../servicios/api';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { BarraLateral } from '../componentes/BarraLateral';
+import { BotonTema } from '../componentes/BotonTema';
 
 export const VisualizacionPublica: React.FC = () => {
   const { usuario } = useAutenticacion();
@@ -181,6 +182,7 @@ export const VisualizacionPublica: React.FC = () => {
             </span>
           </div>
         </div>
+        <BotonTema />
       </header>
 
       {/* Tabs (visibles solo en móvil ya que en desktop se navega por la barra lateral) */}

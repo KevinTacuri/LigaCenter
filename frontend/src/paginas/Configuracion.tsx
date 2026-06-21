@@ -6,6 +6,7 @@ import { serviciosCampeonatos } from '../servicios/api';
 import logoImg from '../assets/logo.svg';
 import Swal from 'sweetalert2';
 import { BarraLateral } from '../componentes/BarraLateral';
+import { BotonTema } from '../componentes/BotonTema';
 
 export const Configuracion: React.FC = () => {
   const { usuario, cargando } = useAutenticacion();
@@ -96,7 +97,7 @@ export const Configuracion: React.FC = () => {
       <BarraLateral rol={usuario.roles?.[0] || 'usuario_publico'} />
       <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
       {/* Header */}
-      <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center gap-4 sticky top-0 z-30 shadow-xs">
+      <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 flex items-center justify-center">
             <img src={logoImg} className="w-full h-full object-contain" alt="Logo" />
@@ -104,10 +105,11 @@ export const Configuracion: React.FC = () => {
           <div>
             <h1 className="text-sm font-extrabold text-white leading-none">Configuración del Campeonato</h1>
             <span className="text-[10px] text-slate-455 font-semibold tracking-wider uppercase block mt-0.5">
-              Parámetros, reglas y estado de competencia
+              Parámetros, reglas and estado de competencia
             </span>
           </div>
         </div>
+        <BotonTema />
       </header>
 
       {/* Contenido */}

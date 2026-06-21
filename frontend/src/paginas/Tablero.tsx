@@ -8,6 +8,7 @@ import Swal from 'sweetalert2';
 
 // Importación de recursos
 import logoImg from '../assets/logo.svg';
+import { BotonTema } from '../componentes/BotonTema';
 
 const PASOS_TORNEO = [
   { step: '1', title: 'Disciplinas y Categorías', desc: 'Registra deportes, define categorías y configura el formato de competencia.', icon: 'sports' },
@@ -90,6 +91,7 @@ export const Tablero: React.FC = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
+              <BotonTema />
               {!tieneRol('administrador') && campeonatoActivo && campeonatoActivo.rules_pdf && (
                 <button
                   onClick={() => manejarDescargarReglamento(campeonatoActivo.id, campeonatoActivo.name)}

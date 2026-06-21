@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { BarraLateral } from '../componentes/BarraLateral';
+import { BotonTema } from '../componentes/BotonTema';
 import {
   serviciosFixture,
   serviciosResultados,
@@ -631,6 +632,7 @@ export const MesaControl: React.FC = () => {
             </span>
           </div>
         </div>
+        <BotonTema />
       </header>
 
       {/* Contenido Principal */}
