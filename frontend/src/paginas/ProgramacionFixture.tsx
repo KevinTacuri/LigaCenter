@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
+import { BarraLateral } from '../componentes/BarraLateral';
 import {
   serviciosFixture,
   serviciosParticipantes
@@ -16,13 +17,20 @@ import type {
 type TabType = 'escenarios' | 'generar' | 'programar' | 'partidos';
 
 export const ProgramacionFixture: React.FC = () => {
-  const { tienePermiso, tieneRol } = useAutenticacion();
+  const { usuario, tienePermiso, tieneRol } = useAutenticacion();
   const navegar = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryTab = searchParams.get('tab');
 
   const [tabActiva, setTabActiva] = useState<TabType>('escenarios');
+
+  useEffect(() => {
+    if (queryTab && queryTab !== tabActiva) {
+      setTabActiva(queryTab as TabType);
+    }
+  }, [queryTab]);
   const [cargando, setCargando] = useState(false);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
-  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [mostrarAyuda, setMostrarAyuda] = useState(false);
 
   const PASOS_AYUDA_FIXTURE = [
@@ -40,7 +48,7 @@ export const ProgramacionFixture: React.FC = () => {
 
   // Estados de formularios
   const [nuevoEsc, setNuevoEsc] = useState({ name: '', venue_type: 'cancha', location: '', capacity: '', status: 'active' });
-  const [datosFixture, setDatosFixture] = useState({ discipline_id: '', category_id: '', start_date: '', venue_ids: [] as number[] });
+  const [datosFixture, setDatosFixture] = useState({ discipline_id: '', category_id: '', start_date: '', venue_ids: [] as number[], format: 'liga' as 'liga' | 'grupos' | 'eliminacion_directa' });
   
   // Asignar fecha
   const [datosFecha, setDatosFecha] = useState({ discipline_id: '', category_id: '', round: '', available_hours: '', venue_ids: [] as number[] });
@@ -122,7 +130,7 @@ export const ProgramacionFixture: React.FC = () => {
       });
       if (res.success) {
         mostrarMensaje('Escenario registrado con éxito.');
-        setNuevoEsc({ name: '', location: '', capacity: '', status: 'active' });
+        setNuevoEsc({ name: '', venue_type: 'cancha', location: '', capacity: '', status: 'active' });
         cargarDatos();
       }
     } catch (err) {
@@ -158,12 +166,24 @@ export const ProgramacionFixture: React.FC = () => {
   // Generar Fixture
   const manejarGenerarFixture = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { discipline_id, category_id, start_date, venue_ids } = datosFixture;
+    const { discipline_id, category_id, start_date, venue_ids, format } = datosFixture;
     if (!discipline_id || !category_id || !start_date || venue_ids.length === 0) {
       mostrarMensaje('Complete todos los campos y seleccione al menos un escenario.', true);
       return;
     }
     try {
+      // Primero actualizar el formato de la categoría en el backend si difiere del actual
+      const catOriginal = categorias.find(c => c.id === parseInt(category_id));
+      if (catOriginal && catOriginal.format !== format) {
+        await serviciosParticipantes.actualizarCategoria(parseInt(category_id), {
+          ...catOriginal,
+          format: format
+        });
+        // Recargar categorías para tener los formatos actualizados
+        const resCat = await serviciosParticipantes.obtenerCategorias();
+        if (resCat.success) setCategorias(resCat.data);
+      }
+
       const res = await serviciosFixture.generarFixture({
         discipline_id: parseInt(discipline_id),
         category_id: parseInt(category_id),
@@ -172,7 +192,7 @@ export const ProgramacionFixture: React.FC = () => {
       });
       if (res.success) {
         mostrarMensaje('Fixture completo generado con éxito para este campeonato.');
-        setDatosFixture({ discipline_id: '', category_id: '', start_date: '', venue_ids: [] });
+        setDatosFixture({ discipline_id: '', category_id: '', start_date: '', venue_ids: [], format: 'liga' });
       }
     } catch (err: any) {
       mostrarMensaje(err.response?.data?.message || 'Error en la generación del fixture.', true);
@@ -252,17 +272,19 @@ export const ProgramacionFixture: React.FC = () => {
     }
   };
 
+  if (!usuario) return null;
+
   return (
-    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans flex flex-col">
-      {/* Cabecera */}
-      <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navegar('/tablero')}
-            className="w-10 h-10 rounded-lg flex items-center justify-center border border-slate-800 hover:bg-[#171a26] transition-all cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-slate-300">arrow_back</span>
-          </button>
+    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans relative overflow-hidden">
+
+      {/* Barra lateral integrada */}
+      <BarraLateral rol={usuario.roles?.[0] || 'usuario_publico'} />
+
+      {/* Contenido principal con margen izquierdo en desktop */}
+      <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
+        {/* Cabecera */}
+        <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+          <div className="flex items-center gap-3">
           <div>
             <h1 className="text-lg font-black text-white leading-none">Fixture y Programación</h1>
             <span className="text-[10px] text-slate-455 font-semibold tracking-wider uppercase mt-1 block">
@@ -272,12 +294,12 @@ export const ProgramacionFixture: React.FC = () => {
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2">
+      {/* Tabs (visibles solo en móvil ya que en desktop se navega por la barra lateral) */}
+      <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2 lg:hidden">
         {(['escenarios', 'generar', 'programar', 'partidos'] as TabType[]).map((tab) => (
           <button
             key={tab}
-            onClick={() => setTabActiva(tab)}
+            onClick={() => setSearchParams({ tab })}
             className={`px-4 py-2 text-xs font-bold rounded-lg uppercase tracking-wide cursor-pointer transition-all ${
               tabActiva === tab
                 ? 'bg-indigo-650 text-white'
@@ -298,13 +320,7 @@ export const ProgramacionFixture: React.FC = () => {
           </div>
         )}
         
-        {/* Toasts */}
-        {mensajeExito && (
-          <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 text-sm flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">check_circle</span>
-            <span>{mensajeExito}</span>
-          </div>
-        )}
+
 
         {errorLocal && (
           <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 text-sm flex items-center gap-2">
@@ -477,7 +493,11 @@ export const ProgramacionFixture: React.FC = () => {
                   <label className="text-xs font-bold text-slate-700 block">Categoría *</label>
                   <select
                     required value={datosFixture.category_id}
-                    onChange={(e) => setDatosFixture({ ...datosFixture, category_id: e.target.value })}
+                    onChange={(e) => {
+                      const catId = e.target.value;
+                      const format = categorias.find((c) => c.id === parseInt(catId))?.format || 'liga';
+                      setDatosFixture({ ...datosFixture, category_id: catId, format });
+                    }}
                     className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
                   >
                     <option value="">Seleccionar Categoría</option>
@@ -489,13 +509,27 @@ export const ProgramacionFixture: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Fecha de Inicio del Torneo *</label>
-                <input
-                  type="date" required value={datosFixture.start_date}
-                  onChange={(e) => setDatosFixture({ ...datosFixture, start_date: e.target.value })}
-                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Fecha de Inicio del Torneo *</label>
+                  <input
+                    type="date" required value={datosFixture.start_date}
+                    onChange={(e) => setDatosFixture({ ...datosFixture, start_date: e.target.value })}
+                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Formato de Competición *</label>
+                  <select
+                    required value={datosFixture.format}
+                    onChange={(e) => setDatosFixture({ ...datosFixture, format: e.target.value as any })}
+                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
+                  >
+                    <option value="liga">Liga (Todos contra todos)</option>
+                    <option value="grupos">Fase de Grupos + Eliminatoria</option>
+                    <option value="eliminacion_directa">Eliminación Directa (Playoffs)</option>
+                  </select>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -714,6 +748,7 @@ export const ProgramacionFixture: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

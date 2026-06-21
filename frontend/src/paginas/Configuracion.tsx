@@ -1,32 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
-import { serviciosUsuarios } from '../servicios/api';
+import { useCampeonato } from '../contexto/ContextoCampeonato';
+import { serviciosCampeonatos } from '../servicios/api';
 import logoImg from '../assets/logo.svg';
-
-type TabConfigType = 'perfil' | 'guia';
-
-const PASOS_TORNEO = [
-  { step: '1', title: 'Disciplinas y Categorías', desc: 'Registra deportes (fútbol, vóley, básquet) y define los rangos de edad y género de cada categoría antes de inscribir equipos.', icon: 'sports', color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
-  { step: '2', title: 'Registrar Instituciones', desc: 'Crea los clubes u organizaciones participantes y asigna un delegado responsable a cada una.', icon: 'corporate_fare', color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
-  { step: '3', title: 'Equipos y Jugadores', desc: 'Inscribe los equipos por categoría, vinculándolos a su organización, y agrega los jugadores con su dorsal y edad validada.', icon: 'groups', color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
-  { step: '4', title: 'Generar Fixture', desc: 'Genera el fixture automático Round Robin (todos contra todos) seleccionando la disciplina y categoría correspondiente.', icon: 'calendar_today', color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
-  { step: '5', title: 'Programar Fechas y Canchas', desc: 'Registra los escenarios disponibles (canchas, estadios), asigna horarios a cada fecha del fixture y programa los partidos.', icon: 'schedule', color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
-  { step: '6', title: 'Mesa de Control (Planillas)', desc: 'Durante cada partido, registra goles, tarjetas, sustituciones e incidencias desde la mesa de control en tiempo real.', icon: 'edit_note', color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
-  { step: '7', title: 'Resultados y Tabla de Posiciones', desc: 'Consulta la tabla de posiciones actualizada al instante, los goleadores del campeonato y las sanciones acumuladas.', icon: 'leaderboard', color: 'text-indigo-400 bg-indigo-500/15 border-indigo-500/30' },
-];
+import Swal from 'sweetalert2';
+import { BarraLateral } from '../componentes/BarraLateral';
 
 export const Configuracion: React.FC = () => {
-  const { usuario, cargando, tieneRol, recargarUsuario } = useAutenticacion();
+  const { usuario, cargando } = useAutenticacion();
+  const { campeonatoActivo, seleccionarCampeonato } = useCampeonato();
   const navegar = useNavigate();
 
-  const [tabActiva, setTabActiva] = useState<TabConfigType>('perfil');
-
-  // Estados del perfil
-  const [datosPerfil, setDatosPerfil] = useState({ name: '', dni: '', phone: '', password: '', password_confirmation: '' });
-  const [guardandoPerfil, setGuardandoPerfil] = useState(false);
-  const [errorPerfil, setErrorPerfil] = useState<string | null>(null);
-  const [exitoPerfil, setExitoPerfil] = useState<string | null>(null);
+  // Estados del formulario
+  const [nombre, setNombre] = useState('');
+  const [tipo, setTipo] = useState<'basico' | 'completo'>('basico');
+  const [estado, setEstado] = useState('creado');
+  const [reglamento, setReglamento] = useState<File | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
   useEffect(() => {
     if (!cargando && !usuario) {
@@ -35,295 +27,205 @@ export const Configuracion: React.FC = () => {
   }, [usuario, cargando, navegar]);
 
   useEffect(() => {
-    if (usuario) {
-      setDatosPerfil({
-        name: usuario.name || '',
-        dni: usuario.dni || '',
-        phone: usuario.phone || '',
-        password: '',
-        password_confirmation: ''
-      });
+    if (campeonatoActivo) {
+      setNombre(campeonatoActivo.name || '');
+      setTipo(campeonatoActivo.type || 'basico');
+      setEstado(campeonatoActivo.status || 'creado');
     }
-  }, [usuario]);
+  }, [campeonatoActivo]);
 
-  const guardarPerfil = async (e: React.FormEvent) => {
+  const manejarGuardar = async (e: React.FormEvent) => {
     e.preventDefault();
-    setGuardandoPerfil(true);
-    setErrorPerfil(null);
-    setExitoPerfil(null);
-
-    if (datosPerfil.password && datosPerfil.password !== datosPerfil.password_confirmation) {
-      setErrorPerfil('Las contraseñas no coinciden.');
-      setGuardandoPerfil(false);
-      return;
-    }
+    if (!campeonatoActivo) return;
+    setGuardando(true);
+    setErrorLocal(null);
 
     try {
-      const payload: any = {
-        name: datosPerfil.name,
-        dni: datosPerfil.dni || null,
-        phone: datosPerfil.phone || null
-      };
-      if (datosPerfil.password) {
-        payload.password = datosPerfil.password;
-        payload.password_confirmation = datosPerfil.password_confirmation;
+      const formData = new FormData();
+      formData.append('name', nombre.trim());
+      formData.append('type', tipo);
+      formData.append('status', estado);
+      if (reglamento) {
+        formData.append('rules_pdf', reglamento);
       }
 
-      const res = await serviciosUsuarios.actualizarUsuario(usuario!.id, payload);
+      const res = await serviciosCampeonatos.actualizarCampeonato(campeonatoActivo.id, formData);
       if (res.success) {
-        await recargarUsuario();
-        setExitoPerfil('Perfil actualizado correctamente.');
-        setDatosPerfil(prev => ({ ...prev, password: '', password_confirmation: '' }));
+        seleccionarCampeonato(res.data);
+        setReglamento(null);
+        Swal.fire({
+          title: 'Configuración Guardada',
+          text: 'Los cambios del campeonato han sido aplicados con éxito.',
+          icon: 'success',
+          confirmButtonColor: '#4f46e5'
+        });
       }
     } catch (err: any) {
-      setErrorPerfil(err.response?.data?.message || 'Error al actualizar el perfil.');
+      setErrorLocal(err.response?.data?.message || 'Error al guardar los cambios del campeonato.');
     } finally {
-      setGuardandoPerfil(false);
+      setGuardando(false);
+    }
+  };
+
+  const manejarDescargarReglamento = async () => {
+    if (!campeonatoActivo) return;
+    try {
+      const blob = await serviciosCampeonatos.descargarReglamento(campeonatoActivo.id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Reglamento-${campeonatoActivo.name.replace(/\s+/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      Swal.fire({
+        title: 'Error',
+        text: 'No se pudo descargar el reglamento del torneo.',
+        icon: 'error',
+        confirmButtonColor: '#4f46e5'
+      });
     }
   };
 
   if (cargando || !usuario) return null;
 
-  const inicialUsuario = usuario.name ? usuario.name.charAt(0).toUpperCase() : 'U';
-
   return (
-    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans flex flex-col">
-
+    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans relative overflow-hidden">
+      <BarraLateral rol={usuario.roles?.[0] || 'usuario_publico'} />
+      <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
       {/* Header */}
       <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center gap-4 sticky top-0 z-30 shadow-xs">
-        <button
-          onClick={() => navegar('/tablero')}
-          className="w-9 h-9 rounded-lg flex items-center justify-center border border-slate-800 hover:bg-[#171a26] text-slate-400 hover:text-white transition-all cursor-pointer shrink-0"
-        >
-          <span className="material-symbols-outlined text-base">arrow_back</span>
-        </button>
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 flex items-center justify-center">
             <img src={logoImg} className="w-full h-full object-contain" alt="Logo" />
           </div>
           <div>
-            <h1 className="text-sm font-extrabold text-white leading-none">Configuración</h1>
-            <span className="text-[10px] text-slate-450 font-semibold tracking-wider uppercase block mt-0.5">
-              Perfil y preferencias de tu cuenta
+            <h1 className="text-sm font-extrabold text-white leading-none">Configuración del Campeonato</h1>
+            <span className="text-[10px] text-slate-455 font-semibold tracking-wider uppercase block mt-0.5">
+              Parámetros, reglas y estado de competencia
             </span>
-          </div>
-        </div>
-
-        {/* Avatar del usuario */}
-        <div className="ml-auto flex items-center gap-2">
-          <div className="hidden md:flex flex-col text-right">
-            <span className="text-xs font-extrabold text-slate-200">{usuario.name}</span>
-            <span className="text-[9px] text-slate-450 font-bold uppercase tracking-wider">
-              {usuario.roles?.[0]?.replace('_', ' ') || 'Usuario'}
-            </span>
-          </div>
-          <div className="w-8 h-8 rounded-full bg-indigo-650 flex items-center justify-center font-extrabold text-xs text-white select-none">
-            {inicialUsuario}
           </div>
         </div>
       </header>
 
       {/* Contenido */}
-      <main className="flex-1 p-6 max-w-4xl w-full mx-auto space-y-6">
-
-        {/* Tabs */}
-        <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-1.5 flex gap-1 shadow-xs w-fit">
-          {[
-            { id: 'perfil' as TabConfigType, label: 'Mi Perfil', icon: 'person' },
-            { id: 'guia' as TabConfigType, label: 'Guía del Torneo', icon: 'help' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setTabActiva(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                tabActiva === tab.id
-                  ? 'bg-indigo-650 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-[#171a26]'
-              }`}
-            >
-              <span className="material-symbols-outlined text-sm">{tab.icon}</span>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Panel: Mi Perfil */}
-        {tabActiva === 'perfil' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-            {/* Card de identidad */}
-            <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 flex flex-col items-center gap-4 shadow-xs text-center">
-              <div className="w-20 h-20 rounded-full bg-indigo-500/10 border-2 border-indigo-500/30 flex items-center justify-center">
-                <span className="text-3xl font-black text-indigo-400">{inicialUsuario}</span>
-              </div>
-              <div>
-                <p className="font-extrabold text-white text-sm">{usuario.name}</p>
-                <p className="text-xs text-slate-455 mt-0.5">{usuario.email}</p>
-              </div>
-              <div className="w-full pt-3 border-t border-slate-900 space-y-2 text-left">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-455 font-semibold">Rol</span>
-                  <span className="font-bold text-slate-300 capitalize">{usuario.roles?.[0]?.replace('_', ' ') || '—'}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-455 font-semibold">DNI</span>
-                  <span className="font-bold text-slate-300">{usuario.dni || '—'}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-455 font-semibold">Teléfono</span>
-                  <span className="font-bold text-slate-300">{usuario.phone || '—'}</span>
-                </div>
-              </div>
+      <main className="flex-1 p-6 max-w-3xl w-full mx-auto space-y-6">
+        {!campeonatoActivo ? (
+          <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-12 text-center text-slate-400">
+            <span className="material-symbols-outlined text-4xl text-slate-600 mb-2">warning</span>
+            <p className="text-sm font-semibold">No has seleccionado ningún campeonato activo.</p>
+            <p className="text-xs text-slate-450 mt-1">Regresa al tablero y selecciona un campeonato antes de continuar.</p>
+          </div>
+        ) : (
+          <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs space-y-6">
+            <div className="border-b border-slate-900 pb-4">
+              <h2 className="text-sm font-extrabold text-white uppercase tracking-wider">Ajustes Generales del Torneo</h2>
+              <p className="text-xs text-slate-450 mt-1">Configura los detalles básicos y sube el reglamento oficial de {campeonatoActivo.name}.</p>
             </div>
 
-            {/* Formulario de edición */}
-            <div className="md:col-span-2 bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs space-y-5">
-              <div className="border-b border-slate-900 pb-4">
-                <h2 className="text-sm font-extrabold text-white">Editar Información Personal</h2>
-                <p className="text-xs text-slate-455 mt-1">Los cambios se reflejan inmediatamente en el sistema.</p>
+            {errorLocal && (
+              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-455 text-xs font-semibold flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm">error</span>
+                {errorLocal}
+              </div>
+            )}
+
+            <form onSubmit={manejarGuardar} className="space-y-5">
+              {/* Nombre */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-350 block">Nombre del Campeonato *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: Copa Clausura Ingenieros"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  className="w-full text-sm border border-slate-800 rounded-lg p-2.5 outline-hidden focus:border-indigo-500 bg-[#171a26] text-white"
+                />
               </div>
 
-              {exitoPerfil && (
-                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-450 text-xs font-semibold flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm">check_circle</span>
-                  {exitoPerfil}
-                </div>
-              )}
-              {errorPerfil && (
-                <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-455 text-xs font-semibold flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm">error</span>
-                  {errorPerfil}
-                </div>
-              )}
-
-              <form onSubmit={guardarPerfil} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Tipo de Gestión */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-300 block">Nombre Completo *</label>
-                  <input
-                    type="text" required placeholder="Tu nombre completo"
-                    value={datosPerfil.name}
-                    onChange={(e) => setDatosPerfil({ ...datosPerfil, name: e.target.value })}
-                    className="w-full text-sm border border-slate-800 rounded-lg p-2.5 outline-hidden focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-[#171a26] text-white"
-                  />
+                  <label className="text-xs font-bold text-slate-350 block">Tipo / Modo de Gestión *</label>
+                  <select
+                    value={tipo}
+                    onChange={(e) => setTipo(e.target.value as any)}
+                    className="w-full text-sm border border-slate-800 rounded-lg p-2.5 outline-hidden focus:border-indigo-500 bg-[#171a26] text-white cursor-pointer"
+                  >
+                    <option value="basico">Básico (Fixture rápido, marcadores)</option>
+                    <option value="completo">Completo (Multi-deporte, actas detalladas, sanciones)</option>
+                  </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-300 block">DNI / Documento</label>
-                    <input
-                      type="text" placeholder="Ej: 12345678"
-                      value={datosPerfil.dni}
-                      onChange={(e) => setDatosPerfil({ ...datosPerfil, dni: e.target.value })}
-                      className="w-full text-sm border border-slate-800 rounded-lg p-2.5 outline-hidden focus:border-indigo-500 bg-[#171a26] text-white"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-300 block">Teléfono</label>
-                    <input
-                      type="text" placeholder="Ej: 987654321"
-                      value={datosPerfil.phone}
-                      onChange={(e) => setDatosPerfil({ ...datosPerfil, phone: e.target.value })}
-                      className="w-full text-sm border border-slate-800 rounded-lg p-2.5 outline-hidden focus:border-indigo-500 bg-[#171a26] text-white"
-                    />
-                  </div>
+                {/* Estado */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-350 block">Estado del Campeonato *</label>
+                  <select
+                    value={estado}
+                    onChange={(e) => setEstado(e.target.value)}
+                    className="w-full text-sm border border-slate-800 rounded-lg p-2.5 outline-hidden focus:border-indigo-500 bg-[#171a26] text-white cursor-pointer"
+                  >
+                    <option value="creado">Creado / Inscripciones abiertas</option>
+                    <option value="en_curso">En Curso / Partidos programados</option>
+                    <option value="finalizado">Finalizado / Premiación</option>
+                  </select>
                 </div>
+              </div>
 
-                {/* Sección contraseña */}
-                <div className="pt-4 border-t border-slate-900 space-y-3">
-                  <div>
-                    <h3 className="text-xs font-extrabold text-slate-300 uppercase tracking-wider">Cambiar Contraseña</h3>
-                    <p className="text-[10px] text-slate-450 mt-0.5">Deja en blanco si no deseas cambiarla.</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-300 block">Nueva Contraseña</label>
-                      <input
-                        type="password" placeholder="Mínimo 8 caracteres"
-                        value={datosPerfil.password}
-                        onChange={(e) => setDatosPerfil({ ...datosPerfil, password: e.target.value })}
-                        className="w-full text-sm border border-slate-800 rounded-lg p-2.5 outline-hidden focus:border-indigo-500 bg-[#171a26] text-white"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-300 block">Confirmar Contraseña</label>
-                      <input
-                        type="password" placeholder="Repite la contraseña"
-                        value={datosPerfil.password_confirmation}
-                        onChange={(e) => setDatosPerfil({ ...datosPerfil, password_confirmation: e.target.value })}
-                        className="w-full text-sm border border-slate-800 rounded-lg p-2.5 outline-hidden focus:border-indigo-500 bg-[#171a26] text-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={guardandoPerfil}
-                  className="w-full bg-indigo-650 hover:bg-indigo-600 text-white py-2.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
-                >
-                  {guardandoPerfil ? (
-                    <>
-                      <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                      <span>Guardando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-sm">save</span>
-                      <span>Guardar Cambios</span>
-                    </>
+              {/* PDF Reglamento */}
+              <div className="space-y-2.5 pt-3 border-t border-slate-900">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold text-slate-350 block">Reglamento Oficial (PDF)</label>
+                  {campeonatoActivo.rules_pdf && (
+                    <button
+                      type="button"
+                      onClick={manejarDescargarReglamento}
+                      className="text-xs text-indigo-400 font-bold hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-0 outline-hidden"
+                    >
+                      <span className="material-symbols-outlined text-xs">download</span>
+                      Descargar Reglamento Actual
+                    </button>
                   )}
-                </button>
-              </form>
-            </div>
+                </div>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => setReglamento(e.target.files?.[0] || null)}
+                  className="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-500/10 file:text-indigo-400 file:hover:bg-indigo-500/20 file:cursor-pointer outline-hidden cursor-pointer bg-[#171a26] border border-slate-800 p-2"
+                />
+                <p className="text-[10px] text-slate-500 leading-none">Sube un nuevo archivo PDF para reemplazar o registrar el reglamento del torneo.</p>
+              </div>
+
+              {/* Botón */}
+              <button
+                type="submit"
+                disabled={guardando}
+                className="w-full bg-indigo-650 hover:bg-indigo-600 text-white py-3 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 uppercase tracking-wider"
+              >
+                {guardando ? (
+                  <>
+                    <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    <span>Guardando Ajustes...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-sm font-bold">save</span>
+                    <span>Guardar Configuración</span>
+                  </>
+                )}
+              </button>
+            </form>
           </div>
         )}
-
-        {/* Panel: Guía del Torneo */}
-        {tabActiva === 'guia' && (
-          <div className="space-y-4">
-            <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs">
-              <div className="border-b border-slate-900 pb-4 mb-6">
-                <h2 className="text-sm font-extrabold text-white flex items-center gap-2">
-                  <span className="material-symbols-outlined text-indigo-400 text-base">help</span>
-                  Guía del Ciclo de Vida del Torneo
-                </h2>
-                <p className="text-xs text-slate-450 mt-1 leading-relaxed">
-                  Sigue esta secuencia de pasos para configurar y gestionar tu campeonato correctamente de principio a fin.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {PASOS_TORNEO.map((paso) => (
-                  <div key={paso.step} className="flex gap-4 p-4 rounded-xl border border-slate-850 bg-[#171a26] hover:bg-[#1c1f2e] transition-colors">
-                    <div className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${paso.color}`}>
-                      <span className="material-symbols-outlined text-base">{paso.icon}</span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] font-black text-slate-505 uppercase tracking-widest">Paso {paso.step}</span>
-                      </div>
-                      <h3 className="text-sm font-extrabold text-white leading-none mb-1.5">{paso.title}</h3>
-                      <p className="text-xs text-slate-450 leading-relaxed font-medium">{paso.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-slate-900 flex items-center justify-between text-xs text-slate-450">
-                <span className="font-semibold">¿Tienes problemas? Escríbenos.</span>
-                <a href="mailto:soporte@ligacenter.com" className="text-indigo-400 font-bold hover:underline">
-                  soporte@ligacenter.com
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
-
       </main>
 
       <footer className="mt-auto bg-[#11131c] border-t border-slate-900 py-5 text-center text-xs text-slate-450">
         © 2026 LigaCenter — Gestión de campeonatos deportivos, Arequipa, Perú.
       </footer>
+      </div>
     </div>
   );
 };

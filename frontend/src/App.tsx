@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProveedorAutenticacion } from './contexto/ContextoAutenticacion';
 import { ProveedorCampeonato } from './contexto/ContextoCampeonato';
@@ -15,19 +15,9 @@ import { VisualizacionPublica } from './paginas/VisualizacionPublica';
 import { SeleccionCampeonato } from './paginas/SeleccionCampeonato';
 import { ConsolaSaaS } from './paginas/ConsolaSaaS';
 import { Configuracion } from './paginas/Configuracion';
+import { Perfil } from './paginas/Perfil';
 
 const App: React.FC = () => {
-  useEffect(() => {
-    const manejarMovimientoMouse = (e: MouseEvent) => {
-      document.documentElement.style.setProperty('--mouse-x', `${e.clientX}px`);
-      document.documentElement.style.setProperty('--mouse-y', `${e.clientY}px`);
-    };
-    window.addEventListener('mousemove', manejarMovimientoMouse);
-    return () => {
-      window.removeEventListener('mousemove', manejarMovimientoMouse);
-    };
-  }, []);
-
   return (
     <ProveedorAutenticacion>
       <ProveedorCampeonato>
@@ -49,6 +39,7 @@ const App: React.FC = () => {
             <Route path="/tablero/publico" element={<VisualizacionPublica />} />
             <Route path="/tablero/saas-admin" element={<ConsolaSaaS />} />
             <Route path="/tablero/configuracion" element={<Configuracion />} />
+            <Route path="/tablero/perfil" element={<Perfil />} />
 
             {/* Redirección por defecto */}
             <Route path="*" element={<Navigate to="/tablero" replace />} />

@@ -3,25 +3,47 @@ import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../contexto/ContextoCampeonato';
 import { BarraLateral } from '../componentes/BarraLateral';
+import { serviciosCampeonatos } from '../servicios/api';
+import Swal from 'sweetalert2';
 
 // Importación de recursos
 import logoImg from '../assets/logo.svg';
 
 const PASOS_TORNEO = [
-  { step: '1', title: 'Disciplinas y Categorías', desc: 'Registra deportes y define los rangos de edad y género de cada categoría.', icon: 'sports' },
-  { step: '2', title: 'Registrar Instituciones', desc: 'Crea organizaciones participantes y asigna un delegado a cada una.', icon: 'corporate_fare' },
-  { step: '3', title: 'Equipos y Jugadores', desc: 'Inscribe equipos por categoría y agrega jugadores con dorsal validado.', icon: 'groups' },
-  { step: '4', title: 'Generar Fixture', desc: 'Genera el fixture Round Robin automático por disciplina y categoría.', icon: 'calendar_today' },
-  { step: '5', title: 'Programar Fechas y Canchas', desc: 'Registra escenarios y asigna horarios a cada partido del fixture.', icon: 'schedule' },
-  { step: '6', title: 'Mesa de Control (Planillas)', desc: 'Registra goles, tarjetas e incidencias durante los partidos en tiempo real.', icon: 'edit_note' },
-  { step: '7', title: 'Resultados y Tabla de Posiciones', desc: 'Consulta posiciones, goleadores y sanciones actualizados al instante.', icon: 'leaderboard' },
+  { step: '1', title: 'Disciplinas y Categorías', desc: 'Registra deportes, define categorías y configura el formato de competencia.', icon: 'sports' },
+  { step: '2', title: 'Equipos y Jugadores', desc: 'Inscribe equipos por categoría y agrega jugadores con dorsal validado.', icon: 'groups' },
+  { step: '3', title: 'Generar Fixture', desc: 'Genera el fixture Round Robin o eliminatoria automático por disciplina y categoría.', icon: 'calendar_today' },
+  { step: '4', title: 'Programar Fechas y Canchas', desc: 'Registra escenarios y asigna horarios a cada partido del fixture.', icon: 'schedule' },
+  { step: '5', title: 'Mesa de Control (Planillas)', desc: 'Registra goles, tarjetas e incidencias durante los partidos en tiempo real.', icon: 'edit_note' },
+  { step: '6', title: 'Resultados y Tabla de Posiciones', desc: 'Consulta posiciones, rankings y sanciones actualizados al instante.', icon: 'leaderboard' },
 ];
 
 export const Tablero: React.FC = () => {
-  const { usuario, cerrarSesion, cargando, tienePermiso, tieneRol } = useAutenticacion();
+  const { usuario, cargando, tienePermiso, tieneRol } = useAutenticacion();
   const { campeonatoActivo, limpiarCampeonato } = useCampeonato();
   const navegar = useNavigate();
   const [mostrarGuia, setMostrarGuia] = useState(false);
+
+  const manejarDescargarReglamento = async (id: number, nombreTorneo: string) => {
+    try {
+      const blob = await serviciosCampeonatos.descargarReglamento(id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Reglamento-${nombreTorneo.replace(/\s+/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      Swal.fire({
+        title: 'Error',
+        text: 'No se pudo descargar el reglamento del torneo.',
+        icon: 'error',
+        confirmButtonColor: '#4f46e5'
+      });
+    }
+  };
 
   useEffect(() => {
     if (!cargando && !usuario) {
@@ -47,14 +69,12 @@ export const Tablero: React.FC = () => {
 
   if (!usuario) return null;
 
-  const inicialUsuario = usuario.name ? usuario.name.charAt(0).toUpperCase() : 'U';
 
   return (
     <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans relative overflow-hidden">
-      <div className="interactive-grid-bg" />
 
       {/* Barra lateral integrada */}
-      <BarraLateral />
+      <BarraLateral rol={usuario.roles?.[0] || 'usuario_publico'} />
 
       {/* Contenido principal con margen izquierdo en desktop */}
       <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
@@ -70,11 +90,20 @@ export const Tablero: React.FC = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
+              {!tieneRol('administrador') && campeonatoActivo && campeonatoActivo.rules_pdf && (
+                <button
+                  onClick={() => manejarDescargarReglamento(campeonatoActivo.id, campeonatoActivo.name)}
+                  className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all"
+                >
+                  <span className="material-symbols-outlined text-sm">download</span>
+                  <span className="hidden sm:inline">Reglamento (PDF)</span>
+                </button>
+              )}
               {!tieneRol('administrador') && (
                 campeonatoActivo ? (
                   <button
                     onClick={limpiarCampeonato}
-                    className="flex items-center gap-1.5 bg-[#171a26] hover:bg-[#1c1f2e] border border-slate-800 text-slate-300 rounded-lg px-3 py-1.5 text-xs font-semibold"
+                    className="flex items-center gap-1.5 bg-[#171a26] hover:bg-[#1c1f2e] border border-slate-800 text-slate-350 rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all"
                   >
                     <span className="material-symbols-outlined text-sm">swap_horiz</span>
                     <span className="hidden sm:inline">Cambiar Torneo</span>
@@ -82,14 +111,13 @@ export const Tablero: React.FC = () => {
                 ) : (
                   <button
                     onClick={() => navegar('/seleccion-campeonato')}
-                    className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-3.5 py-1.5 text-xs font-bold"
+                    className="flex items-center gap-1.5 bg-indigo-650 hover:bg-indigo-600 text-white rounded-lg px-3.5 py-1.5 text-xs font-bold cursor-pointer transition-all"
                   >
                     <span className="material-symbols-outlined text-sm">sports_soccer</span>
                     <span>Seleccionar Campeonato</span>
                   </button>
                 )
               )}
-              {/* El botón de cerrar sesión ahora está en la barra lateral */}
             </div>
           </div>
         </header>
@@ -232,7 +260,7 @@ export const Tablero: React.FC = () => {
                     </div>
                     <div className="flex-1">
                       <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Posiciones y Estadísticas</h4>
-                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Visualiza los resultados en vivo, goleadores y tablas oficiales.</p>
+                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Visualiza los resultados en vivo, anotadores y tablas oficiales.</p>
                       <button className="mt-4 text-xs text-slate-400 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer">
                         <span>Ver Posiciones</span>
                         <span>→</span>

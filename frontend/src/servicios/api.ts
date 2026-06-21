@@ -103,8 +103,8 @@ clienteApi.interceptors.request.use(
 // Interceptor para normalizar respuestas y capturar errores de autenticación
 clienteApi.interceptors.response.use(
   (response) => {
-    // Normalizar la respuesta si no viene envuelta en { success, data }
-    if (response.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
+    // Normalizar la respuesta si no viene envuelta en { success, data } y no es un Blob
+    if (response.data && typeof response.data === 'object' && !Array.isArray(response.data) && !(response.data instanceof Blob)) {
       const keys = Object.keys(response.data);
       const isWrapped = keys.includes('success') && keys.includes('data');
       if (!isWrapped) {
@@ -242,6 +242,12 @@ export interface Categoria {
   discipline_id: number;
   championship_id: number;
   discipline?: Disciplina;
+  format?: 'liga' | 'grupos' | 'eliminacion_directa';
+  format_settings?: {
+    num_groups?: number;
+    advance_per_group?: number;
+    third_place?: boolean;
+  } | null;
 }
 
 export interface Organizacion {
@@ -255,8 +261,6 @@ export interface Equipo {
   name: string;
   logo_url?: string | null;
   representative?: string | null;
-  organization_id: number;
-  organization?: Organizacion;
   registration_status?: 'pendiente' | 'aprobado' | 'rechazado';
 }
 
@@ -318,6 +322,7 @@ export interface Incidencia {
   team_id: number;
   incidence_type: 'goal' | 'yellow_card' | 'red_card' | 'foul' | 'injury';
   minute: number;
+  second?: number | null;
   description?: string | null;
   player?: Jugador;
 }
@@ -350,6 +355,28 @@ export interface Posicion {
   goal_difference: number;
   total_points: number;
   team?: Equipo;
+}
+
+export interface TipoEstadistica {
+  id: number;
+  order: number;
+  statistic_type: {
+    id: number;
+    slug: string;
+    display_name: string;
+  };
+}
+
+export interface RankingItem {
+  player_id: number;
+  player_name: string;
+  team: string | null;
+  value: number;
+  statistic: {
+    id: number;
+    slug: string;
+    display_name: string;
+  };
 }
 
 export interface EstadisticaJugador {
@@ -389,24 +416,20 @@ export const serviciosParticipantes = {
     const res = await clienteApi.post('/categories', datos);
     return res.data;
   },
+  actualizarCategoria: async (id: number, datos: any): Promise<RespuestaApi<Categoria>> => {
+    const res = await clienteApi.put(`/categories/${id}`, datos);
+    return res.data;
+  },
   eliminarCategoria: async (id: number): Promise<RespuestaApi<null>> => {
     const res = await clienteApi.delete(`/categories/${id}`);
     return res.data;
   },
+  obtenerGrupos: async (categoryId: number): Promise<RespuestaApi<any[]>> => {
+    const res = await clienteApi.get(`/groups?category_id=${categoryId}`);
+    return res.data;
+  },
 
-  // Organizaciones
-  obtenerOrganizaciones: async (): Promise<RespuestaApi<Organizacion[]>> => {
-    const res = await clienteApi.get('/organizations');
-    return res.data;
-  },
-  crearOrganizacion: async (datos: any): Promise<RespuestaApi<Organizacion>> => {
-    const res = await clienteApi.post('/organizations', datos);
-    return res.data;
-  },
-  eliminarOrganizacion: async (id: number): Promise<RespuestaApi<null>> => {
-    const res = await clienteApi.delete(`/organizations/${id}`);
-    return res.data;
-  },
+
 
   // Equipos
   obtenerEquipos: async (): Promise<RespuestaApi<Equipo[]>> => {
@@ -561,6 +584,10 @@ export const serviciosResultados = {
     const res = await clienteApi.get('/sanctions');
     return res.data;
   },
+  obtenerReportePartido: async (matchId: number): Promise<RespuestaApi<any>> => {
+    const res = await clienteApi.get(`/match-reports/by-match/${matchId}`);
+    return res.data;
+  },
 
   // Tabla de posiciones
   obtenerPosiciones: async (disciplineId?: number, categoryId?: number): Promise<RespuestaApi<Posicion[]>> => {
@@ -573,17 +600,27 @@ export const serviciosResultados = {
     return res.data;
   },
 
-  // Estadísticas generales
-  obtenerGoleadores: async (): Promise<RespuestaApi<EstadisticaJugador[]>> => {
-    const res = await clienteApi.get('/statistics/top-scorers');
+  // Estadísticas generales y dinámicas
+  obtenerEstadisticasPorDisciplina: async (disciplineId: number): Promise<RespuestaApi<TipoEstadistica[]>> => {
+    const res = await clienteApi.get(`/disciplines/${disciplineId}/statistics`);
     return res.data;
   },
-  obtenerTarjetasAmarillas: async (): Promise<RespuestaApi<EstadisticaJugador[]>> => {
-    const res = await clienteApi.get('/statistics/top-yellow-cards');
-    return res.data;
-  },
-  obtenerTarjetasRojas: async (): Promise<RespuestaApi<EstadisticaJugador[]>> => {
-    const res = await clienteApi.get('/statistics/top-red-cards');
+  obtenerRankingEstadisticas: async (params: {
+    discipline_id: number;
+    statistic_type_id: number;
+    championship_id?: number;
+    category_id?: number;
+    limit?: number;
+  }): Promise<RespuestaApi<RankingItem[]>> => {
+    let url = '/statistics/ranking';
+    const parts: string[] = [];
+    parts.push(`discipline_id=${params.discipline_id}`);
+    parts.push(`statistic_type_id=${params.statistic_type_id}`);
+    if (params.championship_id) parts.push(`championship_id=${params.championship_id}`);
+    if (params.category_id) parts.push(`category_id=${params.category_id}`);
+    if (params.limit) parts.push(`limit=${params.limit}`);
+    url += `?${parts.join('&')}`;
+    const res = await clienteApi.get(url);
     return res.data;
   },
 };
@@ -597,6 +634,7 @@ export interface Campeonato {
   type: 'basico' | 'completo';
   status: string;
   user_id?: number;
+  rules_pdf?: string | null;
 }
 
 export interface TenantInfo {
@@ -619,8 +657,8 @@ export const serviciosCampeonatos = {
       // Fallback a localStorage si el backend no ha implementado la ruta
       const locales = localStorage.getItem('campeonatos_simulados');
       const lista: Campeonato[] = locales ? JSON.parse(locales) : [
-        { id: 1, name: 'Liga de Fútbol Intercolegios', type: 'basico', status: 'en_curso' },
-        { id: 2, name: 'Campeonato Colegio de Ingenieros Arequipa', type: 'completo', status: 'creado' }
+        { id: 1, name: 'Liga de Fútbol Intercolegios', type: 'basico', status: 'en_curso', rules_pdf: null },
+        { id: 2, name: 'Campeonato Colegio de Ingenieros Arequipa', type: 'completo', status: 'creado', rules_pdf: null }
       ];
       if (!locales) {
         localStorage.setItem('campeonatos_simulados', JSON.stringify(lista));
@@ -628,7 +666,7 @@ export const serviciosCampeonatos = {
       return { success: true, data: lista, message: 'Retornado de fallback local' };
     }
   },
-  crearCampeonato: async (datos: { name: string; type: 'basico' | 'completo' }): Promise<RespuestaApi<Campeonato>> => {
+  crearCampeonato: async (datos: any): Promise<RespuestaApi<Campeonato>> => {
     try {
       const res = await clienteApi.post('/championships', datos);
       return res.data;
@@ -636,15 +674,43 @@ export const serviciosCampeonatos = {
       // Fallback
       const locales = localStorage.getItem('campeonatos_simulados');
       const lista: Campeonato[] = locales ? JSON.parse(locales) : [];
+      let name = '';
+      let type: 'basico' | 'completo' = 'basico';
+      if (datos instanceof FormData) {
+        name = datos.get('name') as string || '';
+        type = (datos.get('type') as 'basico' | 'completo') || 'basico';
+      } else if (datos) {
+        name = datos.name || '';
+        type = datos.type || 'basico';
+      }
       const nuevo: Campeonato = {
         id: lista.length > 0 ? Math.max(...lista.map((c) => c.id)) + 1 : 1,
-        name: datos.name,
-        type: datos.type,
-        status: 'creado'
+        name: name,
+        type: type,
+        status: 'creado',
+        rules_pdf: null
       };
       lista.push(nuevo);
       localStorage.setItem('campeonatos_simulados', JSON.stringify(lista));
       return { success: true, data: nuevo, message: 'Guardado en fallback local' };
+    }
+  },
+  descargarReglamento: async (id: number): Promise<Blob> => {
+    const res = await clienteApi.get(`/championships/${id}/rules`, {
+      responseType: 'blob'
+    });
+    return res.data;
+  },
+  actualizarCampeonato: async (id: number, datos: any): Promise<RespuestaApi<Campeonato>> => {
+    if (datos instanceof FormData) {
+      if (!datos.has('_method')) {
+        datos.append('_method', 'PUT');
+      }
+      const res = await clienteApi.post(`/championships/${id}`, datos);
+      return res.data;
+    } else {
+      const res = await clienteApi.put(`/championships/${id}`, datos);
+      return res.data;
     }
   }
 };

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
+import { BarraLateral } from '../componentes/BarraLateral';
 import {
   serviciosFixture,
   serviciosResultados,
@@ -114,7 +115,7 @@ const NORMAS_DEPORTES: Record<string, SportRules> = {
 };
 
 export const MesaControl: React.FC = () => {
-  const { tienePermiso, tieneRol } = useAutenticacion();
+  const { usuario, tienePermiso, tieneRol } = useAutenticacion();
   const navegar = useNavigate();
 
   const obtenerTiposIncidenciaDeporte = (): IncidentTypeConfig[] => {
@@ -155,6 +156,7 @@ export const MesaControl: React.FC = () => {
     if (tipo === 'injury') {
       return { label: 'Lesión', icon: 'medical_services', color: 'bg-teal-50 text-teal-700 border-teal-200' };
     }
+    return { label: tipo, icon: 'info', color: 'bg-slate-50 text-slate-650 border-slate-205' };
   };
 
   const obtenerNormasDeporte = (): SportRules => {
@@ -602,22 +604,20 @@ export const MesaControl: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans flex flex-col">
+    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans relative overflow-hidden">
+      <BarraLateral rol={usuario?.roles?.[0] || 'usuario_publico'} />
+      <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
       {/* Cabecera */}
       <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => {
-              if (partidoSeleccionado) {
-                setPartidoSeleccionado(null);
-              } else {
-                navegar('/tablero');
-              }
-            }}
-            className="w-10 h-10 rounded-lg flex items-center justify-center border border-slate-800 hover:bg-[#171a26] transition-all cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-slate-300">arrow_back</span>
-          </button>
+          {partidoSeleccionado && (
+            <button
+              onClick={() => setPartidoSeleccionado(null)}
+              className="w-10 h-10 rounded-lg flex items-center justify-center border border-slate-800 hover:bg-[#171a26] transition-all cursor-pointer mr-2"
+            >
+              <span className="material-symbols-outlined text-slate-300">arrow_back</span>
+            </button>
+          )}
           <div>
             <h1 className="text-lg font-black text-white leading-none">
               {partidoSeleccionado 
@@ -1259,6 +1259,7 @@ export const MesaControl: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

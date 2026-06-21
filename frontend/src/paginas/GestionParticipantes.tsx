@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { serviciosParticipantes } from '../servicios/api';
+import { BarraLateral } from '../componentes/BarraLateral';
 import type {
   Disciplina,
   Categoria,
-  Organizacion,
   Equipo,
   Jugador
 } from '../servicios/api';
@@ -14,7 +14,7 @@ import type {
 // ─────────────────────────────────────────────
 // TIPOS
 // ─────────────────────────────────────────────
-type TabType = 'disciplinas' | 'categorias' | 'organizaciones' | 'equipos' | 'jugadores' | 'registro-equipo' | 'planilla-jugadores';
+type TabType = 'disciplinas' | 'categorias' | 'equipos' | 'jugadores' | 'registro-equipo' | 'planilla-jugadores';
 
 // Fila de jugador en la tabla editable
 interface FilaJugador {
@@ -158,44 +158,58 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────
 export const GestionParticipantes: React.FC = () => {
-  const { tienePermiso, tieneRol } = useAutenticacion();
+  const { usuario, tienePermiso, tieneRol } = useAutenticacion();
   const navegar = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryTab = searchParams.get('tab');
 
   const [tabActiva, setTabActiva] = useState<TabType>('disciplinas');
+
+  useEffect(() => {
+    if (queryTab && queryTab !== tabActiva) {
+      setTabActiva(queryTab as TabType);
+    }
+  }, [queryTab]);
   const [cargando, setCargando] = useState(false);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
-  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [mostrarAyuda, setMostrarAyuda] = useState(false);
 
   const PASOS_AYUDA_PARTICIPANTES = [
     { paso: '1', titulo: 'Disciplinas (Deportes)', desc: 'Registra los deportes que se jugarán (ej. Fútbol, Vóley).', icono: 'sports' },
-    { paso: '2', titulo: 'Categorías', desc: 'Define los rangos de edad y el género para cada deporte.', icono: 'category' },
-    { paso: '3', titulo: 'Organizaciones', desc: 'Crea los clubes, colegios o instituciones participantes.', icono: 'corporate_fare' },
-    { paso: '4', titulo: 'Equipos', desc: 'Registra los equipos asociándolos a una organización y su categoría.', icono: 'groups' },
-    { paso: '5', titulo: 'Jugadores', desc: 'Inscribe a los jugadores en su respectivo equipo.', icono: 'person' },
-    { paso: '6', titulo: 'Registro Rápido Equipo ✨', desc: 'Crea un equipo con autocomplete — escribe y selecciona o crea organización, disciplina y categoría al vuelo.', icono: 'bolt' },
-    { paso: '7', titulo: 'Planilla de Jugadores ✨', desc: 'Selecciona un equipo y llena jugadores en una tabla estilo Excel. Cada fila se guarda individualmente.', icono: 'table' },
+    { paso: '2', titulo: 'Categorías', desc: 'Define los rangos de edad, el género y formato para cada deporte.', icono: 'category' },
+    { paso: '3', titulo: 'Equipos', desc: 'Registra los equipos asociándolos a su categoría.', icono: 'groups' },
+    { paso: '4', titulo: 'Jugadores', desc: 'Inscribe a los jugadores en su respectivo equipo.', icono: 'person' },
+    { paso: '5', titulo: 'Registro Rápido Equipo ✨', desc: 'Crea un equipo con autocomplete — escribe y selecciona o crea disciplina y categoría al vuelo.', icono: 'bolt' },
+    { paso: '6', titulo: 'Planilla de Jugadores ✨', desc: 'Selecciona un equipo y llena jugadores en una tabla estilo Excel. Cada fila se guarda individualmente.', icono: 'table' }
   ];
 
   // ── Estados de datos ──────────────────────
   const [disciplinas, setDisciplinas] = useState<Disciplina[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [organizaciones, setOrganizaciones] = useState<Organizacion[]>([]);
   const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [jugadores, setJugadores] = useState<Jugador[]>([]);
 
   // ── Formularios originales ─────────────────
   const [nuevaDisc, setNuevaDisc] = useState({ name: '', description: '', rules: '', status: 'active' });
-  const [nuevaCat, setNuevaCat] = useState({ name: '', age_min: '', age_max: '', gender: 'Masculino', discipline_id: '' });
-  const [nuevaOrg, setNuevaOrg] = useState({ name: '', delegate_name: '' });
-  const [nuevoEq, setNuevoEq] = useState({ name: '', representative: '', organization_id: '', discipline_id: '', category_id: '' });
+  const [customDiscName, setCustomDiscName] = useState('');
+  const [nuevaCat, setNuevaCat] = useState({
+    name: '',
+    age_min: '',
+    age_max: '',
+    gender: 'Masculino',
+    discipline_id: '',
+    format: 'liga' as 'liga' | 'grupos' | 'eliminacion_directa',
+    num_groups: '',
+    advance_per_group: '',
+    third_place: false
+  });
+  const [nuevoEq, setNuevoEq] = useState({ name: '', representative: '', discipline_id: '', category_id: '' });
   const [nuevoJug, setNuevoJug] = useState({ name: '', dni: '', age: '', phone: '', team_id: '', number: '', position: 'Delantero' });
 
   // ── Estado: Tab "registro-equipo" ──────────
   const [reqEq, setReqEq] = useState({
     nombre: '',
     representante: '',
-    orgId: null as number | null,
     discId: null as number | null,
     catId: null as number | null,
   });
@@ -245,18 +259,13 @@ export const GestionParticipantes: React.FC = () => {
         if (res.success) setCategorias(res.data);
         const resDisc = await serviciosParticipantes.obtenerDisciplinas();
         if (resDisc.success) setDisciplinas(resDisc.data);
-      } else if (tabActiva === 'organizaciones') {
-        const res = await serviciosParticipantes.obtenerOrganizaciones();
-        if (res.success) setOrganizaciones(res.data);
       } else if (tabActiva === 'equipos') {
-        const [resEq, resOrg, resDisc, resCat] = await Promise.all([
+        const [resEq, resDisc, resCat] = await Promise.all([
           serviciosParticipantes.obtenerEquipos(),
-          serviciosParticipantes.obtenerOrganizaciones(),
           serviciosParticipantes.obtenerDisciplinas(),
           serviciosParticipantes.obtenerCategorias(),
         ]);
         if (resEq.success) setEquipos(resEq.data);
-        if (resOrg.success) setOrganizaciones(resOrg.data);
         if (resDisc.success) setDisciplinas(resDisc.data);
         if (resCat.success) setCategorias(resCat.data);
       } else if (tabActiva === 'jugadores') {
@@ -267,12 +276,10 @@ export const GestionParticipantes: React.FC = () => {
         if (resJug.success) setJugadores(resJug.data);
         if (resEq.success) setEquipos(resEq.data);
       } else if (tabActiva === 'registro-equipo') {
-        const [resOrg, resDisc, resCat] = await Promise.all([
-          serviciosParticipantes.obtenerOrganizaciones(),
+        const [resDisc, resCat] = await Promise.all([
           serviciosParticipantes.obtenerDisciplinas(),
           serviciosParticipantes.obtenerCategorias(),
         ]);
-        if (resOrg.success) setOrganizaciones(resOrg.data);
         if (resDisc.success) setDisciplinas(resDisc.data);
         if (resCat.success) setCategorias(resCat.data);
       } else if (tabActiva === 'planilla-jugadores') {
@@ -331,16 +338,21 @@ export const GestionParticipantes: React.FC = () => {
   };
 
   // ─────────────────────────────────────────────
-  // HANDLERS ORIGINALES (sin cambios)
+  // HANDLERS ORIGINALES
   // ─────────────────────────────────────────────
   const guardarDisciplina = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevaDisc.name) return;
+    const finalName = nuevaDisc.name === 'Otro' ? customDiscName.trim() : nuevaDisc.name;
+    if (!finalName) return;
     try {
-      const res = await serviciosParticipantes.crearDisciplina(nuevaDisc);
+      const res = await serviciosParticipantes.crearDisciplina({
+        ...nuevaDisc,
+        name: finalName
+      });
       if (res.success) {
         mostrarMensaje('Disciplina registrada exitosamente.');
         setNuevaDisc({ name: '', description: '', rules: '', status: 'active' });
+        setCustomDiscName('');
         cargarDatos();
       }
     } catch { mostrarMensaje('Error al registrar disciplina.', true); }
@@ -351,46 +363,79 @@ export const GestionParticipantes: React.FC = () => {
     if (!nuevaCat.name || !nuevaCat.discipline_id) {
       mostrarMensaje('El nombre y la disciplina son obligatorios.', true); return;
     }
+
+    // Construir format_settings dinámicamente según el formato seleccionado
+    let format_settings: any = null;
+    if (nuevaCat.format === 'grupos') {
+      const numGroups = parseInt(nuevaCat.num_groups);
+      const advancePerGroup = parseInt(nuevaCat.advance_per_group);
+      if (isNaN(numGroups) || isNaN(advancePerGroup)) {
+        mostrarMensaje('Debes ingresar el número de grupos y de clasificados.', true);
+        return;
+      }
+      format_settings = {
+        num_groups: numGroups,
+        advance_per_group: advancePerGroup,
+        third_place: nuevaCat.third_place
+      };
+    } else if (nuevaCat.format === 'eliminacion_directa') {
+      format_settings = {
+        third_place: nuevaCat.third_place
+      };
+    } else {
+      format_settings = {};
+    }
+
     try {
       const res = await serviciosParticipantes.crearCategoria({
         name: nuevaCat.name,
         age_min: nuevaCat.age_min ? parseInt(nuevaCat.age_min) : null,
         age_max: nuevaCat.age_max ? parseInt(nuevaCat.age_max) : null,
         gender_type: nuevaCat.gender,
-        discipline_id: parseInt(nuevaCat.discipline_id)
+        discipline_id: parseInt(nuevaCat.discipline_id),
+        format: nuevaCat.format,
+        format_settings: format_settings
       });
       if (res.success) {
         mostrarMensaje('Categoría registrada exitosamente.');
-        setNuevaCat({ name: '', age_min: '', age_max: '', gender: 'Masculino', discipline_id: '' });
+        setNuevaCat({
+          name: '',
+          age_min: '',
+          age_max: '',
+          gender: 'Masculino',
+          discipline_id: '',
+          format: 'liga',
+          num_groups: '',
+          advance_per_group: '',
+          third_place: false
+        });
         cargarDatos();
       }
-    } catch { mostrarMensaje('Error al registrar categoría.', true); }
-  };
-
-  const guardarOrganizacion = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nuevaOrg.name || !nuevaOrg.delegate_name) return;
-    try {
-      const res = await serviciosParticipantes.crearOrganizacion({
-        name: nuevaOrg.name, delegate_name: nuevaOrg.delegate_name
-      });
-      if (res.success) {
-        mostrarMensaje('Organización registrada exitosamente.');
-        setNuevaOrg({ name: '', delegate_name: '' });
-        cargarDatos();
+    } catch (err: any) {
+      // Capturar errores de validación HTTP 422
+      if (err.response && err.response.status === 422) {
+        const errors = err.response.data.errors;
+        const msg = errors ? Object.values(errors).flat().join('\n') : 'Datos inválidos para el formato seleccionado.';
+        Swal.fire({
+          title: 'Error de Configuración',
+          text: msg,
+          icon: 'error',
+          confirmButtonColor: '#4f46e5'
+        });
+      } else {
+        mostrarMensaje('Error al registrar categoría.', true);
       }
-    } catch { mostrarMensaje('Error al registrar organización.', true); }
+    }
   };
 
   const guardarEquipo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevoEq.name || !nuevoEq.organization_id || !nuevoEq.discipline_id || !nuevoEq.category_id) {
+    if (!nuevoEq.name || !nuevoEq.discipline_id || !nuevoEq.category_id) {
       mostrarMensaje('Complete todos los campos obligatorios para el equipo.', true); return;
     }
     try {
       const res = await serviciosParticipantes.crearEquipo({
         name: nuevoEq.name,
-        organization_id: parseInt(nuevoEq.organization_id),
         discipline_id: parseInt(nuevoEq.discipline_id),
         category_id: parseInt(nuevoEq.category_id),
         representative: nuevoEq.representative || null,
@@ -398,10 +443,20 @@ export const GestionParticipantes: React.FC = () => {
       });
       if (res.success) {
         mostrarMensaje('Equipo registrado y aprobado exitosamente.');
-        setNuevoEq({ name: '', representative: '', organization_id: '', discipline_id: '', category_id: '' });
+        setNuevoEq({ name: '', representative: '', discipline_id: '', category_id: '' });
         cargarDatos();
       }
     } catch { mostrarMensaje('Error al registrar equipo.', true); }
+  };
+
+  const cambiarEstadoEquipo = async (id: number, nuevoEstado: 'aprobado' | 'rechazado') => {
+    try {
+      const res = await serviciosParticipantes.actualizarEquipo(id, { registration_status: nuevoEstado });
+      if (res.success) {
+        mostrarMensaje(`Equipo ${nuevoEstado === 'aprobado' ? 'aprobado' : 'rechazado'} con éxito.`);
+        cargarDatos();
+      }
+    } catch { mostrarMensaje('Error al cambiar el estado del equipo.', true); }
   };
 
   const guardarJugador = async (e: React.FormEvent) => {
@@ -428,16 +483,6 @@ export const GestionParticipantes: React.FC = () => {
     }
   };
 
-  const cambiarEstadoEquipo = async (id: number, nuevoEstado: 'aprobado' | 'rechazado') => {
-    try {
-      const res = await serviciosParticipantes.actualizarEquipo(id, { registration_status: nuevoEstado });
-      if (res.success) {
-        mostrarMensaje(`Equipo ${nuevoEstado === 'aprobado' ? 'aprobado' : 'rechazado'} con éxito.`);
-        cargarDatos();
-      }
-    } catch { mostrarMensaje('Error al cambiar el estado del equipo.', true); }
-  };
-
   const eliminarElemento = async (id: number) => {
     const result = await Swal.fire({
       title: '¿Está seguro de que desea eliminar este registro?',
@@ -454,7 +499,6 @@ export const GestionParticipantes: React.FC = () => {
       let res: any;
       if (tabActiva === 'disciplinas') res = await serviciosParticipantes.eliminarDisciplina(id);
       else if (tabActiva === 'categorias') res = await serviciosParticipantes.eliminarCategoria(id);
-      else if (tabActiva === 'organizaciones') res = await serviciosParticipantes.eliminarOrganizacion(id);
       else if (tabActiva === 'equipos') res = await serviciosParticipantes.eliminarEquipo(id);
       else if (tabActiva === 'jugadores') res = await serviciosParticipantes.eliminarJugador(id);
       if (res && res.success) { mostrarMensaje('Registro eliminado correctamente.'); cargarDatos(); }
@@ -465,38 +509,8 @@ export const GestionParticipantes: React.FC = () => {
   // HANDLERS NUEVOS: Registro Rápido Equipo
   // ─────────────────────────────────────────────
 
-  // Crear organización inline desde autocomplete
-  const crearOrgInline = async (nombre: string): Promise<number | null> => {
-    try {
-      const res = await serviciosParticipantes.crearOrganizacion({
-        name: nombre,
-        delegate_name: 'Por definir' // provisional
-      });
-      if (res.success) {
-        mostrarMensaje(`Organización "${nombre}" creada (delegado pendiente).`);
-        const nuevas = await serviciosParticipantes.obtenerOrganizaciones();
-        if (nuevas.success) setOrganizaciones(nuevas.data);
-        return res.data.id;
-      }
-    } catch { mostrarMensaje('Error al crear organización.', true); }
-    return null;
-  };
 
-  // Crear disciplina inline
-  const crearDiscInline = async (nombre: string): Promise<number | null> => {
-    try {
-      const res = await serviciosParticipantes.crearDisciplina({
-        name: nombre, description: '', rules: '', status: 'active'
-      });
-      if (res.success) {
-        mostrarMensaje(`Disciplina "${nombre}" creada.`);
-        const nuevas = await serviciosParticipantes.obtenerDisciplinas();
-        if (nuevas.success) setDisciplinas(nuevas.data);
-        return res.data.id;
-      }
-    } catch { mostrarMensaje('Error al crear disciplina.', true); }
-    return null;
-  };
+
 
   // Crear categoría inline (requiere disciplina seleccionada)
   const crearCatInline = async (nombre: string): Promise<number | null> => {
@@ -522,14 +536,13 @@ export const GestionParticipantes: React.FC = () => {
   };
 
   const guardarReqEq = async () => {
-    if (!reqEq.nombre.trim() || !reqEq.orgId || !reqEq.discId || !reqEq.catId) {
+    if (!reqEq.nombre.trim() || !reqEq.discId || !reqEq.catId) {
       mostrarMensaje('Completa todos los campos obligatorios.', true); return;
     }
     setGuardandoReqEq(true);
     try {
       const res = await serviciosParticipantes.crearEquipo({
         name: reqEq.nombre.trim(),
-        organization_id: reqEq.orgId,
         discipline_id: reqEq.discId,
         category_id: reqEq.catId,
         representative: reqEq.representante.trim() || null,
@@ -537,7 +550,7 @@ export const GestionParticipantes: React.FC = () => {
       });
       if (res.success) {
         mostrarMensaje(`Equipo "${reqEq.nombre}" registrado y aprobado.`);
-        setReqEq({ nombre: '', representante: '', orgId: null, discId: null, catId: null });
+        setReqEq({ nombre: '', representante: '', discId: null, catId: null });
         // Refrescar equipos para la planilla
         const resEq = await serviciosParticipantes.obtenerEquipos();
         if (resEq.success) setEquipos(resEq.data);
@@ -626,32 +639,31 @@ export const GestionParticipantes: React.FC = () => {
   // ─────────────────────────────────────────────
 
   // Opciones para autocompletes
-  const opcsOrgs: { id: number; label: string }[] = organizaciones.map(o => ({ id: o.id, label: o.name }));
-  const opcsDiscs: { id: number; label: string }[] = disciplinas.map(d => ({ id: d.id, label: d.name }));
   const opcsCats: { id: number; label: string }[] = catsFiltradas.map(c => ({ id: c.id, label: c.name }));
   const opcsEquipos: { id: number; label: string }[] = equipos.map(e => ({ id: e.id, label: e.name }));
 
   const TABS: { key: TabType; label: string; nuevo?: boolean }[] = [
     { key: 'disciplinas', label: 'Disciplinas' },
     { key: 'categorias', label: 'Categorías' },
-    { key: 'organizaciones', label: 'Organizaciones' },
     { key: 'equipos', label: 'Equipos' },
     { key: 'jugadores', label: 'Jugadores' },
     { key: 'registro-equipo', label: 'Registro Rápido Equipo', nuevo: true },
     { key: 'planilla-jugadores', label: 'Planilla Jugadores', nuevo: true },
   ];
 
+  if (!usuario) return null;
+
   return (
-    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans flex flex-col">
-      {/* Cabecera */}
-      <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans relative overflow-hidden">
+
+      {/* Barra lateral integrada */}
+      <BarraLateral rol={usuario.roles?.[0] || 'usuario_publico'} />
+
+      {/* Contenido principal con margen izquierdo en desktop */}
+      <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
+        {/* Cabecera */}
+        <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => navegar('/tablero')}
-            className="w-10 h-10 rounded-lg flex items-center justify-center border border-slate-800 hover:bg-[#171a26] transition-all cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-slate-300">arrow_back</span>
-          </button>
           <div>
             <h1 className="text-lg font-black text-white leading-none">Gestión de Participantes</h1>
             <span className="text-[10px] text-slate-455 font-semibold tracking-wider uppercase mt-1 block">
@@ -661,12 +673,12 @@ export const GestionParticipantes: React.FC = () => {
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2">
+      {/* Tabs (visibles solo en móvil ya que en desktop se navega por la barra lateral) */}
+      <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2 lg:hidden">
         {TABS.map(tab => (
           <button
             key={tab.key}
-            onClick={() => setTabActiva(tab.key)}
+            onClick={() => setSearchParams({ tab: tab.key })}
             className={`px-4 py-2 text-xs font-bold rounded-lg uppercase tracking-wide cursor-pointer transition-all flex items-center gap-1.5 ${
               tabActiva === tab.key
                 ? tab.nuevo
@@ -694,7 +706,7 @@ export const GestionParticipantes: React.FC = () => {
         {/* ════════════════════════════════════════════
             TABS ORIGINALES (sin tocar)
         ════════════════════════════════════════════ */}
-        {(tabActiva === 'disciplinas' || tabActiva === 'categorias' || tabActiva === 'organizaciones' || tabActiva === 'equipos' || tabActiva === 'jugadores') && (
+        {(tabActiva === 'disciplinas' || tabActiva === 'categorias' || tabActiva === 'equipos' || tabActiva === 'jugadores') && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Columna Izquierda: Formulario de Registro */}
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs h-fit">
@@ -706,10 +718,36 @@ export const GestionParticipantes: React.FC = () => {
                 <form onSubmit={guardarDisciplina} className="space-y-4">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-700 block">Nombre Disciplina *</label>
-                    <input type="text" required placeholder="Fútbol, Vóley, Básquet..."
-                      value={nuevaDisc.name} onChange={(e) => setNuevaDisc({ ...nuevaDisc, name: e.target.value })}
-                      className="w-full text-sm border border-slate-200 rounded-lg p-2.5 focus:border-secondary focus:ring-1 focus:ring-secondary outline-hidden" />
+                    <select
+                      required
+                      value={nuevaDisc.name}
+                      onChange={(e) => setNuevaDisc({ ...nuevaDisc, name: e.target.value })}
+                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 focus:border-secondary outline-hidden cursor-pointer"
+                    >
+                      <option value="">-- Selecciona Disciplina --</option>
+                      <option value="Fútbol">Fútbol</option>
+                      <option value="Futsal">Futsal</option>
+                      <option value="Vóley">Vóley</option>
+                      <option value="Básquetbol">Básquetbol</option>
+                      <option value="Atletismo">Atletismo</option>
+                      <option value="Natación">Natación</option>
+                      <option value="Tenis">Tenis</option>
+                      <option value="Otro">Otro...</option>
+                    </select>
                   </div>
+                  {nuevaDisc.name === 'Otro' && (
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">Nombre Disciplina Personalizado *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ej: Balonmano, Karate, etc."
+                        value={customDiscName}
+                        onChange={(e) => setCustomDiscName(e.target.value)}
+                        className="w-full text-sm border border-slate-200 rounded-lg p-2.5 focus:border-secondary focus:ring-1 focus:ring-secondary outline-hidden"
+                      />
+                    </div>
+                  )}
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-700 block">Descripción</label>
                     <textarea placeholder="Detalles de la disciplina..."
@@ -762,28 +800,55 @@ export const GestionParticipantes: React.FC = () => {
                       <option value="Mixto">Mixto</option>
                     </select>
                   </div>
+
+                  {/* Formato de Competencia */}
+                  <div className="space-y-1 border-t border-slate-105 pt-3">
+                    <label className="text-xs font-bold text-slate-700 block">Formato de Competencia</label>
+                    <select value={nuevaCat.format} onChange={(e) => setNuevaCat({ ...nuevaCat, format: e.target.value as any })}
+                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
+                      <option value="liga">Liga (Todos contra todos)</option>
+                      <option value="grupos">Fase de Grupos + Eliminación</option>
+                      <option value="eliminacion_directa">Eliminación Directa</option>
+                    </select>
+                  </div>
+
+                  {/* Campos condicionales de format_settings */}
+                  {nuevaCat.format === 'grupos' && (
+                    <div className="space-y-3 bg-slate-50 p-3 rounded-xl border border-slate-100 animate-fadeIn">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700 block">N° de Grupos *</label>
+                          <input type="number" min="2" placeholder="Ej: 4"
+                            value={nuevaCat.num_groups} onChange={(e) => setNuevaCat({ ...nuevaCat, num_groups: e.target.value })}
+                            className="w-full text-xs border border-slate-200 rounded-lg p-2 outline-hidden bg-white" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700 block">Clasificados/Grupo *</label>
+                          <input type="number" min="1" placeholder="Ej: 2"
+                            value={nuevaCat.advance_per_group} onChange={(e) => setNuevaCat({ ...nuevaCat, advance_per_group: e.target.value })}
+                            className="w-full text-xs border border-slate-200 rounded-lg p-2 outline-hidden bg-white" />
+                        </div>
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" checked={nuevaCat.third_place} onChange={(e) => setNuevaCat({ ...nuevaCat, third_place: e.target.checked })}
+                          className="rounded-sm border-slate-300 text-indigo-600 outline-hidden" />
+                        <span className="text-[10px] font-bold text-slate-650 uppercase">Partido por 3° Puesto</span>
+                      </label>
+                    </div>
+                  )}
+
+                  {nuevaCat.format === 'eliminacion_directa' && (
+                    <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-100 animate-fadeIn">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" checked={nuevaCat.third_place} onChange={(e) => setNuevaCat({ ...nuevaCat, third_place: e.target.checked })}
+                          className="rounded-sm border-slate-300 text-indigo-600 outline-hidden" />
+                        <span className="text-[10px] font-bold text-slate-650 uppercase">Partido por 3° Puesto</span>
+                      </label>
+                    </div>
+                  )}
+
                   <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer">
                     Guardar Categoría
-                  </button>
-                </form>
-              )}
-
-              {tabActiva === 'organizaciones' && (
-                <form onSubmit={guardarOrganizacion} className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Nombre Institución/Organización *</label>
-                    <input type="text" required placeholder="Club Deportivo, Escuela, etc."
-                      value={nuevaOrg.name} onChange={(e) => setNuevaOrg({ ...nuevaOrg, name: e.target.value })}
-                      className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Delegado Responsable *</label>
-                    <input type="text" required placeholder="Nombre del Delegado"
-                      value={nuevaOrg.delegate_name} onChange={(e) => setNuevaOrg({ ...nuevaOrg, delegate_name: e.target.value })}
-                      className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                  </div>
-                  <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer">
-                    Guardar Organización
                   </button>
                 </form>
               )}
@@ -801,15 +866,6 @@ export const GestionParticipantes: React.FC = () => {
                     <input type="text" placeholder="Representante del equipo"
                       value={nuevoEq.representative} onChange={(e) => setNuevoEq({ ...nuevoEq, representative: e.target.value })}
                       className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Organización Asociada *</label>
-                    <select required value={nuevoEq.organization_id}
-                      onChange={(e) => setNuevoEq({ ...nuevoEq, organization_id: e.target.value })}
-                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
-                      <option value="">Seleccionar Organización</option>
-                      {organizaciones.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-                    </select>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
@@ -899,7 +955,6 @@ export const GestionParticipantes: React.FC = () => {
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
                         <th className="p-3 pl-4">Detalles</th>
-                        {tabActiva === 'equipos' && <th className="p-3">Organización</th>}
                         {tabActiva === 'equipos' && <th className="p-3">Estado</th>}
                         {tabActiva === 'jugadores' && <th className="p-3">Equipo</th>}
                         <th className="p-3 pr-4 text-right">Acciones</th>
@@ -930,24 +985,12 @@ export const GestionParticipantes: React.FC = () => {
                           </td>
                         </tr>
                       ))}
-                      {tabActiva === 'organizaciones' && organizaciones.map((o) => (
-                        <tr key={o.id} className="hover:bg-slate-50/40">
-                          <td className="p-3 pl-4">
-                            <div className="font-bold text-slate-900">{o.name}</div>
-                            <div className="text-xs text-slate-500">Delegado: {o.delegate_name}</div>
-                          </td>
-                          <td className="p-3 pr-4 text-right">
-                            <button onClick={() => eliminarElemento(o.id)} className="text-xs font-bold text-rose-600 hover:underline cursor-pointer">Eliminar</button>
-                          </td>
-                        </tr>
-                      ))}
                       {tabActiva === 'equipos' && equipos.map((eq) => (
                         <tr key={eq.id} className="hover:bg-slate-50/40">
                           <td className="p-3 pl-4">
                             <div className="font-bold text-slate-900">{eq.name}</div>
                             <div className="text-xs text-slate-500">Delegado: {eq.representative || 'No registrado'}</div>
                           </td>
-                          <td className="p-3 text-slate-700">{eq.organization?.name || 'Independiente'}</td>
                           <td className="p-3">
                             {eq.registration_status === 'aprobado' ? (
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wide">Aprobado</span>
@@ -983,7 +1026,6 @@ export const GestionParticipantes: React.FC = () => {
                       {!cargando && (
                         (tabActiva === 'disciplinas' && disciplinas.length === 0) ||
                         (tabActiva === 'categorias' && categorias.length === 0) ||
-                        (tabActiva === 'organizaciones' && organizaciones.length === 0) ||
                         (tabActiva === 'equipos' && equipos.length === 0) ||
                         (tabActiva === 'jugadores' && jugadores.length === 0)
                       ) && (
@@ -1044,29 +1086,26 @@ export const GestionParticipantes: React.FC = () => {
                 />
               </div>
 
-              {/* Organización */}
-              <Autocomplete
-                label="Organización Asociada"
-                placeholder="Escribe el nombre de la organización..."
-                opciones={opcsOrgs}
-                valorId={reqEq.orgId}
-                onChange={(id) => setReqEq(prev => ({ ...prev, orgId: id }))}
-                onCrear={crearOrgInline}
-                requerido
-                textoCrear="organización"
-              />
+
 
               {/* Disciplina */}
-              <Autocomplete
-                label="Disciplina"
-                placeholder="Ej: Fútbol, Vóley, Básquet..."
-                opciones={opcsDiscs}
-                valorId={reqEq.discId}
-                onChange={(id) => setReqEq(prev => ({ ...prev, discId: id, catId: null }))}
-                onCrear={crearDiscInline}
-                requerido
-                textoCrear="disciplina"
-              />
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Disciplina *</label>
+                <select
+                  required
+                  value={reqEq.discId || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setReqEq(prev => ({ ...prev, discId: val ? parseInt(val) : null, catId: null }));
+                  }}
+                  className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                >
+                  <option value="">-- Selecciona Disciplina --</option>
+                  {disciplinas.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
 
               {/* Categoría (filtrada por disciplina) */}
               <Autocomplete
@@ -1082,11 +1121,10 @@ export const GestionParticipantes: React.FC = () => {
               />
 
               {/* Resumen */}
-              {(reqEq.orgId || reqEq.discId || reqEq.catId) && (
+              {(reqEq.discId || reqEq.catId) && (
                 <div className="bg-slate-50 rounded-xl border border-slate-100 p-3 text-xs text-slate-600 space-y-1">
                   <p className="font-bold text-slate-700 text-[10px] uppercase tracking-wide mb-1">Vista previa</p>
                   {reqEq.nombre && <p><span className="font-semibold">Equipo:</span> {reqEq.nombre}</p>}
-                  {reqEq.orgId && <p><span className="font-semibold">Org:</span> {organizaciones.find(o => o.id === reqEq.orgId)?.name}</p>}
                   {reqEq.discId && <p><span className="font-semibold">Disciplina:</span> {disciplinas.find(d => d.id === reqEq.discId)?.name}</p>}
                   {reqEq.catId && <p><span className="font-semibold">Categoría:</span> {categorias.find(c => c.id === reqEq.catId)?.name}</p>}
                 </div>
@@ -1094,7 +1132,7 @@ export const GestionParticipantes: React.FC = () => {
 
               <button
                 onClick={guardarReqEq}
-                disabled={guardandoReqEq || !reqEq.nombre.trim() || !reqEq.orgId || !reqEq.discId || !reqEq.catId}
+                disabled={guardandoReqEq || !reqEq.nombre.trim() || !reqEq.discId || !reqEq.catId}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl text-sm transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 {guardandoReqEq
@@ -1129,14 +1167,10 @@ export const GestionParticipantes: React.FC = () => {
             {equipoSel && (
               <div className="bg-[#11131c] border border-slate-800 rounded-2xl p-5">
                 <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-3">Datos del Equipo — solo lectura</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Equipo</p>
                     <p className="text-sm font-bold text-white mt-0.5">{equipoSel.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Organización</p>
-                    <p className="text-sm font-bold text-slate-200 mt-0.5">{equipoSel.organization?.name || '—'}</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Representante</p>
@@ -1395,6 +1429,7 @@ export const GestionParticipantes: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

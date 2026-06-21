@@ -39,7 +39,7 @@ class SanctionController extends Controller
     #[OA\Security(name: 'sanctum')]
     public function index(Request $request)
     {
-        $query = Sanction::with(['player', 'match']);
+        $query = Sanction::with(['player.team', 'match']);
 
         if ($request->has('championship_id')) {
             $query->whereHas('match', function ($q) use ($request) {
@@ -94,12 +94,14 @@ class SanctionController extends Controller
     {
         $request->validate([
             'player_id' => 'required|exists:players,id',
-            'origin_match_id' => 'required|exists:matches,id',
+            'origin_match_id' => 'required_without:match_id|exists:matches,id',
+            'match_id' => 'required_without:origin_match_id|exists:matches,id',
             'sanction_type' => 'required|string|max:255',
             'reason' => 'required|string',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date',
             'duration' => 'nullable|integer|min:1',
+            'matches_suspended' => 'nullable|integer|min:1',
             'status' => 'required|string|max:50',
         ]);
 
@@ -132,7 +134,7 @@ class SanctionController extends Controller
     public function show($id)
     {
         $sanction = Sanction::with([
-            'player',
+            'player.team',
             'match'
         ])->find($id);
 
@@ -185,6 +187,7 @@ class SanctionController extends Controller
             'start_date' => 'date',
             'end_date' => 'nullable|date',
             'duration' => 'nullable|integer|min:1',
+            'matches_suspended' => 'nullable|integer|min:1',
             'status' => 'string|max:50',
         ]);
 

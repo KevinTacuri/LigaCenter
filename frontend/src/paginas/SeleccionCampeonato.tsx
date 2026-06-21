@@ -18,6 +18,7 @@ export const SeleccionCampeonato: React.FC = () => {
   const [mostrarCreador, setMostrarCreador] = useState(false);
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevoTipo, setNuevoTipo] = useState<'basico' | 'completo'>('basico');
+  const [nuevoReglamento, setNuevoReglamento] = useState<File | null>(null);
 
   useEffect(() => {
     if (!usuario) {
@@ -60,12 +61,17 @@ export const SeleccionCampeonato: React.FC = () => {
     if (!nuevoNombre.trim()) return;
     setErrorLocal(null);
     try {
-      const res = await serviciosCampeonatos.crearCampeonato({
-        name: nuevoNombre,
-        type: nuevoTipo
-      });
+      const formData = new FormData();
+      formData.append('name', nuevoNombre.trim());
+      formData.append('type', nuevoTipo);
+      if (nuevoReglamento) {
+        formData.append('rules_pdf', nuevoReglamento);
+      }
+
+      const res = await serviciosCampeonatos.crearCampeonato(formData);
       if (res.success) {
         setNuevoNombre('');
+        setNuevoReglamento(null);
         setMostrarCreador(false);
         // Recargar lista y seleccionar el creado
         await cargarCampeonatos();
@@ -147,9 +153,17 @@ export const SeleccionCampeonato: React.FC = () => {
                       onChange={() => setNuevoTipo('completo')} className="sr-only"
                     />
                     <span className="text-xs font-extrabold text-white uppercase">Completo</span>
-                    <span className="text-[10px] text-slate-455">Múltiples disciplinas, incidencias detalladas, sanciones y goleadores.</span>
+                    <span className="text-[10px] text-slate-455">Múltiples disciplinas, incidencias detalladas, sanciones y anotadores.</span>
                   </label>
                 </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-350 block">Reglamento Oficial (PDF - Opcional)</label>
+                <input
+                  type="file" accept=".pdf"
+                  onChange={(e) => setNuevoReglamento(e.target.files?.[0] || null)}
+                  className="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-500/10 file:text-indigo-400 file:hover:bg-indigo-500/20 file:cursor-pointer outline-hidden cursor-pointer bg-[#171a26] border border-slate-800 p-2"
+                />
               </div>
               <button
                 type="submit"

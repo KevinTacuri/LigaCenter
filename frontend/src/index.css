@@ -220,26 +220,4 @@ button.bg-amber-500 {
 /* ==========================================================================
    INTERACTIVE GRID BACKGROUND (MODERN SUITE DESIGN)
    ========================================================================== */
-.interactive-grid-bg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-size: 50px 50px;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  z-index: 0;
-}
-
-.interactive-grid-bg::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    600px circle at var(--mouse-x, 0px) var(--mouse-y, 0px),
-    rgba(178, 34, 77, 0.09), /* Vino sutil, muy elegante */
-    transparent 80%
-  );
-  z-index: 1;
-  pointer-events: none;
-}
+/* Removed as per user request */

@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { serviciosUsuarios } from '../servicios/api';
 import type { Usuario, Rol } from '../servicios/api';
+import { BarraLateral } from '../componentes/BarraLateral';
 
 export const GestionUsuarios: React.FC = () => {
-  const { tienePermiso } = useAutenticacion();
+  const { usuario, tienePermiso } = useAutenticacion();
   const navegar = useNavigate();
 
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -85,24 +86,20 @@ export const GestionUsuarios: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f6f7] text-slate-800 font-sans flex flex-col">
-      {/* Cabecera */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navegar('/tablero')}
-            className="w-10 h-10 rounded-lg flex items-center justify-center border border-slate-200 hover:bg-slate-50 transition-all cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-slate-700">arrow_back</span>
-          </button>
-          <div>
-            <h1 className="text-lg font-black text-slate-900 leading-none">Gestión de Usuarios</h1>
-            <span className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase mt-1 block">
-              Administración General de Clientes
-            </span>
+    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans relative overflow-hidden">
+      <BarraLateral rol={usuario?.roles?.[0] || 'usuario_publico'} />
+      <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
+        {/* Cabecera */}
+        <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-lg font-black text-white leading-none">Gestión de Usuarios</h1>
+              <span className="text-[10px] text-slate-455 font-semibold tracking-wider uppercase mt-1 block">
+                Administración General de Clientes
+              </span>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
       {/* Contenido Principal */}
       <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
@@ -231,6 +228,7 @@ export const GestionUsuarios: React.FC = () => {
         </section>
 
       </main>
+      </div>
     </div>
   );
 };
