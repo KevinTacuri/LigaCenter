@@ -3,12 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../contexto/ContextoCampeonato';
 import { BarraLateral } from '../componentes/BarraLateral';
-import { serviciosCampeonatos } from '../servicios/api';
-import Swal from 'sweetalert2';
 
 // Importación de recursos
 import logoImg from '../assets/logo.svg';
-import { BotonTema } from '../componentes/BotonTema';
+import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
 
 const PASOS_TORNEO = [
   { step: '1', title: 'Disciplinas y Categorías', desc: 'Registra deportes, define categorías y configura el formato de competencia.', icon: 'sports' },
@@ -21,30 +19,9 @@ const PASOS_TORNEO = [
 
 export const Tablero: React.FC = () => {
   const { usuario, cargando, tienePermiso, tieneRol } = useAutenticacion();
-  const { campeonatoActivo, limpiarCampeonato } = useCampeonato();
+  const { campeonatoActivo } = useCampeonato();
   const navegar = useNavigate();
   const [mostrarGuia, setMostrarGuia] = useState(false);
-
-  const manejarDescargarReglamento = async (id: number, nombreTorneo: string) => {
-    try {
-      const blob = await serviciosCampeonatos.descargarReglamento(id);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Reglamento-${nombreTorneo.replace(/\s+/g, '_')}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      Swal.fire({
-        title: 'Error',
-        text: 'No se pudo descargar el reglamento del torneo.',
-        icon: 'error',
-        confirmButtonColor: '#4f46e5'
-      });
-    }
-  };
 
   useEffect(() => {
     if (!cargando && !usuario) {
@@ -79,53 +56,10 @@ export const Tablero: React.FC = () => {
 
       {/* Contenido principal con margen izquierdo en desktop */}
       <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
-        {/* Header simplificado (sin logout, sin logo repetido) */}
-        <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 sticky top-0 z-30">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-black text-white tracking-tight">
-                {campeonatoActivo?.name || 'Tablero de Control'}
-              </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {usuario.name} • {usuario.roles?.[0]?.replace('_', ' ') || 'Usuario'}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <BotonTema />
-              {!tieneRol('administrador') && campeonatoActivo && campeonatoActivo.rules_pdf && (
-                <button
-                  onClick={() => manejarDescargarReglamento(campeonatoActivo.id, campeonatoActivo.name)}
-                  className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all"
-                >
-                  <span className="material-symbols-outlined text-sm">download</span>
-                  <span className="hidden sm:inline">Reglamento (PDF)</span>
-                </button>
-              )}
-              {!tieneRol('administrador') && (
-                campeonatoActivo ? (
-                  <button
-                    onClick={limpiarCampeonato}
-                    className="flex items-center gap-1.5 bg-[#171a26] hover:bg-[#1c1f2e] border border-slate-800 text-slate-350 rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all"
-                  >
-                    <span className="material-symbols-outlined text-sm">swap_horiz</span>
-                    <span className="hidden sm:inline">Cambiar Torneo</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => navegar('/seleccion-campeonato')}
-                    className="flex items-center gap-1.5 bg-indigo-650 hover:bg-indigo-600 text-white rounded-lg px-3.5 py-1.5 text-xs font-bold cursor-pointer transition-all"
-                  >
-                    <span className="material-symbols-outlined text-sm">sports_soccer</span>
-                    <span>Seleccionar Campeonato</span>
-                  </button>
-                )
-              )}
-            </div>
-          </div>
-        </header>
+        <CabeceraEstandar />
 
         {/* Contenido Principal */}
-        <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+        <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto space-y-6 px-4 md:px-8">
           
           {/* Banner de Bienvenida Profesional Claro */}
           <section className="relative rounded-2xl bg-[#11131c] border border-slate-900 p-8 shadow-xs overflow-hidden group">

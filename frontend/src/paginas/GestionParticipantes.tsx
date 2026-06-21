@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import Swal from 'sweetalert2';
+import { sileo } from 'sileo';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { serviciosParticipantes } from '../servicios/api';
 import { BarraLateral } from '../componentes/BarraLateral';
-import { BotonTema } from '../componentes/BotonTema';
+import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
+import { useConfirm } from '@omit/react-confirm-dialog';
 import type {
   Disciplina,
   Categoria,
@@ -162,6 +163,7 @@ export const GestionParticipantes: React.FC = () => {
   const { usuario, tienePermiso, tieneRol } = useAutenticacion();
   const navegar = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const confirm = useConfirm();
   const queryTab = searchParams.get('tab');
 
   const [tabActiva, setTabActiva] = useState<TabType>('disciplinas');
@@ -325,17 +327,11 @@ export const GestionParticipantes: React.FC = () => {
   // UTILIDADES
   // ─────────────────────────────────────────────
   const mostrarMensaje = (msg: string, esError: boolean = false) => {
-    Swal.mixin({
-      toast: true,
-      position: 'top-end',
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-      didOpen: (toast) => {
-        toast.onmouseenter = Swal.stopTimer;
-        toast.onmouseleave = Swal.resumeTimer;
-      }
-    }).fire({ icon: esError ? 'error' : 'success', title: msg });
+    if (esError) {
+      sileo.error({ title: 'Error', description: msg });
+    } else {
+      sileo.success({ title: 'Operación Exitosa', description: msg });
+    }
   };
 
   // ─────────────────────────────────────────────
@@ -417,11 +413,9 @@ export const GestionParticipantes: React.FC = () => {
       if (err.response && err.response.status === 422) {
         const errors = err.response.data.errors;
         const msg = errors ? Object.values(errors).flat().join('\n') : 'Datos inválidos para el formato seleccionado.';
-        Swal.fire({
+        sileo.error({
           title: 'Error de Configuración',
-          text: msg,
-          icon: 'error',
-          confirmButtonColor: '#4f46e5'
+          description: msg
         });
       } else {
         mostrarMensaje('Error al registrar categoría.', true);
@@ -485,25 +479,25 @@ export const GestionParticipantes: React.FC = () => {
   };
 
   const eliminarElemento = async (id: number) => {
-    const result = await Swal.fire({
-      title: '¿Está seguro de que desea eliminar este registro?',
-      text: 'Esta acción no se puede deshacer y podría afectar a otros registros vinculados.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#4f46e5',
-      cancelButtonColor: '#ef4444',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
+    const isConfirmed = await confirm({
+      title: '¿Eliminar Registro?',
+      description: '¿Está seguro de que desea eliminar este registro? Esta acción no se puede deshacer y podría afectar a otros registros vinculados.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      confirmButton: {
+        variant: 'destructive',
+      }
     });
-    if (!result.isConfirmed) return;
-    try {
-      let res: any;
-      if (tabActiva === 'disciplinas') res = await serviciosParticipantes.eliminarDisciplina(id);
-      else if (tabActiva === 'categorias') res = await serviciosParticipantes.eliminarCategoria(id);
-      else if (tabActiva === 'equipos') res = await serviciosParticipantes.eliminarEquipo(id);
-      else if (tabActiva === 'jugadores') res = await serviciosParticipantes.eliminarJugador(id);
-      if (res && res.success) { mostrarMensaje('Registro eliminado correctamente.'); cargarDatos(); }
-    } catch { mostrarMensaje('No se puede eliminar el registro. Puede estar en uso.', true); }
+    if (isConfirmed) {
+      try {
+        let res: any;
+        if (tabActiva === 'disciplinas') res = await serviciosParticipantes.eliminarDisciplina(id);
+        else if (tabActiva === 'categorias') res = await serviciosParticipantes.eliminarCategoria(id);
+        else if (tabActiva === 'equipos') res = await serviciosParticipantes.eliminarEquipo(id);
+        else if (tabActiva === 'jugadores') res = await serviciosParticipantes.eliminarJugador(id);
+        if (res && res.success) { mostrarMensaje('Registro eliminado correctamente.'); cargarDatos(); }
+      } catch { mostrarMensaje('No se puede eliminar el registro. Puede estar en uso.', true); }
+    }
   };
 
   // ─────────────────────────────────────────────
@@ -617,22 +611,24 @@ export const GestionParticipantes: React.FC = () => {
       return;
     }
     if (!fila.id) return;
-    const result = await Swal.fire({
-      title: '¿Eliminar jugador?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      confirmButtonText: 'Eliminar',
-      cancelButtonText: 'Cancelar'
-    });
-    if (!result.isConfirmed) return;
-    try {
-      const res = await serviciosParticipantes.eliminarJugador(fila.id);
-      if (res.success) {
-        setFilasJugadores(prev => prev.filter((_, i) => i !== idx));
-        mostrarMensaje('Jugador eliminado.');
+    const isConfirmed = await confirm({
+      title: '¿Eliminar Jugador?',
+      description: '¿Está seguro de que desea eliminar este jugador de la planilla?',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      confirmButton: {
+        variant: 'destructive',
       }
-    } catch { mostrarMensaje('Error al eliminar jugador.', true); }
+    });
+    if (isConfirmed) {
+      try {
+        const res = await serviciosParticipantes.eliminarJugador(fila.id!);
+        if (res.success) {
+          setFilasJugadores(prev => prev.filter((_, i) => i !== idx));
+          mostrarMensaje('Jugador eliminado.');
+        }
+      } catch { mostrarMensaje('Error al eliminar jugador.', true); }
+    }
   };
 
   // ─────────────────────────────────────────────
@@ -662,18 +658,7 @@ export const GestionParticipantes: React.FC = () => {
 
       {/* Contenido principal con margen izquierdo en desktop */}
       <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
-        {/* Cabecera */}
-        <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-lg font-black text-white leading-none">Gestión de Participantes</h1>
-              <span className="text-[10px] text-slate-455 font-semibold tracking-wider uppercase mt-1 block">
-                Inscripciones y Configuración del Campeonato
-              </span>
-            </div>
-          </div>
-          <BotonTema />
-        </header>
+        <CabeceraEstandar titulo="Gestión de Participantes" subtitulo="Inscripciones y Configuración del Campeonato" />
 
       {/* Tabs (visibles solo en móvil ya que en desktop se navega por la barra lateral) */}
       <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2 lg:hidden">
@@ -696,7 +681,7 @@ export const GestionParticipantes: React.FC = () => {
       </div>
 
       {/* Contenido Principal */}
-      <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+      <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto space-y-6 px-4 md:px-8">
 
         {errorLocal && (
           <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 text-sm flex items-center gap-2">
@@ -1432,6 +1417,7 @@ export const GestionParticipantes: React.FC = () => {
         </div>
       )}
       </div>
+
     </div>
   );
 };

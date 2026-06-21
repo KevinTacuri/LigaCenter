@@ -2,9 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { serviciosUsuarios } from '../servicios/api';
-import logoImg from '../assets/logo.svg';
 import { BarraLateral } from '../componentes/BarraLateral';
-import { BotonTema } from '../componentes/BotonTema';
+import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
 
 type TabConfigType = 'perfil' | 'guia';
 
@@ -109,34 +108,7 @@ export const Perfil: React.FC = () => {
       <BarraLateral rol={usuario.roles?.[0] || 'usuario_publico'} />
       <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
 
-      {/* Header */}
-      <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center gap-4 sticky top-0 z-30 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 flex items-center justify-center">
-            <img src={logoImg} className="w-full h-full object-contain" alt="Logo" />
-          </div>
-          <div>
-            <h1 className="text-sm font-extrabold text-white leading-none">Mi Perfil</h1>
-            <span className="text-[10px] text-slate-455 font-semibold tracking-wider uppercase block mt-0.5">
-              Administración de cuenta y guía técnica
-            </span>
-          </div>
-        </div>
-
-        {/* Avatar del usuario */}
-        <div className="ml-auto flex items-center gap-3">
-          <BotonTema />
-          <div className="hidden md:flex flex-col text-right">
-            <span className="text-xs font-extrabold text-slate-200">{usuario.name}</span>
-            <span className="text-[9px] text-slate-455 font-bold uppercase tracking-wider">
-              {usuario.roles?.[0]?.replace('_', ' ') || 'Usuario'}
-            </span>
-          </div>
-          <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-extrabold text-xs select-none ${colorAvatar.bg} ${colorAvatar.text}`}>
-            {inicialUsuario}
-          </div>
-        </div>
-      </header>
+      <CabeceraEstandar titulo="Mi Perfil" subtitulo="Administración de cuenta y guía técnica" />
 
       {/* Contenido */}
       <main className="flex-1 p-6 max-w-4xl w-full mx-auto space-y-6">

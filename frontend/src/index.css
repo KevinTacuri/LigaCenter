@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../node_modules/@omit/react-confirm-dialog/dist/index.js";
 
 :root {
   /* Default: Dark Mode */
@@ -62,11 +63,11 @@
   --secondary-container: #f1f5f9;     /* Fondo gris claro pastel */
   --on-secondary-container: #0f172a;
 
-  --surface: #f8fafc;                 /* Fondo Claro Minimalista (Slate 50) */
-  --surface-dim: #f1f5f9;             /* Sección Interna Clara (Slate 100) */
+  --surface: #ffffff;                 /* Fondo Claro Minimalista Blanco */
+  --surface-dim: #f8fafc;             /* Sección Interna Clara (Slate 50) */
   --surface-bright: #ffffff;          /* Fondo Inputs */
   --surface-container-lowest: #ffffff; /* Tarjetas Base Blancas */
-  --surface-container-low: #f8fafc;
+  --surface-container-low: #ffffff;
   --surface-container-high: #e2e8f0;
   --surface-container-highest: #cbd5e1;
 
@@ -152,6 +153,27 @@
   --color-slate-455: var(--slate-455);
   --color-slate-850: var(--slate-850);
   --color-slate-905: var(--slate-905);
+
+  /* Variables requeridas por @omit/react-confirm-dialog */
+  --color-background: var(--surface);
+  --color-foreground: var(--on-surface);
+  --color-border: var(--outline);
+  --color-muted: var(--surface-dim);
+  --color-muted-foreground: var(--on-surface-variant);
+  --color-primary-foreground: var(--on-primary);
+  --color-destructive: var(--rose-455);
+  --color-destructive-foreground: #ffffff;
+
+  /* Animaciones y keyframes para radix alert-dialog */
+  --animate-fade-in: fade-in 150ms ease;
+  --animate-fade-out: fade-out 150ms ease;
+  --animate-scale-in: scale-in 150ms ease;
+  --animate-scale-out: scale-out 150ms ease;
+
+  @keyframes fade-in { from { opacity: 0; } }
+  @keyframes fade-out { to { opacity: 0; } }
+  @keyframes scale-in { from { opacity: 0; scale: 0.95; } }
+  @keyframes scale-out { to { opacity: 0; scale: 0.95; } }
 }
 
 body {
@@ -438,3 +460,58 @@ body {
 .light .text-slate-700 {
   color: #64748b !important; /* Slate 500 */
 }
+
+/* Rediseño SaaS Plano para Modo Claro */
+.light .rounded-2xl {
+  border-radius: 12px !important;
+}
+
+.light .shadow-xs,
+.light .shadow-sm,
+.light .shadow,
+.light .shadow-md,
+.light .shadow-lg,
+.light .shadow-xl,
+.light .shadow-2xl {
+  box-shadow: none !important; /* Remover sombras pesadas */
+}
+
+.light .border-slate-200,
+.light .border-slate-150,
+.light .border {
+  border-color: #e2e8f0 !important; /* Forzar borde muy sutil */
+}
+
+/* Sidebar hovers en modo claro (usar acentos del logo) */
+.light .hover\:bg-\[\#1a1d2a\]:hover {
+  background-color: rgba(25, 59, 112, 0.06) !important;
+}
+.light .hover\:text-slate-200:hover {
+  color: #193b70 !important;
+}
+.light .hover\:bg-\[\#151722\]:hover {
+  background-color: rgba(25, 59, 112, 0.04) !important;
+}
+.light .hover\:text-slate-350:hover {
+  color: #193b70 !important;
+}
+
+/* Evitar que los botones de guardar (bg-secondary) se aclaren en hover a casi blanco */
+.light button.bg-secondary:hover,
+.light .bg-secondary:hover {
+  background-color: #1f7068 !important; /* Verde turquesa corporativo de alto contraste */
+}
+
+/* Asegurar texto blanco de alta visibilidad para elementos hijos de botones con fondos oscuros */
+.light button.bg-primary *,
+.light button.bg-secondary *,
+.light button.bg-indigo-650 *,
+.light button.bg-indigo-600 *,
+.light button.bg-emerald-600 *,
+.light button.bg-emerald-500 *,
+.light button.bg-rose-600 *,
+.light button.bg-rose-500 * {
+  color: #ffffff !important;
+}
+
+

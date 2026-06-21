@@ -3,10 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../contexto/ContextoCampeonato';
 import { serviciosCampeonatos } from '../servicios/api';
-import logoImg from '../assets/logo.svg';
-import Swal from 'sweetalert2';
+import { sileo } from 'sileo';
 import { BarraLateral } from '../componentes/BarraLateral';
-import { BotonTema } from '../componentes/BotonTema';
+import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
 
 export const Configuracion: React.FC = () => {
   const { usuario, cargando } = useAutenticacion();
@@ -54,11 +53,9 @@ export const Configuracion: React.FC = () => {
       if (res.success) {
         seleccionarCampeonato(res.data);
         setReglamento(null);
-        Swal.fire({
+        sileo.success({
           title: 'Configuración Guardada',
-          text: 'Los cambios del campeonato han sido aplicados con éxito.',
-          icon: 'success',
-          confirmButtonColor: '#4f46e5'
+          description: 'Los cambios del campeonato han sido aplicados con éxito.'
         });
       }
     } catch (err: any) {
@@ -81,11 +78,9 @@ export const Configuracion: React.FC = () => {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      Swal.fire({
-        title: 'Error',
-        text: 'No se pudo descargar el reglamento del torneo.',
-        icon: 'error',
-        confirmButtonColor: '#4f46e5'
+      sileo.error({
+        title: 'Error de Descarga',
+        description: 'No se pudo descargar el reglamento del torneo.'
       });
     }
   };
@@ -96,21 +91,7 @@ export const Configuracion: React.FC = () => {
     <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans relative overflow-hidden">
       <BarraLateral rol={usuario.roles?.[0] || 'usuario_publico'} />
       <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
-      {/* Header */}
-      <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 flex items-center justify-center">
-            <img src={logoImg} className="w-full h-full object-contain" alt="Logo" />
-          </div>
-          <div>
-            <h1 className="text-sm font-extrabold text-white leading-none">Configuración del Campeonato</h1>
-            <span className="text-[10px] text-slate-455 font-semibold tracking-wider uppercase block mt-0.5">
-              Parámetros, reglas and estado de competencia
-            </span>
-          </div>
-        </div>
-        <BotonTema />
-      </header>
+      <CabeceraEstandar titulo="Configuración del Campeonato" subtitulo="Parámetros, reglas y estado de competencia" />
 
       {/* Contenido */}
       <main className="flex-1 p-6 max-w-3xl w-full mx-auto space-y-6">

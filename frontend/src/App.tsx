@@ -17,11 +17,19 @@ import { ConsolaSaaS } from './paginas/ConsolaSaaS';
 import { Configuracion } from './paginas/Configuracion';
 import { Perfil } from './paginas/Perfil';
 
+import { Toaster } from 'sileo';
+import { ConfirmDialogProvider } from '@omit/react-confirm-dialog';
+
 const App: React.FC = () => {
   return (
     <ProveedorAutenticacion>
       <ProveedorCampeonato>
-        <BrowserRouter>
+        <ConfirmDialogProvider defaultOptions={{
+          confirmText: 'Confirmar',
+          cancelText: 'Cancelar',
+        }}>
+          <Toaster position="top-center" />
+          <BrowserRouter>
           <Routes>
             {/* Rutas Públicas */}
             <Route path="/login" element={<Login />} />
@@ -45,6 +53,7 @@ const App: React.FC = () => {
             <Route path="*" element={<Navigate to="/tablero" replace />} />
           </Routes>
         </BrowserRouter>
+        </ConfirmDialogProvider>
       </ProveedorCampeonato>
     </ProveedorAutenticacion>
   );

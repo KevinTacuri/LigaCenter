@@ -15,7 +15,7 @@ import type {
 } from '../servicios/api';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { BarraLateral } from '../componentes/BarraLateral';
-import { BotonTema } from '../componentes/BotonTema';
+import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
 
 export const VisualizacionPublica: React.FC = () => {
   const { usuario } = useAutenticacion();
@@ -172,18 +172,7 @@ export const VisualizacionPublica: React.FC = () => {
 
   const contenidoInterno = (
     <>
-      {/* Cabecera */}
-      <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div>
-            <h1 className="text-lg font-black text-white leading-none">Estadísticas y Posiciones</h1>
-            <span className="text-[10px] text-slate-450 font-semibold tracking-wider uppercase mt-1 block">
-              Consulta Pública de Resultados en Tiempo Real
-            </span>
-          </div>
-        </div>
-        <BotonTema />
-      </header>
+      <CabeceraEstandar titulo="Estadísticas y Posiciones" subtitulo="Consulta Pública de Resultados en Tiempo Real" />
 
       {/* Tabs (visibles solo en móvil ya que en desktop se navega por la barra lateral) */}
       <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2 lg:hidden">
@@ -232,7 +221,7 @@ export const VisualizacionPublica: React.FC = () => {
       </div>
 
       {/* Contenido Principal */}
-      <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+      <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto space-y-6 px-4 md:px-8">
 
         {errorLocal && (
           <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-455 text-sm flex items-center gap-2">

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Swal from 'sweetalert2';
+import { sileo } from 'sileo';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { BarraLateral } from '../componentes/BarraLateral';
-import { BotonTema } from '../componentes/BotonTema';
+import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
+import { useConfirm } from '@omit/react-confirm-dialog';
 import {
   serviciosFixture,
   serviciosResultados,
@@ -118,6 +119,7 @@ const NORMAS_DEPORTES: Record<string, SportRules> = {
 export const MesaControl: React.FC = () => {
   const { usuario, tienePermiso, tieneRol } = useAutenticacion();
   const navegar = useNavigate();
+  const confirm = useConfirm();
 
   const obtenerTiposIncidenciaDeporte = (): IncidentTypeConfig[] => {
     if (!partidoSeleccionado) return DEFAULT_INCIDENTS;
@@ -495,20 +497,11 @@ export const MesaControl: React.FC = () => {
   };
 
   const mostrarMensaje = (msg: string, esError: boolean = false) => {
-    Swal.mixin({
-      toast: true,
-      position: 'top-end',
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-      didOpen: (toast) => {
-        toast.onmouseenter = Swal.stopTimer;
-        toast.onmouseleave = Swal.resumeTimer;
-      }
-    }).fire({
-      icon: esError ? 'error' : 'success',
-      title: msg
-    });
+    if (esError) {
+      sileo.error({ title: 'Error', description: msg });
+    } else {
+      sileo.success({ title: 'Operación Exitosa', description: msg });
+    }
   };
 
   const guardarProgresoActa = async (e: React.FormEvent) => {
@@ -551,56 +544,52 @@ export const MesaControl: React.FC = () => {
       mostrarMensaje('Guarde el progreso del acta primero antes de bloquear.', true);
       return;
     }
-    const result = await Swal.fire({
+    const isConfirmed = await confirm({
       title: '¿Desea cerrar el acta?',
-      text: 'Esto es irreversible, recalculará la tabla y registrará las sanciones.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#4f46e5',
-      cancelButtonColor: '#ef4444',
-      confirmButtonText: 'Sí, cerrar acta',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-      const res = await serviciosResultados.bloquearActa(acta.id);
-      if (res.success) {
-        setActa(res.data);
-        mostrarMensaje('Acta de partido bloqueada y finalizada. Tabla actualizada.');
-        cargarPartidos();
-        setPartidoSeleccionado(null);
+      description: 'Esto es irreversible, recalculará la tabla de posiciones y registrará las sanciones correspondientes.',
+      confirmText: 'Cerrar Acta',
+      cancelText: 'Cancelar',
+      confirmButton: {
+        variant: 'default',
       }
-    } catch (err) {
-      mostrarMensaje('Error al bloquear acta.', true);
+    });
+    if (isConfirmed) {
+      try {
+        const res = await serviciosResultados.bloquearActa(acta.id);
+        if (res.success) {
+          setActa(res.data);
+          mostrarMensaje('Acta de partido bloqueada y finalizada. Tabla actualizada.');
+          cargarPartidos();
+          setPartidoSeleccionado(null);
+        }
+      } catch {
+        mostrarMensaje('Error al bloquear acta.', true);
+      }
     }
   };
 
 
 
   const eliminarIncidencia = async (id: number) => {
-    const result = await Swal.fire({
-      title: '¿Desea quitar esta incidencia?',
-      text: 'Esta acción no se puede deshacer.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#4f46e5',
-      cancelButtonColor: '#ef4444',
-      confirmButtonText: 'Sí, quitar',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-      const res = await serviciosResultados.eliminarIncidencia(id);
-      if (res.success) {
-        setIncidencias((prev) => prev.filter((i) => i.id !== id));
-        mostrarMensaje('Incidencia eliminada.');
+    const isConfirmed = await confirm({
+      title: '¿Quitar incidencia?',
+      description: '¿Desea quitar esta incidencia de la planilla? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      confirmButton: {
+        variant: 'destructive',
       }
-    } catch (err) {
-      mostrarMensaje('Error al quitar incidencia.', true);
+    });
+    if (isConfirmed) {
+      try {
+        const res = await serviciosResultados.eliminarIncidencia(id);
+        if (res.success) {
+          setIncidencias((prev) => prev.filter((i) => i.id !== id));
+          mostrarMensaje('Incidencia eliminada.');
+        }
+      } catch {
+        mostrarMensaje('Error al quitar incidencia.', true);
+      }
     }
   };
 
@@ -608,35 +597,21 @@ export const MesaControl: React.FC = () => {
     <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans relative overflow-hidden">
       <BarraLateral rol={usuario?.roles?.[0] || 'usuario_publico'} />
       <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
-      {/* Cabecera */}
-      <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-        <div className="flex items-center gap-3">
-          {partidoSeleccionado && (
-            <button
-              onClick={() => setPartidoSeleccionado(null)}
-              className="w-10 h-10 rounded-lg flex items-center justify-center border border-slate-800 hover:bg-[#171a26] transition-all cursor-pointer mr-2"
-            >
-              <span className="material-symbols-outlined text-slate-300">arrow_back</span>
-            </button>
-          )}
-          <div>
-            <h1 className="text-lg font-black text-white leading-none">
-              {partidoSeleccionado 
-                ? `${partidoSeleccionado.local_team?.name} vs ${partidoSeleccionado.visitor_team?.name}` 
-                : 'Mesa de Control'}
-            </h1>
-            <span className="text-[10px] text-slate-450 font-semibold tracking-wider uppercase mt-1 block">
-              {partidoSeleccionado 
-                ? `${partidoSeleccionado.discipline?.name || 'Deporte'} - Jornada ${partidoSeleccionado.round} (${partidoSeleccionado.match_date ? new Date(partidoSeleccionado.match_date).toLocaleDateString() : ''})` 
-                : 'Registro de Resultados y Planillaje Oficial'}
-            </span>
-          </div>
-        </div>
-        <BotonTema />
-      </header>
+      <CabeceraEstandar
+        titulo={partidoSeleccionado ? `${partidoSeleccionado.local_team?.name} vs ${partidoSeleccionado.visitor_team?.name}` : 'Mesa de Control'}
+        subtitulo={partidoSeleccionado ? `${partidoSeleccionado.discipline?.name || 'Deporte'} - Jornada ${partidoSeleccionado.round} (${partidoSeleccionado.match_date ? new Date(partidoSeleccionado.match_date).toLocaleDateString() : ''})` : 'Registro de Resultados y Planillaje Oficial'}
+        leftElement={partidoSeleccionado && (
+          <button
+            onClick={() => setPartidoSeleccionado(null)}
+            className="w-10 h-10 rounded-lg flex items-center justify-center border border-slate-800 hover:bg-[#171a26] transition-all cursor-pointer mr-2"
+          >
+            <span className="material-symbols-outlined text-slate-300">arrow_back</span>
+          </button>
+        )}
+      />
 
       {/* Contenido Principal */}
-      <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+      <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto space-y-6 px-4 md:px-8">
         
         {/* Toasts */}
         {mensajeExito && (
@@ -1262,6 +1237,7 @@ export const MesaControl: React.FC = () => {
         </div>
       )}
       </div>
+
     </div>
   );
 };

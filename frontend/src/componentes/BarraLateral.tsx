@@ -277,16 +277,11 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
         } fixed left-0 top-0 h-full z-40 shadow-2xl`}
       >
         {/* Cabecera Sidebar */}
-        <div className={`flex items-center h-16 px-4 border-b border-slate-800 ${colapsado ? 'justify-center' : 'justify-between'}`}>
+        <div className={`flex items-center h-16 px-4 border-b border-slate-800 justify-center`}>
           <div className="flex items-center gap-2 overflow-hidden">
             <img src={logoImg} className="w-8 h-8 object-contain" alt="LigaCenter" />
-            {!colapsado && <span className="font-black text-white text-sm uppercase">LigaCenter</span>}
+            {!colapsado && <span className="font-black text-white text-sm uppercase font-sans tracking-tight">LigaCenter</span>}
           </div>
-          <button onClick={() => setColapsado(!colapsado)} className="text-slate-400 hover:text-white cursor-pointer animate-pulse-slow">
-            <span className="material-symbols-outlined text-xl">
-              {colapsado ? 'chevron_right' : 'chevron_left'}
-            </span>
-          </button>
         </div>
 
         {/* Listado de Navegación con Acordeones */}
@@ -380,14 +375,28 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
           </div>
 
 
+          {/* Botón Contraer/Expandir (Estilo GitLab) */}
+          <div className="px-3">
+            <button
+              onClick={() => setColapsado(!colapsado)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-slate-400 hover:bg-[#1a1d2a] hover:text-slate-200 cursor-pointer ${colapsado ? 'justify-center' : 'justify-start'}`}
+              title={colapsado ? 'Expandir barra lateral' : ''}
+            >
+              <span className="material-symbols-outlined text-xl text-slate-400">
+                {colapsado ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left'}
+              </span>
+              {!colapsado && <span className="text-xs font-bold uppercase tracking-wider">Contraer barra</span>}
+            </button>
+          </div>
+
           {/* Botón Logout al fondo */}
           <div className="px-3 pb-3">
             <button
               onClick={cerrarSesion}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-rose-455 hover:bg-rose-500/10 cursor-pointer ${colapsado ? 'justify-center' : 'justify-start'}`}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-slate-400 hover:bg-[#1a1d2a] hover:text-slate-200 cursor-pointer ${colapsado ? 'justify-center' : 'justify-start'}`}
               title={colapsado ? 'Cerrar Sesión' : ''}
             >
-              <span className="material-symbols-outlined text-xl text-rose-455">logout</span>
+              <span className="material-symbols-outlined text-xl text-slate-400">logout</span>
               {!colapsado && <span className="text-xs font-bold uppercase tracking-wider">Cerrar Sesión</span>}
             </button>
           </div>
@@ -459,9 +468,9 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
           <div className="px-4 pb-4">
             <button
               onClick={() => { cerrarSesion(); setColapsado(false); }}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-455 text-xs font-extrabold uppercase tracking-wider"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-[#1a1d2a] border border-slate-800 rounded-xl text-slate-400 hover:text-slate-200 text-xs font-extrabold uppercase tracking-wider"
             >
-              <span className="material-symbols-outlined text-sm">logout</span>
+              <span className="material-symbols-outlined text-sm text-slate-400">logout</span>
               Cerrar Sesión
             </button>
           </div>

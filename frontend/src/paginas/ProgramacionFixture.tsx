@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import Swal from 'sweetalert2';
+import { sileo } from 'sileo';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { BarraLateral } from '../componentes/BarraLateral';
-import { BotonTema } from '../componentes/BotonTema';
+import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
+import { useConfirm } from '@omit/react-confirm-dialog';
 import {
   serviciosFixture,
   serviciosParticipantes
@@ -21,6 +22,7 @@ export const ProgramacionFixture: React.FC = () => {
   const { usuario, tienePermiso, tieneRol } = useAutenticacion();
   const navegar = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const confirm = useConfirm();
   const queryTab = searchParams.get('tab');
 
   const [tabActiva, setTabActiva] = useState<TabType>('escenarios');
@@ -101,20 +103,11 @@ export const ProgramacionFixture: React.FC = () => {
   };
 
   const mostrarMensaje = (msg: string, esError: boolean = false) => {
-    Swal.mixin({
-      toast: true,
-      position: 'top-end',
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-      didOpen: (toast) => {
-        toast.onmouseenter = Swal.stopTimer;
-        toast.onmouseleave = Swal.resumeTimer;
-      }
-    }).fire({
-      icon: esError ? 'error' : 'success',
-      title: msg
-    });
+    if (esError) {
+      sileo.error({ title: 'Error', description: msg });
+    } else {
+      sileo.success({ title: 'Operación Exitosa', description: msg });
+    }
   };
 
   // Escenarios
@@ -140,27 +133,25 @@ export const ProgramacionFixture: React.FC = () => {
   };
 
   const eliminarEscenario = async (id: number) => {
-    const result = await Swal.fire({
-      title: '¿Está seguro de que desea eliminar este escenario?',
-      text: 'Esta acción no se puede deshacer y podría afectar a partidos ya programados.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#4f46e5',
-      cancelButtonColor: '#ef4444',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-      const res = await serviciosFixture.eliminarEscenario(id);
-      if (res.success) {
-        mostrarMensaje('Escenario eliminado correctamente.');
-        cargarDatos();
+    const isConfirmed = await confirm({
+      title: '¿Eliminar Escenario?',
+      description: '¿Está seguro de que desea eliminar este escenario? Esta acción no se puede deshacer y podría afectar a partidos ya programados.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      confirmButton: {
+        variant: 'destructive',
       }
-    } catch (err) {
-      mostrarMensaje('No se puede eliminar. Puede estar siendo usado en partidos.', true);
+    });
+    if (isConfirmed) {
+      try {
+        const res = await serviciosFixture.eliminarEscenario(id);
+        if (res.success) {
+          mostrarMensaje('Escenario eliminado correctamente.');
+          cargarDatos();
+        }
+      } catch {
+        mostrarMensaje('No se puede eliminar. Puede estar siendo usado en partidos.', true);
+      }
     }
   };
 
@@ -283,18 +274,7 @@ export const ProgramacionFixture: React.FC = () => {
 
       {/* Contenido principal con margen izquierdo en desktop */}
       <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
-        {/* Cabecera */}
-        <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-lg font-black text-white leading-none">Fixture y Programación</h1>
-              <span className="text-[10px] text-slate-455 font-semibold tracking-wider uppercase mt-1 block">
-                Generación de Encuentros y Asignación de Canchas
-              </span>
-            </div>
-          </div>
-          <BotonTema />
-        </header>
+        <CabeceraEstandar titulo="Fixture y Programación" subtitulo="Generación de Encuentros y Asignación de Canchas" />
 
       {/* Tabs (visibles solo en móvil ya que en desktop se navega por la barra lateral) */}
       <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2 lg:hidden">
@@ -314,7 +294,7 @@ export const ProgramacionFixture: React.FC = () => {
       </div>
 
       {/* Contenido Principal */}
-      <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+      <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto space-y-6 px-4 md:px-8">
         {cargando && (
           <div className="flex justify-center items-center py-2 text-xs font-bold text-slate-500 gap-2">
             <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin"></div>
@@ -751,6 +731,7 @@ export const ProgramacionFixture: React.FC = () => {
         </div>
       )}
       </div>
+
     </div>
   );
 };

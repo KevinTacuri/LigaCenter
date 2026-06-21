@@ -4,7 +4,7 @@ import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { serviciosUsuarios } from '../servicios/api';
 import type { Usuario, Rol } from '../servicios/api';
 import { BarraLateral } from '../componentes/BarraLateral';
-import { BotonTema } from '../componentes/BotonTema';
+import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
 
 export const GestionUsuarios: React.FC = () => {
   const { usuario, tienePermiso } = useAutenticacion();
@@ -90,21 +90,10 @@ export const GestionUsuarios: React.FC = () => {
     <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans relative overflow-hidden">
       <BarraLateral rol={usuario?.roles?.[0] || 'usuario_publico'} />
       <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
-        {/* Cabecera */}
-        <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-lg font-black text-white leading-none">Gestión de Usuarios</h1>
-              <span className="text-[10px] text-slate-455 font-semibold tracking-wider uppercase mt-1 block">
-                Administración General de Clientes
-              </span>
-            </div>
-          </div>
-          <BotonTema />
-        </header>
+        <CabeceraEstandar titulo="Gestión de Usuarios" subtitulo="Administración General de Clientes" />
 
       {/* Contenido Principal */}
-      <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+      <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto space-y-6 px-4 md:px-8">
         
         {/* Toasts */}
         {mensajeExito && (

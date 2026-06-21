@@ -128,7 +128,10 @@ clienteApi.interceptors.response.use(
       // Si el token es inválido o expiró, removemos los datos locales
       localStorage.removeItem('token_autenticacion');
       localStorage.removeItem('usuario_actual');
-      // Podríamos redirigir a login, pero dejamos que el Contexto de Autenticación lo maneje
+      localStorage.removeItem('campeonato_activo_id');
+      localStorage.removeItem('campeonato_activo_name');
+      localStorage.removeItem('campeonato_activo_type');
+      localStorage.removeItem('campeonato_activo_status');
     }
     return Promise.reject(error);
   }

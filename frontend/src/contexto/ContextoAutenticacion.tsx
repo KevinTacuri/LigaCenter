@@ -68,6 +68,12 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
       const respuesta = await serviciosAutenticacion.iniciarSesion({ email, password: contrasenia });
       if (respuesta.success && respuesta.data) {
         const { user, token: tokenApi } = respuesta.data;
+        // Limpiar campeonato previo para evitar inconsistencia de sesión
+        localStorage.removeItem('campeonato_activo_id');
+        localStorage.removeItem('campeonato_activo_name');
+        localStorage.removeItem('campeonato_activo_type');
+        localStorage.removeItem('campeonato_activo_status');
+        
         localStorage.setItem('token_autenticacion', tokenApi);
         setToken(tokenApi);
         setUsuario(user);
@@ -107,6 +113,12 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
 
       if (respuesta.success && respuesta.data) {
         const { user, token: tokenApi } = respuesta.data;
+        // Limpiar campeonato previo para evitar inconsistencia de sesión
+        localStorage.removeItem('campeonato_activo_id');
+        localStorage.removeItem('campeonato_activo_name');
+        localStorage.removeItem('campeonato_activo_type');
+        localStorage.removeItem('campeonato_activo_status');
+
         localStorage.setItem('token_autenticacion', tokenApi);
         setToken(tokenApi);
         setUsuario(user);
@@ -133,11 +145,18 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
       console.error('Error cerrando sesión en servidor, cerrando localmente:', e);
     } finally {
       localStorage.removeItem('token_autenticacion');
+      localStorage.removeItem('campeonato_activo_id');
+      localStorage.removeItem('campeonato_activo_name');
+      localStorage.removeItem('campeonato_activo_type');
+      localStorage.removeItem('campeonato_activo_status');
       setToken(null);
       setUsuario(null);
       setCargando(false);
+      // Redirigir y forzar recarga para limpiar todos los contextos en memoria
+      window.location.href = '/login';
     }
   };
+
 
   // Verificar si el usuario tiene un rol determinado
   const tieneRol = (rol: string): boolean => {
