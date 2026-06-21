@@ -14,8 +14,7 @@ class Category extends Model
         'name',
         'format',
         'format_settings',
-        'championship_id',
-        'discipline_id',
+        'championship_discipline_id',
         'description',
         'gender_type',
         'age_min',
@@ -33,14 +32,9 @@ class Category extends Model
         return $this->hasMany(Team::class);
     }
 
-    public function championship()
+    public function championshipDiscipline()
     {
-        return $this->belongsTo(Championship::class);
-    }
-
-    public function discipline()
-    {
-        return $this->belongsTo(Discipline::class);
+        return $this->belongsTo(ChampionshipDiscipline::class);
     }
 
     public function matches()
