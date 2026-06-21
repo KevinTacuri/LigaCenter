@@ -8,6 +8,9 @@ use App\Models\Championship;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
+use App\Http\Resources\TeamResource;
+use App\Models\Category;
+use \App\Http\Resources\TeamListResource;
 
 #[OA\Tag(
     name: "Teams",
@@ -18,29 +21,30 @@ class TeamController extends Controller
     use ApiResponse;
 
     #[OA\Get(
-        path: "/api/teams",
+        path: "/categories/{category_id}/teams",
         summary: "Listar equipos",
-        description: "Retorna todos los equipos de un campeonato específico.",
+        description: "Retorna una lista de equipos registrados en una categoría específica.",
         tags: ["Teams"],
         security: [["sanctum" => []]],
         parameters: [
-            new OA\Parameter(name: "championship_id", in: "query", required: true, schema: new OA\Schema(type: "integer"))
+            new OA\Parameter(name: "category_id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
         ],
         responses: [
-            new OA\Response(response: 200, description: "Equipos obtenidos exitosamente")
+            new OA\Response(response: 200, description: "Equipos obtenidos exitosamente"),
+            new OA\Response(response: 404, description: "Categoría no encontrada")
         ]
     )]
-    public function index(Request $request)
+    public function index($categoryId)
     {
-        $request->validate([
-            'championship_id' => 'required|exists:championships,id',
-        ]);
+        $category = Category::find($categoryId);
 
-        $teams = Team::where('championship_id', $request->championship_id)
-            ->with(['category.discipline', 'players'])
-            ->get();
+        if (!$category) {
+            return $this->errorResponse('Categoría no encontrada', 404);
+        }
 
-        return $this->successResponse($teams, 'Equipos obtenidos exitosamente');
+        $teams = $category->teams()->withCount('players')->get();
+
+        return $this->successResponse(TeamListResource::collection($teams), 'Equipos obtenidos exitosamente');
     }
 
     #[OA\Post(
@@ -80,9 +84,14 @@ class TeamController extends Controller
             'registration_status' => 'nullable|string',
         ]);
 
-        $category = \App\Models\Category::findOrFail($request->category_id);
-        if ($category->championship_id != $request->championship_id) {
-            return $this->errorResponse('La categoría no pertenece a este campeonato', 422);
+        $category = Category::find($request->category_id);
+
+        if (!$category) {
+            return $this->errorResponse('Categoría no encontrada', 404);
+        }
+
+        if ($category->championshipDiscipline->championship_id != $request->championship_id) {
+            return $this->errorResponse('La disciplina de la categoría no pertenece a este campeonato', 422);
         }
 
         $team = Team::create([
@@ -114,13 +123,19 @@ class TeamController extends Controller
     )]
     public function show($id)
     {
-        $team = Team::with(['category.discipline', 'players'])->find($id);
+        $team = Team::with([
+            'category.championshipDiscipline.discipline',
+            'players'
+        ])->find($id);
 
         if (!$team) {
             return $this->errorResponse('Equipo no encontrado', 404);
         }
 
-        return $this->successResponse($team, 'Equipo obtenido exitosamente');
+        return $this->successResponse(
+            new TeamResource($team),
+            'Equipo obtenido exitosamente'
+        );
     }
 
     #[OA\Put(
