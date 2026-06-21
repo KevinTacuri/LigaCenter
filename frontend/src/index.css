@@ -1,53 +1,137 @@
 @import "tailwindcss";
 
-@theme {
-  --color-primary: #800f2f;                 /* Rojo Carmesí/Vino Premium */
-  --color-primary-container: #11131c;       /* Fondo de Tarjeta */
-  --color-on-primary-container: #f1f5f9;    /* Texto Claro Slate */
-  --color-on-primary: #ffffff;
+:root {
+  /* Default: Dark Mode */
+  --primary: #800f2f;                 /* Rojo Carmesí/Vino Premium */
+  --primary-container: #11131c;       /* Fondo de Tarjeta */
+  --on-primary-container: #f1f5f9;    /* Texto Claro Slate */
+  --on-primary: #ffffff;
   
-  --color-secondary: #b2224d;               /* Vino/Carmesí Acento */
-  --color-secondary-container: #171a26;     /* Gris-Vino Oscuro */
-  --color-on-secondary-container: #ffffff;
+  --secondary: #b2224d;               /* Vino/Carmesí Acento */
+  --secondary-container: #171a26;     /* Gris-Vino Oscuro */
+  --on-secondary-container: #ffffff;
 
-  --color-surface: #0a0b10;                 /* Fondo Oscuro Profundo */
-  --color-surface-dim: #07080c;             /* Sección Interna */
-  --color-surface-bright: #171a26;          /* Fondo Inputs */
-  --color-surface-container-lowest: #11131c; /* Tarjetas Base */
-  --color-surface-container-low: #07080c;
-  --color-surface-container-high: #1c1f2e;
-  --color-surface-container-highest: #2a2e3f;
+  --surface: #0a0b10;                 /* Fondo Oscuro Profundo */
+  --surface-dim: #07080c;             /* Sección Interna */
+  --surface-bright: #171a26;          /* Fondo Inputs */
+  --surface-container-lowest: #11131c; /* Tarjetas Base */
+  --surface-container-low: #07080c;
+  --surface-container-high: #1c1f2e;
+  --surface-container-highest: #2a2e3f;
 
-  --color-on-surface: #f1f5f9;              /* Texto Principal */
-  --color-on-surface-variant: #94a3b8;      /* Texto Muted */
+  --on-surface: #f1f5f9;              /* Texto Principal */
+  --on-surface-variant: #94a3b8;      /* Texto Muted */
 
-  --color-outline: #1e2235;                 /* Bordes */
-  --color-outline-variant: #1e2235;
+  --outline: #1e2235;                 /* Bordes */
+
+  --hover-bg: #171a26;
+  --hover-text: #ffffff;
+
+  /* Redireccionar el color indigo (azul-morado) a la familia del vino/carmesí */
+  --indigo-50: #fff0f3;
+  --indigo-100: #ffccd5;
+  --indigo-200: #ffb3c1;
+  --indigo-300: #ff758f;
+  --indigo-400: #cc3965;
+  --indigo-500: #b2224d;
+  --indigo-600: #800f2f;
+  --indigo-650: #800f2f;
+  --indigo-700: #660c25;
+  --indigo-800: #590d22;
+  --indigo-900: #3f0713;
+  --indigo-950: #1a0208;
+}
+
+.light {
+  /* Light Mode - Sober, pastel, logo corporate blue synergy */
+  --primary: #193b70;                 /* Azul Corporativo (Logo) */
+  --primary-container: #ffffff;       /* Fondo de Tarjeta Blanco */
+  --on-primary-container: #0f172a;    /* Texto Oscuro Slate */
+  --on-primary: #ffffff;
+  
+  --secondary: #2c9b90;               /* Turquesa Logo (oscurecido para contraste) */
+  --secondary-container: #f1f5f9;     /* Fondo gris claro pastel */
+  --on-secondary-container: #0f172a;
+
+  --surface: #f8fafc;                 /* Fondo Claro Minimalista (Slate 50) */
+  --surface-dim: #f1f5f9;             /* Sección Interna Clara (Slate 100) */
+  --surface-bright: #ffffff;          /* Fondo Inputs */
+  --surface-container-lowest: #ffffff; /* Tarjetas Base Blancas */
+  --surface-container-low: #f8fafc;
+  --surface-container-high: #e2e8f0;
+  --surface-container-highest: #cbd5e1;
+
+  --on-surface: #0f172a;              /* Texto Principal Oscuro */
+  --on-surface-variant: #64748b;      /* Texto Secundario / Muted */
+
+  --outline: #e2e8f0;                 /* Bordes Claros */
+
+  --hover-bg: #e2e8f0;
+  --hover-text: #0f172a;
+
+  /* Redireccionar el color indigo a la familia del azul corporativo en tema claro */
+  --indigo-50: #f0f4fa;
+  --indigo-100: #dbeafe;
+  --indigo-200: #bfdbfe;
+  --indigo-300: #93c5fd;
+  --indigo-400: #40c2b5;              /* Turquesa del logo como acento claro */
+  --indigo-500: #1d4ed8;
+  --indigo-600: #193b70;              /* Azul corporativo */
+  --indigo-650: #193b70;
+  --indigo-700: #14305c;
+  --indigo-800: #0f2547;
+  --indigo-900: #0a1a33;
+  --indigo-950: #050d1a;
+}
+
+@theme {
+  --color-primary: var(--primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-on-primary: var(--on-primary);
+  
+  --color-secondary: var(--secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary-container: var(--on-secondary-container);
+
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline);
+
+  --color-indigo-50: var(--indigo-50);
+  --color-indigo-100: var(--indigo-100);
+  --color-indigo-200: var(--indigo-200);
+  --color-indigo-300: var(--indigo-300);
+  --color-indigo-400: var(--indigo-400);
+  --color-indigo-500: var(--indigo-500);
+  --color-indigo-600: var(--indigo-650);
+  --color-indigo-650: var(--indigo-650);
+  --color-indigo-700: var(--indigo-700);
+  --color-indigo-800: var(--indigo-800);
+  --color-indigo-900: var(--indigo-900);
+  --color-indigo-950: var(--indigo-950);
 
   --color-error: #ba1a1a;
   --color-error-container: #ffdad6;
   --color-on-error: #ffffff;
   --color-on-error-container: #93000a;
-
-  /* Redireccionar el color indigo (azul-morado) a la familia del vino/carmesí para uniformizar toda la app */
-  --color-indigo-50: #fff0f3;
-  --color-indigo-100: #ffccd5;
-  --color-indigo-200: #ffb3c1;
-  --color-indigo-300: #ff758f;
-  --color-indigo-400: #cc3965;
-  --color-indigo-500: #b2224d;
-  --color-indigo-600: #800f2f;
-  --color-indigo-650: #800f2f;
-  --color-indigo-700: #660c25;
-  --color-indigo-800: #590d22;
-  --color-indigo-900: #3f0713;
-  --color-indigo-950: #1a0208;
 }
 
 body {
-  background-color: #0a0b10;
-  color: #f1f5f9;
+  background-color: var(--surface);
+  color: var(--on-surface);
   overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Estilo para el diseño de proporción áurea */
@@ -81,143 +165,208 @@ body {
    ========================================================================== */
 
 /* 1. Backgrounds & Containers */
-body, html {
+:root:not(.light) body, :root:not(.light) html {
   background-color: #0a0b10 !important;
   color: #f1f5f9 !important;
 }
 
-.bg-\[\#f4f6f7\], 
-.bg-slate-50, 
-.bg-slate-100 {
+:root:not(.light) .bg-\[\#f4f6f7\], 
+:root:not(.light) .bg-slate-50, 
+:root:not(.light) .bg-slate-100 {
   background-color: #0a0b10 !important;
 }
 
-.bg-white, 
-.bg-white\/90, 
-.bg-surface-container-lowest,
-.bg-surface-bright {
+:root:not(.light) .bg-white, 
+:root:not(.light) .bg-white\/90, 
+:root:not(.light) .bg-surface-container-lowest,
+:root:not(.light) .bg-surface-bright {
   background-color: #11131c !important;
 }
 
-.bg-slate-50\/50,
-.bg-slate-100\/60,
-.bg-\[\#07080c\] {
+:root:not(.light) .bg-slate-50\/50,
+:root:not(.light) .bg-slate-100\/60,
+:root:not(.light) .bg-\[\#07080c\] {
   background-color: #07080c !important;
 }
 
 /* 2. Borders */
-.border-slate-200, 
-.border-slate-200\/80, 
-.border-slate-100, 
-.border-slate-150,
-.border-slate-300,
-.border-outline-variant,
-.border-outline-variant\/60 {
+:root:not(.light) .border-slate-200, 
+:root:not(.light) .border-slate-200\/80, 
+:root:not(.light) .border-slate-100, 
+:root:not(.light) .border-slate-150,
+:root:not(.light) .border-slate-300,
+:root:not(.light) .border-outline-variant,
+:root:not(.light) .border-outline-variant\/60 {
   border-color: #1e2235 !important;
 }
 
 /* 3. Text Colors */
-.text-slate-900, 
-.text-slate-800, 
-.text-slate-950,
-.text-slate-900:hover {
+:root:not(.light) .text-slate-900, 
+:root:not(.light) .text-slate-800, 
+:root:not(.light) .text-slate-950,
+:root:not(.light) .text-slate-900:hover {
   color: #ffffff !important;
 }
 
-.text-slate-700, 
-.text-slate-600 {
+:root:not(.light) .text-slate-700, 
+:root:not(.light) .text-slate-600 {
   color: #cbd5e1 !important;
 }
 
-.text-slate-500,
-.text-slate-400 {
+:root:not(.light) .text-slate-500,
+:root:not(.light) .text-slate-400 {
   color: #94a3b8 !important;
 }
 
 /* 4. Form Controls (Inputs, Selects, Textareas) */
-input, select, textarea {
+:root:not(.light) input, :root:not(.light) select, :root:not(.light) textarea {
   background-color: #171a26 !important;
   color: #ffffff !important;
   border-color: #1e2235 !important;
 }
 
-input:focus, select:focus, textarea:focus {
+:root:not(.light) input:focus, :root:not(.light) select:focus, :root:not(.light) textarea:focus {
   border-color: #4f46e5 !important;
   outline: none !important;
 }
 
-select option {
+:root:not(.light) select option {
   background-color: #11131c !important;
   color: #ffffff !important;
 }
 
-input::placeholder, textarea::placeholder {
+:root:not(.light) input::placeholder, :root:not(.light) textarea::placeholder {
   color: #475569 !important;
 }
 
 /* 5. Badges & Status Indicators */
-.bg-emerald-50,
-.bg-emerald-500\/10 {
+:root:not(.light) .bg-emerald-50,
+:root:not(.light) .bg-emerald-500\/10 {
   background-color: rgba(16, 185, 129, 0.1) !important;
   color: #34d399 !important;
   border-color: rgba(16, 185, 129, 0.2) !important;
 }
-.text-emerald-600, .text-emerald-700, .text-emerald-800 {
+:root:not(.light) .text-emerald-600, :root:not(.light) .text-emerald-700, :root:not(.light) .text-emerald-800 {
   color: #34d399 !important;
 }
 
-.bg-rose-50,
-.bg-rose-500\/10 {
+:root:not(.light) .bg-rose-50,
+:root:not(.light) .bg-rose-500\/10 {
   background-color: rgba(239, 68, 68, 0.1) !important;
   color: #f87171 !important;
   border-color: rgba(239, 68, 68, 0.2) !important;
 }
-.text-rose-600, .text-rose-700, .text-rose-800 {
+:root:not(.light) .text-rose-600, :root:not(.light) .text-rose-700, :root:not(.light) .text-rose-800 {
   color: #f87171 !important;
 }
 
-.bg-amber-50,
-.bg-amber-500\/10 {
+:root:not(.light) .bg-amber-50,
+:root:not(.light) .bg-amber-500\/10 {
   background-color: rgba(245, 158, 11, 0.1) !important;
   color: #fbbf24 !important;
   border-color: rgba(245, 158, 11, 0.2) !important;
 }
-.text-amber-600, .text-amber-700, .text-amber-800, .text-amber-900 {
+:root:not(.light) .text-amber-600, :root:not(.light) .text-amber-700, :root:not(.light) .text-amber-800, :root:not(.light) .text-amber-900 {
   color: #fbbf24 !important;
 }
 
-.bg-blue-50,
-.bg-blue-500\/10 {
+:root:not(.light) .bg-blue-50,
+:root:not(.light) .bg-blue-500\/10 {
   background-color: rgba(59, 130, 246, 0.1) !important;
   color: #60a5fa !important;
   border-color: rgba(59, 130, 246, 0.2) !important;
 }
-.text-blue-600, .text-blue-700, .text-blue-800 {
+:root:not(.light) .text-blue-600, :root:not(.light) .text-blue-700, :root:not(.light) .text-blue-800 {
   color: #60a5fa !important;
 }
 
 /* 6. Navigation Tabs & Interactive Elements hover */
-.hover\:bg-slate-100:hover,
-.hover\:bg-slate-50:hover {
+:root:not(.light) .hover\:bg-slate-100:hover,
+:root:not(.light) .hover\:bg-slate-50:hover {
   background-color: #171a26 !important;
   color: #ffffff !important;
 }
 
 /* 7. Buttons contrast preservation */
-button.bg-primary, 
-button.bg-secondary,
-.bg-primary-container,
-.bg-indigo-650 {
+:root:not(.light) button.bg-primary, 
+:root:not(.light) button.bg-secondary,
+:root:not(.light) .bg-primary-container,
+:root:not(.light) .bg-indigo-650 {
   color: #ffffff !important;
 }
 
-button.bg-amber-650,
-button.bg-amber-600,
-button.bg-amber-500 {
+:root:not(.light) button.bg-amber-650,
+:root:not(.light) button.bg-amber-600,
+:root:not(.light) button.bg-amber-500 {
   color: #ffffff !important;
 }
 
 /* ==========================================================================
-   INTERACTIVE GRID BACKGROUND (MODERN SUITE DESIGN)
+   GLOBAL LIGHT MODE PREMIUM OVERRIDES
    ========================================================================== */
-/* Removed as per user request */
+.light body, .light html {
+  background-color: var(--surface) !important;
+  color: var(--on-surface) !important;
+}
+
+.light input, .light select, .light textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+.light select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+.light input::placeholder, .light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+.light input:focus, .light select:focus, .light textarea:focus {
+  border-color: #193b70 !important;
+  outline: none !important;
+}
+
+/* Hardcoded bg color overrides for light mode */
+.light .bg-\[\#0c0e16\],
+.light .bg-\[\#090a10\],
+.light .bg-surface-dim {
+  background-color: #f1f5f9 !important; /* Soft light gray/blue sidebar */
+}
+.light .bg-\[\#11131c\],
+.light .bg-\[\#171a26\],
+.light .bg-surface-container-lowest,
+.light .bg-surface-bright {
+  background-color: #ffffff !important; /* White for cards */
+}
+.light .border-slate-800,
+.light .border-slate-850,
+.light .border-slate-900,
+.light .border-outline-variant {
+  border-color: #e2e8f0 !important; /* Soft slate border */
+}
+.light .text-white {
+  color: #0f172a !important; /* Dark text */
+}
+.light .text-indigo-400 {
+  color: #193b70 !important; /* E.g. active menu items */
+}
+.light .bg-indigo-500\/5 {
+  background-color: rgba(25, 59, 112, 0.08) !important; /* Soft active item bg */
+}
+.light .bg-rose-500\/10 {
+  background-color: rgba(239, 68, 68, 0.08) !important;
+}
+
+/* Gray colors text mapping */
+.light .text-slate-400,
+.light .text-slate-350,
+.light .text-slate-300,
+.light .text-slate-305,
+.light .text-slate-200 {
+  color: #334155 !important; /* Slate 700 */
+}
+.light .text-slate-500,
+.light .text-slate-450,
+.light .text-slate-455 {
+  color: #64748b !important; /* Slate 500 */
+}
