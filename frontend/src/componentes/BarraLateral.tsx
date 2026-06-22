@@ -40,7 +40,8 @@ const obtenerPastelColorSidebar = (nombre: string) => {
 
 const subMenus: Record<string, SubItemMenu[]> = {
   teams: [
-    { id: 'disciplinas', titulo: 'Disciplinas', query: 'tab=disciplinas' },
+    // Ocultamos "Disciplinas" por ahora para simplificar, pero se puede reactivar fácilmente si se necesita
+    // { id: 'disciplinas', titulo: 'Disciplinas', query: 'tab=disciplinas' }, 
     { id: 'categorias', titulo: 'Categorías', query: 'tab=categorias' },
     { id: 'equipos', titulo: 'Equipos', query: 'tab=equipos' },
     { id: 'jugadores', titulo: 'Jugadores', query: 'tab=jugadores' },
@@ -154,7 +155,9 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
     if (!isActive(item.ruta)) return false;
     const currentQuery = location.search.replace('?', '');
     if (!currentQuery) {
-      if (item.id === 'teams' && sub.id === 'disciplinas') return true;
+      // Cambiamos la pestaña por defecto "Disciplinas" por ahora para simplificar, pero se puede reactivar fácilmente si se necesita
+      // if (item.id === 'teams' && sub.id === 'disciplinas') return true; 
+      if (item.id === 'teams' && sub.id === 'categorias') return true;
       if (item.id === 'fixture' && sub.id === 'escenarios') return true;
       if (item.id === 'posiciones' && sub.id === 'posiciones') return true;
       return false;

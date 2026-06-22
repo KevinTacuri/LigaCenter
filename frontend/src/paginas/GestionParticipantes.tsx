@@ -166,7 +166,9 @@ export const GestionParticipantes: React.FC = () => {
   const confirm = useConfirm();
   const queryTab = searchParams.get('tab');
 
-  const [tabActiva, setTabActiva] = useState<TabType>('disciplinas');
+  // Iniciamos en 'categorias' porque es el módulo más utilizado y el de "disciplinas" lo ocultamos por ahora para simplificar, pero se puede cambiar fácilmente si se prefiere otro tab como predeterminado o reactivar "disciplinas"
+  // const [tabActiva, setTabActiva] = useState<TabType>('disciplinas');
+  const [tabActiva, setTabActiva] = useState<TabType>('categorias');
 
   useEffect(() => {
     if (queryTab && queryTab !== tabActiva) {
@@ -640,7 +642,8 @@ export const GestionParticipantes: React.FC = () => {
   const opcsEquipos: { id: number; label: string }[] = equipos.map(e => ({ id: e.id, label: e.name }));
 
   const TABS: { key: TabType; label: string; nuevo?: boolean }[] = [
-    { key: 'disciplinas', label: 'Disciplinas' },
+    // Ocultamos el TAB de "Disciplinas" por ahora para simplificar, pero se puede reactivar fácilmente si se necesita
+    // { key: 'disciplinas', label: 'Disciplinas' },
     { key: 'categorias', label: 'Categorías' },
     { key: 'equipos', label: 'Equipos' },
     { key: 'jugadores', label: 'Jugadores' },
