@@ -9,26 +9,27 @@ use OpenApi\Attributes as OA;
 
 #[OA\Tag(
     name: "Disciplines",
-    description: "Gestión de disciplinas deportivas como fútbol, vóley, básquet, etc."
+    description: "Gestión de catálogo de disciplinas deportivas disponibles en el sistema."
 )]
 class DisciplineController extends Controller
 {
+
     #[OA\Get(
         path: "/api/disciplines",
         summary: "Listar disciplinas",
-        description: "Retorna todas las disciplinas registradas en el sistema junto con los equipos asociados a cada disciplina.",
+        description: "Retorna el catálogo de disciplinas deportivas disponibles para ser asociadas a un campeonato.",
         tags: ["Disciplines"],
         responses: [
             new OA\Response(
                 response: 200,
-                description: "Listado de disciplinas obtenido correctamente"
+                description: "Catálogo de disciplinas obtenido correctamente"
             )
         ]
     )]
     public function index()
     {
         return response()->json(
-            Discipline::with('teams')->get()
+            Discipline::orderBy('name')->get()
         );
     }
 
@@ -205,4 +206,6 @@ class DisciplineController extends Controller
             'message' => 'Disciplina eliminada correctamente'
         ]);
     }
+
+
 }

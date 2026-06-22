@@ -62,4 +62,15 @@ class Championship extends Model
     {
         return $this->hasMany(Standing::class);
     }
+
+    public function championshipDisciplines()
+    {
+        return $this->hasMany(ChampionshipDiscipline::class);
+    }
+
+    public function disciplines()
+    {
+        return $this->belongsToMany(Discipline::class, 'championship_disciplines')
+            ->withTimestamps();
+    }
 }

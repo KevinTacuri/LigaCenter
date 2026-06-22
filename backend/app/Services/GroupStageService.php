@@ -12,6 +12,16 @@ class GroupStageService
 {
     public function generateGroups($championshipId, $categoryId, $settings, $startDate, $venueIds)
     {
+        Group::where('championship_id', $championshipId)
+            ->where('category_id', $categoryId)
+            ->delete();
+
+        GameMatch::where('championship_id', $championshipId)
+            ->where('category_id', $categoryId)
+            ->where('phase', 'grupos')
+            ->delete();
+
+
         $teams = Team::where('championship_id', $championshipId)
             ->where('category_id', $categoryId)
             ->where('registration_status', 'aprobado')

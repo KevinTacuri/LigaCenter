@@ -16,11 +16,12 @@ class KnockoutService
         }
 
         $numTeams = $qualifiedTeams->count();
-        $numPhases =(int) log($numTeams, 2);
 
-        if (!is_int($numPhases)) {
+        if (($numTeams & ($numTeams - 1)) !== 0) {
             throw new \Exception('El número de equipos debe ser potencia de 2 para eliminatoria directa');
         }
+
+        $numPhases = (int) log($numTeams, 2);
 
         $phaseNames = $this->getPhaseNames($numPhases);
         $matches = [];

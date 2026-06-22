@@ -10,3 +10,5 @@ require __DIR__ . '/api/fixture.php';
 require __DIR__ . '/api/results.php';
 require __DIR__ . '/api/statistics.php';
 require __DIR__ . '/api/groups.php';
+require __DIR__ . '/api/championship-disciplines.php';
+require __DIR__ . '/api/categories.php';
