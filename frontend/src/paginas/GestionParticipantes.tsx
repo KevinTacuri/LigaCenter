@@ -211,6 +211,72 @@ export const GestionParticipantes: React.FC = () => {
   const [nuevoEq, setNuevoEq] = useState({ name: '', representative: '', discipline_id: '', category_id: '' });
   const [nuevoJug, setNuevoJug] = useState({ name: '', dni: '', age: '', phone: '', team_id: '', number: '', position: 'Delantero' });
 
+  // Agregar estado del modo de registro (Modo manual o Modo carga masiva)
+  const [modoJugador, setModoJugador] = useState<'manual' | 'masiva'>('manual');
+  const [archivoCsv, setArchivoCsv] = useState<File | null>(null);
+  const [cargandoCsv, setCargandoCsv] = useState(false);
+  const [resultadoCarga, setResultadoCarga] = useState<{ ok: number; errores: string[] } | null>(null);
+  const inputArchivoRef = useRef<HTMLInputElement>(null);
+
+  // Agregar función de procesamiento CSV (Modo carga masiva)
+  const procesarCsvJugadores = async () => {
+  if (!archivoCsv || equipoIdMasiva === null) return;
+  // ahora usa el estado directamente ↑
+  setCargandoCsv(true);
+  setResultadoCarga(null);
+  try {
+    const texto = await archivoCsv.text();
+    const lineas = texto.split('\n').map(l => l.trim()).filter(Boolean);
+    const filas = lineas.slice(1);
+    let ok = 0;
+    const errores: string[] = [];
+
+    for (let i = 0; i < filas.length; i++) {
+      const cols = filas[i].split(/[,;\t]/).map(c => c.trim().replace(/^"|"$/g, ''));
+      const [nombre, dni, edad, dorsal] = cols;
+      if (!nombre || !edad) {
+        errores.push(`Fila ${i + 2}: Faltan campos obligatorios (nombre, edad).`);
+        continue;
+      }
+      try {
+        const res = await serviciosParticipantes.crearJugador({
+          full_name: nombre,
+          team_id: equipoIdMasiva,  // ← lee el estado correctamente
+          dni: dni || null,
+          age: parseInt(edad),
+          number: dorsal ? parseInt(dorsal) : null,
+          position: null,
+        });
+        if (res.success) ok++;
+        else errores.push(`Fila ${i + 2}: ${res.message || 'Error desconocido.'}`);
+      } catch (err: any) {
+        errores.push(`Fila ${i + 2}: ${err.response?.data?.message || 'Error al guardar.'}`);
+      }
+    }
+
+    setResultadoCarga({ ok, errores });
+    if (ok > 0) {
+      mostrarMensaje(`${ok} jugador(es) importado(s) exitosamente.`);
+      cargarDatos();
+    }
+  } catch {
+    mostrarMensaje('No se pudo leer el archivo CSV.', true);
+  } finally {
+    setCargandoCsv(false);
+  }
+};
+
+  const descargarPlantilla = () => {
+    const cabecera = 'nombre_completo,dni,edad,dorsal\n';
+    const ejemplo  = 'Juan Pérez,12345678,22,10\n';
+    const blob = new Blob([cabecera + ejemplo], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'plantilla_jugadores.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+
   // ── Estado: Tab "registro-equipo" ──────────
   const [reqEq, setReqEq] = useState({
     nombre: '',
@@ -225,6 +291,7 @@ export const GestionParticipantes: React.FC = () => {
   const [equipoSel, setEquipoSel] = useState<Equipo | null>(null);
   const [filasJugadores, setFilasJugadores] = useState<FilaJugador[]>([]);
   const [cargandoPlanilla, setCargandoPlanilla] = useState(false);
+  const [equipoIdMasiva, setEquipoIdMasiva] = useState<number | null>(null);
 
   // ─────────────────────────────────────────────
   // EFECTOS
@@ -886,46 +953,219 @@ export const GestionParticipantes: React.FC = () => {
               )}
 
               {tabActiva === 'jugadores' && (
-                <form onSubmit={guardarJugador} className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Nombre Completo *</label>
-                    <input type="text" required placeholder="Nombre del jugador"
-                      value={nuevoJug.name} onChange={(e) => setNuevoJug({ ...nuevoJug, name: e.target.value })}
-                      className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
+                <div className="space-y-4">
+
+                  {/* Toggle Modo */}
+                  <div className="flex rounded-xl border border-slate-200 overflow-hidden text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => { setModoJugador('manual'); setResultadoCarga(null); }}
+                      className={`flex-1 py-2.5 flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        modoJugador === 'manual'
+                          ? 'bg-indigo-600 text-white'
+                          : 'text-slate-500 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-sm">person_add</span>
+                      Registro Manual
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setModoJugador('masiva'); setResultadoCarga(null); }}
+                      className={`flex-1 py-2.5 flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        modoJugador === 'masiva'
+                          ? 'bg-sky-600 text-white'
+                          : 'text-slate-500 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-sm">upload_file</span>
+                      Carga Masiva
+                    </button>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-700 block">DNI / Documento</label>
-                      <input type="text" placeholder="DNI"
-                        value={nuevoJug.dni} onChange={(e) => setNuevoJug({ ...nuevoJug, dni: e.target.value })}
-                        className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
+
+                  {/* ── MODO MANUAL ── */} 
+                  {modoJugador === 'manual' && (
+                    <form onSubmit={guardarJugador} className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">Nombre Completo *</label>
+                        <input type="text" required placeholder="Nombre del jugador"
+                          value={nuevoJug.name} onChange={(e) => setNuevoJug({ ...nuevoJug, name: e.target.value })}
+                          className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700 block">DNI / Documento</label>
+                          <input type="text" placeholder="DNI"
+                            value={nuevoJug.dni} onChange={(e) => setNuevoJug({ ...nuevoJug, dni: e.target.value })}
+                            className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700 block">Edad *</label>
+                          <input type="number" required placeholder="Edad" min="1"
+                            value={nuevoJug.age} onChange={(e) => setNuevoJug({ ...nuevoJug, age: e.target.value })}
+                            className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700 block">Dorsal</label>
+                          <input type="number" placeholder="Ej: 10"
+                            value={nuevoJug.number} onChange={(e) => setNuevoJug({ ...nuevoJug, number: e.target.value })}
+                            className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">Equipo *</label>
+                        <select required value={nuevoJug.team_id}
+                          onChange={(e) => setNuevoJug({ ...nuevoJug, team_id: e.target.value })}
+                          className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
+                          <option value="">Seleccionar Equipo</option>
+                          {equipos.map((eq) => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
+                        </select>
+                      </div>
+                      <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer">
+                        Guardar Jugador
+                      </button>
+                    </form>
+                  )}
+
+                  {/* ── MODO CARGA MASIVA ── */}
+                  {modoJugador === 'masiva' && (
+                    <div className="space-y-3">
+
+                        {/* Selector de equipo — NUEVO */}
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 block">Equipo destino *</label>
+                          <select
+                            value={equipoIdMasiva ?? ''}
+                            onChange={(e) => {
+                              setEquipoIdMasiva(e.target.value ? parseInt(e.target.value) : null);
+                              setResultadoCarga(null);
+                              setArchivoCsv(null);  // ← limpiar también el archivo
+                              if (inputArchivoRef.current) inputArchivoRef.current.value = '';
+                            }}
+                            className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                          >
+                            <option value="">-- Selecciona el equipo --</option>
+                            {equipos.map((eq) => (
+                              <option key={eq.id} value={eq.id}>{eq.name}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                      {/* Drop zone */}
+                      <div
+                        onClick={() => inputArchivoRef.current?.click()}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const file = e.dataTransfer.files[0];
+                          if (file && (file.name.endsWith('.csv') || file.name.endsWith('.xlsx'))) {
+                            setArchivoCsv(file);
+                            setResultadoCarga(null);
+                          } else {
+                            mostrarMensaje('Solo se permiten archivos CSV.', true);
+                          }
+                        }}
+                        className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:border-sky-400 hover:bg-sky-50/30 transition-all"
+                      >
+                        <span className="material-symbols-outlined text-3xl text-slate-300 block mb-2">cloud_upload</span>
+                        {archivoCsv ? (
+                          <div>
+                            <p className="text-xs font-bold text-sky-700">{archivoCsv.name}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">{(archivoCsv.size / 1024).toFixed(1)} KB · Haz clic para cambiar</p>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-xs font-bold text-slate-600">Arrastra tu archivo aquí</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">Formatos permitidos: .CSV (Máx. 10MB)</p>
+                          </div>
+                        )}
+                        <input
+                          ref={inputArchivoRef}
+                          type="file"
+                          accept=".csv"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) { setArchivoCsv(file); setResultadoCarga(null); }
+                          }}
+                        />
+                      </div>
+
+                      {/* Acciones inferiores */}
+                      <div className="flex items-center justify-between text-[10px]">
+                        <button
+                          type="button"
+                          onClick={descargarPlantilla}
+                          className="flex items-center gap-1 text-sky-600 font-bold hover:underline cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-xs">download</span>
+                          Descargar Plantilla .XLSX
+                        </button>
+                        <span className="flex items-center gap-1 text-slate-400 font-semibold">
+                          <span className="material-symbols-outlined text-xs text-amber-500">info</span>
+                          Validación automática activa
+                        </span>
+                      </div>
+
+                      {/* Botón procesar */}
+                      <button
+                        type="button"
+                        onClick={procesarCsvJugadores}
+                        disabled={!archivoCsv || !equipoIdMasiva || cargandoCsv}
+                        className="
+                          w-full relative overflow-hidden
+                          py-3 rounded-xl text-xs font-bold tracking-wide uppercase
+                          flex items-center justify-center gap-2
+                          transition-all duration-200 cursor-pointer
+                          focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2
+                          disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none
+                          bg-sky-600 hover:bg-sky-500 active:bg-sky-700
+                          shadow-md hover:shadow-sky-500/40 hover:shadow-lg active:shadow-none
+                          active:scale-[0.98] hover:scale-[1.01]
+                          text-white
+                        "
+                      >
+                        {/* Brillo superior al hacer hover */}
+                        <span className="absolute inset-x-0 top-0 h-px bg-white/30 rounded-full pointer-events-none" />
+
+                        {cargandoCsv ? (
+                          <>
+                            <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Procesando...
+                          </>
+                        ) : (
+                          <>
+                            <span className="material-symbols-outlined text-base">cloud_upload</span>
+                            Iniciar Carga
+                          </>
+                        )}
+                      </button>
+
+                      {/* Resultado */}
+                      {resultadoCarga && (
+                        <div className="rounded-xl border overflow-hidden text-xs">
+                          {resultadoCarga.ok > 0 && (
+                            <div className="bg-emerald-50 border-emerald-200 px-3 py-2 flex items-center gap-1.5 text-emerald-700 font-bold">
+                              <span className="material-symbols-outlined text-sm">check_circle</span>
+                              {resultadoCarga.ok} jugador(es) importado(s) correctamente.
+                            </div>
+                          )}
+                          {resultadoCarga.errores.length > 0 && (
+                            <div className="bg-rose-50 border-t border-rose-100 px-3 py-2 space-y-1">
+                              <p className="font-bold text-rose-700 flex items-center gap-1">
+                                <span className="material-symbols-outlined text-xs">error</span>
+                                {resultadoCarga.errores.length} error(es):
+                              </p>
+                              {resultadoCarga.errores.map((err, i) => (
+                                <p key={i} className="text-rose-600 pl-4">• {err}</p>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-700 block">Edad *</label>
-                      <input type="number" required placeholder="Edad" min="1"
-                        value={nuevoJug.age} onChange={(e) => setNuevoJug({ ...nuevoJug, age: e.target.value })}
-                        className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-700 block">Dorsal</label>
-                      <input type="number" placeholder="Ej: 10"
-                        value={nuevoJug.number} onChange={(e) => setNuevoJug({ ...nuevoJug, number: e.target.value })}
-                        className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Equipo *</label>
-                    <select required value={nuevoJug.team_id}
-                      onChange={(e) => setNuevoJug({ ...nuevoJug, team_id: e.target.value })}
-                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
-                      <option value="">Seleccionar Equipo</option>
-                      {equipos.map((eq) => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
-                    </select>
-                  </div>
-                  <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer">
-                    Guardar Jugador
-                  </button>
-                </form>
+                  )}
+                </div>
               )}
             </div>
 
