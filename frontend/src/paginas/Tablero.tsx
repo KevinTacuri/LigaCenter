@@ -82,23 +82,41 @@ export const Tablero: React.FC = () => {
         }
       }
 
+      // 2.5 Asociar la disciplina al campeonato actual
+      let champDisciplineId: number;
+      const resChampDiscs = await serviciosParticipantes.obtenerDisciplinasCampeonato(activeChampionshipId);
+      const champDiscExistente = resChampDiscs.data?.find(cd => cd.discipline_id === disciplineId);
+
+      if (champDiscExistente) {
+        champDisciplineId = champDiscExistente.id;
+      } else {
+        const resCD = await serviciosParticipantes.agregarDisciplinaCampeonato(activeChampionshipId, {
+          discipline_id: disciplineId,
+          specific_rules: 'Reglas de juego del mundial: 90 minutos de juego, 5 cambios.'
+        });
+        if (resCD.success && resCD.data) {
+          champDisciplineId = resCD.data.id;
+        } else {
+          throw new Error('No se pudo asociar la disciplina Fútbol al campeonato.');
+        }
+      }
+
       // 3. Crear o buscar categoría "Selecciones Libres"
       let categoryId: number;
-      const resCats = await serviciosParticipantes.obtenerCategorias();
+      const resCats = await serviciosParticipantes.obtenerCategorias(champDisciplineId);
       const catExistente = resCats.data?.find(c => 
-        c.discipline_id === disciplineId && 
+        c.championship_discipline_id === champDisciplineId && 
         (c.name.toLowerCase().includes('selecciones') || c.name.toLowerCase().includes('libres'))
       );
 
       if (catExistente) {
         categoryId = catExistente.id;
       } else {
-        const resCat = await serviciosParticipantes.crearCategoria({
+        const resCat = await serviciosParticipantes.crearCategoria(champDisciplineId, {
           name: 'Selecciones Libres',
           age_min: 16,
           age_max: 45,
           gender_type: 'Masculino',
-          discipline_id: disciplineId,
           format: 'liga',
           format_settings: {}
         });

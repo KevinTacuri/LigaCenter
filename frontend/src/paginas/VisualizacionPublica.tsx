@@ -88,8 +88,9 @@ export const VisualizacionPublica: React.FC = () => {
 
   const cargarFiltros = async () => {
     try {
+      const champId = parseInt(localStorage.getItem('campeonato_activo_id') || '0');
       const resDisc = await serviciosParticipantes.obtenerDisciplinas();
-      const resCat = await serviciosParticipantes.obtenerCategorias();
+      const resCat = await serviciosParticipantes.obtenerCategoriasPorCampeonato(champId);
       if (resDisc.success) setDisciplinas(resDisc.data);
       if (resCat.success) setCategorias(resCat.data);
     } catch (err) {}
@@ -254,7 +255,7 @@ export const VisualizacionPublica: React.FC = () => {
               >
                 <option value="">Todas las categorías</option>
                 {categorias
-                  .filter((c) => !filtroDisc || c.discipline_id === parseInt(filtroDisc))
+                  .filter((c) => !filtroDisc || c.championship_discipline?.discipline_id === parseInt(filtroDisc))
                   .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)
                 }
               </select>

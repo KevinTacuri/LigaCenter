@@ -46,7 +46,7 @@ class CategoryController extends Controller
                 'championship_discipline_id',
                 $championshipDiscipline->id
             )
-                ->with('teams')
+                ->with(['teams', 'championshipDiscipline.discipline'])
                 ->get()
         );
     }
@@ -321,5 +321,16 @@ class CategoryController extends Controller
         return response()->json([
             'message' => 'Categoría eliminada correctamente'
         ]);
+    }
+
+    public function indexByChampionship(\App\Models\Championship $championship)
+    {
+        return response()->json(
+            Category::whereHas('championshipDiscipline', function ($query) use ($championship) {
+                $query->where('championship_id', $championship->id);
+            })
+                ->with(['teams', 'championshipDiscipline.discipline'])
+                ->get()
+        );
     }
 }

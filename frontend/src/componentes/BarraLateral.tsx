@@ -40,8 +40,7 @@ const obtenerPastelColorSidebar = (nombre: string) => {
 
 const subMenus: Record<string, SubItemMenu[]> = {
   teams: [
-    // Ocultamos "Disciplinas" por ahora para simplificar, pero se puede reactivar fácilmente si se necesita
-    // { id: 'disciplinas', titulo: 'Disciplinas', query: 'tab=disciplinas' }, 
+    { id: 'disciplinas', titulo: 'Disciplinas', query: 'tab=disciplinas' },
     { id: 'categorias', titulo: 'Categorías', query: 'tab=categorias' },
     { id: 'equipos', titulo: 'Equipos', query: 'tab=equipos' },
     { id: 'jugadores', titulo: 'Jugadores', query: 'tab=jugadores' },

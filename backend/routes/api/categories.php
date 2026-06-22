@@ -11,6 +11,12 @@ Route::middleware('auth:sanctum')->group(function () {
         [CategoryController::class, 'index']
     );
 
+    // Obtener todas las categorías de un campeonato
+    Route::get(
+        '/championships/{championship}/categories',
+        [CategoryController::class, 'indexByChampionship']
+    );
+
     Route::post(
         '/championship-disciplines/{championshipDiscipline}/categories',
         [CategoryController::class, 'store']

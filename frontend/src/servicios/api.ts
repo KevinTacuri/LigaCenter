@@ -235,6 +235,18 @@ export interface Disciplina {
   status: string;
 }
 
+export interface ChampionshipDiscipline {
+  id: number;
+  championship_id: number;
+  discipline_id: number;
+  specific_rules?: {
+    match_duration?: number;
+    substitutions_limit?: number;
+    [key: string]: any;
+  } | null;
+  discipline?: Disciplina;
+}
+
 export interface Categoria {
   id: number;
   name: string;
@@ -242,9 +254,8 @@ export interface Categoria {
   age_max?: number | null;
   gender: string;
   gender_type?: string;
-  discipline_id: number;
-  championship_id: number;
-  discipline?: Disciplina;
+  championship_discipline_id: number;
+  championship_discipline?: ChampionshipDiscipline;
   format?: 'liga' | 'grupos' | 'eliminacion_directa';
   format_settings?: {
     num_groups?: number;
@@ -410,13 +421,31 @@ export const serviciosParticipantes = {
     return res.data;
   },
 
-  // Categorías
-  obtenerCategorias: async (): Promise<RespuestaApi<Categoria[]>> => {
-    const res = await clienteApi.get('/categories');
+  // Disciplinas de Campeonato (ChampionshipDiscipline)
+  obtenerDisciplinasCampeonato: async (championshipId: number): Promise<RespuestaApi<ChampionshipDiscipline[]>> => {
+    const res = await clienteApi.get(`/championships/${championshipId}/disciplines`);
     return res.data;
   },
-  crearCategoria: async (datos: any): Promise<RespuestaApi<Categoria>> => {
-    const res = await clienteApi.post('/categories', datos);
+  agregarDisciplinaCampeonato: async (championshipId: number, datos: { discipline_id: number; specific_rules?: any }): Promise<RespuestaApi<ChampionshipDiscipline>> => {
+    const res = await clienteApi.post(`/championships/${championshipId}/disciplines`, datos);
+    return res.data;
+  },
+  eliminarDisciplinaCampeonato: async (id: number): Promise<RespuestaApi<null>> => {
+    const res = await clienteApi.delete(`/championship-disciplines/${id}`);
+    return res.data;
+  },
+
+  // Categorías
+  obtenerCategorias: async (championshipDisciplineId: number): Promise<RespuestaApi<Categoria[]>> => {
+    const res = await clienteApi.get(`/championship-disciplines/${championshipDisciplineId}/categories`);
+    return res.data;
+  },
+  obtenerCategoriasPorCampeonato: async (championshipId: number): Promise<RespuestaApi<Categoria[]>> => {
+    const res = await clienteApi.get(`/championships/${championshipId}/categories`);
+    return res.data;
+  },
+  crearCategoria: async (championshipDisciplineId: number, datos: any): Promise<RespuestaApi<Categoria>> => {
+    const res = await clienteApi.post(`/championship-disciplines/${championshipDisciplineId}/categories`, datos);
     return res.data;
   },
   actualizarCategoria: async (id: number, datos: any): Promise<RespuestaApi<Categoria>> => {
@@ -437,6 +466,10 @@ export const serviciosParticipantes = {
   // Equipos
   obtenerEquipos: async (): Promise<RespuestaApi<Equipo[]>> => {
     const res = await clienteApi.get('/teams');
+    return res.data;
+  },
+  obtenerEquiposPorCategoria: async (categoryId: number): Promise<RespuestaApi<Equipo[]>> => {
+    const res = await clienteApi.get(`/categories/${categoryId}/teams`);
     return res.data;
   },
   crearEquipo: async (datos: any): Promise<RespuestaApi<Equipo>> => {

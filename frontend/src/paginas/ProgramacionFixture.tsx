@@ -72,19 +72,20 @@ export const ProgramacionFixture: React.FC = () => {
     setCargando(true);
     setErrorLocal(null);
     try {
+      const champId = parseInt(localStorage.getItem('campeonato_activo_id') || '0');
       if (tabActiva === 'escenarios') {
         const res = await serviciosFixture.obtenerEscenarios();
         if (res.success) setEscenarios(res.data);
       } else if (tabActiva === 'generar') {
         const resDisc = await serviciosParticipantes.obtenerDisciplinas();
-        const resCat = await serviciosParticipantes.obtenerCategorias();
+        const resCat = await serviciosParticipantes.obtenerCategoriasPorCampeonato(champId);
         const resEsc = await serviciosFixture.obtenerEscenarios();
         if (resDisc.success) setDisciplinas(resDisc.data);
         if (resCat.success) setCategorias(resCat.data);
         if (resEsc.success) setEscenarios(resEsc.data);
       } else if (tabActiva === 'programar') {
         const resDisc = await serviciosParticipantes.obtenerDisciplinas();
-        const resCat = await serviciosParticipantes.obtenerCategorias();
+        const resCat = await serviciosParticipantes.obtenerCategoriasPorCampeonato(champId);
         const resEsc = await serviciosFixture.obtenerEscenarios();
         if (resDisc.success) setDisciplinas(resDisc.data);
         if (resCat.success) setCategorias(resCat.data);
@@ -171,8 +172,8 @@ export const ProgramacionFixture: React.FC = () => {
           ...catOriginal,
           format: format
         });
-        // Recargar categorías para tener los formatos actualizados
-        const resCat = await serviciosParticipantes.obtenerCategorias();
+        const champId = parseInt(localStorage.getItem('campeonato_activo_id') || '0');
+        const resCat = await serviciosParticipantes.obtenerCategoriasPorCampeonato(champId);
         if (resCat.success) setCategorias(resCat.data);
       }
 
@@ -484,7 +485,7 @@ export const ProgramacionFixture: React.FC = () => {
                   >
                     <option value="">Seleccionar Categoría</option>
                     {categorias
-                      .filter((c) => !datosFixture.discipline_id || c.discipline_id === parseInt(datosFixture.discipline_id))
+                      .filter((c) => !datosFixture.discipline_id || c.championship_discipline?.discipline_id === parseInt(datosFixture.discipline_id))
                       .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)
                     }
                   </select>
@@ -563,7 +564,7 @@ export const ProgramacionFixture: React.FC = () => {
                   >
                     <option value="">Seleccionar Categoría</option>
                     {categorias
-                      .filter((c) => !datosFecha.discipline_id || c.discipline_id === parseInt(datosFecha.discipline_id))
+                      .filter((c) => !datosFecha.discipline_id || c.championship_discipline?.discipline_id === parseInt(datosFecha.discipline_id))
                       .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)
                     }
                   </select>

@@ -10,7 +10,8 @@ import type {
   Disciplina,
   Categoria,
   Equipo,
-  Jugador
+  Jugador,
+  ChampionshipDiscipline
 } from '../servicios/api';
 
 // ─────────────────────────────────────────────
@@ -190,6 +191,7 @@ export const GestionParticipantes: React.FC = () => {
 
   // ── Estados de datos ──────────────────────
   const [disciplinas, setDisciplinas] = useState<Disciplina[]>([]);
+  const [champDisciplines, setChampDisciplines] = useState<ChampionshipDiscipline[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [jugadores, setJugadores] = useState<Jugador[]>([]);
@@ -323,22 +325,31 @@ export const GestionParticipantes: React.FC = () => {
     setCargando(true);
     setErrorLocal(null);
     try {
+      const champId = parseInt(localStorage.getItem('campeonato_activo_id') || '0');
       if (tabActiva === 'disciplinas') {
-        const res = await serviciosParticipantes.obtenerDisciplinas();
+        const [res, resCD] = await Promise.all([
+          serviciosParticipantes.obtenerDisciplinas(),
+          serviciosParticipantes.obtenerDisciplinasCampeonato(champId)
+        ]);
         if (res.success) setDisciplinas(res.data);
+        if (resCD.success) setChampDisciplines(resCD.data);
       } else if (tabActiva === 'categorias') {
-        const res = await serviciosParticipantes.obtenerCategorias();
-        if (res.success) setCategorias(res.data);
-        const resDisc = await serviciosParticipantes.obtenerDisciplinas();
+        const [resCat, resCD, resDisc] = await Promise.all([
+          serviciosParticipantes.obtenerCategoriasPorCampeonato(champId),
+          serviciosParticipantes.obtenerDisciplinasCampeonato(champId),
+          serviciosParticipantes.obtenerDisciplinas()
+        ]);
+        if (resCat.success) setCategorias(resCat.data);
+        if (resCD.success) setChampDisciplines(resCD.data);
         if (resDisc.success) setDisciplinas(resDisc.data);
       } else if (tabActiva === 'equipos') {
-        const [resEq, resDisc, resCat] = await Promise.all([
+        const [resEq, resCD, resCat] = await Promise.all([
           serviciosParticipantes.obtenerEquipos(),
-          serviciosParticipantes.obtenerDisciplinas(),
-          serviciosParticipantes.obtenerCategorias(),
+          serviciosParticipantes.obtenerDisciplinasCampeonato(champId),
+          serviciosParticipantes.obtenerCategoriasPorCampeonato(champId),
         ]);
         if (resEq.success) setEquipos(resEq.data);
-        if (resDisc.success) setDisciplinas(resDisc.data);
+        if (resCD.success) setChampDisciplines(resCD.data);
         if (resCat.success) setCategorias(resCat.data);
       } else if (tabActiva === 'jugadores') {
         const [resJug, resEq] = await Promise.all([
@@ -348,11 +359,11 @@ export const GestionParticipantes: React.FC = () => {
         if (resJug.success) setJugadores(resJug.data);
         if (resEq.success) setEquipos(resEq.data);
       } else if (tabActiva === 'registro-equipo') {
-        const [resDisc, resCat] = await Promise.all([
-          serviciosParticipantes.obtenerDisciplinas(),
-          serviciosParticipantes.obtenerCategorias(),
+        const [resCD, resCat] = await Promise.all([
+          serviciosParticipantes.obtenerDisciplinasCampeonato(champId),
+          serviciosParticipantes.obtenerCategoriasPorCampeonato(champId),
         ]);
-        if (resDisc.success) setDisciplinas(resDisc.data);
+        if (resCD.success) setChampDisciplines(resCD.data);
         if (resCat.success) setCategorias(resCat.data);
       } else if (tabActiva === 'planilla-jugadores') {
         const resEq = await serviciosParticipantes.obtenerEquipos();
@@ -411,17 +422,39 @@ export const GestionParticipantes: React.FC = () => {
     const finalName = nuevaDisc.name === 'Otro' ? customDiscName.trim() : nuevaDisc.name;
     if (!finalName) return;
     try {
-      const res = await serviciosParticipantes.crearDisciplina({
-        ...nuevaDisc,
-        name: finalName
+      const champId = parseInt(localStorage.getItem('campeonato_activo_id') || '0');
+      // 1. Crear o buscar en catálogo
+      let discId: number;
+      const exist = disciplinas.find(d => d.name.toLowerCase().trim() === finalName.toLowerCase().trim());
+      if (exist) {
+        discId = exist.id;
+      } else {
+        const res = await serviciosParticipantes.crearDisciplina({
+          ...nuevaDisc,
+          name: finalName
+        });
+        if (res.success && res.data) {
+          discId = res.data.id;
+        } else {
+          throw new Error('Error al registrar la disciplina.');
+        }
+      }
+
+      // 2. Asociar al campeonato
+      const CDres = await serviciosParticipantes.agregarDisciplinaCampeonato(champId, {
+        discipline_id: discId,
+        specific_rules: nuevaDisc.description || null
       });
-      if (res.success) {
-        mostrarMensaje('Disciplina registrada exitosamente.');
+
+      if (CDres.success) {
+        mostrarMensaje('Disciplina asociada al campeonato exitosamente.');
         setNuevaDisc({ name: '', description: '', rules: '', status: 'active' });
         setCustomDiscName('');
         cargarDatos();
       }
-    } catch { mostrarMensaje('Error al registrar disciplina.', true); }
+    } catch (err: any) {
+      mostrarMensaje(err.response?.data?.message || err.message || 'Error al asociar disciplina.', true);
+    }
   };
 
   const guardarCategoria = async (e: React.FormEvent) => {
@@ -453,12 +486,12 @@ export const GestionParticipantes: React.FC = () => {
     }
 
     try {
-      const res = await serviciosParticipantes.crearCategoria({
+      const champDisciplineId = parseInt(nuevaCat.discipline_id);
+      const res = await serviciosParticipantes.crearCategoria(champDisciplineId, {
         name: nuevaCat.name,
         age_min: nuevaCat.age_min ? parseInt(nuevaCat.age_min) : null,
         age_max: nuevaCat.age_max ? parseInt(nuevaCat.age_max) : null,
         gender_type: nuevaCat.gender,
-        discipline_id: parseInt(nuevaCat.discipline_id),
         format: nuevaCat.format,
         format_settings: format_settings
       });
@@ -560,7 +593,7 @@ export const GestionParticipantes: React.FC = () => {
     if (isConfirmed) {
       try {
         let res: any;
-        if (tabActiva === 'disciplinas') res = await serviciosParticipantes.eliminarDisciplina(id);
+        if (tabActiva === 'disciplinas') res = await serviciosParticipantes.eliminarDisciplinaCampeonato(id);
         else if (tabActiva === 'categorias') res = await serviciosParticipantes.eliminarCategoria(id);
         else if (tabActiva === 'equipos') res = await serviciosParticipantes.eliminarEquipo(id);
         else if (tabActiva === 'jugadores') res = await serviciosParticipantes.eliminarJugador(id);
@@ -582,16 +615,21 @@ export const GestionParticipantes: React.FC = () => {
       mostrarMensaje('Selecciona primero una disciplina para crear la categoría.', true);
       return null;
     }
+    const champCD = champDisciplines.find(cd => cd.discipline_id === reqEq.discId);
+    if (!champCD) {
+      mostrarMensaje('La disciplina seleccionada no está asociada a este campeonato.', true);
+      return null;
+    }
     try {
-      const res = await serviciosParticipantes.crearCategoria({
+      const res = await serviciosParticipantes.crearCategoria(champCD.id, {
         name: nombre,
         age_min: null, age_max: null,
-        gender_type: 'Mixto',
-        discipline_id: reqEq.discId
+        gender_type: 'Mixto'
       });
       if (res.success) {
         mostrarMensaje(`Categoría "${nombre}" creada (edades pendientes).`);
-        const nuevas = await serviciosParticipantes.obtenerCategorias();
+        const champId = parseInt(localStorage.getItem('campeonato_activo_id') || '0');
+        const nuevas = await serviciosParticipantes.obtenerCategoriasPorCampeonato(champId);
         if (nuevas.success) setCategorias(nuevas.data);
         return res.data.id;
       }
@@ -625,7 +663,7 @@ export const GestionParticipantes: React.FC = () => {
 
   // Categorías filtradas por disciplina seleccionada en registro rápido
   const catsFiltradas = categorias.filter(c =>
-    !reqEq.discId || c.discipline_id === reqEq.discId
+    !reqEq.discId || c.championship_discipline?.discipline_id === reqEq.discId
   );
 
   // ─────────────────────────────────────────────
@@ -825,7 +863,7 @@ export const GestionParticipantes: React.FC = () => {
                       onChange={(e) => setNuevaCat({ ...nuevaCat, discipline_id: e.target.value })}
                       className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
                       <option value="">-- Selecciona Disciplina --</option>
-                      {disciplinas.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                      {champDisciplines.map((cd) => <option key={cd.id} value={cd.id}>{cd.discipline?.name}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
@@ -941,7 +979,7 @@ export const GestionParticipantes: React.FC = () => {
                         className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
                         <option value="">Seleccionar Categoría</option>
                         {categorias
-                          .filter((c) => !nuevoEq.discipline_id || c.discipline_id === parseInt(nuevoEq.discipline_id))
+                          .filter((c) => !nuevoEq.discipline_id || c.championship_discipline?.discipline_id === parseInt(nuevoEq.discipline_id))
                           .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
@@ -1207,7 +1245,7 @@ export const GestionParticipantes: React.FC = () => {
                           <td className="p-3 pl-4">
                             <div className="font-bold text-slate-900">{c.name}</div>
                             <div className="text-xs text-slate-500">
-                              Edades: {c.age_min ?? 'N/A'} - {c.age_max ?? 'N/A'} | Género: {c.gender_type || c.gender || 'N/A'} | Disciplina: {c.discipline?.name || 'N/A'}
+                              Edades: {c.age_min ?? 'N/A'} - {c.age_max ?? 'N/A'} | Género: {c.gender_type || c.gender || 'N/A'} | Disciplina: {c.championship_discipline?.discipline?.name || 'N/A'}
                             </div>
                           </td>
                           <td className="p-3 pr-4 text-right">
