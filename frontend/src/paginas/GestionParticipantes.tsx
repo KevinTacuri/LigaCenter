@@ -194,6 +194,11 @@ export const GestionParticipantes: React.FC = () => {
   const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [jugadores, setJugadores] = useState<Jugador[]>([]);
 
+  // ── Estado: Filtros y orden de la tabla de Equipos ──
+  const [busquedaEq, setBusquedaEq] = useState('');
+  const [filtroEstadoEq, setFiltroEstadoEq] = useState<'todos' | 'aprobado' | 'pendiente' | 'rechazado'>('todos');
+  const [ordenEq, setOrdenEq] = useState<'nombre_asc' | 'nombre_desc' | 'representante_asc' | 'representante_desc' | 'estado'>('nombre_asc');
+
   // ── Formularios originales ─────────────────
   const [nuevaDisc, setNuevaDisc] = useState({ name: '', description: '', rules: '', status: 'active' });
   const [customDiscName, setCustomDiscName] = useState('');
@@ -763,6 +768,25 @@ export const GestionParticipantes: React.FC = () => {
   const opcsCats: { id: number; label: string }[] = catsFiltradas.map(c => ({ id: c.id, label: c.name }));
   const opcsEquipos: { id: number; label: string }[] = equipos.map(e => ({ id: e.id, label: e.name }));
 
+  // Lista de equipos filtrada y ordenada para la tabla (no modifica `equipos` original)
+  const equiposFiltrados = equipos
+    .filter(eq => {
+      const texto = busquedaEq.trim().toLowerCase();
+      const coincideTexto = !texto ||
+        eq.name.toLowerCase().includes(texto) ||
+        (eq.representative || '').toLowerCase().includes(texto);
+      const coincideEstado = filtroEstadoEq === 'todos' || (eq.registration_status || 'pendiente') === filtroEstadoEq;
+      return coincideTexto && coincideEstado;
+    })
+    .sort((a, b) => {
+      if (ordenEq === 'nombre_asc') return a.name.localeCompare(b.name);
+      if (ordenEq === 'nombre_desc') return b.name.localeCompare(a.name);
+      if (ordenEq === 'representante_asc') return (a.representative || '').localeCompare(b.representative || '');
+      if (ordenEq === 'representante_desc') return (b.representative || '').localeCompare(a.representative || '');
+      if (ordenEq === 'estado') return (a.registration_status || 'pendiente').localeCompare(b.registration_status || 'pendiente');
+      return 0;
+    });
+
   const TABS: { key: TabType; label: string; nuevo?: boolean }[] = [
     // Ocultamos el TAB de "Disciplinas" por ahora para simplificar, pero se puede reactivar fácilmente si se necesita
     // { key: 'disciplinas', label: 'Disciplinas' },
@@ -1229,6 +1253,57 @@ export const GestionParticipantes: React.FC = () => {
               <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900 mb-4 border-b border-slate-100 pb-2">
                 Lista de {tabActiva}
               </h2>
+
+              {/* ── Filtros y orden (solo tab Equipos) ── */}
+              {tabActiva === 'equipos' && (
+                <div className="mb-4 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Buscador */}
+                    <div className="relative md:col-span-1">
+                      <input
+                        type="text"
+                        placeholder="Buscar por nombre o representante..."
+                        value={busquedaEq}
+                        onChange={(e) => setBusquedaEq(e.target.value)}
+                        className="w-full text-sm border border-slate-200 rounded-lg p-2.5 pr-8 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                      />
+                      <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">
+                        search
+                      </span>
+                    </div>
+
+                    {/* Filtro Estado */}
+                    <select
+                      value={filtroEstadoEq}
+                      onChange={(e) => setFiltroEstadoEq(e.target.value as any)}
+                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                    >
+                      <option value="todos">Todos los estados</option>
+                      <option value="aprobado">Aprobado</option>
+                      <option value="pendiente">Pendiente</option>
+                      <option value="rechazado">Rechazado</option>
+                    </select>
+
+                    {/* Orden */}
+                    <select
+                      value={ordenEq}
+                      onChange={(e) => setOrdenEq(e.target.value as any)}
+                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                    >
+                      <option value="nombre_asc">Nombre (A-Z)</option>
+                      <option value="nombre_desc">Nombre (Z-A)</option>
+                      <option value="representante_asc">Representante (A-Z)</option>
+                      <option value="representante_desc">Representante (Z-A)</option>
+                      <option value="estado">Estado</option>
+                    </select>
+                  </div>
+
+                  {/* Contador de resultados */}
+                  <p className="text-[11px] text-slate-400 font-semibold">
+                    Mostrando {equiposFiltrados.length} de {equipos.length} equipos
+                  </p>
+                </div>
+              )}
               {cargando ? (
                 <div className="p-12 flex flex-col items-center justify-center gap-3">
                   <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
@@ -1280,7 +1355,7 @@ export const GestionParticipantes: React.FC = () => {
                           </td>
                         </tr>
                       ))}
-                      {tabActiva === 'equipos' && equipos.map((eq) => (
+                      {tabActiva === 'equipos' && equiposFiltrados.map((eq) => (
                         <tr key={eq.id} className="hover:bg-slate-50/40">
                           <td className="p-3 pl-4">
                             <div className="font-bold text-slate-900">{eq.name}</div>
@@ -1343,7 +1418,7 @@ export const GestionParticipantes: React.FC = () => {
                       {!cargando && (
                         (tabActiva === 'disciplinas' && disciplinas.length === 0) ||
                         (tabActiva === 'categorias' && categorias.length === 0) ||
-                        (tabActiva === 'equipos' && equipos.length === 0) ||
+                        (tabActiva === 'equipos' && equiposFiltrados.length === 0) ||
                         (tabActiva === 'jugadores' && jugadores.length === 0)
                       ) && (
                         <tr>
