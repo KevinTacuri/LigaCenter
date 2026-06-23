@@ -753,17 +753,13 @@ export const serviciosCampeonatos = {
 
 export const serviciosSuperAdmin = {
   obtenerTenants: async (): Promise<RespuestaApi<TenantInfo[]>> => {
-    try {
-      const res = await clienteApi.get('/admin/tenants');
-      return res.data;
-    } catch (err) {
-      // Fallback
-      const lista: TenantInfo[] = [
-        { id: 1, name: 'Organizador', email: 'organizador@ligacenter.com', championships_count: 2, is_active: true },
-        { id: 2, name: 'Juan Pérez', email: 'juan@ligacenter.com', championships_count: 1, is_active: true },
-        { id: 3, name: 'Mesa Control', email: 'mesa@ligacenter.com', championships_count: 0, is_active: true }
-      ];
-      return { success: true, data: lista, message: 'Retornado de fallback local' };
-    }
+    // Retornar directamente la lista de mock/fallback local sin hacer la petición HTTP
+    // ya que el backend no implementa este endpoint (es una simulación SaaS)
+    const lista: TenantInfo[] = [
+      { id: 1, name: 'Organizador', email: 'organizador@ligacenter.com', championships_count: 2, is_active: true },
+      { id: 2, name: 'Juan Pérez', email: 'juan@ligacenter.com', championships_count: 1, is_active: true },
+      { id: 3, name: 'Mesa Control', email: 'mesa@ligacenter.com', championships_count: 0, is_active: true }
+    ];
+    return { success: true, data: lista, message: 'Retornado de mock local' };
   }
 };
