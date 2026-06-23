@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { sileo } from 'sileo';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
-import { useCampeonato } from '../contexto/ContextoCampeonato';
 import { serviciosParticipantes } from '../servicios/api';
 import { BarraLateral } from '../componentes/BarraLateral';
 import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
@@ -11,8 +10,7 @@ import type {
   Disciplina,
   Categoria,
   Equipo,
-  Jugador,
-  ChampionshipDiscipline
+  Jugador
 } from '../servicios/api';
 
 // ─────────────────────────────────────────────
@@ -163,20 +161,13 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
 // ─────────────────────────────────────────────
 export const GestionParticipantes: React.FC = () => {
   const { usuario, tienePermiso, tieneRol } = useAutenticacion();
-  const { campeonatoActivo } = useCampeonato();
   const navegar = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const confirm = useConfirm();
   const queryTab = searchParams.get('tab');
 
-  // Redirigir si no hay campeonato activo
-  useEffect(() => {
-    if (!campeonatoActivo) {
-      navegar('/tablero');
-    }
-  }, [campeonatoActivo, navegar]);
-
-  // Iniciamos en 'categorias' porque es el módulo más utilizado y el de "disciplinas" lo ocultamos por ahora para simplificar
+  // Iniciamos en 'categorias' porque es el módulo más utilizado y el de "disciplinas" lo ocultamos por ahora para simplificar, pero se puede cambiar fácilmente si se prefiere otro tab como predeterminado o reactivar "disciplinas"
+  // const [tabActiva, setTabActiva] = useState<TabType>('disciplinas');
   const [tabActiva, setTabActiva] = useState<TabType>('categorias');
 
   useEffect(() => {
@@ -199,7 +190,6 @@ export const GestionParticipantes: React.FC = () => {
 
   // ── Estados de datos ──────────────────────
   const [disciplinas, setDisciplinas] = useState<Disciplina[]>([]);
-  const [champDisciplines, setChampDisciplines] = useState<ChampionshipDiscipline[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [jugadores, setJugadores] = useState<Jugador[]>([]);
@@ -303,6 +293,16 @@ export const GestionParticipantes: React.FC = () => {
   const [cargandoPlanilla, setCargandoPlanilla] = useState(false);
   const [equipoIdMasiva, setEquipoIdMasiva] = useState<number | null>(null);
 
+  // ── Estado: Modal Editar Equipo ────────────
+  const [modalEditarEq, setModalEditarEq] = useState<{
+    abierto: boolean;
+    eq: Equipo | null;
+    nombre: string;
+    representante: string;
+    estado: 'pendiente' | 'aprobado' | 'rechazado';
+    guardando: boolean;
+  }>({ abierto: false, eq: null, nombre: '', representante: '', estado: 'pendiente', guardando: false });
+
   // ─────────────────────────────────────────────
   // EFECTOS
   // ─────────────────────────────────────────────
@@ -333,31 +333,22 @@ export const GestionParticipantes: React.FC = () => {
     setCargando(true);
     setErrorLocal(null);
     try {
-      const champId = parseInt(localStorage.getItem('campeonato_activo_id') || '0');
       if (tabActiva === 'disciplinas') {
-        const [res, resCD] = await Promise.all([
-          serviciosParticipantes.obtenerDisciplinas(),
-          serviciosParticipantes.obtenerDisciplinasCampeonato(champId)
-        ]);
+        const res = await serviciosParticipantes.obtenerDisciplinas();
         if (res.success) setDisciplinas(res.data);
-        if (resCD.success) setChampDisciplines(resCD.data);
       } else if (tabActiva === 'categorias') {
-        const [resCat, resCD, resDisc] = await Promise.all([
-          serviciosParticipantes.obtenerCategoriasPorCampeonato(champId),
-          serviciosParticipantes.obtenerDisciplinasCampeonato(champId),
-          serviciosParticipantes.obtenerDisciplinas()
-        ]);
-        if (resCat.success) setCategorias(resCat.data);
-        if (resCD.success) setChampDisciplines(resCD.data);
+        const res = await serviciosParticipantes.obtenerCategorias();
+        if (res.success) setCategorias(res.data);
+        const resDisc = await serviciosParticipantes.obtenerDisciplinas();
         if (resDisc.success) setDisciplinas(resDisc.data);
       } else if (tabActiva === 'equipos') {
-        const [resEq, resCD, resCat] = await Promise.all([
+        const [resEq, resDisc, resCat] = await Promise.all([
           serviciosParticipantes.obtenerEquipos(),
-          serviciosParticipantes.obtenerDisciplinasCampeonato(champId),
-          serviciosParticipantes.obtenerCategoriasPorCampeonato(champId),
+          serviciosParticipantes.obtenerDisciplinas(),
+          serviciosParticipantes.obtenerCategorias(),
         ]);
         if (resEq.success) setEquipos(resEq.data);
-        if (resCD.success) setChampDisciplines(resCD.data);
+        if (resDisc.success) setDisciplinas(resDisc.data);
         if (resCat.success) setCategorias(resCat.data);
       } else if (tabActiva === 'jugadores') {
         const [resJug, resEq] = await Promise.all([
@@ -367,11 +358,11 @@ export const GestionParticipantes: React.FC = () => {
         if (resJug.success) setJugadores(resJug.data);
         if (resEq.success) setEquipos(resEq.data);
       } else if (tabActiva === 'registro-equipo') {
-        const [resCD, resCat] = await Promise.all([
-          serviciosParticipantes.obtenerDisciplinasCampeonato(champId),
-          serviciosParticipantes.obtenerCategoriasPorCampeonato(champId),
+        const [resDisc, resCat] = await Promise.all([
+          serviciosParticipantes.obtenerDisciplinas(),
+          serviciosParticipantes.obtenerCategorias(),
         ]);
-        if (resCD.success) setChampDisciplines(resCD.data);
+        if (resDisc.success) setDisciplinas(resDisc.data);
         if (resCat.success) setCategorias(resCat.data);
       } else if (tabActiva === 'planilla-jugadores') {
         const resEq = await serviciosParticipantes.obtenerEquipos();
@@ -430,39 +421,17 @@ export const GestionParticipantes: React.FC = () => {
     const finalName = nuevaDisc.name === 'Otro' ? customDiscName.trim() : nuevaDisc.name;
     if (!finalName) return;
     try {
-      const champId = parseInt(localStorage.getItem('campeonato_activo_id') || '0');
-      // 1. Crear o buscar en catálogo
-      let discId: number;
-      const exist = disciplinas.find(d => d.name.toLowerCase().trim() === finalName.toLowerCase().trim());
-      if (exist) {
-        discId = exist.id;
-      } else {
-        const res = await serviciosParticipantes.crearDisciplina({
-          ...nuevaDisc,
-          name: finalName
-        });
-        if (res.success && res.data) {
-          discId = res.data.id;
-        } else {
-          throw new Error('Error al registrar la disciplina.');
-        }
-      }
-
-      // 2. Asociar al campeonato
-      const CDres = await serviciosParticipantes.agregarDisciplinaCampeonato(champId, {
-        discipline_id: discId,
-        specific_rules: nuevaDisc.description || null
+      const res = await serviciosParticipantes.crearDisciplina({
+        ...nuevaDisc,
+        name: finalName
       });
-
-      if (CDres.success) {
-        mostrarMensaje('Disciplina asociada al campeonato exitosamente.');
+      if (res.success) {
+        mostrarMensaje('Disciplina registrada exitosamente.');
         setNuevaDisc({ name: '', description: '', rules: '', status: 'active' });
         setCustomDiscName('');
         cargarDatos();
       }
-    } catch (err: any) {
-      mostrarMensaje(err.response?.data?.message || err.message || 'Error al asociar disciplina.', true);
-    }
+    } catch { mostrarMensaje('Error al registrar disciplina.', true); }
   };
 
   const guardarCategoria = async (e: React.FormEvent) => {
@@ -494,50 +463,12 @@ export const GestionParticipantes: React.FC = () => {
     }
 
     try {
-      const selectedDisciplineName = nuevaCat.discipline_id;
-      const champId = parseInt(localStorage.getItem('campeonato_activo_id') || '0');
-
-      // 1. Buscar o crear la disciplina en el sistema
-      let discId: number;
-      const foundDisc = disciplinas.find(d => d.name.toLowerCase().trim() === selectedDisciplineName.toLowerCase().trim());
-      if (foundDisc) {
-        discId = foundDisc.id;
-      } else {
-        const resDisc = await serviciosParticipantes.crearDisciplina({ name: selectedDisciplineName });
-        if (resDisc.success && resDisc.data) {
-          discId = resDisc.data.id;
-          // Actualizar estado local
-          setDisciplinas((prev) => [...prev, resDisc.data]);
-        } else {
-          throw new Error('No se pudo crear la disciplina.');
-        }
-      }
-
-      // 2. Buscar o asociar al campeonato
-      let champDisciplineId: number;
-      const foundCD = champDisciplines.find(cd => cd.discipline_id === discId);
-      if (foundCD) {
-        champDisciplineId = foundCD.id;
-      } else {
-        const resCD = await serviciosParticipantes.agregarDisciplinaCampeonato(champId, {
-          discipline_id: discId,
-          specific_rules: null
-        });
-        if (resCD.success && resCD.data) {
-          champDisciplineId = resCD.data.id;
-          // Actualizar estado local
-          setChampDisciplines(prev => [...prev, resCD.data]);
-        } else {
-          throw new Error('No se pudo asociar la disciplina al campeonato.');
-        }
-      }
-
-      // 3. Registrar categoría
-      const res = await serviciosParticipantes.crearCategoria(champDisciplineId, {
+      const res = await serviciosParticipantes.crearCategoria({
         name: nuevaCat.name,
         age_min: nuevaCat.age_min ? parseInt(nuevaCat.age_min) : null,
         age_max: nuevaCat.age_max ? parseInt(nuevaCat.age_max) : null,
         gender_type: nuevaCat.gender,
+        discipline_id: parseInt(nuevaCat.discipline_id),
         format: nuevaCat.format,
         format_settings: format_settings
       });
@@ -592,12 +523,12 @@ export const GestionParticipantes: React.FC = () => {
     } catch { mostrarMensaje('Error al registrar equipo.', true); }
   };
 
-  const cambiarEstadoEquipo = async (id: number, nuevoEstado: 'aprobado' | 'rechazado') => {
+  const cambiarEstadoEquipo = async (id: number, nuevoEstado: 'aprobado' | 'rechazado' | 'pendiente') => {
     try {
       const res = await serviciosParticipantes.actualizarEquipo(id, { registration_status: nuevoEstado });
       if (res.success) {
-        mostrarMensaje(`Equipo ${nuevoEstado === 'aprobado' ? 'aprobado' : 'rechazado'} con éxito.`);
-        cargarDatos();
+        setEquipos(prev => prev.map(e => e.id === id ? { ...e, registration_status: nuevoEstado } : e));
+        mostrarMensaje(`Estado actualizado a "${nuevoEstado}" correctamente.`);
       }
     } catch { mostrarMensaje('Error al cambiar el estado del equipo.', true); }
   };
@@ -619,7 +550,7 @@ export const GestionParticipantes: React.FC = () => {
       if (res.success) {
         mostrarMensaje('Jugador inscrito exitosamente.');
         setNuevoJug({ name: '', dni: '', age: '', phone: '', team_id: '', number: '', position: 'Delantero' });
-        cargarDatos();
+        setJugadores(prev => [...prev, res.data]);
       }
     } catch (err: any) {
       mostrarMensaje(err.response?.data?.message || 'Error al inscribir jugador.', true);
@@ -639,11 +570,17 @@ export const GestionParticipantes: React.FC = () => {
     if (isConfirmed) {
       try {
         let res: any;
-        if (tabActiva === 'disciplinas') res = await serviciosParticipantes.eliminarDisciplinaCampeonato(id);
+        if (tabActiva === 'disciplinas') res = await serviciosParticipantes.eliminarDisciplina(id);
         else if (tabActiva === 'categorias') res = await serviciosParticipantes.eliminarCategoria(id);
         else if (tabActiva === 'equipos') res = await serviciosParticipantes.eliminarEquipo(id);
         else if (tabActiva === 'jugadores') res = await serviciosParticipantes.eliminarJugador(id);
-        if (res && res.success) { mostrarMensaje('Registro eliminado correctamente.'); cargarDatos(); }
+        if (res && res.success) {
+          mostrarMensaje('Registro eliminado correctamente.');
+          if (tabActiva === 'disciplinas') setDisciplinas(prev => prev.filter(d => d.id !== id));
+          else if (tabActiva === 'categorias') setCategorias(prev => prev.filter(c => c.id !== id));
+          else if (tabActiva === 'equipos') setEquipos(prev => prev.filter(e => e.id !== id));
+          else if (tabActiva === 'jugadores') setJugadores(prev => prev.filter(j => j.id !== id));
+        }
       } catch { mostrarMensaje('No se puede eliminar el registro. Puede estar en uso.', true); }
     }
   };
@@ -661,21 +598,16 @@ export const GestionParticipantes: React.FC = () => {
       mostrarMensaje('Selecciona primero una disciplina para crear la categoría.', true);
       return null;
     }
-    const champCD = champDisciplines.find(cd => cd.discipline_id === reqEq.discId);
-    if (!champCD) {
-      mostrarMensaje('La disciplina seleccionada no está asociada a este campeonato.', true);
-      return null;
-    }
     try {
-      const res = await serviciosParticipantes.crearCategoria(champCD.id, {
+      const res = await serviciosParticipantes.crearCategoria({
         name: nombre,
         age_min: null, age_max: null,
-        gender_type: 'Mixto'
+        gender_type: 'Mixto',
+        discipline_id: reqEq.discId
       });
       if (res.success) {
         mostrarMensaje(`Categoría "${nombre}" creada (edades pendientes).`);
-        const champId = parseInt(localStorage.getItem('campeonato_activo_id') || '0');
-        const nuevas = await serviciosParticipantes.obtenerCategoriasPorCampeonato(champId);
+        const nuevas = await serviciosParticipantes.obtenerCategorias();
         if (nuevas.success) setCategorias(nuevas.data);
         return res.data.id;
       }
@@ -709,7 +641,7 @@ export const GestionParticipantes: React.FC = () => {
 
   // Categorías filtradas por disciplina seleccionada en registro rápido
   const catsFiltradas = categorias.filter(c =>
-    !reqEq.discId || c.championship_discipline?.discipline_id === reqEq.discId
+    !reqEq.discId || c.discipline_id === reqEq.discId
   );
 
   // ─────────────────────────────────────────────
@@ -753,6 +685,45 @@ export const GestionParticipantes: React.FC = () => {
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Error al guardar jugador.';
       setFilasJugadores(prev => prev.map((f, i) => i === idx ? { ...f, guardando: false, error: msg } : f));
+    }
+  };
+
+  const abrirModalEditar = (eq: Equipo) => {
+    setModalEditarEq({
+      abierto: true,
+      eq,
+      nombre: eq.name,
+      representante: eq.representative || '',
+      estado: eq.registration_status || 'pendiente',
+      guardando: false,
+    });
+  };
+
+  const guardarEdicionEq = async () => {
+    if (!modalEditarEq.eq) return;
+    if (!modalEditarEq.nombre.trim()) {
+      mostrarMensaje('El nombre del equipo es obligatorio.', true); return;
+    }
+    setModalEditarEq(prev => ({ ...prev, guardando: true }));
+    try {
+      const res = await serviciosParticipantes.actualizarEquipo(modalEditarEq.eq.id, {
+        name: modalEditarEq.nombre.trim(),
+        representative: modalEditarEq.representante.trim() || null,
+        registration_status: modalEditarEq.estado,
+      });
+      if (res.success) {
+        setEquipos(prev => prev.map(e =>
+          e.id === modalEditarEq.eq!.id
+            ? { ...e, name: modalEditarEq.nombre.trim(), representative: modalEditarEq.representante.trim() || null, registration_status: modalEditarEq.estado }
+            : e
+        ));
+        mostrarMensaje('Equipo actualizado correctamente.');
+        setModalEditarEq({ abierto: false, eq: null, nombre: '', representante: '', estado: 'pendiente', guardando: false });
+      }
+    } catch {
+      mostrarMensaje('Error al actualizar el equipo.', true);
+    } finally {
+      setModalEditarEq(prev => ({ ...prev, guardando: false }));
     }
   };
 
@@ -909,9 +880,7 @@ export const GestionParticipantes: React.FC = () => {
                       onChange={(e) => setNuevaCat({ ...nuevaCat, discipline_id: e.target.value })}
                       className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
                       <option value="">-- Selecciona Disciplina --</option>
-                      {['Fútbol', 'Futsal', 'Básquetbol', 'Vóleibol', 'Atletismo', 'Ajedrez', 'Tenis de Mesa'].map((name) => (
-                        <option key={name} value={name}>{name}</option>
-                      ))}
+                      {disciplinas.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
@@ -1027,7 +996,7 @@ export const GestionParticipantes: React.FC = () => {
                         className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
                         <option value="">Seleccionar Categoría</option>
                         {categorias
-                          .filter((c) => !nuevoEq.discipline_id || c.championship_discipline?.discipline_id === parseInt(nuevoEq.discipline_id))
+                          .filter((c) => !nuevoEq.discipline_id || c.discipline_id === parseInt(nuevoEq.discipline_id))
                           .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
@@ -1270,10 +1239,20 @@ export const GestionParticipantes: React.FC = () => {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-                        <th className="p-3 pl-4">Detalles</th>
-                        {tabActiva === 'equipos' && <th className="p-3">Estado</th>}
-                        {tabActiva === 'jugadores' && <th className="p-3">Equipo</th>}
-                        <th className="p-3 pr-4 text-right">Acciones</th>
+                        {tabActiva === 'equipos' ? (
+                          <>
+                            <th className="p-3 pl-4">Nombre del Equipo</th>
+                            <th className="p-3">Representante</th>
+                            <th className="p-3">Estado</th>
+                            <th className="p-3 pr-4 text-right">Acciones</th>
+                          </>
+                        ) : (
+                          <>
+                            <th className="p-3 pl-4">Detalles</th>
+                            {tabActiva === 'jugadores' && <th className="p-3">Equipo</th>}
+                            <th className="p-3 pr-4 text-right">Acciones</th>
+                          </>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-sm">
@@ -1293,7 +1272,7 @@ export const GestionParticipantes: React.FC = () => {
                           <td className="p-3 pl-4">
                             <div className="font-bold text-slate-900">{c.name}</div>
                             <div className="text-xs text-slate-500">
-                              Edades: {c.age_min ?? 'N/A'} - {c.age_max ?? 'N/A'} | Género: {c.gender_type || c.gender || 'N/A'} | Disciplina: {c.championship_discipline?.discipline?.name || 'N/A'}
+                              Edades: {c.age_min ?? 'N/A'} - {c.age_max ?? 'N/A'} | Género: {c.gender_type || c.gender || 'N/A'} | Disciplina: {c.discipline?.name || 'N/A'}
                             </div>
                           </td>
                           <td className="p-3 pr-4 text-right">
@@ -1305,25 +1284,47 @@ export const GestionParticipantes: React.FC = () => {
                         <tr key={eq.id} className="hover:bg-slate-50/40">
                           <td className="p-3 pl-4">
                             <div className="font-bold text-slate-900">{eq.name}</div>
-                            <div className="text-xs text-slate-500">Delegado: {eq.representative || 'No registrado'}</div>
+                          </td>
+                          <td className="p-3 text-sm text-slate-700">
+                            {eq.representative || <span className="text-slate-400 italic text-xs">No registrado</span>}
                           </td>
                           <td className="p-3">
-                            {eq.registration_status === 'aprobado' ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wide">Aprobado</span>
-                            ) : eq.registration_status === 'rechazado' ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 uppercase tracking-wide">Rechazado</span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wide">Pendiente</span>
-                            )}
+                            <select
+                              value={eq.registration_status || 'pendiente'}
+                              onChange={async (e) => {
+                                const nuevoEstado = e.target.value as 'pendiente' | 'aprobado' | 'rechazado';
+                                await cambiarEstadoEquipo(eq.id, nuevoEstado);
+                              }}
+                              className={`text-[10px] font-bold uppercase tracking-wide rounded px-2 py-0.5 border cursor-pointer outline-hidden transition-colors ${
+                                eq.registration_status === 'aprobado'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : eq.registration_status === 'rechazado'
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}
+                            >
+                              <option value="pendiente">Pendiente</option>
+                              <option value="aprobado">Aprobado</option>
+                              <option value="rechazado">Rechazado</option>
+                            </select>
                           </td>
-                          <td className="p-3 pr-4 text-right space-x-2">
-                            {eq.registration_status !== 'aprobado' && (
-                              <button onClick={() => cambiarEstadoEquipo(eq.id, 'aprobado')} className="text-xs font-bold text-emerald-600 hover:underline cursor-pointer">Aprobar</button>
-                            )}
-                            {eq.registration_status === 'pendiente' && (
-                              <button onClick={() => cambiarEstadoEquipo(eq.id, 'rechazado')} className="text-xs font-bold text-amber-600 hover:underline cursor-pointer">Rechazar</button>
-                            )}
-                            <button onClick={() => eliminarElemento(eq.id)} className="text-xs font-bold text-rose-600 hover:underline cursor-pointer">Eliminar</button>
+                          <td className="p-3 pr-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => abrirModalEditar(eq)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-600 hover:text-white hover:border-indigo-600 active:scale-95 transition-all cursor-pointer"
+                              >
+                                <span className="material-symbols-outlined text-xs">edit</span>
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => eliminarElemento(eq.id)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-rose-600 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-600 hover:text-white hover:border-rose-600 active:scale-95 transition-all cursor-pointer"
+                              >
+                                <span className="material-symbols-outlined text-xs">delete</span>
+                                Eliminar
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1683,6 +1684,89 @@ export const GestionParticipantes: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* ── Modal Editar Equipo ── */}
+      {modalEditarEq.abierto && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-indigo-500 text-base">edit</span>
+                <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Editar Equipo</h3>
+              </div>
+              <button
+                onClick={() => setModalEditarEq(prev => ({ ...prev, abierto: false }))}
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4">
+              {/* Nombre */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Nombre del Equipo *</label>
+                <input
+                  type="text"
+                  value={modalEditarEq.nombre}
+                  onChange={e => setModalEditarEq(prev => ({ ...prev, nombre: e.target.value }))}
+                  placeholder="Nombre del equipo"
+                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                />
+              </div>
+
+              {/* Representante */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Representante / Delegado</label>
+                <input
+                  type="text"
+                  value={modalEditarEq.representante}
+                  onChange={e => setModalEditarEq(prev => ({ ...prev, representante: e.target.value }))}
+                  placeholder="Nombre del representante"
+                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                />
+              </div>
+
+              {/* Estado */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Estado de Registro</label>
+                <select
+                  value={modalEditarEq.estado}
+                  onChange={e => setModalEditarEq(prev => ({ ...prev, estado: e.target.value as 'pendiente' | 'aprobado' | 'rechazado' }))}
+                  className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                >
+                  <option value="pendiente">Pendiente</option>
+                  <option value="aprobado">Aprobado</option>
+                  <option value="rechazado">Rechazado</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setModalEditarEq(prev => ({ ...prev, abierto: false }))}
+                disabled={modalEditarEq.guardando}
+                className="px-4 py-2 text-xs font-bold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all cursor-pointer disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={guardarEdicionEq}
+                disabled={modalEditarEq.guardando || !modalEditarEq.nombre.trim()}
+                className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {modalEditarEq.guardando
+                  ? <><span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />Guardando...</>
+                  : <><span className="material-symbols-outlined text-xs">save</span>Guardar Cambios</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Botón Flotante de Ayuda */}
       <button
