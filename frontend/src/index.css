@@ -269,13 +269,18 @@ body {
 
 /* 4. Form Controls (Inputs, Selects, Textareas) */
 :root:not(.light) input, :root:not(.light) select, :root:not(.light) textarea {
-  background-color: #171a26 !important;
-  color: #ffffff !important;
-  border-color: #1e2235 !important;
+  background-color: #0c0e16;
+  color: #ffffff;
+  border-color: #1e293b;
+  border-radius: 10px;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease-in-out;
 }
 
 :root:not(.light) input:focus, :root:not(.light) select:focus, :root:not(.light) textarea:focus {
-  border-color: #4f46e5 !important;
+  border-color: var(--indigo-500) !important;
+  box-shadow: 0 0 0 2px rgba(178, 34, 77, 0.25) !important;
   outline: none !important;
 }
 
@@ -359,19 +364,24 @@ body {
 }
 
 .light input, .light select, .light textarea {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-  border-color: #cbd5e1 !important;
+  background-color: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+  border-radius: 10px;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease-in-out;
 }
 .light select option {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
+  background-color: #ffffff;
+  color: #0f172a;
 }
 .light input::placeholder, .light textarea::placeholder {
-  color: #94a3b8 !important;
+  color: #94a3b8;
 }
 .light input:focus, .light select:focus, .light textarea:focus {
   border-color: #193b70 !important;
+  box-shadow: 0 0 0 2px rgba(25, 59, 112, 0.15) !important;
   outline: none !important;
 }
 
@@ -512,6 +522,27 @@ body {
 .light button.bg-rose-600 *,
 .light button.bg-rose-500 * {
   color: #ffffff !important;
+}
+
+/* ==========================================================================
+   GLOBAL TYPOGRAPHY OVERRIDES (Outfit Font Consistency)
+   ========================================================================== */
+body, input, select, textarea, button, table, td, th, h1, h2, h3, h4, h5, h6, span:not(.material-symbols-outlined) {
+  font-family: 'Outfit', sans-serif !important;
+}
+
+/* ==========================================================================
+   COLLAPSIBLE SIDEBAR DYNAMIC GRID LAYOUT (Adaptive right drawer space squeezing)
+   ========================================================================== */
+@media (min-width: 1024px) {
+  /* Main page layout shifts/squeezes left when right sidebar panel is open */
+  .lg\:ml-64 {
+    transition: margin-right 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  
+  body.panel-campeonatos-abierto .lg\:ml-64 {
+    margin-right: 384px !important;
+  }
 }
 
 

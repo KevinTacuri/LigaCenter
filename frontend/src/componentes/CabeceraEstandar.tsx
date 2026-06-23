@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../contexto/ContextoCampeonato';
 import { serviciosCampeonatos } from '../servicios/api';
@@ -18,8 +17,7 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
   leftElement,
 }) => {
   const { usuario, tieneRol } = useAutenticacion();
-  const { campeonatoActivo, limpiarCampeonato } = useCampeonato();
-  const navigate = useNavigate();
+  const { campeonatoActivo, panelCampeonatosAbierto, setPanelCampeonatosAbierto } = useCampeonato();
 
   const manejarDescargarReglamento = async () => {
     if (!campeonatoActivo) return;
@@ -52,7 +50,7 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
   const esAdministrador = tieneRol('administrador');
 
   return (
-    <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-900 px-6 py-4 sticky top-0 z-30 shadow-xs flex items-center justify-between">
+    <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-800 px-6 h-16 sticky top-0 z-30 shadow-xs flex items-center justify-between shrink-0">
       <div className="flex items-center gap-3">
         {leftElement}
         <div>
@@ -78,18 +76,18 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
           </button>
         )}
 
-        {!esAdministrador && (
+        {!esAdministrador && !panelCampeonatosAbierto && (
           campeonatoActivo ? (
             <button
-              onClick={limpiarCampeonato}
-              className="flex items-center gap-1.5 bg-[#171a26] hover:bg-[#1c1f2e] border border-slate-800 text-slate-350 rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all shadow-xs"
+              onClick={() => setPanelCampeonatosAbierto(true)}
+              className="flex items-center gap-1.5 bg-[#171a26] hover:bg-[#1c1f2e] border border-slate-800 text-slate-355 rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all shadow-xs"
             >
               <span className="material-symbols-outlined text-sm">swap_horiz</span>
               <span className="hidden sm:inline">Cambiar Torneo</span>
             </button>
           ) : (
             <button
-              onClick={() => navigate('/seleccion-campeonato')}
+              onClick={() => setPanelCampeonatosAbierto(true)}
               className="flex items-center gap-1.5 bg-indigo-650 hover:bg-indigo-600 text-white rounded-lg px-3.5 py-1.5 text-xs font-bold cursor-pointer transition-all shadow-xs"
             >
               <span className="material-symbols-outlined text-sm">sports_soccer</span>

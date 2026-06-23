@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { sileo } from 'sileo';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
+import { useCampeonato } from '../contexto/ContextoCampeonato';
 import { serviciosParticipantes } from '../servicios/api';
 import { BarraLateral } from '../componentes/BarraLateral';
 import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
@@ -162,13 +163,20 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
 // ─────────────────────────────────────────────
 export const GestionParticipantes: React.FC = () => {
   const { usuario, tienePermiso, tieneRol } = useAutenticacion();
+  const { campeonatoActivo } = useCampeonato();
   const navegar = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const confirm = useConfirm();
   const queryTab = searchParams.get('tab');
 
-  // Iniciamos en 'categorias' porque es el módulo más utilizado y el de "disciplinas" lo ocultamos por ahora para simplificar, pero se puede cambiar fácilmente si se prefiere otro tab como predeterminado o reactivar "disciplinas"
-  // const [tabActiva, setTabActiva] = useState<TabType>('disciplinas');
+  // Redirigir si no hay campeonato activo
+  useEffect(() => {
+    if (!campeonatoActivo) {
+      navegar('/tablero');
+    }
+  }, [campeonatoActivo, navegar]);
+
+  // Iniciamos en 'categorias' porque es el módulo más utilizado y el de "disciplinas" lo ocultamos por ahora para simplificar
   const [tabActiva, setTabActiva] = useState<TabType>('categorias');
 
   useEffect(() => {
@@ -486,7 +494,45 @@ export const GestionParticipantes: React.FC = () => {
     }
 
     try {
-      const champDisciplineId = parseInt(nuevaCat.discipline_id);
+      const selectedDisciplineName = nuevaCat.discipline_id;
+      const champId = parseInt(localStorage.getItem('campeonato_activo_id') || '0');
+
+      // 1. Buscar o crear la disciplina en el sistema
+      let discId: number;
+      const foundDisc = disciplinas.find(d => d.name.toLowerCase().trim() === selectedDisciplineName.toLowerCase().trim());
+      if (foundDisc) {
+        discId = foundDisc.id;
+      } else {
+        const resDisc = await serviciosParticipantes.crearDisciplina({ name: selectedDisciplineName });
+        if (resDisc.success && resDisc.data) {
+          discId = resDisc.data.id;
+          // Actualizar estado local
+          setDisciplinas((prev) => [...prev, resDisc.data]);
+        } else {
+          throw new Error('No se pudo crear la disciplina.');
+        }
+      }
+
+      // 2. Buscar o asociar al campeonato
+      let champDisciplineId: number;
+      const foundCD = champDisciplines.find(cd => cd.discipline_id === discId);
+      if (foundCD) {
+        champDisciplineId = foundCD.id;
+      } else {
+        const resCD = await serviciosParticipantes.agregarDisciplinaCampeonato(champId, {
+          discipline_id: discId,
+          specific_rules: null
+        });
+        if (resCD.success && resCD.data) {
+          champDisciplineId = resCD.data.id;
+          // Actualizar estado local
+          setChampDisciplines(prev => [...prev, resCD.data]);
+        } else {
+          throw new Error('No se pudo asociar la disciplina al campeonato.');
+        }
+      }
+
+      // 3. Registrar categoría
       const res = await serviciosParticipantes.crearCategoria(champDisciplineId, {
         name: nuevaCat.name,
         age_min: nuevaCat.age_min ? parseInt(nuevaCat.age_min) : null,
@@ -863,7 +909,9 @@ export const GestionParticipantes: React.FC = () => {
                       onChange={(e) => setNuevaCat({ ...nuevaCat, discipline_id: e.target.value })}
                       className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
                       <option value="">-- Selecciona Disciplina --</option>
-                      {champDisciplines.map((cd) => <option key={cd.id} value={cd.id}>{cd.discipline?.name}</option>)}
+                      {['Fútbol', 'Futsal', 'Básquetbol', 'Vóleibol', 'Atletismo', 'Ajedrez', 'Tenis de Mesa'].map((name) => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="space-y-1">

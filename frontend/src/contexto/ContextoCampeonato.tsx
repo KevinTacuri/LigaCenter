@@ -6,6 +6,8 @@ interface PropiedadesContextoCampeonato {
   seleccionarCampeonato: (camp: Campeonato) => void;
   limpiarCampeonato: () => void;
   cargandoCampeonato: boolean;
+  panelCampeonatosAbierto: boolean;
+  setPanelCampeonatosAbierto: (abierto: boolean) => void;
 }
 
 const ContextoCampeonato = createContext<PropiedadesContextoCampeonato | undefined>(undefined);
@@ -21,6 +23,7 @@ export const useCampeonato = () => {
 export const ProveedorCampeonato: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [campeonatoActivo, setCampeonatoActivo] = useState<Campeonato | null>(null);
   const [cargandoCampeonato, setCargandoCampeonato] = useState(true);
+  const [panelCampeonatosAbierto, setPanelCampeonatosAbierto] = useState(false);
 
   useEffect(() => {
     const id = localStorage.getItem('campeonato_activo_id');
@@ -44,6 +47,7 @@ export const ProveedorCampeonato: React.FC<{ children: React.ReactNode }> = ({ c
     localStorage.setItem('campeonato_activo_name', camp.name);
     localStorage.setItem('campeonato_activo_type', camp.type);
     localStorage.setItem('campeonato_activo_status', camp.status);
+    setPanelCampeonatosAbierto(false); // Cerrar panel al seleccionar
   };
 
   const limpiarCampeonato = () => {
@@ -60,7 +64,9 @@ export const ProveedorCampeonato: React.FC<{ children: React.ReactNode }> = ({ c
         campeonatoActivo,
         seleccionarCampeonato,
         limpiarCampeonato,
-        cargandoCampeonato
+        cargandoCampeonato,
+        panelCampeonatosAbierto,
+        setPanelCampeonatosAbierto
       }}
     >
       {children}

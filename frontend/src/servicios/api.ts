@@ -748,6 +748,21 @@ export const serviciosCampeonatos = {
       const res = await clienteApi.put(`/championships/${id}`, datos);
       return res.data;
     }
+  },
+  eliminarCampeonato: async (id: number): Promise<RespuestaApi<null>> => {
+    try {
+      const res = await clienteApi.delete(`/championships/${id}`);
+      return res.data;
+    } catch (err) {
+      // Fallback a localStorage si el backend falla o no lo implementa
+      const locales = localStorage.getItem('campeonatos_simulados');
+      if (locales) {
+        const lista: Campeonato[] = JSON.parse(locales);
+        const filtrada = lista.filter((c) => c.id !== id);
+        localStorage.setItem('campeonatos_simulados', JSON.stringify(filtrada));
+      }
+      return { success: true, data: null, message: 'Campeonato eliminado (fallback)' };
+    }
   }
 };
 

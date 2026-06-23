@@ -94,46 +94,46 @@ export const ConsolaSaaS: React.FC = () => {
 
         {/* Resumen SaaS */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+          <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs hover:border-indigo-500/30 transition-all duration-300">
             <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wider mb-1">Total Organizadores</span>
-            <span className="text-3xl font-black text-slate-900">{tenants.length}</span>
+            <span className="text-3xl font-black text-white">{tenants.length}</span>
           </div>
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+          <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs hover:border-indigo-500/30 transition-all duration-300">
             <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wider mb-1">Campeonatos Activos</span>
-            <span className="text-3xl font-black text-primary">
+            <span className="text-3xl font-black text-indigo-400">
               {tenants.reduce((acc, curr) => acc + curr.championships_count, 0)}
             </span>
           </div>
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+          <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs hover:border-indigo-500/30 transition-all duration-300">
             <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wider mb-1">Estado de la Plataforma</span>
-            <span className="flex items-center gap-1.5 mt-2 font-bold text-[10px] text-emerald-700 uppercase">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="flex items-center gap-1.5 mt-2 font-bold text-[10px] text-emerald-400 uppercase">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#10b981] animate-pulse"></span>
               Operando Normal
             </span>
           </div>
         </section>
 
         {/* Listado de Tenants */}
-        <section className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="p-6 border-b border-slate-150 flex items-center justify-between">
-            <h2 className="font-extrabold text-base text-slate-900">Workspaces / Organizadores Registrados</h2>
-            <span className="text-xs text-slate-500 font-medium">Auditoría general SaaS</span>
+        <section className="bg-[#11131c] rounded-2xl border border-slate-900 shadow-xs overflow-hidden">
+          <div className="p-6 border-b border-slate-900 flex items-center justify-between">
+            <h2 className="font-extrabold text-base text-white">Workspaces / Organizadores Registrados</h2>
+            <span className="text-xs text-slate-400 font-medium">Auditoría general SaaS</span>
           </div>
 
           {cargando ? (
             <div className="p-12 flex flex-col items-center justify-center gap-3">
-              <div className="w-10 h-10 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
-              <span className="text-xs text-slate-500 uppercase tracking-widest font-bold">Cargando Workspaces...</span>
+              <div className="w-10 h-10 rounded-full border-4 border-slate-800 border-t-indigo-500 animate-spin" />
+              <span className="text-xs text-slate-400 uppercase tracking-widest font-bold">Cargando Workspaces...</span>
             </div>
           ) : tenants.length === 0 ? (
-            <div className="p-12 text-center text-slate-500 text-sm">
+            <div className="p-12 text-center text-slate-400 text-sm">
               No hay organizadores registrados por el momento.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+                  <tr className="bg-[#171a26] border-b border-slate-900 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
                     <th className="p-4 pl-6">Nombre de Cuenta</th>
                     <th className="p-4">Contacto de Correo</th>
                     <th className="p-4 text-center">Campeonatos Creados</th>
@@ -141,18 +141,18 @@ export const ConsolaSaaS: React.FC = () => {
                     <th className="p-4 pr-6 text-right">Acciones de Licencia</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
+                <tbody className="divide-y divide-slate-900 text-sm">
                   {tenants.map((t) => (
-                    <tr key={t.id} className="hover:bg-slate-50/40 transition-colors">
-                      <td className="p-4 pl-6 font-bold text-slate-900">{t.name}</td>
-                      <td className="p-4 text-slate-600 text-xs">{t.email}</td>
-                      <td className="p-4 text-center font-extrabold text-slate-800">{t.championships_count}</td>
+                    <tr key={t.id} className="hover:bg-slate-900/20 transition-colors">
+                      <td className="p-4 pl-6 font-bold text-white">{t.name}</td>
+                      <td className="p-4 text-slate-300 text-xs">{t.email}</td>
+                      <td className="p-4 text-center font-extrabold text-slate-200">{t.championships_count}</td>
                       <td className="p-4">
                         <span
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
                             t.is_active
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25'
+                              : 'bg-rose-500/10 text-rose-450 border border-rose-500/25'
                           }`}
                         >
                           {t.is_active ? 'Activa' : 'Suspendida'}
@@ -163,8 +163,8 @@ export const ConsolaSaaS: React.FC = () => {
                           onClick={() => manejarToggleEstado(t)}
                           className={`px-3 py-1.5 text-xs font-bold rounded-lg border cursor-pointer transition-all ${
                             t.is_active
-                              ? 'border-rose-200 text-rose-600 hover:bg-rose-50'
-                              : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
+                              ? 'border-rose-500/30 text-rose-450 hover:bg-rose-500/10 hover:border-rose-500/50'
+                              : 'border-emerald-500/30 text-emerald-450 hover:bg-emerald-500/10 hover:border-emerald-500/50'
                           }`}
                         >
                           {t.is_active ? 'Suspender Workspace' : 'Activar Workspace'}

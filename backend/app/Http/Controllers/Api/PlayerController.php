@@ -38,8 +38,7 @@ class PlayerController extends Controller
     public function index(Request $request)
     {
         $query = Player::with([
-            'team.category',
-            'team.discipline'
+            'team.category.championshipDiscipline.discipline'
         ]);
 
         if ($request->has('championship_id')) {
@@ -201,8 +200,7 @@ class PlayerController extends Controller
     {
         return response()->json(
             Player::with([
-                'team.category',
-                'team.discipline'
+                'team.category.championshipDiscipline.discipline'
             ])->findOrFail($id)
         );
     }

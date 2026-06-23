@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { sileo } from 'sileo';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
+import { useCampeonato } from '../contexto/ContextoCampeonato';
 import { BarraLateral } from '../componentes/BarraLateral';
 import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
 import { useConfirm } from '@omit/react-confirm-dialog';
@@ -20,12 +21,20 @@ type TabType = 'escenarios' | 'generar' | 'programar' | 'partidos';
 
 export const ProgramacionFixture: React.FC = () => {
   const { usuario, tienePermiso, tieneRol } = useAutenticacion();
+  const { campeonatoActivo } = useCampeonato();
   const navegar = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const confirm = useConfirm();
   const queryTab = searchParams.get('tab');
 
   const [tabActiva, setTabActiva] = useState<TabType>('escenarios');
+
+  // Redirigir si no hay campeonato activo
+  useEffect(() => {
+    if (!campeonatoActivo) {
+      navegar('/tablero');
+    }
+  }, [campeonatoActivo, navegar]);
 
   useEffect(() => {
     if (queryTab && queryTab !== tabActiva) {

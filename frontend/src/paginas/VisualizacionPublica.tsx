@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   serviciosResultados,
   serviciosParticipantes,
@@ -14,15 +14,25 @@ import type {
   RankingItem
 } from '../servicios/api';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
+import { useCampeonato } from '../contexto/ContextoCampeonato';
 import { BarraLateral } from '../componentes/BarraLateral';
 import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
 
 export const VisualizacionPublica: React.FC = () => {
   const { usuario } = useAutenticacion();
+  const { campeonatoActivo } = useCampeonato();
+  const navegar = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryTab = searchParams.get('tab');
 
   const [tabActiva, setTabActiva] = useState<string>('posiciones');
+
+  // Redirigir si no hay campeonato activo
+  useEffect(() => {
+    if (!campeonatoActivo) {
+      navegar('/tablero');
+    }
+  }, [campeonatoActivo, navegar]);
 
   useEffect(() => {
     if (queryTab && queryTab !== tabActiva) {

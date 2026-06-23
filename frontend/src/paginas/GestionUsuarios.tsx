@@ -10,6 +10,12 @@ export const GestionUsuarios: React.FC = () => {
   const { usuario, tienePermiso } = useAutenticacion();
   const navegar = useNavigate();
 
+  const obtenerNombreRol = (rolesArray: any[]): string => {
+    if (!rolesArray || rolesArray.length === 0) return 'usuario_publico';
+    const rolObj = rolesArray[0];
+    return typeof rolObj === 'object' && rolObj !== null ? rolObj.name : rolObj;
+  };
+
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [roles, setRoles] = useState<Rol[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -111,26 +117,26 @@ export const GestionUsuarios: React.FC = () => {
         )}
 
         {/* Tabla / Listado */}
-        <section className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="p-6 border-b border-slate-150 flex items-center justify-between">
-            <h2 className="font-extrabold text-base text-slate-900">Usuarios Registrados en la App</h2>
-            <span className="text-xs text-slate-500 font-medium">Lista de personas y organizadores</span>
+        <section className="bg-[#11131c] rounded-2xl border border-slate-900 shadow-xs overflow-hidden">
+          <div className="p-6 border-b border-slate-900 flex items-center justify-between">
+            <h2 className="font-extrabold text-base text-white">Usuarios Registrados en la App</h2>
+            <span className="text-xs text-slate-400 font-medium">Lista de personas y organizadores</span>
           </div>
 
           {cargando ? (
             <div className="p-12 flex flex-col items-center justify-center gap-3">
-              <div className="w-10 h-10 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
-              <span className="text-xs text-slate-500 uppercase tracking-widest font-bold">Cargando Usuarios...</span>
+              <div className="w-10 h-10 rounded-full border-4 border-slate-800 border-t-indigo-500 animate-spin" />
+              <span className="text-xs text-slate-400 uppercase tracking-widest font-bold">Cargando Usuarios...</span>
             </div>
           ) : usuarios.length === 0 ? (
-            <div className="p-12 text-center text-slate-500 text-sm">
+            <div className="p-12 text-center text-slate-400 text-sm">
               No hay usuarios registrados por el momento.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+                  <tr className="bg-[#171a26] border-b border-slate-900 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
                     <th className="p-4 pl-6">Nombre</th>
                     <th className="p-4">Contacto</th>
                     <th className="p-4">DNI / Cédula</th>
@@ -139,25 +145,31 @@ export const GestionUsuarios: React.FC = () => {
                     <th className="p-4 pr-6 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
+                <tbody className="divide-y divide-slate-900 text-sm">
                   {usuarios.map((usuario) => (
-                    <tr key={usuario.id} className="hover:bg-slate-50/40 transition-colors">
+                    <tr key={usuario.id} className="hover:bg-slate-900/20 transition-colors">
                       <td className="p-4 pl-6">
-                        <div className="font-bold text-slate-900">{usuario.name}</div>
-                        <div className="text-xs text-slate-500">{usuario.email}</div>
+                        <div className="font-bold text-white">{usuario.name}</div>
+                        <div className="text-xs text-slate-450">{usuario.email}</div>
                       </td>
-                      <td className="p-4 text-slate-600 text-xs">
+                      <td className="p-4 text-slate-300 text-xs">
                         {usuario.phone || 'No registrado'}
                       </td>
-                      <td className="p-4 text-slate-600 text-xs">
+                      <td className="p-4 text-slate-300 text-xs">
                         {usuario.dni || 'No registrado'}
                       </td>
                       <td className="p-4">
                         <select
-                          value={usuario.roles[0] || 'Publico'}
+                          value={obtenerNombreRol(usuario.roles)}
                           onChange={(e) => manejarCambioRol(usuario.id, e.target.value)}
-                          className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs rounded-lg px-2.5 py-1.5 font-semibold transition-all outline-hidden cursor-pointer"
+                          className="bg-[#171a26] hover:bg-[#1f2335] border border-slate-850 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 font-semibold transition-all outline-hidden cursor-pointer"
                         >
+                          {/* Garantizar que el rol actual esté presente en las opciones para evitar que se distorsione la selección */}
+                          {obtenerNombreRol(usuario.roles) && !roles.some((rol) => rol.name === obtenerNombreRol(usuario.roles)) && (
+                            <option value={obtenerNombreRol(usuario.roles)}>
+                              {obtenerNombreRol(usuario.roles).replace('_', ' ').toUpperCase()}
+                            </option>
+                          )}
                           {roles.map((rol) => (
                             <option key={rol.id} value={rol.name}>
                               {rol.name.replace('_', ' ').toUpperCase()}
@@ -169,11 +181,11 @@ export const GestionUsuarios: React.FC = () => {
                         <span
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                             usuario.is_active
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-slate-100 text-slate-600 border border-slate-200'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25'
+                              : 'bg-slate-500/10 text-slate-400 border border-slate-500/25'
                           }`}
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full ${usuario.is_active ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+                          <span className={`w-1.5 h-1.5 rounded-full ${usuario.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'}`}></span>
                           {usuario.is_active ? 'Activo' : 'Inactivo'}
                         </span>
                       </td>
@@ -182,8 +194,8 @@ export const GestionUsuarios: React.FC = () => {
                           onClick={() => manejarToggleEstado(usuario)}
                           className={`px-3 py-1.5 text-xs font-bold rounded-lg border cursor-pointer transition-all ${
                             usuario.is_active
-                              ? 'border-rose-200 text-rose-600 hover:bg-rose-50'
-                              : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
+                              ? 'border-rose-500/30 text-rose-450 hover:bg-rose-500/10 hover:border-rose-500/50'
+                              : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/50'
                           }`}
                         >
                           {usuario.is_active ? 'Desactivar' : 'Activar'}
@@ -198,19 +210,19 @@ export const GestionUsuarios: React.FC = () => {
 
           {/* Paginación */}
           {totalPaginas > 1 && (
-            <div className="p-4 border-t border-slate-150 flex items-center justify-between text-xs">
+            <div className="p-4 border-t border-slate-900 flex items-center justify-between text-xs">
               <button
                 disabled={pagina === 1}
                 onClick={() => setPagina(pagina - 1)}
-                className="px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-150 transition-all cursor-pointer disabled:opacity-50"
+                className="px-3 py-1.5 bg-[#171a26] border border-slate-850 text-slate-300 font-semibold rounded-lg hover:bg-slate-900 transition-all cursor-pointer disabled:opacity-50"
               >
                 Anterior
               </button>
-              <span className="text-slate-500">Página {pagina} de {totalPaginas}</span>
+              <span className="text-slate-400">Página {pagina} de {totalPaginas}</span>
               <button
                 disabled={pagina === totalPaginas}
                 onClick={() => setPagina(pagina + 1)}
-                className="px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-150 transition-all cursor-pointer disabled:opacity-50"
+                className="px-3 py-1.5 bg-[#171a26] border border-slate-850 text-slate-300 font-semibold rounded-lg hover:bg-slate-900 transition-all cursor-pointer disabled:opacity-50"
               >
                 Siguiente
               </button>

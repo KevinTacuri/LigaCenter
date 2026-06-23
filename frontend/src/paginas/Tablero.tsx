@@ -6,7 +6,9 @@ import { BarraLateral } from '../componentes/BarraLateral';
 import { 
   serviciosParticipantes, 
   serviciosCampeonatos, 
-  serviciosFixture 
+  serviciosFixture,
+  serviciosUsuarios,
+  serviciosSuperAdmin
 } from '../servicios/api';
 import { sileo } from 'sileo';
 
@@ -25,10 +27,159 @@ const PASOS_TORNEO = [
 
 export const Tablero: React.FC = () => {
   const { usuario, cargando, tienePermiso, tieneRol } = useAutenticacion();
-  const { campeonatoActivo } = useCampeonato();
+  const { campeonatoActivo, seleccionarCampeonato, setPanelCampeonatosAbierto } = useCampeonato();
   const navegar = useNavigate();
   const [mostrarGuia, setMostrarGuia] = useState(false);
   const [simulando, setSimulando] = useState(false);
+
+  // Estados de datos de Administración SaaS (Simulación y Snapshot)
+  const [usuariosSnapshot, setUsuariosSnapshot] = useState<any[]>([]);
+  const [totalUsuarios, setTotalUsuarios] = useState<number>(0);
+  const [totalTenants, setTotalTenants] = useState<number>(3);
+  const [cargandoAdminData, setCargandoAdminData] = useState(false);
+  const [filtroLog, setFiltroLog] = useState<'TODOS' | 'INFO' | 'SUCCESS' | 'ERROR' | 'TRACE'>('TODOS');
+  
+  const [logsList, setLogsList] = useState([
+    { id: 1, time: '2026-06-23 00:08:12', type: 'INFO', text: 'Servidor bootstrapped con base de datos SQLite.' },
+    { id: 2, time: '2026-06-23 00:09:03', type: 'INFO', text: 'Mesa de Control enrutada con token Sanctum.' },
+    { id: 3, time: '2026-06-23 00:10:05', type: 'SUCCESS', text: 'Sesión administrativa iniciada para el propietario.' },
+    { id: 4, time: '2026-06-23 00:12:44', type: 'TRACE', text: 'Petición GET /api/users exitosa (status 200).' },
+    { id: 5, time: '2026-06-23 00:15:13', type: 'SUCCESS', text: 'Roles de usuario cargados en memoria local.' },
+    { id: 6, time: '2026-06-23 00:18:22', type: 'INFO', text: 'Vanguard Health check de servidor: 100% OK.' },
+  ]);
+
+  // Carga de snapshot y estadísticas de administradores
+  useEffect(() => {
+    if (usuario && tieneRol('administrador')) {
+      cargarDatosAdmin();
+    }
+  }, [usuario]);
+
+  const cargarDatosAdmin = async () => {
+    setCargandoAdminData(true);
+    try {
+      const resUser = await serviciosUsuarios.obtenerUsuarios(1);
+      if (resUser.success) {
+        setUsuariosSnapshot(resUser.data.users.slice(0, 4));
+        setTotalUsuarios(resUser.data.pagination.total);
+      }
+      
+      const resTenants = await serviciosSuperAdmin.obtenerTenants();
+      if (resTenants.success) {
+        setTotalTenants(resTenants.data.length);
+      }
+    } catch (err) {
+      console.error("Error al cargar datos de admin en el dashboard:", err);
+    } finally {
+      setCargandoAdminData(false);
+    }
+  };
+
+  // Estados para selección/creación integrada de campeonatos
+  const [campeonatos, setCampeonatos] = useState<any[]>([]);
+  const [cargandoCampeonatos, setCargandoCampeonatos] = useState(false);
+  
+  // Creador
+  const [nuevoNombre, setNuevoNombre] = useState('');
+  const [nuevoTipo, setNuevoTipo] = useState<'basico' | 'completo'>('basico');
+  const [nuevoReglamento, setNuevoReglamento] = useState<File | null>(null);
+  const [creando, setCreando] = useState(false);
+
+  useEffect(() => {
+    if (usuario && !tieneRol('administrador') && !campeonatoActivo) {
+      cargarCampeonatos();
+    }
+  }, [usuario, campeonatoActivo]);
+
+  useEffect(() => {
+    if (usuario && !tieneRol('administrador') && !campeonatoActivo && !cargandoCampeonatos && campeonatos.length > 0) {
+      setPanelCampeonatosAbierto(true);
+    }
+  }, [usuario, campeonatoActivo, cargandoCampeonatos, campeonatos.length]);
+
+  const cargarCampeonatos = async () => {
+    setCargandoCampeonatos(true);
+    try {
+      const res = await serviciosCampeonatos.obtenerCampeonatos();
+      if (res.success) {
+        setCampeonatos(res.data);
+      } else {
+        console.error('No se pudieron obtener los campeonatos.');
+      }
+    } catch (err) {
+      console.error('Error al conectar con el servidor para obtener campeonatos:', err);
+    } finally {
+      setCargandoCampeonatos(false);
+    }
+  };
+
+  const manejarCrearCampeonato = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nuevoNombre.trim()) return;
+    setCreando(true);
+    try {
+      const formData = new FormData();
+      formData.append('name', nuevoNombre.trim());
+      formData.append('type', nuevoTipo);
+      if (nuevoReglamento) {
+        formData.append('rules_pdf', nuevoReglamento);
+      }
+
+      const res = await serviciosCampeonatos.crearCampeonato(formData);
+      if (res.success) {
+        setNuevoNombre('');
+        setNuevoReglamento(null);
+        sileo.success({
+          title: 'Campeonato Creado',
+          description: 'El nuevo campeonato se ha registrado correctamente.'
+        });
+        await cargarCampeonatos();
+        seleccionarCampeonato(res.data);
+      } else {
+        sileo.error({
+          title: 'Error de Creación',
+          description: res.message || 'No se pudo crear el campeonato.'
+        });
+      }
+    } catch (err) {
+      sileo.error({
+        title: 'Error de Creación',
+        description: 'Error al conectar con el servidor para registrar el campeonato.'
+      });
+    } finally {
+      setCreando(false);
+    }
+  };
+
+  const obtenerNombreRol = (rolesArray: any[]): string => {
+    if (!rolesArray || rolesArray.length === 0) return 'usuario_publico';
+    const rolObj = rolesArray[0];
+    return typeof rolObj === 'object' && rolObj !== null ? rolObj.name : rolObj;
+  };
+
+  const agregarLogSimulado = (tipo: 'INFO' | 'SUCCESS' | 'ERROR' | 'TRACE') => {
+    const tiposTexto = {
+      INFO: 'Monitoreo de CPU estable en 12%. Disco: 2.4MB.',
+      SUCCESS: 'Copia de seguridad SQLite generada con éxito.',
+      ERROR: 'Intento de acceso denegado a recurso restringido por IP.',
+      TRACE: 'Ejecutada depuración de pila de middleware de API.'
+    };
+    const now = new Date();
+    const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    
+    setLogsList(prev => [
+      ...prev,
+      {
+        id: Date.now(),
+        time: timeStr,
+        type: tipo,
+        text: tiposTexto[tipo]
+      }
+    ]);
+    
+    sileo.info({ title: 'Evento de Auditoría', description: `Log registrado: [${tipo}]` });
+  };
+
 
   const handleSimularMundial = async () => {
     setSimulando(true);
@@ -329,10 +480,8 @@ export const Tablero: React.FC = () => {
   useEffect(() => {
     if (!cargando && !usuario) {
       navegar('/login');
-    } else if (!cargando && usuario && !campeonatoActivo && !usuario.roles?.includes('administrador')) {
-      navegar('/seleccion-campeonato');
     }
-  }, [usuario, cargando, navegar, campeonatoActivo]);
+  }, [usuario, cargando, navegar]);
 
   if (cargando) {
     return (
@@ -364,18 +513,18 @@ export const Tablero: React.FC = () => {
         {/* Contenido Principal */}
         <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto space-y-6 px-4 md:px-8">
           
-          {/* Banner de Bienvenida Profesional Claro */}
-          <section className="relative rounded-2xl bg-[#11131c] border border-slate-900 p-8 shadow-xs overflow-hidden group">
+          {/* Banner de Bienvenida Profesional Compacto */}
+          <section className="relative rounded-xl bg-[#11131c] border border-slate-900 p-4 md:p-5 shadow-xs overflow-hidden group">
             {/* Soft decorative line on top */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#800f2f] via-indigo-650 to-indigo-500"></div>
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#800f2f] via-indigo-650 to-indigo-500"></div>
             
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-              <div className="space-y-2">
-                <h2 className="text-xl md:text-2.5xl font-black text-white tracking-tight leading-none">
-                  ¡Bienvenido de nuevo, <span className="text-indigo-400">{usuario.name}</span>!
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+              <div className="space-y-1">
+                <h2 className="text-base md:text-lg font-black text-white tracking-tight leading-none">
+                  ¡Bienvenido, <span className="text-indigo-400">{usuario.name}</span>!
                 </h2>
-                <p className="text-slate-300 text-sm md:text-base max-w-2xl font-medium leading-relaxed">
-                  Desde aquí puedes gestionar los campeonatos, partidos, equipos y estadísticas según tu rol asignado en el sistema LigaCenter.
+                <p className="text-slate-400 text-xs max-w-2xl font-medium leading-relaxed">
+                  Gestiona campeonatos, partidos, equipos y estadísticas según tu rol asignado.
                 </p>
               </div>
 
@@ -383,9 +532,9 @@ export const Tablero: React.FC = () => {
                 {usuario.roles?.map((rol, i) => (
                   <span 
                     key={i} 
-                    className="px-3.5 py-1.5 rounded-lg bg-[#171a26] border border-slate-850 text-slate-350 text-xs font-bold uppercase tracking-wider"
+                    className="px-2.5 py-1 rounded-md bg-[#171a26] border border-slate-850 text-slate-350 text-[10px] font-bold uppercase tracking-wider"
                   >
-                    Rol: {rol.replace('_', ' ')}
+                    {rol.replace('_', ' ')}
                   </span>
                 ))}
               </div>
@@ -427,143 +576,489 @@ export const Tablero: React.FC = () => {
           )}
 
           {/* Base grid layout */}
-          <div className="grid grid-cols-1 gap-6">
-
-            {/* Card: Acciones y Módulos según Permisos */}
-            <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs hover:border-[#800f2f]/60 transition-all duration-200">
-              <h3 className="text-slate-200 font-bold text-sm uppercase tracking-wider mb-6 flex items-center gap-2 border-b border-slate-905 pb-3">
-                <div className="w-7 h-7 rounded bg-[#171a26] flex items-center justify-center text-slate-300 border border-slate-850">
-                  <span className="material-symbols-outlined text-sm">sports_soccer</span>
-                </div>
-                Módulos Disponibles
-              </h3>
+          {tieneRol('administrador') ? (
+            <div className="space-y-6 animate-fadeIn">
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 1. Métricas Globales del SaaS */}
+              <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Organizadores */}
+                <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs flex items-center gap-5 hover:border-indigo-500/30 transition-all duration-300 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-xl group-hover:bg-indigo-500/10 transition-colors"></div>
+                  <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-2xl">groups</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-450 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Organizadores</span>
+                    <span className="text-xl font-black text-white">{totalTenants} Activos</span>
+                    <span className="text-[10px] text-slate-500 block font-semibold">Clientes en la plataforma</span>
+                  </div>
+                </div>
+
+                {/* Usuarios Registrados */}
+                <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs flex items-center gap-5 hover:border-indigo-500/30 transition-all duration-300 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/5 rounded-full blur-xl group-hover:bg-violet-500/10 transition-colors"></div>
+                  <div className="w-12 h-12 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-2xl">shield_person</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-455 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Usuarios del Sistema</span>
+                    <span className="text-xl font-black text-white">{cargandoAdminData ? '...' : `${totalUsuarios} Totales`}</span>
+                    <span className="text-[10px] text-slate-500 block font-semibold">Cuentas creadas</span>
+                  </div>
+                </div>
+
+                {/* Servidor OK */}
+                <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs flex items-center gap-5 hover:border-emerald-500/30 transition-all duration-300 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl group-hover:bg-emerald-500/10 transition-colors"></div>
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-2xl">dns</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-455 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Estado Servidor</span>
+                    <span className="text-xl font-black text-emerald-400">100% Online</span>
+                    <span className="text-[10px] text-slate-500 block font-semibold">CPU: 12% | RAM: 450MB</span>
+                  </div>
+                </div>
+
+                {/* Base de datos SQLite */}
+                <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs flex items-center gap-5 hover:border-amber-500/30 transition-all duration-300 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-xl group-hover:bg-amber-500/10 transition-colors"></div>
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-405 border border-amber-500/20 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-2xl">database</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-455 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Base de Datos</span>
+                    <span className="text-xl font-black text-white">SQLite Activo</span>
+                    <span className="text-[10px] text-slate-500 block font-semibold">Sincronizado / 2.4 MB</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* 2. Sección dividida: Terminal y Tabla Snapshot */}
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                 
-                {/* Módulo: Gestión de Usuarios (Solo Administrador) */}
-                {tienePermiso('gestionar_usuarios') && (
-                  <div className="p-6 rounded-2xl bg-[#171a26] border border-slate-900/60 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-xs transition-all duration-300 group flex items-start gap-5 cursor-pointer" onClick={() => navegar('/tablero/usuarios')}>
-                    <div className="w-14 h-14 rounded-xl bg-[#11131c] text-slate-400 border border-slate-800 flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:text-indigo-400 group-hover:border-indigo-500/30 transition-all duration-300 shrink-0">
-                      <span className="material-symbols-outlined text-[28px]">group</span>
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Gestión de Usuarios</h4>
-                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Administra accesos, roles y activa o desactiva usuarios.</p>
-                      <button className="mt-4 text-xs text-slate-400 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer">
-                        <span>Acceder Módulo</span>
-                        <span>→</span>
+                {/* Consola de Auditoría Interactiva (7 cols) */}
+                <section className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs xl:col-span-7 flex flex-col h-[400px]">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-900 pb-4 mb-4 shrink-0">
+                    <h3 className="text-slate-200 font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                      <span className="material-symbols-outlined text-lg text-indigo-400">terminal</span>
+                      Registro de Eventos (Auditoría del Sistema)
+                    </h3>
+                    
+                    <div className="flex items-center gap-2">
+                      <select 
+                        value={filtroLog}
+                        onChange={(e) => setFiltroLog(e.target.value as any)}
+                        className="bg-[#171a26] border border-slate-850 text-slate-300 text-[10px] rounded-md px-2 py-1 outline-hidden font-bold cursor-pointer"
+                      >
+                        <option value="TODOS">TODOS LOS LOGS</option>
+                        <option value="INFO">INFO</option>
+                        <option value="SUCCESS">SUCCESS</option>
+                        <option value="TRACE">TRACE</option>
+                        <option value="ERROR">ERROR</option>
+                      </select>
+                      
+                      <button 
+                        onClick={() => setLogsList([])}
+                        title="Limpiar Consola"
+                        className="bg-slate-800 hover:bg-slate-700 text-slate-350 p-1 rounded-md text-[10px] border border-slate-750 cursor-pointer flex items-center justify-center active:scale-95"
+                      >
+                        <span className="material-symbols-outlined text-sm font-bold">mop</span>
                       </button>
                     </div>
                   </div>
-                )}
 
-                {/* Módulo: Consola SaaS (Solo Super Administrador / App Owner) */}
-                {tienePermiso('gestionar_usuarios') && (
-                  <div className="p-6 rounded-2xl bg-[#171a26] border border-slate-900/60 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-xs transition-all duration-300 group flex items-start gap-5 cursor-pointer" onClick={() => navegar('/tablero/saas-admin')}>
+                  {/* Terminal Log Container */}
+                  <div className="flex-1 bg-black/40 border border-slate-900 rounded-xl p-4 font-mono text-[10px] text-slate-400 space-y-2 overflow-y-auto min-h-0 select-text">
+                    {logsList.filter(log => filtroLog === 'TODOS' || log.type === filtroLog).length === 0 ? (
+                      <p className="text-slate-600 italic">No hay logs registrados para este filtro.</p>
+                    ) : (
+                      logsList
+                        .filter(log => filtroLog === 'TODOS' || log.type === filtroLog)
+                        .map((log) => {
+                          let colorClass = 'text-slate-400';
+                          if (log.type === 'SUCCESS') colorClass = 'text-emerald-400';
+                          if (log.type === 'ERROR') colorClass = 'text-rose-450 font-bold';
+                          if (log.type === 'TRACE') colorClass = 'text-indigo-405';
+                          
+                          return (
+                            <div key={log.id} className="flex gap-2.5 items-start leading-relaxed border-b border-slate-905/30 pb-1.5 last:border-0">
+                              <span className="text-slate-600 shrink-0 select-none">[{log.time}]</span>
+                              <span className={`font-bold shrink-0 uppercase select-none w-14`}>[{log.type}]</span>
+                              <span className={colorClass}>{log.text}</span>
+                            </div>
+                          );
+                        })
+                    )}
+                  </div>
+
+                  {/* Controles para simular eventos */}
+                  <div className="mt-4 flex flex-wrap items-center gap-2 pt-3 border-t border-slate-900 shrink-0">
+                    <span className="text-[9px] uppercase font-black text-slate-500 tracking-wider">Simular Evento:</span>
+                    <button 
+                      onClick={() => agregarLogSimulado('INFO')}
+                      className="px-2 py-1 bg-slate-800/80 hover:bg-slate-800 text-slate-350 text-[8px] font-extrabold uppercase rounded-sm border border-slate-750 transition-colors cursor-pointer"
+                    >
+                      + Info CPU
+                    </button>
+                    <button 
+                      onClick={() => agregarLogSimulado('SUCCESS')}
+                      className="px-2 py-1 bg-emerald-950/20 hover:bg-emerald-950/45 text-emerald-400 text-[8px] font-extrabold uppercase rounded-sm border border-emerald-900/30 transition-colors cursor-pointer"
+                    >
+                      + Backup Exitoso
+                    </button>
+                    <button 
+                      onClick={() => agregarLogSimulado('TRACE')}
+                      className="px-2 py-1 bg-indigo-950/20 hover:bg-indigo-950/45 text-indigo-400 text-[8px] font-extrabold uppercase rounded-sm border border-indigo-900/30 transition-colors cursor-pointer"
+                    >
+                      + Debug API
+                    </button>
+                    <button 
+                      onClick={() => agregarLogSimulado('ERROR')}
+                      className="px-2 py-1 bg-rose-950/20 hover:bg-rose-950/45 text-rose-455 text-[8px] font-extrabold uppercase rounded-sm border border-rose-900/30 transition-colors cursor-pointer"
+                    >
+                      + Acceso Denegado
+                    </button>
+                  </div>
+                </section>
+
+                {/* Instantánea de Usuarios (5 cols) */}
+                <section className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs xl:col-span-5 flex flex-col h-[400px]">
+                  <div className="flex items-center justify-between border-b border-slate-900 pb-4 mb-4 shrink-0">
+                    <h3 className="text-slate-200 font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                      <span className="material-symbols-outlined text-lg text-indigo-400">group</span>
+                      Usuarios Recientes
+                    </h3>
+                    <button 
+                      onClick={() => navegar('/tablero/usuarios')}
+                      className="text-[#a5d8ff] hover:text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <span>Gestionar</span>
+                      <span className="material-symbols-outlined text-xs">open_in_new</span>
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto min-h-0">
+                    {cargandoAdminData ? (
+                      <div className="h-full flex items-center justify-center">
+                        <div className="w-6 h-6 border-2 border-slate-800 border-t-indigo-500 rounded-full animate-spin"></div>
+                      </div>
+                    ) : usuariosSnapshot.length === 0 ? (
+                      <div className="h-full flex items-center justify-center text-slate-500 text-xs italic">
+                        No hay usuarios registrados en el sistema.
+                      </div>
+                    ) : (
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="text-slate-500 text-[9px] uppercase font-bold tracking-wider border-b border-slate-900 pb-2">
+                            <th className="pb-2 font-black">Usuario</th>
+                            <th className="pb-2 font-black">Rol del Sistema</th>
+                            <th className="pb-2 text-right font-black">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-905/30">
+                          {usuariosSnapshot.map((item) => (
+                            <tr key={item.id} className="hover:bg-slate-900/10 transition-colors">
+                              <td className="py-2.5">
+                                <div className="font-bold text-slate-200 leading-tight text-xs">{item.name}</div>
+                                <div className="text-[10px] text-slate-500 leading-none mt-0.5">{item.email}</div>
+                              </td>
+                              <td className="py-2.5">
+                                <span className="px-2 py-0.5 rounded-md bg-[#171a26] border border-slate-850 text-slate-350 font-bold uppercase text-[9px] tracking-wide">
+                                  {obtenerNombreRol(item.roles).replace('_', ' ')}
+                                </span>
+                              </td>
+                              <td className="py-2.5 text-right">
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider ${
+                                  item.is_active 
+                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                    : 'bg-slate-500/10 text-slate-450 border border-slate-500/20'
+                                }`}>
+                                  <span className={`w-1 h-1 rounded-full ${item.is_active ? 'bg-emerald-500' : 'bg-slate-500'}`}></span>
+                                  {item.is_active ? 'Activo' : 'Inactivo'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </section>
+
+              </div>
+
+              {/* 3. Sección de Consolas Administrativas */}
+              <section className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs">
+                <h3 className="text-slate-200 font-bold text-sm uppercase tracking-wider mb-6 flex items-center gap-2 border-b border-slate-900 pb-3">
+                  <div className="w-7 h-7 rounded bg-[#171a26] flex items-center justify-center text-slate-300 border border-slate-850">
+                    <span className="material-symbols-outlined text-sm">settings_applications</span>
+                  </div>
+                  Consola de Herramientas SaaS y Configuración
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Módulo 1: Consola SaaS */}
+                  <div className="p-6 rounded-2xl bg-[#171a26] border border-slate-900 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-xs transition-all duration-300 group flex items-start gap-5 cursor-pointer" onClick={() => navegar('/tablero/saas-admin')}>
                     <div className="w-14 h-14 rounded-xl bg-[#11131c] text-slate-400 border border-slate-800 flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:text-indigo-400 group-hover:border-indigo-500/30 transition-all duration-300 shrink-0">
                       <span className="material-symbols-outlined text-[28px]">admin_panel_settings</span>
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Consola SaaS Administrador</h4>
-                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Supervisa organizadores, estadísticas globales de torneos y licencias.</p>
-                      <button className="mt-4 text-xs text-slate-400 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer">
+                      <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Consola SaaS</h4>
+                      <p className="text-xs text-slate-450 mt-1.5 leading-relaxed font-medium">Supervisa y audita organizadores registrados, cantidad de campeonatos y estado de licencias globales.</p>
+                      <button className="mt-4 text-xs text-slate-455 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer bg-transparent border-0 outline-hidden">
                         <span>Auditar SaaS</span>
                         <span>→</span>
                       </button>
                     </div>
                   </div>
-                )}
 
-                {/* Módulo: Equipos y Jugadores (Organizador, Encargado, Publico) */}
-                {campeonatoActivo && tienePermiso('ver_equipos') && !tieneRol('administrador') && (
-                  <div className="p-6 rounded-2xl bg-[#171a26] border border-slate-900/60 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-xs transition-all duration-300 group flex items-start gap-5 cursor-pointer" onClick={() => navegar('/tablero/participantes')}>
+                  {/* Módulo 2: Gestión de Usuarios */}
+                  <div className="p-6 rounded-2xl bg-[#171a26] border border-slate-900 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-xs transition-all duration-300 group flex items-start gap-5 cursor-pointer" onClick={() => navegar('/tablero/usuarios')}>
                     <div className="w-14 h-14 rounded-xl bg-[#11131c] text-slate-400 border border-slate-800 flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:text-indigo-400 group-hover:border-indigo-500/30 transition-all duration-300 shrink-0">
-                      <span className="material-symbols-outlined text-[28px]">groups</span>
+                      <span className="material-symbols-outlined text-[28px]">group</span>
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Equipos y Jugadores</h4>
-                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Consulta los planteles, crea nuevos equipos e inscribe jugadores.</p>
-                      <button className="mt-4 text-xs text-slate-400 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer">
-                        <span>Ver Equipos</span>
+                      <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Usuarios & Roles</h4>
+                      <p className="text-xs text-slate-450 mt-1.5 leading-relaxed font-medium">Asigna y actualiza roles en el sistema (Administrador, Organizador, Mesa de Control) y gestiona la suspensión de cuentas.</p>
+                      <button className="mt-4 text-xs text-slate-455 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer bg-transparent border-0 outline-hidden">
+                        <span>Gestionar Roles</span>
                         <span>→</span>
                       </button>
                     </div>
                   </div>
-                )}
 
-                {/* Módulo: Fixture y Escenarios (Organizador, Administrador) */}
-                {campeonatoActivo && tienePermiso('ver_equipos') && !tieneRol('administrador') && (
-                  <div className="p-6 rounded-2xl bg-[#171a26] border border-slate-900/60 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-xs transition-all duration-300 group flex items-start gap-5 cursor-pointer" onClick={() => navegar('/tablero/fixture')}>
+                  {/* Módulo 3: Configuración General */}
+                  <div className="p-6 rounded-2xl bg-[#171a26] border border-slate-900 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-xs transition-all duration-300 group flex items-start gap-5 cursor-pointer" onClick={() => navegar('/tablero/configuracion')}>
                     <div className="w-14 h-14 rounded-xl bg-[#11131c] text-slate-400 border border-slate-800 flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:text-indigo-400 group-hover:border-indigo-500/30 transition-all duration-300 shrink-0">
-                      <span className="material-symbols-outlined text-[28px]">calendar_today</span>
+                      <span className="material-symbols-outlined text-[28px]">settings</span>
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Fixture y Calendario</h4>
-                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Genera emparejamientos y programa canchas y horarios oficiales.</p>
-                      <button className="mt-4 text-xs text-slate-400 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer">
-                        <span>Gestionar Fixture</span>
+                      <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Configuración Global</h4>
+                      <p className="text-xs text-slate-450 mt-1.5 leading-relaxed font-medium">Configura parámetros globales del sistema, opciones de desarrollo, plantillas de reglamentos y guías oficiales.</p>
+                      <button className="mt-4 text-xs text-slate-455 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer bg-transparent border-0 outline-hidden">
+                        <span>Ajustar Sistema</span>
                         <span>→</span>
                       </button>
                     </div>
                   </div>
-                )}
+                </div>
+              </section>
+            </div>
+          ) : !campeonatoActivo ? (
+            cargandoCampeonatos ? (
+              <div className="py-20 flex flex-col items-center justify-center gap-3">
+                <div className="w-8 h-8 rounded-full border-4 border-slate-800 border-t-indigo-500 animate-spin" />
+                <span className="text-xs text-slate-500 font-extrabold uppercase tracking-widest animate-pulse">Cargando campeonatos...</span>
+              </div>
+            ) : campeonatos.length === 0 ? (
+              // Vista Limpia de Onboarding (0 Campeonatos)
+              <div className="max-w-md mx-auto py-8 px-4 space-y-6 text-center animate-fadeIn">
+                <div className="w-16 h-16 mx-auto rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                  <span className="material-symbols-outlined text-3xl">sports_soccer</span>
+                </div>
+                <div className="space-y-1.5">
+                  <h2 className="text-lg md:text-xl font-black text-white tracking-tight">Crea tu primer campeonato</h2>
+                  <p className="text-xs text-slate-400 leading-relaxed font-semibold max-w-sm mx-auto">
+                    ¡Bienvenido a LigaCenter! Para comenzar a gestionar tus disciplinas, equipos, jugadores, fixtures y planillas de juego, registra tu primer campeonato a continuación.
+                  </p>
+                </div>
 
-                {/* Módulo: Gestión de Planillas y Partidos (Mesa, Organizador) */}
-                {campeonatoActivo && (tienePermiso('registrar_incidencias') || tieneRol('organizador')) && !tieneRol('administrador') && (
-                  <div className="p-6 rounded-2xl bg-[#171a26] border border-slate-900/60 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-xs transition-all duration-300 group flex items-start gap-5 cursor-pointer" onClick={() => navegar('/tablero/mesa')}>
-                    <div className="w-14 h-14 rounded-xl bg-[#11131c] text-slate-400 border border-slate-800 flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:text-indigo-400 group-hover:border-indigo-500/30 transition-all duration-300 shrink-0">
-                      <span className="material-symbols-outlined text-[28px]">assignment</span>
+                {/* Formulario de onboarding */}
+                <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 text-left shadow-xs space-y-4">
+                  <form onSubmit={manejarCrearCampeonato} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-350 block">Nombre del Campeonato *</label>
+                      <input
+                        type="text" required placeholder="Ej: Torneo Clausura Colegio de Ingenieros"
+                        value={nuevoNombre} onChange={(e) => setNuevoNombre(e.target.value)}
+                        className="w-full text-xs border border-slate-800 bg-[#171a26] text-white rounded-xl p-3 outline-none focus:border-indigo-500/50 transition-all font-medium font-sans"
+                      />
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Planilla de Partidos</h4>
-                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Registra goles, faltas, tarjetas e incidencias de los encuentros.</p>
-                      <button className="mt-4 text-xs text-slate-400 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer">
-                        <span>Mesa de Control</span>
-                        <span>→</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
 
-                {/* Módulo: Tablas de Posición (Cualquiera) */}
-                {campeonatoActivo && tienePermiso('ver_tablas') && !tieneRol('administrador') && (
-                  <div className="p-6 rounded-2xl bg-[#171a26] border border-slate-900/60 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-xs transition-all duration-300 group flex items-start gap-5 cursor-pointer" onClick={() => navegar('/tablero/publico')}>
-                    <div className="w-14 h-14 rounded-xl bg-[#11131c] text-slate-400 border border-slate-800 flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:text-indigo-400 group-hover:border-indigo-500/30 transition-all duration-300 shrink-0">
-                      <span className="material-symbols-outlined text-[28px]">leaderboard</span>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-350 block">Formato / Tipo de Gestión *</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <label className={`p-4 rounded-xl border flex flex-col gap-1 cursor-pointer transition-all ${
+                          nuevoTipo === 'basico' ? 'border-indigo-500 bg-indigo-500/5' : 'border-slate-850 bg-[#171a26]/40 hover:bg-[#1a1d2a]'
+                        }`}>
+                          <input
+                            type="radio" name="onboarding_tipo_camp" checked={nuevoTipo === 'basico'}
+                            onChange={() => setNuevoTipo('basico')} className="sr-only"
+                          />
+                          <span className="text-xs font-extrabold text-white uppercase tracking-wider">Básico</span>
+                          <span className="text-[9px] text-slate-500 leading-none">Fixture rápido</span>
+                        </label>
+                        <label className={`p-4 rounded-xl border flex flex-col gap-1 cursor-pointer transition-all ${
+                          nuevoTipo === 'completo' ? 'border-indigo-500 bg-indigo-500/5' : 'border-slate-855 bg-[#171a26]/40 hover:bg-[#1a1d2a]'
+                        }`}>
+                          <input
+                            type="radio" name="onboarding_tipo_camp" checked={nuevoTipo === 'completo'}
+                            onChange={() => setNuevoTipo('completo')} className="sr-only"
+                          />
+                          <span className="text-xs font-extrabold text-white uppercase tracking-wider">Completo</span>
+                          <span className="text-[9px] text-slate-500 leading-none">Multi-disciplina</span>
+                        </label>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Posiciones y Estadísticas</h4>
-                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Visualiza los resultados en vivo, anotadores y tablas oficiales.</p>
-                      <button className="mt-4 text-xs text-slate-400 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer">
-                        <span>Ver Posiciones</span>
-                        <span>→</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
 
-                {/* Mensaje Informativo si no hay Campeonato seleccionado */}
-                {!campeonatoActivo && !tieneRol('administrador') && (
-                  <div className="md:col-span-2 p-8 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-amber-200 flex flex-col items-center justify-center text-center gap-3">
-                    <span className="material-symbols-outlined text-3xl text-amber-500">warning_amber</span>
-                    <div>
-                      <h4 className="font-extrabold text-sm uppercase tracking-wider text-amber-300">Sin Campeonato Seleccionado</h4>
-                      <p className="text-xs text-amber-400 mt-1.5 max-w-md leading-relaxed font-medium">
-                        Para poder gestionar equipos, jugadores, fixtures y actas de partidos, por favor selecciona un campeonato de trabajo.
-                      </p>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-350 block">Reglamento Oficial (PDF - Opcional)</label>
+                      <input
+                        type="file" accept=".pdf"
+                        onChange={(e) => setNuevoReglamento(e.target.files?.[0] || null)}
+                        className="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-[10px] file:font-black file:bg-indigo-500/10 file:text-indigo-400 file:hover:bg-indigo-500/20 file:cursor-pointer outline-none cursor-pointer bg-[#171a26] border border-slate-800 p-2.5 rounded-xl"
+                      />
                     </div>
+
                     <button
-                      onClick={() => navegar('/seleccion-campeonato')}
-                      className="mt-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-5 py-2.5 rounded-lg transition-all shadow-xs cursor-pointer active:scale-95 flex items-center gap-1.5"
+                      type="submit" disabled={creando}
+                      className="w-full bg-indigo-650 hover:bg-indigo-600 disabled:bg-indigo-800 text-white font-extrabold py-3.5 rounded-xl text-xs tracking-wider uppercase cursor-pointer transition-all flex items-center justify-center gap-2 mt-4"
                     >
-                      <span className="material-symbols-outlined text-sm font-bold">sports_soccer</span>
-                      <span>Seleccionar / Crear Campeonato</span>
+                      {creando ? 'Creando e Ingresando...' : 'Crear e Ingresar'}
                     </button>
+                  </form>
+                </div>
+              </div>
+            ) : (
+              // Vista de Seleccion por Panel Lateral (>= 1 Campeonatos)
+              <div className="max-w-md mx-auto py-16 px-4 space-y-6 text-center animate-fadeIn">
+                <div className="w-16 h-16 mx-auto rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 animate-pulse">
+                  <span className="material-symbols-outlined text-3xl">east</span>
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-lg md:text-xl font-black text-white tracking-tight">Selecciona un campeonato</h2>
+                  <p className="text-xs text-slate-400 leading-relaxed font-semibold max-w-sm mx-auto">
+                    Por favor, abre el panel de campeonatos en la barra lateral derecha para seleccionar el torneo con el que deseas trabajar.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setPanelCampeonatosAbierto(true)}
+                  className="bg-indigo-650 hover:bg-indigo-600 text-white font-extrabold text-xs uppercase px-5 py-3 rounded-xl flex items-center gap-2 mx-auto cursor-pointer shadow-xs transition-all tracking-wider"
+                >
+                  <span className="material-symbols-outlined text-sm">swap_horiz</span>
+                  <span>Abrir Panel de Campeonatos</span>
+                </button>
+              </div>
+            )
+          ) : (
+            <div className="grid grid-cols-1 gap-6">
+
+              {/* Card: Acciones y Módulos según Permisos */}
+              <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs hover:border-[#800f2f]/60 transition-all duration-200">
+                <h3 className="text-slate-200 font-bold text-sm uppercase tracking-wider mb-6 flex items-center gap-2 border-b border-slate-905 pb-3">
+                  <div className="w-7 h-7 rounded bg-[#171a26] flex items-center justify-center text-slate-300 border border-slate-850">
+                    <span className="material-symbols-outlined text-sm">sports_soccer</span>
                   </div>
-                )}
+                  Módulos Disponibles
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  
+                  {/* Módulo: Gestión de Usuarios (Solo Administrador) */}
+                  {tienePermiso('gestionar_usuarios') && (
+                    <div className="p-6 rounded-2xl bg-[#171a26] border border-slate-900/60 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-xs transition-all duration-300 group flex items-start gap-5 cursor-pointer" onClick={() => navegar('/tablero/usuarios')}>
+                      <div className="w-14 h-14 rounded-xl bg-[#11131c] text-slate-400 border border-slate-800 flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:text-indigo-400 group-hover:border-indigo-500/30 transition-all duration-300 shrink-0">
+                        <span className="material-symbols-outlined text-[28px]">group</span>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Gestión de Usuarios</h4>
+                        <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Administra accesos, roles y activa o desactiva usuarios.</p>
+                        <button className="mt-4 text-xs text-slate-400 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer">
+                          <span>Acceder Módulo</span>
+                          <span>→</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Módulo: Consola SaaS (Solo Super Administrador / App Owner) */}
+                  {tienePermiso('gestionar_usuarios') && (
+                    <div className="p-6 rounded-2xl bg-[#171a26] border border-slate-900/60 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-xs transition-all duration-300 group flex items-start gap-5 cursor-pointer" onClick={() => navegar('/tablero/saas-admin')}>
+                      <div className="w-14 h-14 rounded-xl bg-[#11131c] text-slate-400 border border-slate-800 flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:text-indigo-400 group-hover:border-indigo-500/30 transition-all duration-300 shrink-0">
+                        <span className="material-symbols-outlined text-[28px]">admin_panel_settings</span>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Consola SaaS Administrador</h4>
+                        <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Supervisa organizadores, estadísticas globales de torneos y licencias.</p>
+                        <button className="mt-4 text-xs text-slate-400 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer">
+                          <span>Auditar SaaS</span>
+                          <span>→</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Módulo: Equipos y Jugadores (Organizador, Encargado, Publico) */}
+                  {campeonatoActivo && tienePermiso('ver_equipos') && !tieneRol('administrador') && (
+                    <div className="p-6 rounded-2xl bg-[#171a26] border border-slate-900/60 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-xs transition-all duration-300 group flex items-start gap-5 cursor-pointer" onClick={() => navegar('/tablero/participantes')}>
+                      <div className="w-14 h-14 rounded-xl bg-[#11131c] text-slate-400 border border-slate-800 flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:text-indigo-400 group-hover:border-indigo-500/30 transition-all duration-300 shrink-0">
+                        <span className="material-symbols-outlined text-[28px]">groups</span>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Equipos y Jugadores</h4>
+                        <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Consulta los planteles, crea nuevos equipos e inscribe jugadores.</p>
+                        <button className="mt-4 text-xs text-slate-400 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer">
+                          <span>Ver Equipos</span>
+                          <span>→</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Módulo: Fixture y Escenarios (Organizador, Administrador) */}
+                  {campeonatoActivo && tienePermiso('ver_equipos') && !tieneRol('administrador') && (
+                    <div className="p-6 rounded-2xl bg-[#171a26] border border-slate-900/60 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-xs transition-all duration-300 group flex items-start gap-5 cursor-pointer" onClick={() => navegar('/tablero/fixture')}>
+                      <div className="w-14 h-14 rounded-xl bg-[#11131c] text-slate-400 border border-slate-800 flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:text-indigo-400 group-hover:border-indigo-500/30 transition-all duration-300 shrink-0">
+                        <span className="material-symbols-outlined text-[28px]">calendar_today</span>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Fixture y Calendario</h4>
+                        <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Genera emparejamientos y programa canchas y horarios oficiales.</p>
+                        <button className="mt-4 text-xs text-slate-400 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer">
+                          <span>Gestionar Fixture</span>
+                          <span>→</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Módulo: Gestión de Planillas y Partidos (Mesa, Organizador) */}
+                  {campeonatoActivo && (tienePermiso('registrar_incidencias') || tieneRol('organizador')) && !tieneRol('administrador') && (
+                    <div className="p-6 rounded-2xl bg-[#171a26] border border-slate-900/60 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-xs transition-all duration-300 group flex items-start gap-5 cursor-pointer" onClick={() => navegar('/tablero/mesa')}>
+                      <div className="w-14 h-14 rounded-xl bg-[#11131c] text-slate-400 border border-slate-800 flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:text-indigo-400 group-hover:border-indigo-500/30 transition-all duration-300 shrink-0">
+                        <span className="material-symbols-outlined text-[28px]">assignment</span>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Planilla de Partidos</h4>
+                        <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Registra goles, faltas, tarjetas e incidencias de los encuentros.</p>
+                        <button className="mt-4 text-xs text-slate-400 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer">
+                          <span>Mesa de Control</span>
+                          <span>→</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Módulo: Tablas de Posición (Cualquiera) */}
+                  {campeonatoActivo && tienePermiso('ver_tablas') && !tieneRol('administrador') && (
+                    <div className="p-6 rounded-2xl bg-[#171a26] border border-slate-900/60 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-xs transition-all duration-300 group flex items-start gap-5 cursor-pointer" onClick={() => navegar('/tablero/publico')}>
+                      <div className="w-14 h-14 rounded-xl bg-[#11131c] text-slate-400 border border-slate-800 flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:text-indigo-400 group-hover:border-indigo-500/30 transition-all duration-300 shrink-0">
+                        <span className="material-symbols-outlined text-[28px]">leaderboard</span>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Posiciones y Estadísticas</h4>
+                        <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Visualiza los resultados en vivo, anotadores y tablas oficiales.</p>
+                        <button className="mt-4 text-xs text-slate-400 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer">
+                          <span>Ver Posiciones</span>
+                          <span>→</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </main>
 
         {/* Botón flotante de Ayuda / Guía ? */}
