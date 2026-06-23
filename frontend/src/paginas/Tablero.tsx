@@ -32,6 +32,12 @@ export const Tablero: React.FC = () => {
   const [mostrarGuia, setMostrarGuia] = useState(false);
   const [simulando, setSimulando] = useState(false);
 
+  useEffect(() => {
+    if (sessionStorage.getItem('vista_publica_activa') === 'true') {
+      navegar('/publico');
+    }
+  }, [navegar]);
+
   // Estados de datos de Administración SaaS (Simulación y Snapshot)
   const [usuariosSnapshot, setUsuariosSnapshot] = useState<any[]>([]);
   const [totalUsuarios, setTotalUsuarios] = useState<number>(0);

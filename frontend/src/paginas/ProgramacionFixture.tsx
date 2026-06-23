@@ -14,7 +14,8 @@ import type {
   Escenario,
   Partido,
   Disciplina,
-  Categoria
+  Categoria,
+  Jugador
 } from '../servicios/api';
 
 type TabType = 'escenarios' | 'generar' | 'programar' | 'partidos';
@@ -57,6 +58,7 @@ export const ProgramacionFixture: React.FC = () => {
   const [partidos, setPartidos] = useState<Partido[]>([]);
   const [disciplinas, setDisciplinas] = useState<Disciplina[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [jugadores, setJugadores] = useState<Jugador[]>([]);
 
   // Estados de formularios
   const [nuevoEsc, setNuevoEsc] = useState({ name: '', venue_type: 'cancha', location: '', capacity: '', status: 'active' });
@@ -100,10 +102,14 @@ export const ProgramacionFixture: React.FC = () => {
         if (resCat.success) setCategorias(resCat.data);
         if (resEsc.success) setEscenarios(resEsc.data);
       } else if (tabActiva === 'partidos') {
-        const resPart = await serviciosFixture.obtenerPartidos();
+        const [resPart, resEsc, resJug] = await Promise.all([
+          serviciosFixture.obtenerPartidos(),
+          serviciosFixture.obtenerEscenarios(),
+          serviciosParticipantes.obtenerJugadores()
+        ]);
         if (resPart.success) setPartidos(resPart.data);
-        const resEsc = await serviciosFixture.obtenerEscenarios();
         if (resEsc.success) setEscenarios(resEsc.data);
+        if (resJug.success) setJugadores(resJug.data);
       }
     } catch (err: any) {
       setErrorLocal('Error al cargar datos del módulo.');
@@ -253,11 +259,106 @@ export const ProgramacionFixture: React.FC = () => {
     });
   };
 
+  const validarConflictosReprogramacion = (
+    partidoId: number,
+    localTeamId: number,
+    visitorTeamId: number,
+    proposedDate: string,
+    proposedTime: string,
+    proposedVenueId: number
+  ): boolean => {
+    const propStart = new Date(`${proposedDate}T${proposedTime}`);
+    if (isNaN(propStart.getTime())) return false;
+
+    // 1. Cruce de Canchas (Escenario) - ±90 minutos
+    const conflictoEscenario = partidos.find(p => {
+      if (p.id === partidoId || !p.match_date || !p.match_time || p.venue_id !== proposedVenueId) return false;
+      const otherStart = new Date(`${p.match_date}T${p.match_time}`);
+      if (isNaN(otherStart.getTime())) return false;
+      const diffMin = Math.abs(propStart.getTime() - otherStart.getTime()) / (1000 * 60);
+      return diffMin < 90;
+    });
+
+    if (conflictoEscenario) {
+      sileo.error({
+        title: 'Conflicto de Escenario 🚫',
+        description: `El escenario ya está reservado para el partido "${conflictoEscenario.local_team?.name} vs ${conflictoEscenario.visitor_team?.name}" programado para las ${conflictoEscenario.match_time} (Margen mínimo de 90 minutos).`
+      });
+      return true; // Hay conflicto
+    }
+
+    // 2. Cruce de Jugadores - ±120 minutos (2 horas)
+    const jugadoresPropuestos = jugadores.filter(
+      j => j.team_id === localTeamId || j.team_id === visitorTeamId
+    );
+
+    // Buscar partidos en el rango de ±2 horas
+    const partidosCercanos = partidos.filter(p => {
+      if (p.id === partidoId || !p.match_date || !p.match_time) return false;
+      const otherStart = new Date(`${p.match_date}T${p.match_time}`);
+      if (isNaN(otherStart.getTime())) return false;
+      const diffMin = Math.abs(propStart.getTime() - otherStart.getTime()) / (1000 * 60);
+      return diffMin < 120;
+    });
+
+    for (const pCercano of partidosCercanos) {
+      const teamIdsConflicto = [
+        pCercano.local_team_id || (pCercano as any).home_team_id,
+        pCercano.visitor_team_id || (pCercano as any).away_team_id
+      ];
+
+      // Jugadores de los equipos en conflicto
+      const jugadoresConflicto = jugadores.filter(
+        j => teamIdsConflicto.includes(j.team_id)
+      );
+
+      // Buscar si algún jugador está en ambos conjuntos (intersección)
+      for (const jProp of jugadoresPropuestos) {
+        const coincidencia = jugadoresConflicto.find(
+          jc => (jProp.dni && jc.dni && jProp.dni === jc.dni) || 
+                (jProp.name.toLowerCase().trim() === jc.name.toLowerCase().trim())
+        );
+
+        if (coincidencia) {
+          const equipoActual = jProp.team_id === localTeamId 
+            ? (partidoParaReprogramar?.local_team?.name || `Equipo ${localTeamId}`)
+            : (partidoParaReprogramar?.visitor_team?.name || `Equipo ${visitorTeamId}`);
+          
+          const equipoConflicto = coincidencia.team?.name || `Equipo ID ${coincidencia.team_id}`;
+
+          sileo.error({
+            title: 'Conflicto de Jugadores (Doble reserva) 🚫',
+            description: `El jugador "${jProp.name}" (DNI: ${jProp.dni || 'S/D'}) inscrito en "${equipoActual}" tiene un conflicto de horarios. También juega para "${equipoConflicto}" en el partido programado a las ${pCercano.match_time} (Margen mínimo de 2 horas).`
+          });
+          return true; // Hay conflicto
+        }
+      }
+    }
+
+    return false; // No hay conflicto
+  };
+
   const guardarReprogramacion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!partidoParaReprogramar) return;
     const { match_date, match_time, venue_id } = datosReprog;
     if (!match_date || !match_time || !venue_id) return;
+
+    // Validación de conflictos en cliente
+    const localId = partidoParaReprogramar.local_team_id || (partidoParaReprogramar as any).home_team_id;
+    const visitorId = partidoParaReprogramar.visitor_team_id || (partidoParaReprogramar as any).away_team_id;
+    
+    const tieneConflicto = validarConflictosReprogramacion(
+      partidoParaReprogramar.id,
+      localId,
+      visitorId,
+      match_date,
+      match_time,
+      parseInt(venue_id)
+    );
+    
+    if (tieneConflicto) return; // Detener flujo si hay conflicto
+
     try {
       const res = await serviciosFixture.reprogramarPartido(partidoParaReprogramar.id, {
         match_date,

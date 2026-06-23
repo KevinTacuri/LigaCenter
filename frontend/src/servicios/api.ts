@@ -680,6 +680,21 @@ export interface Campeonato {
   status: string;
   user_id?: number;
   rules_pdf?: string | null;
+  settings?: any;
+  description?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  is_public?: boolean;
+}
+
+export interface ChampionshipUser {
+  id: number;
+  championship_id: number;
+  user_id: number;
+  role: 'team_delegate' | 'score_table' | string;
+  team_id?: number | null;
+  user?: Usuario;
+  team?: Equipo;
 }
 
 export interface TenantInfo {
@@ -694,6 +709,36 @@ export interface TenantInfo {
  * Servicios de SaaS
  */
 export const serviciosCampeonatos = {
+  obtenerCampeonato: async (id: number): Promise<RespuestaApi<Campeonato>> => {
+    try {
+      const res = await clienteApi.get(`/championships/${id}`);
+      return res.data;
+    } catch (err) {
+      const locales = localStorage.getItem('campeonatos_simulados');
+      const lista: Campeonato[] = locales ? JSON.parse(locales) : [];
+      const found = lista.find((c) => c.id === id);
+      if (found) {
+        return { success: true, data: found, message: 'Retornado de fallback local' };
+      }
+      return { success: false, data: null as any, message: 'Campeonato no encontrado' };
+    }
+  },
+  obtenerUsuariosCampeonato: async (championshipId: number): Promise<RespuestaApi<ChampionshipUser[]>> => {
+    const res = await clienteApi.get(`/championships/${championshipId}/users`);
+    return res.data;
+  },
+  agregarUsuarioCampeonato: async (championshipId: number, datos: { user_id: number; role: string; team_id?: number | null }): Promise<RespuestaApi<ChampionshipUser>> => {
+    const res = await clienteApi.post(`/championships/${championshipId}/users`, datos);
+    return res.data;
+  },
+  actualizarRolUsuarioCampeonato: async (id: number, datos: { role: string; team_id?: number | null }): Promise<RespuestaApi<ChampionshipUser>> => {
+    const res = await clienteApi.put(`/championship-users/${id}`, datos);
+    return res.data;
+  },
+  removerUsuarioCampeonato: async (id: number): Promise<RespuestaApi<null>> => {
+    const res = await clienteApi.delete(`/championship-users/${id}`);
+    return res.data;
+  },
   obtenerCampeonatos: async (): Promise<RespuestaApi<Campeonato[]>> => {
     try {
       const res = await clienteApi.get('/championships');

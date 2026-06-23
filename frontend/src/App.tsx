@@ -8,6 +8,7 @@ import { Tablero } from './paginas/Tablero';
 import { RecuperarContrasenia } from './paginas/RecuperarContrasenia';
 import { RestablecerContrasenia } from './paginas/RestablecerContrasenia';
 import { GestionUsuarios } from './paginas/GestionUsuarios';
+import { GestionDelegados } from './paginas/GestionDelegados';
 import { GestionParticipantes } from './paginas/GestionParticipantes';
 import { ProgramacionFixture } from './paginas/ProgramacionFixture';
 import { MesaControl } from './paginas/MesaControl';
@@ -36,11 +37,13 @@ const App: React.FC = () => {
               <Route path="/registro" element={<Registro />} />
               <Route path="/recuperar-contrasenia" element={<RecuperarContrasenia />} />
               <Route path="/restablecer-contrasenia" element={<RestablecerContrasenia />} />
+              <Route path="/publico" element={<VisualizacionPublica esVistaAnonima={true} />} />
 
               {/* Rutas Privadas / Protegidas */}
               <Route path="/seleccion-campeonato" element={<Navigate to="/tablero" replace />} />
               <Route path="/tablero" element={<Tablero />} />
               <Route path="/tablero/usuarios" element={<GestionUsuarios />} />
+              <Route path="/tablero/delegados" element={<GestionDelegados />} />
               <Route path="/tablero/participantes" element={<GestionParticipantes />} />
               <Route path="/tablero/fixture" element={<ProgramacionFixture />} />
               <Route path="/tablero/mesa" element={<MesaControl />} />

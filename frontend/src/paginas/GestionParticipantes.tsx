@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { sileo } from 'sileo';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
-import { serviciosParticipantes } from '../servicios/api';
+import { serviciosParticipantes, serviciosCampeonatos } from '../servicios/api';
 import { BarraLateral } from '../componentes/BarraLateral';
 import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
 import { useConfirm } from '@omit/react-confirm-dialog';
@@ -12,6 +12,7 @@ import type {
   Equipo,
   Jugador
 } from '../servicios/api';
+import { useCampeonato } from '../contexto/ContextoCampeonato';
 
 // ─────────────────────────────────────────────
 // TIPOS
@@ -165,6 +166,7 @@ export const GestionParticipantes: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const confirm = useConfirm();
   const queryTab = searchParams.get('tab');
+  const { campeonatoActivo } = useCampeonato();
 
   // Iniciamos en 'categorias' porque es el módulo más utilizado y el de "disciplinas" lo ocultamos por ahora para simplificar, pero se puede cambiar fácilmente si se prefiere otro tab como predeterminado o reactivar "disciplinas"
   // const [tabActiva, setTabActiva] = useState<TabType>('disciplinas');
@@ -229,11 +231,15 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
 
   // Agregar función de procesamiento CSV (Modo carga masiva)
   const procesarCsvJugadores = async () => {
-  if (!archivoCsv || equipoIdMasiva === null) return;
-  // ahora usa el estado directamente ↑
-  setCargandoCsv(true);
-  setResultadoCarga(null);
-  try {
+    if (!archivoCsv || equipoIdMasiva === null) return;
+    if (isDeadlineExpired) {
+      mostrarMensaje('El plazo de inscripción de jugadores ha vencido.', true);
+      return;
+    }
+    // ahora usa el estado directamente ↑
+    setCargandoCsv(true);
+    setResultadoCarga(null);
+    try {
     const texto = await archivoCsv.text();
     const lineas = texto.split('\n').map(l => l.trim()).filter(Boolean);
     const filas = lineas.slice(1);
@@ -323,6 +329,21 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     guardando: boolean;
   }>({ abierto: false, jug: null, nombre: '', dni: '', numero: '', teamId: '', guardando: false });
 
+  // ── Estado: Plazos de Cierre y Prórrogas para Delegados (Frontend Custom) ──
+  const [delegadoTeamId, setDelegadoTeamId] = useState<number | null>(null);
+  const [championshipSettings, setChampionshipSettings] = useState<any>({});
+  const [prorrogaFecha, setProrrogaFecha] = useState('');
+  const [prorrogaMotivo, setProrrogaMotivo] = useState('');
+  const [enviandoProrroga, setEnviandoProrroga] = useState(false);
+  const [mostrarFormProrroga, setMostrarFormProrroga] = useState(false);
+
+  // Redirigir al delegado a la planilla de jugadores si está en una pestaña no permitida
+  useEffect(() => {
+    if (delegadoTeamId !== null && tabActiva !== 'planilla-jugadores' && tabActiva !== 'jugadores') {
+      setTabActiva('planilla-jugadores');
+    }
+  }, [delegadoTeamId, tabActiva]);
+
   // ─────────────────────────────────────────────
   // EFECTOS
   // ─────────────────────────────────────────────
@@ -350,25 +371,66 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
   // CARGA DE DATOS
   // ─────────────────────────────────────────────
   const cargarDatos = async () => {
+    if (!campeonatoActivo) return;
     setCargando(true);
     setErrorLocal(null);
     try {
+      // Cargar detalles de campeonato y relación del usuario
+      try {
+        const resCamp = await serviciosCampeonatos.obtenerCampeonato(campeonatoActivo.id);
+        if (resCamp.success && resCamp.data) {
+          setChampionshipSettings(resCamp.data.settings || {});
+        }
+        const resUsers = await serviciosCampeonatos.obtenerUsuariosCampeonato(campeonatoActivo.id);
+        if (resUsers.success && usuario) {
+          const miRel = resUsers.data.find((cu: any) => cu.user_id === usuario.id);
+          if (miRel && miRel.role === 'team_delegate' && miRel.team_id) {
+            setDelegadoTeamId(miRel.team_id);
+            // Preseleccionar el equipo del delegado
+            setEquipoSelId(miRel.team_id);
+            setEquipoIdMasiva(miRel.team_id);
+          }
+        }
+      } catch (err) {
+        console.error("Error al cargar la relación del delegado o settings:", err);
+      }
+
       if (tabActiva === 'disciplinas') {
         const res = await serviciosParticipantes.obtenerDisciplinas();
         if (res.success) setDisciplinas(res.data);
       } else if (tabActiva === 'categorias') {
-        const res = await serviciosParticipantes.obtenerCategorias();
-        if (res.success) setCategorias(res.data);
-        const resDisc = await serviciosParticipantes.obtenerDisciplinas();
-        if (resDisc.success) setDisciplinas(resDisc.data);
+        const [resCat, resDisc] = await Promise.all([
+          serviciosParticipantes.obtenerCategoriasPorCampeonato(campeonatoActivo.id),
+          serviciosParticipantes.obtenerDisciplinasCampeonato(campeonatoActivo.id),
+        ]);
+        if (resCat.success) setCategorias(resCat.data);
+        if (resDisc.success) {
+          const mapped = resDisc.data.map(cd => ({
+            id: cd.id, // cd.id es el championship_discipline_id
+            name: cd.discipline?.name || 'Desconocido',
+            description: cd.discipline?.description || '',
+            rules: cd.discipline?.rules || '',
+            status: cd.discipline?.status || 'active'
+          }));
+          setDisciplinas(mapped);
+        }
       } else if (tabActiva === 'equipos') {
         const [resEq, resDisc, resCat] = await Promise.all([
           serviciosParticipantes.obtenerEquipos(),
-          serviciosParticipantes.obtenerDisciplinas(),
-          serviciosParticipantes.obtenerCategorias(),
+          serviciosParticipantes.obtenerDisciplinasCampeonato(campeonatoActivo.id),
+          serviciosParticipantes.obtenerCategoriasPorCampeonato(campeonatoActivo.id),
         ]);
         if (resEq.success) setEquipos(resEq.data);
-        if (resDisc.success) setDisciplinas(resDisc.data);
+        if (resDisc.success) {
+          const mapped = resDisc.data.map(cd => ({
+            id: cd.id,
+            name: cd.discipline?.name || 'Desconocido',
+            description: cd.discipline?.description || '',
+            rules: cd.discipline?.rules || '',
+            status: cd.discipline?.status || 'active'
+          }));
+          setDisciplinas(mapped);
+        }
         if (resCat.success) setCategorias(resCat.data);
       } else if (tabActiva === 'jugadores') {
         const [resJug, resEq] = await Promise.all([
@@ -379,10 +441,19 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
         if (resEq.success) setEquipos(resEq.data);
       } else if (tabActiva === 'registro-equipo') {
         const [resDisc, resCat] = await Promise.all([
-          serviciosParticipantes.obtenerDisciplinas(),
-          serviciosParticipantes.obtenerCategorias(),
+          serviciosParticipantes.obtenerDisciplinasCampeonato(campeonatoActivo.id),
+          serviciosParticipantes.obtenerCategoriasPorCampeonato(campeonatoActivo.id),
         ]);
-        if (resDisc.success) setDisciplinas(resDisc.data);
+        if (resDisc.success) {
+          const mapped = resDisc.data.map(cd => ({
+            id: cd.id,
+            name: cd.discipline?.name || 'Desconocido',
+            description: cd.discipline?.description || '',
+            rules: cd.discipline?.rules || '',
+            status: cd.discipline?.status || 'active'
+          }));
+          setDisciplinas(mapped);
+        }
         if (resCat.success) setCategorias(resCat.data);
       } else if (tabActiva === 'planilla-jugadores') {
         const resEq = await serviciosParticipantes.obtenerEquipos();
@@ -483,12 +554,11 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     }
 
     try {
-      const res = await serviciosParticipantes.crearCategoria({
+      const res = await serviciosParticipantes.crearCategoria(parseInt(nuevaCat.discipline_id), {
         name: nuevaCat.name,
         age_min: nuevaCat.age_min ? parseInt(nuevaCat.age_min) : null,
         age_max: nuevaCat.age_max ? parseInt(nuevaCat.age_max) : null,
         gender_type: nuevaCat.gender,
-        discipline_id: parseInt(nuevaCat.discipline_id),
         format: nuevaCat.format,
         format_settings: format_settings
       });
@@ -555,6 +625,10 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
 
   const guardarJugador = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isDeadlineExpired) {
+      mostrarMensaje('El plazo de inscripción de jugadores ha vencido.', true);
+      return;
+    }
     if (!nuevoJug.name || !nuevoJug.team_id || !nuevoJug.age) {
       mostrarMensaje('El nombre, el equipo y la edad son obligatorios.', true); return;
     }
@@ -569,7 +643,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       });
       if (res.success) {
         mostrarMensaje('Jugador inscrito exitosamente.');
-        setNuevoJug({ name: '', dni: '', age: '', phone: '', team_id: '', number: '', position: 'Delantero' });
+        setNuevoJug({ name: '', dni: '', age: '', phone: '', team_id: delegadoTeamId !== null ? String(delegadoTeamId) : '', number: '', position: 'Delantero' });
         setJugadores(prev => [...prev, res.data]);
       }
     } catch (err: any) {
@@ -578,6 +652,10 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
   };
 
   const eliminarElemento = async (id: number) => {
+    if (tabActiva === 'jugadores' && isDeadlineExpired) {
+      mostrarMensaje('El plazo de inscripción de jugadores ha vencido y no se permiten modificaciones.', true);
+      return;
+    }
     const isConfirmed = await confirm({
       title: '¿Eliminar Registro?',
       description: '¿Está seguro de que desea eliminar este registro? Esta acción no se puede deshacer y podría afectar a otros registros vinculados.',
@@ -619,15 +697,14 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       return null;
     }
     try {
-      const res = await serviciosParticipantes.crearCategoria({
+      const res = await serviciosParticipantes.crearCategoria(reqEq.discId, {
         name: nombre,
         age_min: null, age_max: null,
-        gender_type: 'Mixto',
-        discipline_id: reqEq.discId
+        gender_type: 'Mixto'
       });
       if (res.success) {
         mostrarMensaje(`Categoría "${nombre}" creada (edades pendientes).`);
-        const nuevas = await serviciosParticipantes.obtenerCategorias();
+        const nuevas = await serviciosParticipantes.obtenerCategoriasPorCampeonato(campeonatoActivo!.id);
         if (nuevas.success) setCategorias(nuevas.data);
         return res.data.id;
       }
@@ -661,7 +738,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
 
   // Categorías filtradas por disciplina seleccionada en registro rápido
   const catsFiltradas = categorias.filter(c =>
-    !reqEq.discId || c.discipline_id === reqEq.discId
+    !reqEq.discId || c.championship_discipline_id === reqEq.discId
   );
 
   // ─────────────────────────────────────────────
@@ -673,6 +750,10 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
 
   const guardarFila = async (idx: number) => {
     if (!equipoSelId) return;
+    if (isDeadlineExpired) {
+      mostrarMensaje('El plazo de inscripción de jugadores ha vencido.', true);
+      return;
+    }
     const fila = filasJugadores[idx];
     if (!fila.nombre.trim() || !fila.edad.trim()) {
       setFilasJugadores(prev => prev.map((f, i) => i === idx ? { ...f, error: 'Nombre y edad son obligatorios.' } : f));
@@ -749,20 +830,24 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
 
   const abrirModalEditarJugador = (j: Jugador) => {
     // Fallback: si team_id no viene en el objeto, lo tomamos de team.id
-    const idEquipo = j.team_id ?? j.team?.id ?? '';
+    const idEquipo = j.team_id ?? j.team?.id;
     setModalEditarJug({
       abierto: true,
       jug: j,
       nombre: j.name,
       dni: j.dni || '',
       numero: j.number != null ? String(j.number) : '',
-      teamId: idEquipo !== '' ? String(idEquipo) : '',
+      teamId: idEquipo !== undefined ? String(idEquipo) : '',
       guardando: false,
     });
   };
 
   const guardarEdicionJugador = async () => {
     if (!modalEditarJug.jug) return;
+    if (isDeadlineExpired) {
+      mostrarMensaje('El plazo de inscripción de jugadores ha vencido.', true);
+      return;
+    }
     if (!modalEditarJug.nombre.trim() || !modalEditarJug.teamId) {
       mostrarMensaje('El nombre y el equipo son obligatorios.', true); return;
     }
@@ -798,6 +883,10 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
   };
 
   const eliminarFilaJugador = async (idx: number) => {
+    if (isDeadlineExpired) {
+      mostrarMensaje('El plazo de inscripción de jugadores ha vencido.', true);
+      return;
+    }
     const fila = filasJugadores[idx];
     if (!fila.guardado) {
       // Fila nueva no guardada: solo quitar de UI
@@ -831,7 +920,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
 
   // Opciones para autocompletes
   const opcsCats: { id: number; label: string }[] = catsFiltradas.map(c => ({ id: c.id, label: c.name }));
-  const opcsEquipos: { id: number; label: string }[] = equipos.map(e => ({ id: e.id, label: e.name }));
+  const opcsEquipos: { id: number; label: string }[] = (delegadoTeamId !== null ? equipos.filter(e => e.id === delegadoTeamId) : equipos).map(e => ({ id: e.id, label: e.name }));
 
   // Lista de equipos filtrada y ordenada para la tabla (no modifica `equipos` original)
   const equiposFiltrados = equipos
@@ -841,7 +930,8 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
         eq.name.toLowerCase().includes(texto) ||
         (eq.representative || '').toLowerCase().includes(texto);
       const coincideEstado = filtroEstadoEq === 'todos' || (eq.registration_status || 'pendiente') === filtroEstadoEq;
-      return coincideTexto && coincideEstado;
+      const coincideEquipoDelegado = delegadoTeamId === null || eq.id === delegadoTeamId;
+      return coincideTexto && coincideEstado && coincideEquipoDelegado;
     })
     .sort((a, b) => {
       if (ordenEq === 'nombre_asc') return a.name.localeCompare(b.name);
@@ -856,7 +946,9 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
   const jugadoresFiltrados = jugadores
     .filter(j => {
       const texto = busquedaJug.trim().toLowerCase();
-      return !texto || j.name.toLowerCase().includes(texto);
+      const coincideTexto = !texto || j.name.toLowerCase().includes(texto);
+      const coincideEquipoDelegado = delegadoTeamId === null || j.team_id === delegadoTeamId;
+      return coincideTexto && coincideEquipoDelegado;
     })
     .sort((a, b) => {
       if (ordenJug === 'nombre_asc') return a.name.localeCompare(b.name);
@@ -866,7 +958,10 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       return 0;
     });
 
-  const TABS: { key: TabType; label: string; nuevo?: boolean }[] = [
+  const TABS: { key: TabType; label: string; nuevo?: boolean }[] = delegadoTeamId !== null ? [
+    { key: 'jugadores', label: 'Jugadores' },
+    { key: 'planilla-jugadores', label: 'Planilla Jugadores', nuevo: true },
+  ] : [
     // Ocultamos el TAB de "Disciplinas" por ahora para simplificar, pero se puede reactivar fácilmente si se necesita
     // { key: 'disciplinas', label: 'Disciplinas' },
     { key: 'categorias', label: 'Categorías' },
@@ -875,6 +970,178 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     { key: 'registro-equipo', label: 'Registro Rápido Equipo', nuevo: true },
     { key: 'planilla-jugadores', label: 'Planilla Jugadores', nuevo: true },
   ];
+
+  // Plazo de Cierre
+  const limiteStr = delegadoTeamId && championshipSettings?.roster_deadlines?.[`team_${delegadoTeamId}`];
+  const limiteDate = limiteStr ? new Date(limiteStr) : null;
+  const isDeadlineExpired = limiteDate ? new Date() > limiteDate : false;
+
+  // Inicializar team_id en el formulario de registro manual del delegado
+  useEffect(() => {
+    if (delegadoTeamId !== null) {
+      setNuevoJug(prev => ({ ...prev, team_id: String(delegadoTeamId) }));
+    }
+  }, [delegadoTeamId]);
+
+  const enviarSolicitudProrroga = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!campeonatoActivo || !delegadoTeamId || !prorrogaFecha || !prorrogaMotivo.trim()) return;
+
+    setEnviandoProrroga(true);
+    try {
+      const nowTimestamp = Math.floor(Date.now() / 1000);
+      const newRequest = {
+        id: nowTimestamp,
+        team_id: delegadoTeamId,
+        requested_deadline: new Date(prorrogaFecha).toISOString(),
+        reason: prorrogaMotivo.trim(),
+        status: 'pendiente'
+      };
+
+      const updatedSettings = {
+        ...championshipSettings,
+        extension_requests: [
+          ...(championshipSettings.extension_requests || []),
+          newRequest
+        ]
+      };
+
+      const res = await serviciosCampeonatos.actualizarCampeonato(campeonatoActivo.id, {
+        name: campeonatoActivo.name,
+        settings: updatedSettings
+      });
+
+      if (res.success) {
+        setChampionshipSettings(updatedSettings);
+        setProrrogaFecha('');
+        setProrrogaMotivo('');
+        setMostrarFormProrroga(false);
+        mostrarMensaje('Solicitud de prórroga enviada con éxito.');
+      } else {
+        mostrarMensaje(res.message || 'Error al enviar la solicitud.', true);
+      }
+    } catch (err) {
+      mostrarMensaje('Error al enviar la solicitud.', true);
+    } finally {
+      setEnviandoProrroga(false);
+    }
+  };
+
+  const renderBannerPlazoExpirado = () => {
+    if (delegadoTeamId === null || !limiteDate) return null;
+
+    const prorrogaPendiente = (championshipSettings?.extension_requests || []).some(
+      (r: any) => r.team_id === delegadoTeamId && r.status === 'pendiente'
+    );
+
+    if (mostrarFormProrroga) {
+      return (
+        <div className="p-5 rounded-2xl border bg-[#11131c] border-slate-800 text-slate-100 mb-6 animate-fadeIn">
+          <h3 className="font-extrabold text-sm uppercase tracking-wider mb-4 text-indigo-455 flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">schedule</span>
+            Solicitar Prórroga de Inscripción
+          </h3>
+          <form onSubmit={enviarSolicitudProrroga} className="space-y-4 max-w-xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-400 block font-sans">Nueva fecha propuesta *</label>
+                <input
+                  type="datetime-local"
+                  required
+                  value={prorrogaFecha}
+                  onChange={(e) => setProrrogaFecha(e.target.value)}
+                  className="w-full text-sm border border-slate-700 bg-slate-800 rounded-lg p-2.5 text-white outline-hidden font-sans"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-400 block font-sans">Motivo o justificación *</label>
+              <textarea
+                required
+                placeholder="Explica brevemente por qué necesitas más tiempo (ej. Dificultad para recolectar fotos de los DNI)..."
+                value={prorrogaMotivo}
+                onChange={(e) => setProrrogaMotivo(e.target.value)}
+                className="w-full text-sm border border-slate-700 bg-slate-800 rounded-lg p-2.5 text-white min-h-[80px] outline-hidden font-sans"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setMostrarFormProrroga(false)}
+                className="px-4 py-2 border border-slate-700 text-slate-400 hover:bg-slate-800 font-bold rounded-lg text-xs transition-all cursor-pointer font-sans"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={enviandoProrroga}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-750 disabled:opacity-60 text-white font-bold rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5 font-sans"
+              >
+                {enviandoProrroga ? (
+                  <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <span className="material-symbols-outlined text-xs">send</span>
+                )}
+                Enviar Solicitud
+              </button>
+            </div>
+          </form>
+        </div>
+      );
+    }
+
+    return (
+      <div className={`p-5 rounded-2xl border ${isDeadlineExpired ? 'bg-amber-500/10 border-amber-500/20 text-amber-200' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-200'} mb-6 shadow-xs`}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <span className={`material-symbols-outlined text-2xl mt-0.5 ${isDeadlineExpired ? 'text-amber-400 animate-pulse' : 'text-emerald-400'}`}>
+              {isDeadlineExpired ? 'history_toggle_off' : 'verified'}
+            </span>
+            <div>
+              <h3 className="font-extrabold text-sm uppercase tracking-wider font-sans">
+                Plazo de Inscripción de Plantilla
+              </h3>
+              <p className="text-xs mt-1 text-slate-350 font-sans">
+                La fecha límite para inscribir o modificar jugadores de tu equipo es el:{' '}
+                <span className="font-bold text-white">
+                  {limiteDate.toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}
+                </span>
+                .
+              </p>
+              {isDeadlineExpired ? (
+                <p className="text-xs mt-1 text-amber-400 font-bold font-sans">
+                  ❌ El plazo ha vencido. Los formularios de edición y carga de jugadores están deshabilitados.
+                </p>
+              ) : (
+                <p className="text-xs mt-1 text-emerald-400 font-bold font-sans">
+                  ✓ El plazo está vigente. Aún puedes registrar y editar jugadores.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {isDeadlineExpired && (
+            <div className="w-full md:w-auto">
+              {prorrogaPendiente ? (
+                <div className="bg-amber-650/20 border border-amber-500/30 rounded-xl p-3 text-center">
+                  <p className="text-xs font-bold text-amber-400 font-sans">Solicitud de prórroga pendiente</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5 font-sans">Tu organizador la revisará pronto.</p>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setMostrarFormProrroga(true)}
+                  className="w-full md:w-auto bg-amber-500 hover:bg-amber-650 text-[#0a0b10] font-bold text-xs uppercase tracking-wide px-4 py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 font-sans"
+                >
+                  <span className="material-symbols-outlined text-sm font-bold">schedule_send</span>
+                  Solicitar Prórroga
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   if (!usuario) return null;
 
@@ -888,8 +1155,8 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
         <CabeceraEstandar titulo="Gestión de Participantes" subtitulo="Inscripciones y Configuración del Campeonato" />
 
-      {/* Tabs (visibles solo en móvil ya que en desktop se navega por la barra lateral) */}
-      <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2 lg:hidden">
+      {/* Tabs para cambiar entre módulos (visible en todo tamaño) */}
+      <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2">
         {TABS.map(tab => (
           <button
             key={tab.key}
@@ -917,6 +1184,8 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
             <span>{errorLocal}</span>
           </div>
         )}
+
+        {renderBannerPlazoExpirado()}
 
         {/* ════════════════════════════════════════════
             TABS ORIGINALES (sin tocar)
@@ -1099,7 +1368,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                         className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
                         <option value="">Seleccionar Categoría</option>
                         {categorias
-                          .filter((c) => !nuevoEq.discipline_id || c.discipline_id === parseInt(nuevoEq.discipline_id))
+                          .filter((c) => !nuevoEq.discipline_id || c.championship_discipline_id === parseInt(nuevoEq.discipline_id))
                           .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
@@ -1171,16 +1440,24 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 block">Equipo *</label>
-                        <select required value={nuevoJug.team_id}
+                        <label className="text-xs font-bold text-slate-700 block font-sans">Equipo *</label>
+                        <select
+                          required
+                          value={delegadoTeamId !== null ? String(delegadoTeamId) : nuevoJug.team_id}
+                          disabled={delegadoTeamId !== null}
                           onChange={(e) => setNuevoJug({ ...nuevoJug, team_id: e.target.value })}
-                          className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
+                          className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer disabled:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-500 font-sans"
+                        >
                           <option value="">Seleccionar Equipo</option>
                           {equipos.map((eq) => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
                         </select>
                       </div>
-                      <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer">
-                        Guardar Jugador
+                      <button
+                        type="submit"
+                        disabled={isDeadlineExpired}
+                        className="w-full bg-secondary hover:bg-secondary-container disabled:bg-slate-300 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer font-sans"
+                      >
+                        {isDeadlineExpired ? 'Plazo de Inscripción Expirado' : 'Guardar Jugador'}
                       </button>
                     </form>
                   )}
@@ -1191,16 +1468,17 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
 
                         {/* Selector de equipo — NUEVO */}
                         <div className="space-y-1">
-                          <label className="text-xs font-bold text-slate-700 block">Equipo destino *</label>
+                          <label className="text-xs font-bold text-slate-700 block font-sans">Equipo destino *</label>
                           <select
-                            value={equipoIdMasiva ?? ''}
+                            value={delegadoTeamId !== null ? delegadoTeamId : (equipoIdMasiva ?? '')}
+                            disabled={delegadoTeamId !== null}
                             onChange={(e) => {
                               setEquipoIdMasiva(e.target.value ? parseInt(e.target.value) : null);
                               setResultadoCarga(null);
                               setArchivoCsv(null);  // ← limpiar también el archivo
                               if (inputArchivoRef.current) inputArchivoRef.current.value = '';
                             }}
-                            className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                            className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer disabled:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-500 font-sans"
                           >
                             <option value="">-- Selecciona el equipo --</option>
                             {equipos.map((eq) => (
@@ -1210,44 +1488,52 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                         </div>
 
                       {/* Drop zone */}
-                      <div
-                        onClick={() => inputArchivoRef.current?.click()}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          const file = e.dataTransfer.files[0];
-                          if (file && (file.name.endsWith('.csv') || file.name.endsWith('.xlsx'))) {
-                            setArchivoCsv(file);
-                            setResultadoCarga(null);
-                          } else {
-                            mostrarMensaje('Solo se permiten archivos CSV.', true);
-                          }
-                        }}
-                        className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:border-sky-400 hover:bg-sky-50/30 transition-all"
-                      >
-                        <span className="material-symbols-outlined text-3xl text-slate-300 block mb-2">cloud_upload</span>
-                        {archivoCsv ? (
-                          <div>
-                            <p className="text-xs font-bold text-sky-700">{archivoCsv.name}</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">{(archivoCsv.size / 1024).toFixed(1)} KB · Haz clic para cambiar</p>
-                          </div>
-                        ) : (
-                          <div>
-                            <p className="text-xs font-bold text-slate-600">Arrastra tu archivo aquí</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">Formatos permitidos: .CSV (Máx. 10MB)</p>
-                          </div>
-                        )}
-                        <input
-                          ref={inputArchivoRef}
-                          type="file"
-                          accept=".csv"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) { setArchivoCsv(file); setResultadoCarga(null); }
+                      {isDeadlineExpired ? (
+                        <div className="border-2 border-dashed border-amber-500/25 bg-amber-500/5 rounded-xl p-6 text-center">
+                          <span className="material-symbols-outlined text-3xl text-amber-500 block mb-2">lock</span>
+                          <p className="text-xs font-bold text-amber-300 font-sans">Carga Masiva Deshabilitada</p>
+                          <p className="text-[10px] text-slate-400 mt-1 font-sans">El plazo de inscripción de jugadores ha vencido.</p>
+                        </div>
+                      ) : (
+                        <div
+                          onClick={() => inputArchivoRef.current?.click()}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            const file = e.dataTransfer.files[0];
+                            if (file && (file.name.endsWith('.csv') || file.name.endsWith('.xlsx'))) {
+                              setArchivoCsv(file);
+                              setResultadoCarga(null);
+                            } else {
+                              mostrarMensaje('Solo se permiten archivos CSV.', true);
+                            }
                           }}
-                        />
-                      </div>
+                          className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:border-sky-400 hover:bg-sky-50/30 transition-all"
+                        >
+                          <span className="material-symbols-outlined text-3xl text-slate-300 block mb-2">cloud_upload</span>
+                          {archivoCsv ? (
+                            <div>
+                              <p className="text-xs font-bold text-sky-700">{archivoCsv.name}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">{(archivoCsv.size / 1024).toFixed(1)} KB · Haz clic para cambiar</p>
+                            </div>
+                          ) : (
+                            <div>
+                              <p className="text-xs font-bold text-slate-600">Arrastra tu archivo aquí</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">Formatos permitidos: .CSV (Máx. 10MB)</p>
+                            </div>
+                          )}
+                          <input
+                            ref={inputArchivoRef}
+                            type="file"
+                            accept=".csv"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) { setArchivoCsv(file); setResultadoCarga(null); }
+                            }}
+                          />
+                        </div>
+                      )}
 
                       {/* Acciones inferiores */}
                       <div className="flex items-center justify-between text-[10px]">
@@ -1269,10 +1555,11 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                       <button
                         type="button"
                         onClick={procesarCsvJugadores}
-                        disabled={!archivoCsv || !equipoIdMasiva || cargandoCsv}
+                        disabled={!archivoCsv || !equipoIdMasiva || cargandoCsv || isDeadlineExpired}
                         className="
                           w-full relative overflow-hidden
-                          py-3 rounded-xl text-xs font-bold tracking-wide uppercase
+                          py-3 rounded-xl text-xs font-bold tracking-wide uppercase font-sans
+                          bg-indigo-650 hover:bg-indigo-700 text-white disabled:opacity-60 disabled:cursor-not-allowed transition-all
                           flex items-center justify-center gap-2
                           transition-all duration-200 cursor-pointer
                           focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2
@@ -1469,7 +1756,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                           <td className="p-3 pl-4">
                             <div className="font-bold text-slate-900">{c.name}</div>
                             <div className="text-xs text-slate-500">
-                              Edades: {c.age_min ?? 'N/A'} - {c.age_max ?? 'N/A'} | Género: {c.gender_type || c.gender || 'N/A'} | Disciplina: {c.discipline?.name || 'N/A'}
+                              Edades: {c.age_min ?? 'N/A'} - {c.age_max ?? 'N/A'} | Género: {c.gender_type || c.gender || 'N/A'} | Disciplina: {c.championship_discipline?.discipline?.name || 'N/A'}
                             </div>
                           </td>
                           <td className="p-3 pr-4 text-right">
@@ -1692,8 +1979,13 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                   label="Seleccionar Equipo"
                   placeholder="Escribe el nombre del equipo..."
                   opciones={opcsEquipos}
-                  valorId={equipoSelId}
-                  onChange={(id) => setEquipoSelId(id)}
+                  valorId={delegadoTeamId !== null ? delegadoTeamId : equipoSelId}
+                  onChange={(id) => {
+                    if (delegadoTeamId === null) {
+                      setEquipoSelId(id);
+                    }
+                  }}
+                  deshabilitado={delegadoTeamId !== null}
                   requerido
                 />
               </div>
@@ -1772,7 +2064,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                               <input
                                 type="text"
                                 value={fila.nombre}
-                                disabled={fila.guardado}
+                                disabled={fila.guardado || isDeadlineExpired}
                                 onChange={e => actualizarFila(idx, 'nombre', e.target.value)}
                                 placeholder="Nombre completo"
                                 className={`w-full text-sm rounded-lg px-3 py-2 outline-hidden transition-all ${
@@ -1788,7 +2080,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                               <input
                                 type="text"
                                 value={fila.dni}
-                                disabled={fila.guardado}
+                                disabled={fila.guardado || isDeadlineExpired}
                                 onChange={e => actualizarFila(idx, 'dni', e.target.value)}
                                 placeholder="DNI"
                                 className={`w-full text-sm rounded-lg px-3 py-2 outline-hidden transition-all ${
@@ -1804,7 +2096,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                               <input
                                 type="number"
                                 value={fila.edad}
-                                disabled={fila.guardado}
+                                disabled={fila.guardado || isDeadlineExpired}
                                 onChange={e => actualizarFila(idx, 'edad', e.target.value)}
                                 placeholder="Edad"
                                 min="1"
@@ -1821,7 +2113,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                               <input
                                 type="number"
                                 value={fila.dorsal}
-                                disabled={fila.guardado}
+                                disabled={fila.guardado || isDeadlineExpired}
                                 onChange={e => actualizarFila(idx, 'dorsal', e.target.value)}
                                 placeholder="#"
                                 min="1"
@@ -1837,16 +2129,17 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                             <td className="p-2 pr-5 text-right">
                               {fila.guardado ? (
                                 <button
-                                  onClick={() => eliminarFilaJugador(idx)}
-                                  className="text-xs font-bold text-rose-500 hover:text-rose-700 hover:underline cursor-pointer transition-colors"
+                                  onClick={() => { if (!isDeadlineExpired) eliminarFilaJugador(idx); }}
+                                  disabled={isDeadlineExpired}
+                                  className="text-xs font-bold text-rose-500 hover:text-rose-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline hover:underline cursor-pointer transition-colors"
                                 >
                                   Eliminar
                                 </button>
                               ) : (
                                 <button
                                   onClick={() => guardarFila(idx)}
-                                  disabled={fila.guardando}
-                                  className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all"
+                                  disabled={fila.guardando || isDeadlineExpired}
+                                  className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all"
                                 >
                                   {fila.guardando
                                     ? <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />

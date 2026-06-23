@@ -85,28 +85,35 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
       titulo: 'Equipos y Jugadores',
       icono: 'groups',
       ruta: '/tablero/participantes',
-      visible: !!campeonatoActivo && (rol === 'administrador' || rol === 'organizador' || rol === 'usuario_publico')
+      visible: !!campeonatoActivo && (rol === 'organizador' || rol === 'usuario_publico')
+    },
+    {
+      id: 'delegados',
+      titulo: 'Delegados y Roles',
+      icono: 'person_pin',
+      ruta: '/tablero/delegados',
+      visible: !!campeonatoActivo && rol === 'organizador'
     },
     {
       id: 'fixture',
       titulo: 'Fixture y Calendario',
       icono: 'calendar_today',
       ruta: '/tablero/fixture',
-      visible: !!campeonatoActivo && (rol === 'administrador' || rol === 'organizador' || rol === 'usuario_publico')
+      visible: !!campeonatoActivo && (rol === 'organizador' || rol === 'usuario_publico')
     },
     {
       id: 'mesa',
       titulo: 'Mesa de Control',
       icono: 'edit_note',
       ruta: '/tablero/mesa',
-      visible: !!campeonatoActivo && (rol === 'administrador' || rol === 'organizador' || rol === 'encargado_mesa')
+      visible: !!campeonatoActivo && (rol === 'organizador' || rol === 'encargado_mesa')
     },
     {
       id: 'posiciones',
       titulo: 'Posiciones y Estadísticas',
       icono: 'leaderboard',
       ruta: '/tablero/publico',
-      visible: !!campeonatoActivo
+      visible: !!campeonatoActivo && rol !== 'administrador'
     }
   ];
 
@@ -140,7 +147,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
       titulo: 'Configurar Campeonato',
       icono: 'settings',
       ruta: '/tablero/configuracion',
-      visible: !!campeonatoActivo && (rol === 'administrador' || rol === 'organizador')
+      visible: !!campeonatoActivo && rol === 'organizador'
     }
   ];
 

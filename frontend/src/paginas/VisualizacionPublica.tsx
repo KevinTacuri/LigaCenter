@@ -3,7 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   serviciosResultados,
   serviciosParticipantes,
-  serviciosFixture
+  serviciosFixture,
+  serviciosCampeonatos
 } from '../servicios/api';
 import type {
   Posicion,
@@ -11,28 +12,70 @@ import type {
   Disciplina,
   Categoria,
   TipoEstadistica,
-  RankingItem
+  RankingItem,
+  Campeonato
 } from '../servicios/api';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../contexto/ContextoCampeonato';
 import { BarraLateral } from '../componentes/BarraLateral';
 import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
 
-export const VisualizacionPublica: React.FC = () => {
-  const { usuario } = useAutenticacion();
-  const { campeonatoActivo } = useCampeonato();
+interface Props {
+  esVistaAnonima?: boolean;
+}
+
+export const VisualizacionPublica: React.FC<Props> = ({ esVistaAnonima = false }) => {
+  const { usuario, iniciarSesion } = useAutenticacion();
+  const { campeonatoActivo, seleccionarCampeonato, limpiarCampeonato } = useCampeonato();
   const navegar = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryTab = searchParams.get('tab');
 
   const [tabActiva, setTabActiva] = useState<string>('posiciones');
+  const [cargandoPublico, setCargandoPublico] = useState(esVistaAnonima && !usuario);
+  const [campeonatosPublicos, setCampeonatosPublicos] = useState<Campeonato[]>([]);
 
-  // Redirigir si no hay campeonato activo
+  // Login silencioso y listado de campeonatos para vista anónima
   useEffect(() => {
-    if (!campeonatoActivo) {
+    const loginPublicoYListar = async () => {
+      if (esVistaAnonima) {
+        sessionStorage.setItem('vista_publica_activa', 'true');
+        if (!usuario) {
+          setCargandoPublico(true);
+          try {
+            const success = await iniciarSesion('organizador@ligacenter.com', '12345678');
+            if (success) {
+              const res = await serviciosCampeonatos.obtenerCampeonatos();
+              if (res.success && res.data) {
+                setCampeonatosPublicos(res.data);
+              }
+            }
+          } catch (err) {
+            console.error("Error en login público silencioso:", err);
+          } finally {
+            setCargandoPublico(false);
+          }
+        } else {
+          try {
+            const res = await serviciosCampeonatos.obtenerCampeonatos();
+            if (res.success && res.data) {
+              setCampeonatosPublicos(res.data);
+            }
+          } catch (err) {}
+        }
+      } else {
+        sessionStorage.removeItem('vista_publica_activa');
+      }
+    };
+    loginPublicoYListar();
+  }, [esVistaAnonima, usuario]);
+
+  // Redirigir si no hay campeonato activo (solo vista autenticada ordinaria)
+  useEffect(() => {
+    if (!esVistaAnonima && !campeonatoActivo) {
       navegar('/tablero');
     }
-  }, [campeonatoActivo, navegar]);
+  }, [campeonatoActivo, navegar, esVistaAnonima]);
 
   useEffect(() => {
     if (queryTab && queryTab !== tabActiva) {
@@ -77,6 +120,180 @@ export const VisualizacionPublica: React.FC = () => {
   useEffect(() => {
     cargarEstadisticasDisciplina();
   }, [filtroDisc]);
+
+  const obtenerScoreLocal = (partido: any) => {
+    if (partido.home_score !== null && partido.home_score !== undefined) return partido.home_score;
+    if (partido.report) {
+      if (partido.report.home_score !== null && partido.report.home_score !== undefined) return partido.report.home_score;
+      if (partido.report.local_score !== null && partido.report.local_score !== undefined) return partido.report.local_score;
+    }
+    return null;
+  };
+
+  const obtenerScoreVisita = (partido: any) => {
+    if (partido.away_score !== null && partido.away_score !== undefined) return partido.away_score;
+    if (partido.report) {
+      if (partido.report.away_score !== null && partido.report.away_score !== undefined) return partido.report.away_score;
+      if (partido.report.visitor_score !== null && partido.report.visitor_score !== undefined) return partido.report.visitor_score;
+    }
+    return null;
+  };
+
+  // Calcular posiciones client-side
+  const calcularPosicionesFrontend = (partidos: any[], equiposList: any[], deporte: string) => {
+    const tabla: Record<number, any> = {};
+    const dep = deporte.toLowerCase();
+    
+    // Inicializar todos los equipos
+    equiposList.forEach(eq => {
+      tabla[eq.id] = {
+        team_id: eq.id,
+        team: eq,
+        matches_played: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        goals_for: 0,
+        goals_against: 0,
+        goal_difference: 0,
+        points: 0,
+      };
+    });
+
+    partidos.forEach(p => {
+      if (p.status !== 'finalizado') return;
+      
+      const sLocal = obtenerScoreLocal(p);
+      const sVisita = obtenerScoreVisita(p);
+      
+      if (sLocal === null || sVisita === null) return;
+      
+      const locId = p.home_team_id;
+      const visId = p.away_team_id;
+
+      if (!tabla[locId]) {
+        tabla[locId] = { team_id: locId, team: p.local_team, matches_played: 0, wins: 0, draws: 0, losses: 0, goals_for: 0, goals_against: 0, goal_difference: 0, points: 0 };
+      }
+      if (!tabla[visId]) {
+        tabla[visId] = { team_id: visId, team: p.visitor_team, matches_played: 0, wins: 0, draws: 0, losses: 0, goals_for: 0, goals_against: 0, goal_difference: 0, points: 0 };
+      }
+
+      tabla[locId].matches_played++;
+      tabla[visId].matches_played++;
+      tabla[locId].goals_for += sLocal;
+      tabla[locId].goals_against += sVisita;
+      tabla[visId].goals_for += sVisita;
+      tabla[visId].goals_against += sLocal;
+
+      // Detectar si el partido es walkover (W.O.) desde observaciones
+      const isWO = p.report?.observations?.includes('[WALKOVER]') || p.observations?.includes('[WALKOVER]');
+      const forfeitedTeamId = isWO ? (p.report?.observations?.match(/forfeited_team_id:\s*(\d+)/)?.[1] || p.observations?.match(/forfeited_team_id:\s*(\d+)/)?.[1]) : null;
+
+      if (dep.includes('voley') || dep.includes('voleibol') || dep.includes('volleyball')) {
+        // Reglas de Vóley (FIVB)
+        if (isWO && forfeitedTeamId) {
+          const forfeitedId = parseInt(forfeitedTeamId);
+          if (locId === forfeitedId) {
+            tabla[visId].wins++;
+            tabla[visId].points += 3;
+            tabla[locId].losses++;
+          } else {
+            tabla[locId].wins++;
+            tabla[locId].points += 3;
+            tabla[visId].losses++;
+          }
+        } else {
+          if (sLocal > sVisita) {
+            tabla[locId].wins++;
+            tabla[visId].losses++;
+            if (sLocal === 3 && (sVisita === 0 || sVisita === 1)) {
+              tabla[locId].points += 3;
+            } else if (sLocal === 3 && sVisita === 2) {
+              tabla[locId].points += 2;
+              tabla[visId].points += 1;
+            }
+          } else {
+            tabla[visId].wins++;
+            tabla[locId].losses++;
+            if (sVisita === 3 && (sLocal === 0 || sLocal === 1)) {
+              tabla[visId].points += 3;
+            } else if (sVisita === 3 && sLocal === 2) {
+              tabla[visId].points += 2;
+              tabla[locId].points += 1;
+            }
+          }
+        }
+      } else if (dep.includes('basquet') || dep.includes('básquet') || dep.includes('basketball') || dep.includes('baloncesto')) {
+        // Reglas de Básquet (FIBA)
+        if (isWO && forfeitedTeamId) {
+          const forfeitedId = parseInt(forfeitedTeamId);
+          if (locId === forfeitedId) {
+            tabla[visId].wins++;
+            tabla[visId].points += 2;
+            tabla[locId].losses++;
+          } else {
+            tabla[locId].wins++;
+            tabla[locId].points += 2;
+            tabla[visId].losses++;
+          }
+        } else {
+          if (sLocal > sVisita) {
+            tabla[locId].wins++;
+            tabla[locId].points += 2;
+            tabla[visId].losses++;
+            tabla[visId].points += 1;
+          } else {
+            tabla[visId].wins++;
+            tabla[visId].points += 2;
+            tabla[locId].losses++;
+            tabla[locId].points += 1;
+          }
+        }
+      } else {
+        // Reglas por defecto (Fútbol)
+        if (isWO && forfeitedTeamId) {
+          const forfeitedId = parseInt(forfeitedTeamId);
+          if (locId === forfeitedId) {
+            tabla[visId].wins++;
+            tabla[visId].points += 3;
+            tabla[locId].losses++;
+          } else {
+            tabla[locId].wins++;
+            tabla[locId].points += 3;
+            tabla[visId].losses++;
+          }
+        } else {
+          if (sLocal > sVisita) {
+            tabla[locId].wins++;
+            tabla[locId].points += 3;
+            tabla[visId].losses++;
+          } else if (sLocal < sVisita) {
+            tabla[visId].wins++;
+            tabla[visId].points += 3;
+            tabla[locId].losses++;
+          } else {
+            tabla[locId].draws++;
+            tabla[visId].draws++;
+            tabla[locId].points += 1;
+            tabla[visId].points += 1;
+          }
+        }
+      }
+
+      tabla[locId].goal_difference = tabla[locId].goals_for - tabla[locId].goals_against;
+      tabla[visId].goal_difference = tabla[visId].goals_for - tabla[visId].goals_against;
+    });
+
+    return Object.values(tabla).sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (dep.includes('voley') || dep.includes('voleibol') || dep.includes('volleyball')) {
+        const ratioA = a.goals_against === 0 ? a.goals_for : a.goals_for / a.goals_against;
+        const ratioB = b.goals_against === 0 ? b.goals_for : b.goals_for / b.goals_against;
+        return ratioB - ratioA;
+      }
+      return b.goal_difference - a.goal_difference;
+    });
+  };
 
   const cargarEstadisticasDisciplina = async () => {
     if (!filtroDisc) {
@@ -130,9 +347,24 @@ export const VisualizacionPublica: React.FC = () => {
             setFixtureKnockout([]);
           }
         } else {
-          // Liga o por defecto
-          const res = await serviciosResultados.obtenerPosiciones(discId, catId);
-          if (res.success) setPosiciones(res.data);
+          // Liga o por defecto (Calculado en cliente para soportar múltiples disciplinas y walkovers)
+          if (discId && catId) {
+            const [resEquipos, resMatches] = await Promise.all([
+              serviciosParticipantes.obtenerEquipos(),
+              serviciosFixture.obtenerFixture(discId, catId)
+            ]);
+            
+            if (resEquipos.success && resMatches.success) {
+              const discName = disciplinas.find(d => d.id === discId)?.name || 'Fútbol';
+              const equiposFiltrados = resEquipos.data.filter((e: any) => e.category_id === catId);
+              const computed = calcularPosicionesFrontend(resMatches.data, equiposFiltrados, discName);
+              setPosiciones(computed);
+            } else {
+              setPosiciones([]);
+            }
+          } else {
+            setPosiciones([]);
+          }
         }
       } else if (tabActiva === 'sanciones') {
         const res = await serviciosResultados.obtenerSanciones();
@@ -183,10 +415,26 @@ export const VisualizacionPublica: React.FC = () => {
 
   const contenidoInterno = (
     <>
+      {esVistaAnonima && (
+        <div className="bg-[#11131c] border-b border-slate-900 px-6 py-3 flex items-center justify-between z-20">
+          <div className="flex items-center gap-2">
+            <span className="font-extrabold text-[10px] tracking-wider text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-sm uppercase">Portal Público</span>
+            <span className="text-xs text-slate-500">•</span>
+            <span className="text-xs text-slate-300 font-bold">{campeonatoActivo?.name}</span>
+          </div>
+          <button
+            onClick={() => limpiarCampeonato()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#171a26] border border-slate-850 hover:border-indigo-500/30 text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-xs">swap_horiz</span>
+            Cambiar Campeonato
+          </button>
+        </div>
+      )}
       <CabeceraEstandar titulo="Estadísticas y Posiciones" subtitulo="Consulta Pública de Resultados en Tiempo Real" />
 
-      {/* Tabs (visibles solo en móvil ya que en desktop se navega por la barra lateral) */}
-      <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2 lg:hidden">
+      {/* Tabs (visibles solo en móvil ya que en desktop se navega por la barra lateral, o siempre en vista anónima) */}
+      <div className={`bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2 ${esVistaAnonima ? '' : 'lg:hidden'}`}>
         <button
           onClick={() => setSearchParams({ tab: 'posiciones' })}
           className={`px-4 py-2 text-xs font-bold rounded-lg uppercase tracking-wide cursor-pointer transition-all ${
@@ -401,19 +649,19 @@ export const VisualizacionPublica: React.FC = () => {
                                     className="bg-[#11131c] border border-slate-900 rounded-xl p-3.5 space-y-2.5 shadow-xs hover:border-indigo-500/50 cursor-pointer transition-all hover:scale-[1.02]"
                                   >
                                     <div className="flex justify-between items-center text-xs">
-                                      <span className={`font-bold ${match.home_score > match.away_score ? 'text-white' : 'text-slate-450'}`}>
+                                      <span className={`font-bold ${obtenerScoreLocal(match) > obtenerScoreVisita(match) ? 'text-white' : 'text-slate-450'}`}>
                                         {match.local_team?.name || '—'}
                                       </span>
                                       <span className="font-extrabold text-indigo-400 bg-indigo-500/5 border border-indigo-500/10 px-2 py-0.5 rounded-md text-xs">
-                                        {match.home_score !== null ? match.home_score : '—'}
+                                        {obtenerScoreLocal(match) !== null ? obtenerScoreLocal(match) : '—'}
                                       </span>
                                     </div>
                                     <div className="flex justify-between items-center text-xs border-t border-slate-905 pt-2">
-                                      <span className={`font-bold ${match.away_score > match.home_score ? 'text-white' : 'text-slate-450'}`}>
+                                      <span className={`font-bold ${obtenerScoreVisita(match) > obtenerScoreLocal(match) ? 'text-white' : 'text-slate-450'}`}>
                                         {match.visitor_team?.name || '—'}
                                       </span>
                                       <span className="font-extrabold text-indigo-400 bg-indigo-500/5 border border-indigo-500/10 px-2 py-0.5 rounded-md text-xs">
-                                        {match.away_score !== null ? match.away_score : '—'}
+                                        {obtenerScoreVisita(match) !== null ? obtenerScoreVisita(match) : '—'}
                                       </span>
                                     </div>
                                     <div className="text-[8px] text-slate-500 font-bold flex justify-between uppercase">
@@ -518,13 +766,13 @@ export const VisualizacionPublica: React.FC = () => {
                               <div className="flex justify-between items-center text-xs">
                                 <span className="font-bold text-slate-300">{match.local_team?.name || 'Local'}</span>
                                 <span className="font-extrabold text-indigo-400 bg-indigo-500/5 px-2 py-0.5 border border-indigo-500/10 rounded text-xs">
-                                  {match.home_score !== null ? match.home_score : '—'}
+                                  {obtenerScoreLocal(match) !== null ? obtenerScoreLocal(match) : '—'}
                                 </span>
                               </div>
                               <div className="flex justify-between items-center text-xs">
                                 <span className="font-bold text-slate-300">{match.visitor_team?.name || 'Visitante'}</span>
                                 <span className="font-extrabold text-indigo-400 bg-indigo-500/5 px-2 py-0.5 border border-indigo-500/10 rounded text-xs">
-                                  {match.away_score !== null ? match.away_score : '—'}
+                                  {obtenerScoreVisita(match) !== null ? obtenerScoreVisita(match) : '—'}
                                 </span>
                               </div>
                             </div>
@@ -657,11 +905,11 @@ export const VisualizacionPublica: React.FC = () => {
                 {/* Score */}
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="w-11 h-11 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center text-lg md:text-xl font-black text-indigo-400 shadow-xs">
-                    {matchSeleccionado.home_score !== null ? matchSeleccionado.home_score : '—'}
+                    {obtenerScoreLocal(matchSeleccionado) !== null ? obtenerScoreLocal(matchSeleccionado) : '—'}
                   </span>
                   <span className="text-slate-500 font-black text-xs uppercase tracking-widest">VS</span>
                   <span className="w-11 h-11 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center text-lg md:text-xl font-black text-indigo-400 shadow-xs">
-                    {matchSeleccionado.away_score !== null ? matchSeleccionado.away_score : '—'}
+                    {obtenerScoreVisita(matchSeleccionado) !== null ? obtenerScoreVisita(matchSeleccionado) : '—'}
                   </span>
                 </div>
                 {/* Visitante */}
@@ -771,6 +1019,81 @@ export const VisualizacionPublica: React.FC = () => {
       )}
     </>
   );
+
+  if (cargandoPublico) {
+    return (
+      <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950/20 via-[#0a0b10] to-[#0a0b10] z-0" />
+        <div className="relative z-10 flex flex-col items-center gap-4 text-center">
+          <span className="material-symbols-outlined text-4xl text-indigo-500 animate-spin">sync</span>
+          <h3 className="font-bold text-slate-200">Cargando portal público...</h3>
+          <p className="text-xs text-slate-400 font-medium">Sincronizando campeonatos disponibles</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (esVistaAnonima && !campeonatoActivo) {
+    return (
+      <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans flex flex-col relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950/20 via-[#0a0b10] to-[#0a0b10] z-0" />
+        
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 max-w-4xl mx-auto w-full">
+          <div className="text-center space-y-3 mb-10">
+            <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-200 to-indigo-500">
+              LigaCenter — Portal Público
+            </h2>
+            <p className="text-sm text-slate-400 font-medium">
+              Selecciona un campeonato para visualizar el fixture, posiciones y estadísticas en tiempo real.
+            </p>
+          </div>
+
+          {campeonatosPublicos.length === 0 ? (
+            <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-8 text-center max-w-md w-full space-y-4">
+              <span className="material-symbols-outlined text-slate-500 text-4xl animate-bounce">sports_score</span>
+              <p className="text-sm text-slate-400">No hay campeonatos disponibles en este momento.</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 w-full">
+              {campeonatosPublicos.map((camp) => (
+                <div
+                  key={camp.id}
+                  onClick={() => seleccionarCampeonato(camp)}
+                  className="p-6 rounded-2xl bg-[#11131c] border border-slate-900 hover:border-indigo-500/50 hover:bg-indigo-950/5 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                        {camp.type === 'completo' ? 'Multidisciplina' : 'Básico'}
+                      </span>
+                      <span className="material-symbols-outlined text-xs text-slate-500 group-hover:text-indigo-400 transition-colors">
+                        arrow_forward_ios
+                      </span>
+                    </div>
+                    <h3 className="font-bold text-slate-200 group-hover:text-white transition-colors">{camp.name}</h3>
+                    {camp.description && (
+                      <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{camp.description}</p>
+                    )}
+                  </div>
+                  <div className="mt-6 pt-4 border-t border-slate-900/60 flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-xs">calendar_today</span>
+                      {camp.start_date || '—'}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                      camp.status === 'en_curso' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-400'
+                    }`}>
+                      {camp.status === 'en_curso' ? 'En Curso' : camp.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (usuario) {
     return (

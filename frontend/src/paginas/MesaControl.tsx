@@ -230,7 +230,9 @@ export const MesaControl: React.FC = () => {
   const [golesLocal, setGolesLocal] = useState('0');
   const [golesVisita, setGolesVisita] = useState('0');
   const [firmaArbitro, setFirmaArbitro] = useState('');
-  const [firmaDelegado, setFirmaDelegado] = useState('');
+  const [firmaDelegadoLocal, setFirmaDelegadoLocal] = useState('');
+  const [firmaDelegadoVisita, setFirmaDelegadoVisita] = useState('');
+  const [firmaDelegadoMesa, setFirmaDelegadoMesa] = useState('');
   const [observaciones, setObservaciones] = useState('');
 
   // Estados de cronómetro y subestado
@@ -439,7 +441,9 @@ export const MesaControl: React.FC = () => {
     setGolesLocal('0');
     setGolesVisita('0');
     setFirmaArbitro('');
-    setFirmaDelegado('');
+    setFirmaDelegadoLocal('');
+    setFirmaDelegadoVisita('');
+    setFirmaDelegadoMesa('');
     setObservaciones('');
 
     try {
@@ -460,7 +464,27 @@ export const MesaControl: React.FC = () => {
         setGolesLocal(a.local_score.toString());
         setGolesVisita(a.visitor_score.toString());
         setFirmaArbitro(a.referee_signature || '');
-        setFirmaDelegado(a.delegate_signature || '');
+        
+        const sig = a.delegate_signature || '';
+        if (sig.includes('Local:') || sig.includes('Visita:')) {
+          const parts = sig.split(' | ');
+          let loc = '';
+          let vis = '';
+          let mes = '';
+          parts.forEach((p: string) => {
+            if (p.startsWith('Local:')) loc = p.substring(6).trim();
+            else if (p.startsWith('Visita:')) vis = p.substring(7).trim();
+            else if (p.startsWith('Mesa:')) mes = p.substring(5).trim();
+          });
+          setFirmaDelegadoLocal(loc);
+          setFirmaDelegadoVisita(vis);
+          setFirmaDelegadoMesa(mes);
+        } else {
+          setFirmaDelegadoMesa(sig);
+          setFirmaDelegadoLocal('');
+          setFirmaDelegadoVisita('');
+        }
+        
         setObservaciones(a.observations || '');
       }
     } catch (err) {
@@ -507,13 +531,14 @@ export const MesaControl: React.FC = () => {
   const guardarProgresoActa = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!partidoSeleccionado) return;
+    const combinedSignature = `Local: ${firmaDelegadoLocal.trim()} | Visita: ${firmaDelegadoVisita.trim()} | Mesa: ${firmaDelegadoMesa.trim()}`;
     try {
       if (acta) {
         const res = await serviciosResultados.actualizarActa(acta.id, {
           local_score: parseInt(golesLocal),
           visitor_score: parseInt(golesVisita),
           referee_signature: firmaArbitro || undefined,
-          delegate_signature: firmaDelegado || undefined,
+          delegate_signature: combinedSignature,
           observations: observaciones || undefined
         });
         if (res.success) {
@@ -526,7 +551,7 @@ export const MesaControl: React.FC = () => {
           local_score: parseInt(golesLocal),
           visitor_score: parseInt(golesVisita),
           referee_signature: firmaArbitro || undefined,
-          delegate_signature: firmaDelegado || undefined,
+          delegate_signature: combinedSignature,
           observations: observaciones || undefined
         });
         if (res.success) {
@@ -566,6 +591,38 @@ export const MesaControl: React.FC = () => {
         mostrarMensaje('Error al bloquear acta.', true);
       }
     }
+  };
+
+  const manejarWalkover = async (forfeitedTeamId: number) => {
+    if (!partidoSeleccionado) return;
+
+    const name = partidoSeleccionado.discipline?.name?.toLowerCase().trim() || '';
+    let scoreGanador = '3';
+    let scorePerdedor = '0';
+
+    if (name.includes('basquet') || name.includes('básquet') || name.includes('basketball') || name.includes('baloncesto')) {
+      scoreGanador = '20';
+    } else if (name.includes('voley') || name.includes('voleibol') || name.includes('volleyball')) {
+      scoreGanador = '3';
+    }
+
+    const esLocalForfeited = forfeitedTeamId === (partidoSeleccionado.local_team_id || (partidoSeleccionado as any).home_team_id);
+    
+    const nuevoGolesLocal = esLocalForfeited ? scorePerdedor : scoreGanador;
+    const nuevoGolesVisita = esLocalForfeited ? scoreGanador : scorePerdedor;
+
+    setGolesLocal(nuevoGolesLocal);
+    setGolesVisita(nuevoGolesVisita);
+    setObservaciones(`[WALKOVER] forfeited_team_id: ${forfeitedTeamId}`);
+    setFirmaArbitro('W.O. REGLAMENTARIO');
+    setFirmaDelegadoLocal('W.O.');
+    setFirmaDelegadoVisita('W.O.');
+    setFirmaDelegadoMesa(usuario?.name || 'Mesa Control');
+
+    sileo.warning({
+      title: 'Walkover Declarado',
+      description: `Se ha establecido el marcador reglamentario (${nuevoGolesLocal}-${nuevoGolesVisita}) y la observación correspondiente. Guarde los cambios para confirmar.`
+    });
   };
 
 
@@ -880,6 +937,37 @@ export const MesaControl: React.FC = () => {
                   <div className="font-extrabold text-sm text-slate-200 truncate">{partidoSeleccionado.visitor_team?.name}</div>
                 </div>
 
+                {/* Opciones Especiales: Walkover (W.O.) */}
+                {!acta?.is_locked && (
+                  <div className="bg-[#07080c] border border-slate-900 p-4 rounded-2xl space-y-3 animate-fadeIn">
+                    <h4 className="text-[10px] font-bold text-amber-500 uppercase tracking-wider flex items-center gap-1.5 font-sans">
+                      <span className="material-symbols-outlined text-xs font-bold">gavel</span>
+                      Declarar Incomparecencia (Walkover / W.O.)
+                    </h4>
+                    <p className="text-[10px] text-slate-400 font-sans">
+                      Si uno de los equipos no se presentó al encuentro, puedes registrar el marcador reglamentario (3-0 para Fútbol, 20-0 para Básquetbol, 3-0 para Vóley) de manera directa.
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => manejarWalkover(partidoSeleccionado.local_team_id || (partidoSeleccionado as any).home_team_id)}
+                        className="bg-rose-950/30 hover:bg-rose-900 border border-rose-500/20 text-rose-350 text-[10px] font-bold py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 font-sans"
+                      >
+                        <span className="material-symbols-outlined text-xs">cancel</span>
+                        W.O. Local Inasistente
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => manejarWalkover(partidoSeleccionado.visitor_team_id || (partidoSeleccionado as any).away_team_id)}
+                        className="bg-rose-950/30 hover:bg-rose-900 border border-rose-500/20 text-rose-350 text-[10px] font-bold py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 font-sans"
+                      >
+                        <span className="material-symbols-outlined text-xs">cancel</span>
+                        W.O. Visita Inasistente
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Botones de Incidencia Rápida (Eventos Rápidos de un Clic) */}
                 {!acta?.is_locked && (
                   <div className="p-4 bg-[#07080c] border border-slate-900 rounded-2xl space-y-3 shadow-xs">
@@ -943,20 +1031,38 @@ export const MesaControl: React.FC = () => {
                 
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-300 block">Firma Árbitro Principal</label>
+                    <label className="text-xs font-bold text-slate-300 block font-sans">Firma Árbitro Principal</label>
                     <input
                       type="text" placeholder="Firma / Nombre" disabled={acta?.is_locked}
                       value={firmaArbitro} onChange={(e) => setFirmaArbitro(e.target.value)}
-                      className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 placeholder:text-slate-600"
+                      className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 placeholder:text-slate-600 font-sans"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-300 block">Firma Delegado de Mesa</label>
-                    <input
-                      type="text" placeholder="Firma / Nombre" disabled={acta?.is_locked}
-                      value={firmaDelegado} onChange={(e) => setFirmaDelegado(e.target.value)}
-                      className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 placeholder:text-slate-600"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-350 block font-sans uppercase">Delegado Mesa</label>
+                      <input
+                        type="text" placeholder="Nombre" disabled={acta?.is_locked}
+                        value={firmaDelegadoMesa} onChange={(e) => setFirmaDelegadoMesa(e.target.value)}
+                        className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 placeholder:text-slate-600 font-sans"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-355 block font-sans uppercase">Delegado Local</label>
+                      <input
+                        type="text" placeholder="Nombre" disabled={acta?.is_locked}
+                        value={firmaDelegadoLocal} onChange={(e) => setFirmaDelegadoLocal(e.target.value)}
+                        className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 placeholder:text-slate-600 font-sans"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-355 block font-sans uppercase">Delegado Visita</label>
+                      <input
+                        type="text" placeholder="Nombre" disabled={acta?.is_locked}
+                        value={firmaDelegadoVisita} onChange={(e) => setFirmaDelegadoVisita(e.target.value)}
+                        className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 placeholder:text-slate-600 font-sans"
+                      />
+                    </div>
                   </div>
                 </div>
 

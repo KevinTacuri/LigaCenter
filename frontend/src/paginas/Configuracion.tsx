@@ -8,7 +8,7 @@ import { BarraLateral } from '../componentes/BarraLateral';
 import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
 
 export const Configuracion: React.FC = () => {
-  const { usuario, cargando } = useAutenticacion();
+  const { usuario, cargando, tieneRol } = useAutenticacion();
   const { campeonatoActivo, seleccionarCampeonato } = useCampeonato();
   const navegar = useNavigate();
 
@@ -23,6 +23,10 @@ export const Configuracion: React.FC = () => {
   useEffect(() => {
     if (!cargando && !usuario) {
       navegar('/login');
+      return;
+    }
+    if (usuario && tieneRol('administrador')) {
+      navegar('/tablero');
     }
   }, [usuario, cargando, navegar]);
 
