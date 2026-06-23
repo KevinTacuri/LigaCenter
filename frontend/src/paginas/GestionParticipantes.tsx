@@ -199,6 +199,10 @@ export const GestionParticipantes: React.FC = () => {
   const [filtroEstadoEq, setFiltroEstadoEq] = useState<'todos' | 'aprobado' | 'pendiente' | 'rechazado'>('todos');
   const [ordenEq, setOrdenEq] = useState<'nombre_asc' | 'nombre_desc' | 'representante_asc' | 'representante_desc' | 'estado'>('nombre_asc');
 
+  // ── Estado: Filtros y orden de la tabla de Jugadores ──
+const [busquedaJug, setBusquedaJug] = useState('');
+const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_asc' | 'equipo_desc'>('nombre_asc');
+
   // ── Formularios originales ─────────────────
   const [nuevaDisc, setNuevaDisc] = useState({ name: '', description: '', rules: '', status: 'active' });
   const [customDiscName, setCustomDiscName] = useState('');
@@ -307,6 +311,17 @@ export const GestionParticipantes: React.FC = () => {
     estado: 'pendiente' | 'aprobado' | 'rechazado';
     guardando: boolean;
   }>({ abierto: false, eq: null, nombre: '', representante: '', estado: 'pendiente', guardando: false });
+
+  // ── Estado: Modal Editar Jugador ───────────
+  const [modalEditarJug, setModalEditarJug] = useState<{
+    abierto: boolean;
+    jug: Jugador | null;
+    nombre: string;
+    dni: string;
+    numero: string;
+    teamId: string;
+    guardando: boolean;
+  }>({ abierto: false, jug: null, nombre: '', dni: '', numero: '', teamId: '', guardando: false });
 
   // ─────────────────────────────────────────────
   // EFECTOS
@@ -732,6 +747,56 @@ export const GestionParticipantes: React.FC = () => {
     }
   };
 
+  const abrirModalEditarJugador = (j: Jugador) => {
+    // Fallback: si team_id no viene en el objeto, lo tomamos de team.id
+    const idEquipo = j.team_id ?? j.team?.id ?? '';
+    setModalEditarJug({
+      abierto: true,
+      jug: j,
+      nombre: j.name,
+      dni: j.dni || '',
+      numero: j.number != null ? String(j.number) : '',
+      teamId: idEquipo !== '' ? String(idEquipo) : '',
+      guardando: false,
+    });
+  };
+
+  const guardarEdicionJugador = async () => {
+    if (!modalEditarJug.jug) return;
+    if (!modalEditarJug.nombre.trim() || !modalEditarJug.teamId) {
+      mostrarMensaje('El nombre y el equipo son obligatorios.', true); return;
+    }
+    setModalEditarJug(prev => ({ ...prev, guardando: true }));
+    try {
+      const res = await serviciosParticipantes.actualizarJugador(modalEditarJug.jug.id, {
+        full_name: modalEditarJug.nombre.trim(),
+        dni: modalEditarJug.dni.trim() || null,
+        number: modalEditarJug.numero.trim() ? parseInt(modalEditarJug.numero) : null,
+        team_id: parseInt(modalEditarJug.teamId),
+      });
+      if (res.success) {
+        setJugadores(prev => prev.map(j =>
+          j.id === modalEditarJug.jug!.id
+            ? {
+                ...j,
+                name: modalEditarJug.nombre.trim(),
+                dni: modalEditarJug.dni.trim() || null,
+                number: modalEditarJug.numero.trim() ? parseInt(modalEditarJug.numero) : null,
+                team_id: parseInt(modalEditarJug.teamId),
+                team: equipos.find(eq => eq.id === parseInt(modalEditarJug.teamId)) || j.team,
+              }
+            : j
+        ));
+        mostrarMensaje('Jugador actualizado correctamente.');
+        setModalEditarJug({ abierto: false, jug: null, nombre: '', dni: '', numero: '', teamId: '', guardando: false });
+      }
+    } catch (err: any) {
+      mostrarMensaje(err.response?.data?.message || 'Error al actualizar el jugador.', true);
+    } finally {
+      setModalEditarJug(prev => ({ ...prev, guardando: false }));
+    }
+  };
+
   const eliminarFilaJugador = async (idx: number) => {
     const fila = filasJugadores[idx];
     if (!fila.guardado) {
@@ -784,6 +849,20 @@ export const GestionParticipantes: React.FC = () => {
       if (ordenEq === 'representante_asc') return (a.representative || '').localeCompare(b.representative || '');
       if (ordenEq === 'representante_desc') return (b.representative || '').localeCompare(a.representative || '');
       if (ordenEq === 'estado') return (a.registration_status || 'pendiente').localeCompare(b.registration_status || 'pendiente');
+      return 0;
+    });
+
+  // Lista de jugadores filtrada y ordenada para la tabla (no modifica `jugadores` original)
+  const jugadoresFiltrados = jugadores
+    .filter(j => {
+      const texto = busquedaJug.trim().toLowerCase();
+      return !texto || j.name.toLowerCase().includes(texto);
+    })
+    .sort((a, b) => {
+      if (ordenJug === 'nombre_asc') return a.name.localeCompare(b.name);
+      if (ordenJug === 'nombre_desc') return b.name.localeCompare(a.name);
+      if (ordenJug === 'equipo_asc') return (a.team?.name || '').localeCompare(b.team?.name || '');
+      if (ordenJug === 'equipo_desc') return (b.team?.name || '').localeCompare(a.team?.name || '');
       return 0;
     });
 
@@ -1304,6 +1383,42 @@ export const GestionParticipantes: React.FC = () => {
                   </p>
                 </div>
               )}
+              {tabActiva === 'jugadores' && (
+                <div className="mb-4 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Buscador */}
+                    <div className="relative md:col-span-2">
+                      <input
+                        type="text"
+                        placeholder="Buscar por nombre del jugador..."
+                        value={busquedaJug}
+                        onChange={(e) => setBusquedaJug(e.target.value)}
+                        className="w-full text-sm border border-slate-200 rounded-lg p-2.5 pr-8 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                      />
+                      <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">
+                        search
+                      </span>
+                    </div>
+
+                    {/* Orden */}
+                    <select
+                      value={ordenJug}
+                      onChange={(e) => setOrdenJug(e.target.value as any)}
+                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                    >
+                      <option value="nombre_asc">Nombre (A-Z)</option>
+                      <option value="nombre_desc">Nombre (Z-A)</option>
+                      <option value="equipo_asc">Equipo (A-Z)</option>
+                      <option value="equipo_desc">Equipo (Z-A)</option>
+                    </select>
+                  </div>
+
+                  {/* Contador de resultados */}
+                  <p className="text-[11px] text-slate-400 font-semibold">
+                    Mostrando {jugadoresFiltrados.length} de {jugadores.length} jugadores
+                  </p>
+                </div>
+              )}
               {cargando ? (
                 <div className="p-12 flex flex-col items-center justify-center gap-3">
                   <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
@@ -1321,10 +1436,17 @@ export const GestionParticipantes: React.FC = () => {
                             <th className="p-3">Estado</th>
                             <th className="p-3 pr-4 text-right">Acciones</th>
                           </>
+                       ) : tabActiva === 'jugadores' ? (
+                          <>
+                            <th className="p-3 pl-4">Nombre Completo</th>
+                            <th className="p-3">DNI</th>
+                            <th className="p-3">Dorsal</th>
+                            <th className="p-3">Equipo</th>
+                            <th className="p-3 pr-4 text-right">Acciones</th>
+                          </>
                         ) : (
                           <>
                             <th className="p-3 pl-4">Detalles</th>
-                            {tabActiva === 'jugadores' && <th className="p-3">Equipo</th>}
                             <th className="p-3 pr-4 text-right">Acciones</th>
                           </>
                         )}
@@ -1403,15 +1525,37 @@ export const GestionParticipantes: React.FC = () => {
                           </td>
                         </tr>
                       ))}
-                      {tabActiva === 'jugadores' && jugadores.map((j) => (
+                      {tabActiva === 'jugadores' && jugadoresFiltrados.map((j) => (
                         <tr key={j.id} className="hover:bg-slate-50/40">
                           <td className="p-3 pl-4">
                             <div className="font-bold text-slate-900">{j.name}</div>
-                            <div className="text-xs text-slate-500">DNI: {j.dni || 'No registrado'} | Camiseta: {j.number || 'N/A'} ({j.position})</div>
                           </td>
-                          <td className="p-3 text-slate-700">{j.team?.name || 'Sin equipo'}</td>
+                          <td className="p-3 text-sm text-slate-700">
+                            {j.dni || <span className="text-slate-400 italic text-xs">No registrado</span>}
+                          </td>
+                          <td className="p-3 text-sm text-slate-700">
+                            {j.number != null ? j.number : <span className="text-slate-400 italic text-xs">N/A</span>}
+                          </td>
+                          <td className="p-3 text-sm text-slate-700">
+                            {j.team?.name || <span className="text-slate-400 italic text-xs">Sin equipo</span>}
+                          </td>
                           <td className="p-3 pr-4 text-right">
-                            <button onClick={() => eliminarElemento(j.id)} className="text-xs font-bold text-rose-600 hover:underline cursor-pointer">Eliminar</button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => abrirModalEditarJugador(j)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-600 hover:text-white hover:border-indigo-600 active:scale-95 transition-all cursor-pointer"
+                              >
+                                <span className="material-symbols-outlined text-xs">edit</span>
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => eliminarElemento(j.id)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-rose-600 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-600 hover:text-white hover:border-rose-600 active:scale-95 transition-all cursor-pointer"
+                              >
+                                <span className="material-symbols-outlined text-xs">delete</span>
+                                Eliminar
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1419,7 +1563,7 @@ export const GestionParticipantes: React.FC = () => {
                         (tabActiva === 'disciplinas' && disciplinas.length === 0) ||
                         (tabActiva === 'categorias' && categorias.length === 0) ||
                         (tabActiva === 'equipos' && equiposFiltrados.length === 0) ||
-                        (tabActiva === 'jugadores' && jugadores.length === 0)
+                        (tabActiva === 'jugadores' && jugadoresFiltrados.length === 0)
                       ) && (
                         <tr>
                           <td colSpan={4} className="p-10 text-center text-slate-500 text-xs">No hay registros cargados.</td>
@@ -1834,6 +1978,101 @@ export const GestionParticipantes: React.FC = () => {
                 className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {modalEditarEq.guardando
+                  ? <><span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />Guardando...</>
+                  : <><span className="material-symbols-outlined text-xs">save</span>Guardar Cambios</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Editar Jugador ── */}
+      {modalEditarJug.abierto && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-indigo-500 text-base">edit</span>
+                <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Editar Jugador</h3>
+              </div>
+              <button
+                onClick={() => setModalEditarJug(prev => ({ ...prev, abierto: false }))}
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4">
+              {/* Nombre */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Nombre Completo *</label>
+                <input
+                  type="text"
+                  value={modalEditarJug.nombre}
+                  onChange={e => setModalEditarJug(prev => ({ ...prev, nombre: e.target.value }))}
+                  placeholder="Nombre del jugador"
+                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                />
+              </div>
+
+              {/* DNI y Dorsal */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">DNI</label>
+                  <input
+                    type="text"
+                    value={modalEditarJug.dni}
+                    onChange={e => setModalEditarJug(prev => ({ ...prev, dni: e.target.value }))}
+                    placeholder="DNI"
+                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Dorsal</label>
+                  <input
+                    type="number"
+                    value={modalEditarJug.numero}
+                    onChange={e => setModalEditarJug(prev => ({ ...prev, numero: e.target.value }))}
+                    placeholder="Ej: 10"
+                    min="1"
+                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                  />
+                </div>
+              </div>
+
+              {/* Equipo */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Equipo *</label>
+                <select
+                  value={modalEditarJug.teamId}
+                  onChange={e => setModalEditarJug(prev => ({ ...prev, teamId: e.target.value }))}
+                  className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                >
+                  <option value="">Seleccionar Equipo</option>
+                  {equipos.map((eq) => <option key={eq.id} value={String(eq.id)}>{eq.name}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setModalEditarJug(prev => ({ ...prev, abierto: false }))}
+                disabled={modalEditarJug.guardando}
+                className="px-4 py-2 text-xs font-bold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all cursor-pointer disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={guardarEdicionJugador}
+                disabled={modalEditarJug.guardando || !modalEditarJug.nombre.trim() || !modalEditarJug.teamId}
+                className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {modalEditarJug.guardando
                   ? <><span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />Guardando...</>
                   : <><span className="material-symbols-outlined text-xs">save</span>Guardar Cambios</>
                 }

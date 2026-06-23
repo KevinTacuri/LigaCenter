@@ -498,6 +498,15 @@ export const serviciosParticipantes = {
     const res = await clienteApi.delete(`/players/${id}`);
     return res.data;
   },
+  // Actualizar datos de un jugador
+  actualizarJugador: async (
+    id: number,
+    datos: any
+  ): Promise<RespuestaApi<Jugador>> => {
+    const res = await clienteApi.put(`/players/${id}`, datos);
+    return res.data;
+  },
+    
 };
 
 /**
