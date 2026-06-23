@@ -34,15 +34,28 @@ class TeamController extends Controller
             new OA\Response(response: 404, description: "Categoría no encontrada")
         ]
     )]
-    public function index($categoryId)
+    public function index(Request $request, $categoryId = null)
     {
-        $category = Category::find($categoryId);
+        if ($categoryId) {
+            $category = Category::find($categoryId);
 
-        if (!$category) {
-            return $this->errorResponse('Categoría no encontrada', 404);
+            if (!$category) {
+                return $this->errorResponse('Categoría no encontrada', 404);
+            }
+
+            $teams = $category->teams()->withCount('players')->get();
+
+            return $this->successResponse(TeamListResource::collection($teams), 'Equipos obtenidos exitosamente');
         }
 
-        $teams = $category->teams()->withCount('players')->get();
+        $championshipId = $request->query('championship_id') 
+            ?? $request->header('X-Championship-ID');
+
+        if (!$championshipId) {
+            return $this->errorResponse('Falta el ID del campeonato', 400);
+        }
+
+        $teams = Team::where('championship_id', $championshipId)->withCount('players')->get();
 
         return $this->successResponse(TeamListResource::collection($teams), 'Equipos obtenidos exitosamente');
     }
