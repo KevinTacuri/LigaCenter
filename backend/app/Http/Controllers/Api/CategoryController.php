@@ -323,6 +323,22 @@ class CategoryController extends Controller
         ]);
     }
 
+    #[OA\Get(
+        path: "/api/championships/{championship}/categories",
+        operationId: "getCategoriesByChampionship",
+        summary: "Listar categorías de un campeonato",
+        description: "Obtiene todas las categorías asociadas a las disciplinas de un campeonato.",
+        tags: ["Categories"],
+        security: [["sanctum" => []]],
+        parameters: [
+            new OA\Parameter(name: "championship", description: "ID del campeonato", in: "path", required: true, schema: new OA\Schema(type: "integer"))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: "Categorías obtenidas exitosamente"),
+            new OA\Response(response: 401, description: "No autenticado"),
+            new OA\Response(response: 404, description: "Campeonato no encontrado")
+        ]
+    )]
     public function indexByChampionship(\App\Models\Championship $championship)
     {
         return response()->json(
@@ -332,5 +348,40 @@ class CategoryController extends Controller
                 ->with(['teams', 'championshipDiscipline.discipline'])
                 ->get()
         );
+    }
+
+    #[OA\Get(
+        path: "/api/public/categories",
+        operationId: "getPublicCategories",
+        summary: "Listar categorías públicas",
+        description: "Obtiene categorías pertenecientes a campeonatos públicos y permite filtrarlas.",
+        tags: ["Categories"],
+        parameters: [
+            new OA\Parameter(name: "championship_id", description: "ID del campeonato", in: "query", required: false, schema: new OA\Schema(type: "integer")),
+            new OA\Parameter(name: "discipline_id", description: "ID de la disciplina", in: "query", required: false, schema: new OA\Schema(type: "integer"))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: "Categorías públicas obtenidas exitosamente")
+        ]
+    )]
+    public function indexPublic(Request $request)
+    {
+        $query = Category::with(['championshipDiscipline.discipline', 'teams'])
+            ->whereHas('championshipDiscipline.championship', function($q) {
+                $q->where('is_public', true);
+            });
+
+        if ($request->has('championship_id')) {
+            $query->whereHas('championshipDiscipline', function($q) use ($request) {
+                $q->where('championship_id', $request->championship_id);
+            });
+        }
+        if ($request->has('discipline_id')) {
+            $query->whereHas('championshipDiscipline', function($q) use ($request) {
+                $q->where('discipline_id', $request->discipline_id);
+            });
+        }
+
+        return response()->json($query->get());
     }
 }

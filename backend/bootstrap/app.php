@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'championship.access' => \App\Http\Middleware\CheckChampionshipAccess::class,
+            'public.access' => \App\Http\Middleware\PublicAccessMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

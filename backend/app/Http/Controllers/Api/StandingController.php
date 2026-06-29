@@ -182,4 +182,46 @@ class StandingController extends Controller
             'Registro obtenido exitosamente'
         );
     }
+
+    #[OA\Get(
+        path: '/api/public/standings/championship/{championshipId}',
+        operationId: 'getPublicStandingsByChampionship',
+        summary: 'Obtener tabla de posiciones de un campeonato público',
+        description: 'Lista las posiciones de un campeonato público, con filtros opcionales por disciplina y categoría.',
+        tags: ['Standings'],
+        parameters: [
+            new OA\Parameter(name: 'championshipId', description: 'ID del campeonato público', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'discipline_id', description: 'ID de la disciplina', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'category_id', description: 'ID de la categoría', in: 'query', required: false, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Tabla de posiciones obtenida exitosamente'),
+            new OA\Response(response: 404, description: 'Campeonato público no encontrado')
+        ]
+    )]
+    public function byChampionship($championshipId, Request $request)
+    {
+        $championship = Championship::where('is_public', true)->findOrFail($championshipId);
+
+        $query = Standing::with(['team', 'discipline', 'category'])
+            ->where('championship_id', $championshipId);
+
+        if ($request->has('discipline_id')) {
+            $query->where('discipline_id', $request->discipline_id);
+        }
+        if ($request->has('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        $standings = $query
+            ->orderByDesc('total_points')
+            ->orderByDesc('goal_difference')
+            ->orderByDesc('goals_for')
+            ->get();
+
+        return $this->successResponse(
+            $standings,
+            'Tabla de posiciones obtenida exitosamente'
+        );
+    }
 }

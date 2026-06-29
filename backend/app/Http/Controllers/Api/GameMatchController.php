@@ -59,9 +59,16 @@ class GameMatchController extends Controller
         response: 200,
         description: 'Partidos obtenidos exitosamente'
     )]
+
     public function index(Request $request)
     {
         $query = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'discipline', 'category', 'report']);
+
+        if (!$request->user()) {
+            $query->whereHas('championship', function($q) {
+                $q->where('is_public', true);
+            });
+        }
 
         if ($request->has('championship_id')) {
             $query->where('championship_id', $request->championship_id);
@@ -204,5 +211,76 @@ class GameMatchController extends Controller
         ]);
 
         return $this->successResponse($match, 'Partido reprogramado exitosamente');
+    }
+
+    #[OA\Get(
+        path: '/api/public/matches/live',
+        operationId: 'getPublicLiveMatches',
+        summary: 'Listar partidos en vivo',
+        description: 'Obtiene los partidos en curso de campeonatos públicos, con filtro opcional por campeonato.',
+        tags: ['Partidos'],
+        parameters: [
+            new OA\Parameter(name: 'championship_id', description: 'ID del campeonato público', in: 'query', required: false, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Partidos en vivo obtenidos exitosamente')
+        ]
+    )]
+    public function live(Request $request)
+    {
+        $query = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'discipline', 'category'])
+            ->where('status', 'en_curso')
+            ->whereHas('championship', function($q) {
+                $q->where('is_public', true);
+            });
+
+        if ($request->has('championship_id')) {
+            $query->where('championship_id', $request->championship_id);
+        }
+
+        $matches = $query->orderBy('match_date')->orderBy('match_time')->get();
+        return $this->successResponse($matches, 'Partidos en vivo obtenidos exitosamente');
+    }
+
+    #[OA\Get(
+        path: '/api/public/matches/upcoming',
+        operationId: 'getPublicUpcomingMatches',
+        summary: 'Listar próximos partidos',
+        description: 'Obtiene los próximos partidos programados de campeonatos públicos.',
+        tags: ['Partidos'],
+        parameters: [
+            new OA\Parameter(name: 'championship_id', description: 'ID del campeonato público', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'discipline_id', description: 'ID de la disciplina', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'category_id', description: 'ID de la categoría', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'limit', description: 'Cantidad máxima de partidos a retornar', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 20, minimum: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Próximos partidos obtenidos exitosamente')
+        ]
+    )]
+    public function upcoming(Request $request)
+    {
+        $query = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'discipline', 'category'])
+            ->where('status', 'programado')
+            ->whereDate('match_date', '>=', now()->toDateString())
+            ->whereHas('championship', function($q) {
+                $q->where('is_public', true);
+            });
+
+        if ($request->has('championship_id')) {
+            $query->where('championship_id', $request->championship_id);
+        }
+        if ($request->has('discipline_id')) {
+            $query->where('discipline_id', $request->discipline_id);
+        }
+        if ($request->has('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        $matches = $query->orderBy('match_date')->orderBy('match_time')
+            ->limit($request->limit ?? 20)
+            ->get();
+
+        return $this->successResponse($matches, 'Próximos partidos obtenidos exitosamente');
     }
 }

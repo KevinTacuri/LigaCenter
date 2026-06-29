@@ -12,17 +12,31 @@
         }
     ],
     "paths": {
-        "/api/categories": {
+        "/api/championship-disciplines/{championshipDiscipline}/categories": {
             "get": {
                 "tags": [
                     "Categories"
                 ],
                 "summary": "Listar categorías",
-                "description": "Retorna todas las categorías registradas en el sistema, incluyendo los equipos asociados a cada categoría.",
-                "operationId": "ac9c4d978ea4e5b72915ca9728e5b8b1",
+                "description": "Retorna todas las categorías registradas para una disciplina específica de un campeonato, incluyendo los equipos asociados a cada categoría.",
+                "operationId": "ca5c528ef5f71c9c55e60b21a75c922e",
+                "parameters": [
+                    {
+                        "name": "championshipDiscipline",
+                        "in": "path",
+                        "description": "ID de la disciplina asociada al campeonato",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Lista de categorías obtenida correctamente"
+                    },
+                    "404": {
+                        "description": "La disciplina del campeonato no existe"
                     }
                 }
             },
@@ -31,8 +45,19 @@
                     "Categories"
                 ],
                 "summary": "Crear categoría",
-                "description": "Registra una nueva categoría en el sistema. Las categorías se utilizan para agrupar equipos según rangos de edad.",
-                "operationId": "cca49a87d9b0ebb9a98ad7c154b71737",
+                "description": "Registra una nueva categoría para una disciplina específica de un campeonato. Las categorías se utilizan para agrupar equipos según rangos de edad y definir el formato de competición.",
+                "operationId": "6692751a398fdce6b9c37e4f11c72574",
+                "parameters": [
+                    {
+                        "name": "championshipDiscipline",
+                        "in": "path",
+                        "description": "ID de la disciplina asociada al campeonato",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "requestBody": {
                     "description": "Datos necesarios para crear una categoría",
                     "required": true,
@@ -40,19 +65,46 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "name",
-                                    "age_range"
+                                    "name"
                                 ],
                                 "properties": {
                                     "name": {
-                                        "description": "Nombre de la categoría (ej: Juvenil, Libre, Senior)",
+                                        "description": "Nombre de la categoría",
                                         "type": "string",
-                                        "example": "Juvenil"
+                                        "example": "Sub-15"
                                     },
-                                    "age_range": {
-                                        "description": "Rango de edad permitido en formato mínimo-máximo (ej: 18-25)",
+                                    "format": {
+                                        "description": "Formato de competición",
                                         "type": "string",
-                                        "example": "18-25"
+                                        "example": "grupos",
+                                        "enum": [
+                                            "liga",
+                                            "grupos",
+                                            "eliminacion_directa"
+                                        ]
+                                    },
+                                    "format_settings": {
+                                        "description": "Configuración JSON según el formato elegido",
+                                        "type": "object",
+                                        "example": "{\"num_groups\":4,\"advance_per_group\":2,\"third_place\":true}"
+                                    },
+                                    "description": {
+                                        "description": "Descripción de la categoría",
+                                        "type": "string",
+                                        "example": "Categoría para menores de 15 años"
+                                    },
+                                    "gender_type": {
+                                        "description": "Género de la categoría",
+                                        "type": "string",
+                                        "example": "Masculino"
+                                    },
+                                    "age_min": {
+                                        "type": "integer",
+                                        "example": 10
+                                    },
+                                    "age_max": {
+                                        "type": "integer",
+                                        "example": 15
                                     }
                                 },
                                 "type": "object"
@@ -63,6 +115,9 @@
                 "responses": {
                     "201": {
                         "description": "Categoría creada exitosamente"
+                    },
+                    "404": {
+                        "description": "La disciplina del campeonato no existe"
                     },
                     "422": {
                         "description": "Error de validación en los datos enviados"
@@ -76,7 +131,7 @@
                     "Categories"
                 ],
                 "summary": "Obtener categoría por ID",
-                "description": "Devuelve la información detallada de una categoría específica junto con sus equipos asociados.",
+                "description": "Devuelve la información detallada de una categoría específica junto con los equipos asociados y la disciplina del campeonato a la que pertenece.",
                 "operationId": "09767bb2e47dde77dd1e2591428b0ae1",
                 "parameters": [
                     {
@@ -103,7 +158,7 @@
                     "Categories"
                 ],
                 "summary": "Actualizar categoría",
-                "description": "Permite actualizar la información de una categoría existente como nombre o rango de edad.",
+                "description": "Permite actualizar la información de una categoría existente, incluyendo su formato de competición.",
                 "operationId": "7dcf71887e585de7f881e9eb98d86126",
                 "parameters": [
                     {
@@ -126,12 +181,40 @@
                                     "name": {
                                         "description": "Nuevo nombre de la categoría",
                                         "type": "string",
-                                        "example": "Juvenil A"
+                                        "example": "Sub-15 A"
                                     },
-                                    "age_range": {
-                                        "description": "Nuevo rango de edad",
+                                    "format": {
+                                        "description": "Nuevo formato de competición",
                                         "type": "string",
-                                        "example": "18-23"
+                                        "example": "liga",
+                                        "enum": [
+                                            "liga",
+                                            "grupos",
+                                            "eliminacion_directa"
+                                        ]
+                                    },
+                                    "format_settings": {
+                                        "description": "Configuración JSON según el formato elegido",
+                                        "type": "object",
+                                        "example": "{\"num_groups\":4,\"advance_per_group\":2,\"third_place\":true}"
+                                    },
+                                    "description": {
+                                        "description": "Nueva descripción",
+                                        "type": "string",
+                                        "example": "Categoría actualizada"
+                                    },
+                                    "gender_type": {
+                                        "description": "Nuevo género",
+                                        "type": "string",
+                                        "example": "Femenino"
+                                    },
+                                    "age_min": {
+                                        "type": "integer",
+                                        "example": 12
+                                    },
+                                    "age_max": {
+                                        "type": "integer",
+                                        "example": 16
                                     }
                                 },
                                 "type": "object"
@@ -145,6 +228,9 @@
                     },
                     "404": {
                         "description": "Categoría no encontrada"
+                    },
+                    "422": {
+                        "description": "Error de validación"
                     }
                 }
             },
@@ -176,17 +262,705 @@
                 }
             }
         },
+        "/api/championships/{championship}/categories": {
+            "get": {
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Listar categorías de un campeonato",
+                "description": "Obtiene todas las categorías asociadas a las disciplinas de un campeonato.",
+                "operationId": "getCategoriesByChampionship",
+                "parameters": [
+                    {
+                        "name": "championship",
+                        "in": "path",
+                        "description": "ID del campeonato",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Categorías obtenidas exitosamente"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "404": {
+                        "description": "Campeonato no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/public/categories": {
+            "get": {
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Listar categorías públicas",
+                "description": "Obtiene categorías pertenecientes a campeonatos públicos y permite filtrarlas.",
+                "operationId": "getPublicCategories",
+                "parameters": [
+                    {
+                        "name": "championship_id",
+                        "in": "query",
+                        "description": "ID del campeonato",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "discipline_id",
+                        "in": "query",
+                        "description": "ID de la disciplina",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Categorías públicas obtenidas exitosamente"
+                    }
+                }
+            }
+        },
+        "/api/championships": {
+            "get": {
+                "tags": [
+                    "Championships"
+                ],
+                "summary": "Listar campeonatos del usuario",
+                "operationId": "ff7a46078c347df016e1e2e0db6bbfc2",
+                "responses": {
+                    "200": {
+                        "description": "Campeonatos obtenidos exitosamente"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Championships"
+                ],
+                "summary": "Crear campeonato",
+                "operationId": "3b181aeb617a8304d26999d6b08382b8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Liga Empresarial 2026"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Campeonato entre empresas"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "example": "basico"
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-06-01"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-12-20"
+                                    },
+                                    "is_public": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "settings": {
+                                        "type": "object"
+                                    },
+                                    "rules_pdf": {
+                                        "description": "Archivo PDF con el reglamento del campeonato",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Campeonato creado exitosamente"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/championships/{id}": {
+            "get": {
+                "tags": [
+                    "Championships"
+                ],
+                "summary": "Obtener campeonato",
+                "operationId": "12f1c8413a11ccdf87173e01e8ffe2af",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Campeonato obtenido exitosamente"
+                    },
+                    "404": {
+                        "description": "Campeonato no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Championships"
+                ],
+                "summary": "Actualizar campeonato",
+                "operationId": "52afb169c90ed0d74b6b617a8eb08772",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "creado",
+                                            "en_curso",
+                                            "finalizado"
+                                        ]
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "is_public": {
+                                        "type": "boolean"
+                                    },
+                                    "settings": {
+                                        "type": "object"
+                                    },
+                                    "rules_pdf": {
+                                        "description": "PDF del reglamento (opcional, reemplaza el anterior)",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Campeonato actualizado exitosamente"
+                    },
+                    "404": {
+                        "description": "Campeonato no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Championships"
+                ],
+                "summary": "Eliminar campeonato",
+                "operationId": "2c53424a43ab08ce7f08a6fe9b0c7b28",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Campeonato eliminado exitosamente"
+                    },
+                    "404": {
+                        "description": "Campeonato no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/championships/{id}/users": {
+            "post": {
+                "tags": [
+                    "Championships"
+                ],
+                "summary": "Agregar usuario al campeonato",
+                "operationId": "7f11163c0abb23782e72c536e140f4af",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "user_id",
+                                    "role"
+                                ],
+                                "properties": {
+                                    "user_id": {
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "role": {
+                                        "type": "string",
+                                        "example": "referee",
+                                        "enum": [
+                                            "organizer",
+                                            "referee",
+                                            "team_delegate",
+                                            "score_table"
+                                        ]
+                                    },
+                                    "team_id": {
+                                        "type": "integer",
+                                        "example": 3
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Usuario agregado exitosamente"
+                    },
+                    "404": {
+                        "description": "Campeonato no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/championships/{id}/rules": {
+            "get": {
+                "tags": [
+                    "Championships"
+                ],
+                "summary": "Descargar reglamento del campeonato (PDF)",
+                "operationId": "8700a019003829d8f4ae53fd48418432",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PDF descargado exitosamente",
+                        "content": {
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Campeonato o archivo no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/public/championships/{id}/disciplines": {
+            "get": {
+                "tags": [
+                    "Championships"
+                ],
+                "summary": "Listar disciplinas de un campeonato público",
+                "description": "Obtiene las disciplinas asociadas a un campeonato que está marcado como público.",
+                "operationId": "getPublicChampionshipDisciplines",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del campeonato público",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Disciplinas obtenidas exitosamente"
+                    },
+                    "404": {
+                        "description": "Campeonato público no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/championships/{championship}/disciplines": {
+            "get": {
+                "tags": [
+                    "Championship Disciplines"
+                ],
+                "summary": "Listar disciplinas del campeonato",
+                "operationId": "06691757d65d3848d6beba323210228e",
+                "responses": {
+                    "200": {
+                        "description": "Listado obtenido correctamente"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Championship Disciplines"
+                ],
+                "summary": "Agregar disciplina al campeonato",
+                "description": "Asocia una disciplina deportiva a un campeonato específico. Cada disciplina solo puede registrarse una vez por campeonato.",
+                "operationId": "22e7c25e2369f99b9b8234a97e5684cd",
+                "parameters": [
+                    {
+                        "name": "championship",
+                        "in": "path",
+                        "description": "ID del campeonato",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Información de la disciplina a asociar",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "discipline_id"
+                                ],
+                                "properties": {
+                                    "discipline_id": {
+                                        "description": "ID de la disciplina del catálogo",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "rules": {
+                                        "description": "Reglas específicas de la disciplina para este campeonato",
+                                        "type": "string",
+                                        "example": "Tiempo de juego de 40 minutos por tiempo.",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Disciplina agregada correctamente al campeonato"
+                    },
+                    "422": {
+                        "description": "La disciplina ya existe en el campeonato o los datos enviados son inválidos"
+                    },
+                    "404": {
+                        "description": "Campeonato o disciplina no encontrados"
+                    }
+                }
+            }
+        },
+        "/api/championship-disciplines/{id}": {
+            "get": {
+                "tags": [
+                    "Championship Disciplines"
+                ],
+                "summary": "Obtener disciplina del campeonato",
+                "operationId": "a8f1c84d19870abd1130fc8e7c0d18b8",
+                "responses": {
+                    "200": {
+                        "description": "Información obtenida correctamente"
+                    },
+                    "404": {
+                        "description": "Registro no encontrado"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Championship Disciplines"
+                ],
+                "summary": "Actualizar reglas",
+                "operationId": "e7f49fc2258b92d6639a9de0fc00f929",
+                "requestBody": {
+                    "description": "Reglas específicas de la disciplina para este campeonato",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "specific_rules"
+                                ],
+                                "properties": {
+                                    "specific_rules": {
+                                        "type": "string",
+                                        "example": "Tiempo de juego de 40 minutos por tiempo."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Actualizado correctamente"
+                    },
+                    "404": {
+                        "description": "Registro no encontrado"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Championship Disciplines"
+                ],
+                "summary": "Eliminar disciplina del campeonato",
+                "operationId": "761972ce304ea553c05c7c785a6b4125",
+                "responses": {
+                    "200": {
+                        "description": "Eliminada correctamente"
+                    }
+                }
+            }
+        },
+        "/api/championships/{championshipId}/users": {
+            "get": {
+                "tags": [
+                    "Championship Users"
+                ],
+                "summary": "Listar usuarios de un campeonato",
+                "operationId": "55522bb54527b549e25b30e29b41003d",
+                "parameters": [
+                    {
+                        "name": "championshipId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Usuarios obtenidos exitosamente"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/championship-users/{id}": {
+            "put": {
+                "tags": [
+                    "Championship Users"
+                ],
+                "summary": "Actualizar rol de usuario en campeonato",
+                "operationId": "2a2f830da9624f32bf6bf90f2dfc29c4",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "role"
+                                ],
+                                "properties": {
+                                    "role": {
+                                        "type": "string",
+                                        "example": "score_table",
+                                        "enum": [
+                                            "organizer",
+                                            "referee",
+                                            "team_delegate",
+                                            "score_table"
+                                        ]
+                                    },
+                                    "team_id": {
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Rol actualizado exitosamente"
+                    },
+                    "404": {
+                        "description": "Registro no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Championship Users"
+                ],
+                "summary": "Remover usuario de campeonato",
+                "operationId": "83972931e1577f65322ad33e9c9dc7df",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Usuario removido exitosamente"
+                    },
+                    "404": {
+                        "description": "Registro no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/disciplines": {
             "get": {
                 "tags": [
                     "Disciplines"
                 ],
                 "summary": "Listar disciplinas",
-                "description": "Retorna todas las disciplinas registradas en el sistema junto con los equipos asociados a cada disciplina.",
+                "description": "Retorna el catálogo de disciplinas deportivas disponibles para ser asociadas a un campeonato.",
                 "operationId": "747d80849e4fc36456f4373fb7ea63b3",
                 "responses": {
                     "200": {
-                        "description": "Listado de disciplinas obtenido correctamente"
+                        "description": "Catálogo de disciplinas obtenido correctamente"
                     }
                 }
             },
@@ -337,13 +1111,41 @@
                 }
             }
         },
+        "/api/disciplines/{discipline}/statistics": {
+            "get": {
+                "tags": [
+                    "Discipline Statistics"
+                ],
+                "summary": "Obtiene las estadísticas configuradas para una disciplina",
+                "operationId": "getDisciplineStatistics",
+                "parameters": [
+                    {
+                        "name": "discipline",
+                        "in": "path",
+                        "description": "ID de la disciplina",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Estadísticas obtenidas correctamente"
+                    },
+                    "404": {
+                        "description": "Disciplina no encontrada"
+                    }
+                }
+            }
+        },
         "/api/fixture/generate": {
             "post": {
                 "tags": [
                     "Fixture"
                 ],
                 "summary": "Generar fixture",
-                "description": "Genera el fixture completo usando el algoritmo Round Robin (todos contra todos).",
+                "description": "Genera el fixture según el formato de la categoría (liga, grupos, eliminacion_directa).",
                 "operationId": "generateFixture",
                 "requestBody": {
                     "required": true,
@@ -351,13 +1153,13 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "discipline_id",
+                                    "championship_id",
                                     "category_id",
                                     "start_date",
                                     "venue_ids"
                                 ],
                                 "properties": {
-                                    "discipline_id": {
+                                    "championship_id": {
                                         "type": "integer",
                                         "example": 1
                                     },
@@ -405,13 +1207,13 @@
                     "Fixture"
                 ],
                 "summary": "Obtener fixture",
-                "description": "Obtiene el fixture generado para una disciplina y categoría específicas.",
+                "description": "Obtiene el fixture generado para un campeonato y categoría específicos.",
                 "operationId": "getFixture",
                 "parameters": [
                     {
-                        "name": "discipline_id",
+                        "name": "championship_id",
                         "in": "query",
-                        "description": "ID de la disciplina",
+                        "description": "ID del campeonato",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -451,14 +1253,14 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "discipline_id",
+                                    "championship_id",
                                     "category_id",
                                     "round",
                                     "available_hours",
                                     "venue_ids"
                                 ],
                                 "properties": {
-                                    "discipline_id": {
+                                    "championship_id": {
                                         "type": "integer",
                                         "example": 1
                                     },
@@ -560,6 +1362,15 @@
                                 "cancelado",
                                 "reprogramado"
                             ]
+                        }
+                    },
+                    {
+                        "name": "championship_id",
+                        "in": "query",
+                        "description": "ID del campeonato (opcional, para filtrar)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
                         }
                     }
                 ],
@@ -724,6 +1535,312 @@
                 }
             }
         },
+        "/api/public/matches/live": {
+            "get": {
+                "tags": [
+                    "Partidos"
+                ],
+                "summary": "Listar partidos en vivo",
+                "description": "Obtiene los partidos en curso de campeonatos públicos, con filtro opcional por campeonato.",
+                "operationId": "getPublicLiveMatches",
+                "parameters": [
+                    {
+                        "name": "championship_id",
+                        "in": "query",
+                        "description": "ID del campeonato público",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Partidos en vivo obtenidos exitosamente"
+                    }
+                }
+            }
+        },
+        "/api/public/matches/upcoming": {
+            "get": {
+                "tags": [
+                    "Partidos"
+                ],
+                "summary": "Listar próximos partidos",
+                "description": "Obtiene los próximos partidos programados de campeonatos públicos.",
+                "operationId": "getPublicUpcomingMatches",
+                "parameters": [
+                    {
+                        "name": "championship_id",
+                        "in": "query",
+                        "description": "ID del campeonato público",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "discipline_id",
+                        "in": "query",
+                        "description": "ID de la disciplina",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "description": "ID de la categoría",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Cantidad máxima de partidos a retornar",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Próximos partidos obtenidos exitosamente"
+                    }
+                }
+            }
+        },
+        "/api/groups": {
+            "get": {
+                "tags": [
+                    "Groups"
+                ],
+                "summary": "Listar grupos",
+                "operationId": "ac30b3897794f3ee24af2af44d36ce5d",
+                "parameters": [
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Grupos obtenidos exitosamente"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/groups/{id}": {
+            "get": {
+                "tags": [
+                    "Groups"
+                ],
+                "summary": "Obtener grupo por ID",
+                "operationId": "8205d284770b45579f4f4c21e9f7988b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Grupo obtenido exitosamente"
+                    },
+                    "404": {
+                        "description": "Grupo no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/groups/{id}/standings": {
+            "get": {
+                "tags": [
+                    "Groups"
+                ],
+                "summary": "Tabla de posiciones del grupo",
+                "operationId": "cb7d5ae9d6d4c0cf633f7a74d445b9fe",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tabla obtenida exitosamente"
+                    },
+                    "404": {
+                        "description": "Grupo no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/group-teams": {
+            "get": {
+                "tags": [
+                    "Group Teams"
+                ],
+                "summary": "Listar equipos en grupos",
+                "operationId": "fe97212fcb0e6b5d7d08e9d2a0f7f4f9",
+                "parameters": [
+                    {
+                        "name": "group_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Equipos obtenidos exitosamente"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/group-teams/{id}": {
+            "get": {
+                "tags": [
+                    "Group Teams"
+                ],
+                "summary": "Obtener asignación por ID",
+                "operationId": "b64f5de9ef3fd0893f55f400b876dded",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Asignación obtenida exitosamente"
+                    },
+                    "404": {
+                        "description": "Asignación no encontrada"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Group Teams"
+                ],
+                "summary": "Actualizar estadísticas del equipo en el grupo",
+                "operationId": "d0d0270cee2063f018851145d42512d5",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "points": {
+                                        "type": "integer"
+                                    },
+                                    "goals_for": {
+                                        "type": "integer"
+                                    },
+                                    "goals_against": {
+                                        "type": "integer"
+                                    },
+                                    "matches_played": {
+                                        "type": "integer"
+                                    },
+                                    "wins": {
+                                        "type": "integer"
+                                    },
+                                    "draws": {
+                                        "type": "integer"
+                                    },
+                                    "losses": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Estadísticas actualizadas exitosamente"
+                    },
+                    "404": {
+                        "description": "Asignación no encontrada"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/match-incidences": {
             "get": {
                 "tags": [
@@ -731,6 +1848,26 @@
                 ],
                 "summary": "Listar incidencias",
                 "operationId": "getMatchIncidences",
+                "parameters": [
+                    {
+                        "name": "match_id",
+                        "in": "query",
+                        "description": "ID del partido (opcional)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "championship_id",
+                        "in": "query",
+                        "description": "ID del campeonato (opcional, filtra por partidos del campeonato)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Incidencias obtenidas exitosamente"
@@ -866,6 +2003,17 @@
                 ],
                 "summary": "Listar actas de partido",
                 "operationId": "getMatchReports",
+                "parameters": [
+                    {
+                        "name": "championship_id",
+                        "in": "query",
+                        "description": "ID del campeonato (opcional)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Actas obtenidas exitosamente"
@@ -1015,176 +2163,17 @@
                     "Match Reports"
                 ],
                 "summary": "Bloquear acta",
-                "description": "Bloquea el acta para evitar modificaciones adicionales",
+                "description": "Bloquea el acta, actualiza tabla de posiciones, estadísticas de jugadores y genera sanciones",
                 "operationId": "lockMatchReport",
                 "responses": {
                     "200": {
                         "description": "Acta bloqueada exitosamente"
                     },
+                    "400": {
+                        "description": "El acta ya está bloqueada o no hay resultados"
+                    },
                     "404": {
                         "description": "Acta no encontrada"
-                    }
-                }
-            }
-        },
-        "/api/organizations": {
-            "get": {
-                "tags": [
-                    "Organizations"
-                ],
-                "summary": "Listar delegaciones",
-                "description": "Retorna todas las delegaciones registradas en el sistema junto con sus equipos asociados.",
-                "operationId": "a6f3e52e9b7995087fc40990424c2977",
-                "responses": {
-                    "200": {
-                        "description": "Listado de delegaciones obtenido correctamente"
-                    }
-                }
-            },
-            "post": {
-                "tags": [
-                    "Organizations"
-                ],
-                "summary": "Registrar delegación",
-                "description": "Crea una nueva delegación deportiva que podrá registrar equipos dentro del sistema.",
-                "operationId": "383fb9d4f91db3e68d25843995206055",
-                "requestBody": {
-                    "description": "Datos necesarios para registrar una delegación",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "name",
-                                    "delegate_name"
-                                ],
-                                "properties": {
-                                    "name": {
-                                        "description": "Nombre de la delegación o institución",
-                                        "type": "string",
-                                        "example": "Universidad Nacional"
-                                    },
-                                    "delegate_name": {
-                                        "description": "Nombre del delegado responsable de la institución",
-                                        "type": "string",
-                                        "example": "Juan Pérez"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Delegación creada correctamente"
-                    },
-                    "422": {
-                        "description": "Error de validación"
-                    }
-                }
-            }
-        },
-        "/api/organizations/{id}": {
-            "get": {
-                "tags": [
-                    "Organizations"
-                ],
-                "summary": "Obtener delegación por ID",
-                "description": "Devuelve la información detallada de una delegación específica junto con sus equipos registrados.",
-                "operationId": "11826ee077ae441c61f2bee8476e2a14",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "ID de la delegación",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Delegación encontrada correctamente"
-                    },
-                    "404": {
-                        "description": "Delegación no encontrada"
-                    }
-                }
-            },
-            "put": {
-                "tags": [
-                    "Organizations"
-                ],
-                "summary": "Actualizar delegación",
-                "description": "Permite actualizar el nombre de la delegación o el nombre del delegado responsable.",
-                "operationId": "bd0ad467881940d8b5cf673dafad246c",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "ID de la delegación a actualizar",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "description": "Campos opcionales para actualizar la delegación",
-                    "required": false,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "example": "Universidad Nacional Mayor"
-                                    },
-                                    "delegate_name": {
-                                        "type": "string",
-                                        "example": "Carlos Ramírez"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Delegación actualizada correctamente"
-                    },
-                    "404": {
-                        "description": "Delegación no encontrada"
-                    }
-                }
-            },
-            "delete": {
-                "tags": [
-                    "Organizations"
-                ],
-                "summary": "Eliminar delegación",
-                "description": "Elimina una delegación del sistema. Esto puede afectar a los equipos asociados a la misma.",
-                "operationId": "7d55393f5111cc0a3ab33cd72089022d",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "ID de la delegación a eliminar",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Delegación eliminada correctamente"
-                    },
-                    "404": {
-                        "description": "Delegación no encontrada"
                     }
                 }
             }
@@ -1197,6 +2186,17 @@
                 "summary": "Listar jugadores",
                 "description": "Retorna todos los jugadores registrados en el sistema con información del equipo, organización, categoría y disciplina.",
                 "operationId": "930ce8098c35806eb854e0be45ef56c8",
+                "parameters": [
+                    {
+                        "name": "championship_id",
+                        "in": "query",
+                        "description": "ID del campeonato (opcional)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Listado de jugadores obtenido correctamente"
@@ -1379,6 +2379,273 @@
                 }
             }
         },
+        "/api/players/{id}/history": {
+            "get": {
+                "tags": [
+                    "Player Statistics"
+                ],
+                "summary": "Historial del jugador",
+                "description": "Obtiene el historial completo del jugador (totales y desglose por campeonato)",
+                "operationId": "getPlayerHistory",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Historial obtenido exitosamente"
+                    },
+                    "404": {
+                        "description": "Jugador no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/statistics/ranking": {
+            "get": {
+                "tags": [
+                    "Player Statistics"
+                ],
+                "summary": "Ranking de jugadores",
+                "operationId": "getRanking",
+                "parameters": [
+                    {
+                        "name": "discipline_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 1
+                    },
+                    {
+                        "name": "statistic_type_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 1
+                    },
+                    {
+                        "name": "championship_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 1
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 1
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Número máximo de jugadores a mostrar en el ranking (default 10)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        },
+                        "example": 10
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ranking obtenido exitosamente"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            }
+        },
+        "/api/public/statistics/top-scorers": {
+            "get": {
+                "tags": [
+                    "Player Statistics"
+                ],
+                "summary": "Obtener máximos goleadores",
+                "description": "Obtiene el ranking público de jugadores con más goles.",
+                "operationId": "getPublicTopScorers",
+                "parameters": [
+                    {
+                        "name": "championship_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "discipline_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Cantidad máxima de jugadores",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10,
+                            "maximum": 50,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Máximos goleadores obtenidos exitosamente"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            }
+        },
+        "/api/public/statistics/top-assists": {
+            "get": {
+                "tags": [
+                    "Player Statistics"
+                ],
+                "summary": "Obtener máximos asistentes",
+                "description": "Obtiene el ranking público de jugadores con más asistencias.",
+                "operationId": "getPublicTopAssists",
+                "parameters": [
+                    {
+                        "name": "championship_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "discipline_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Cantidad máxima de jugadores",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10,
+                            "maximum": 50,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Máximos asistentes obtenidos exitosamente"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            }
+        },
+        "/api/public/search": {
+            "get": {
+                "tags": [
+                    "Public Search"
+                ],
+                "summary": "Buscar contenido público",
+                "description": "Busca coincidencias en campeonatos públicos, equipos, jugadores y partidos.",
+                "operationId": "searchPublicContent",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Texto a buscar",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 100,
+                            "minLength": 2
+                        },
+                        "example": "Liga"
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "description": "Tipo de contenido",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "all",
+                            "enum": [
+                                "all",
+                                "championships",
+                                "teams",
+                                "players",
+                                "matches"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Cantidad máxima de resultados por tipo",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 50,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resultados de búsqueda obtenidos exitosamente"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            }
+        },
         "/api/sanctions": {
             "get": {
                 "tags": [
@@ -1386,6 +2653,26 @@
                 ],
                 "summary": "Listar sanciones",
                 "operationId": "getSanctions",
+                "parameters": [
+                    {
+                        "name": "championship_id",
+                        "in": "query",
+                        "description": "ID del campeonato (opcional)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "player_id",
+                        "in": "query",
+                        "description": "ID del jugador (opcional)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Sanciones obtenidas exitosamente"
@@ -1519,6 +2806,35 @@
                 ],
                 "summary": "Tabla de posiciones",
                 "operationId": "getStandings",
+                "parameters": [
+                    {
+                        "name": "championship_id",
+                        "in": "query",
+                        "description": "ID del campeonato (opcional)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "discipline_id",
+                        "in": "query",
+                        "description": "ID de la disciplina (opcional)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "description": "ID de la categoría (opcional)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Tabla de posiciones obtenida exitosamente"
@@ -1550,6 +2866,35 @@
                 ],
                 "summary": "Obtener posición por equipo",
                 "operationId": "getStandingByTeam",
+                "parameters": [
+                    {
+                        "name": "championship_id",
+                        "in": "query",
+                        "description": "ID del campeonato (opcional)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "discipline_id",
+                        "in": "query",
+                        "description": "ID de la disciplina (opcional)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "description": "ID de la categoría (opcional)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Registro obtenido exitosamente"
@@ -1560,59 +2905,128 @@
                 }
             }
         },
-        "/api/teams": {
+        "/api/public/standings/championship/{championshipId}": {
+            "get": {
+                "tags": [
+                    "Standings"
+                ],
+                "summary": "Obtener tabla de posiciones de un campeonato público",
+                "description": "Lista las posiciones de un campeonato público, con filtros opcionales por disciplina y categoría.",
+                "operationId": "getPublicStandingsByChampionship",
+                "parameters": [
+                    {
+                        "name": "championshipId",
+                        "in": "path",
+                        "description": "ID del campeonato público",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "discipline_id",
+                        "in": "query",
+                        "description": "ID de la disciplina",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "description": "ID de la categoría",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tabla de posiciones obtenida exitosamente"
+                    },
+                    "404": {
+                        "description": "Campeonato público no encontrado"
+                    }
+                }
+            }
+        },
+        "/categories/{category_id}/teams": {
             "get": {
                 "tags": [
                     "Teams"
                 ],
                 "summary": "Listar equipos",
-                "description": "Retorna todos los equipos registrados en el sistema junto con su organización, disciplina, categoría y jugadores asociados.",
-                "operationId": "c670238853ec3a3117dbec73032ec126",
+                "description": "Retorna una lista de equipos registrados en una categoría específica.",
+                "operationId": "7a02fe1847e0ad950aff53d49f214739",
+                "parameters": [
+                    {
+                        "name": "category_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Listado de equipos obtenido correctamente"
+                        "description": "Equipos obtenidos exitosamente"
+                    },
+                    "404": {
+                        "description": "Categoría no encontrada"
                     }
-                }
-            },
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/teams": {
             "post": {
                 "tags": [
                     "Teams"
                 ],
-                "summary": "Registrar equipo",
-                "description": "Crea un nuevo equipo asociado a una delegación, disciplina y categoría. El estado inicial del registro es 'pendiente'.",
+                "summary": "Crear equipo",
+                "description": "Registra un nuevo equipo dentro de un campeonato.",
                 "operationId": "4941f3c784ffd96605f0689a9281a00c",
                 "requestBody": {
-                    "description": "Datos necesarios para crear un equipo",
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "organization_id",
-                                    "discipline_id",
+                                    "championship_id",
                                     "category_id",
                                     "name"
                                 ],
                                 "properties": {
-                                    "organization_id": {
-                                        "description": "ID de la delegación (organización)",
+                                    "championship_id": {
                                         "type": "integer",
                                         "example": 1
                                     },
-                                    "discipline_id": {
-                                        "description": "ID de la disciplina deportiva",
-                                        "type": "integer",
-                                        "example": 2
-                                    },
                                     "category_id": {
-                                        "description": "ID de la categoría del equipo",
                                         "type": "integer",
-                                        "example": 3
+                                        "example": 1
                                     },
                                     "name": {
-                                        "description": "Nombre del equipo",
                                         "type": "string",
-                                        "example": "Los Invencibles"
+                                        "example": "Equipo A"
+                                    },
+                                    "logo": {
+                                        "type": "string",
+                                        "example": "logos/equipo-a.png"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Equipo representante de la empresa X"
+                                    },
+                                    "registration_status": {
+                                        "type": "string",
+                                        "example": "pendiente"
                                     }
                                 },
                                 "type": "object"
@@ -1622,12 +3036,17 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Equipo creado correctamente"
+                        "description": "Equipo creado exitosamente"
                     },
                     "422": {
                         "description": "Error de validación"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/teams/{id}": {
@@ -1636,13 +3055,12 @@
                     "Teams"
                 ],
                 "summary": "Obtener equipo por ID",
-                "description": "Devuelve la información detallada de un equipo junto con su organización, disciplina, categoría y jugadores registrados.",
+                "description": "Devuelve la información detallada de un equipo específico.",
                 "operationId": "565c2c0ddda3a3c79c07c1186147bf94",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID del equipo",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -1651,25 +3069,29 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Equipo encontrado correctamente"
+                        "description": "Equipo obtenido exitosamente"
                     },
                     "404": {
                         "description": "Equipo no encontrado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             },
             "put": {
                 "tags": [
                     "Teams"
                 ],
                 "summary": "Actualizar equipo",
-                "description": "Permite actualizar la información de un equipo como su nombre, categoría, disciplina, organización o estado de registro.",
+                "description": "Actualiza la información de un equipo existente.",
                 "operationId": "d3da511e62efc5f231429fc54d0e543c",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID del equipo a actualizar",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -1677,31 +3099,28 @@
                     }
                 ],
                 "requestBody": {
-                    "description": "Campos opcionales para actualizar el equipo",
                     "required": false,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "properties": {
-                                    "organization_id": {
-                                        "type": "integer",
-                                        "example": 1
-                                    },
-                                    "discipline_id": {
-                                        "type": "integer",
-                                        "example": 2
-                                    },
-                                    "category_id": {
-                                        "type": "integer",
-                                        "example": 3
-                                    },
                                     "name": {
                                         "type": "string",
-                                        "example": "Los Campeones"
+                                        "example": "Equipo A Actualizado"
+                                    },
+                                    "logo": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
                                     },
                                     "registration_status": {
                                         "type": "string",
-                                        "example": "aprobado"
+                                        "enum": [
+                                            "pendiente",
+                                            "aprobado",
+                                            "rechazado"
+                                        ]
                                     }
                                 },
                                 "type": "object"
@@ -1711,25 +3130,29 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Equipo actualizado correctamente"
+                        "description": "Equipo actualizado exitosamente"
                     },
                     "404": {
                         "description": "Equipo no encontrado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
                     "Teams"
                 ],
                 "summary": "Eliminar equipo",
-                "description": "Elimina un equipo del sistema junto con sus relaciones (como jugadores asociados si aplica cascada).",
+                "description": "Elimina un equipo del sistema.",
                 "operationId": "2487793952b12e67c02262ddf9c639d9",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID del equipo a eliminar",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -1738,12 +3161,400 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Equipo eliminado correctamente"
+                        "description": "Equipo eliminado exitosamente"
                     },
                     "404": {
                         "description": "Equipo no encontrado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/teams/{id}/players": {
+            "post": {
+                "tags": [
+                    "Teams"
+                ],
+                "summary": "Agregar jugador al equipo",
+                "description": "Asigna un jugador existente a un equipo.",
+                "operationId": "17b2d6d834c97e4ed0be8f4d3f55a5f4",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "player_id"
+                                ],
+                                "properties": {
+                                    "player_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "jersey_number": {
+                                        "type": "integer",
+                                        "example": 10
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Jugador agregado exitosamente"
+                    },
+                    "404": {
+                        "description": "Equipo o jugador no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/teams/{id}/players/{playerId}": {
+            "delete": {
+                "tags": [
+                    "Teams"
+                ],
+                "summary": "Remover jugador del equipo",
+                "description": "Remueve un jugador de un equipo.",
+                "operationId": "d359aff49ba67a7531ba530f69bb3207",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "playerId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Jugador removido exitosamente"
+                    },
+                    "404": {
+                        "description": "Equipo o jugador no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/team-players": {
+            "get": {
+                "tags": [
+                    "Team Players"
+                ],
+                "summary": "Listar relaciones equipo-jugador",
+                "description": "Retorna todas las asignaciones de jugadores a equipos.",
+                "operationId": "6299f515b0839bfdb9fcd99a86733632",
+                "parameters": [
+                    {
+                        "name": "team_id",
+                        "in": "query",
+                        "description": "Filtrar por equipo",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "player_id",
+                        "in": "query",
+                        "description": "Filtrar por jugador",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "championship_id",
+                        "in": "query",
+                        "description": "Filtrar por campeonato (a través del equipo)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Relaciones obtenidas exitosamente"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Team Players"
+                ],
+                "summary": "Asignar jugador a equipo",
+                "description": "Asigna un jugador existente a un equipo existente.",
+                "operationId": "9134a048cab7a2eb794e83f68e58b6a8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "team_id",
+                                    "player_id"
+                                ],
+                                "properties": {
+                                    "team_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "player_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "jersey_number": {
+                                        "type": "integer",
+                                        "example": 10
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "example": "activo"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Jugador asignado exitosamente"
+                    },
+                    "409": {
+                        "description": "El jugador ya está asignado a este equipo"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/team-players/{id}": {
+            "get": {
+                "tags": [
+                    "Team Players"
+                ],
+                "summary": "Obtener relación por ID",
+                "description": "Devuelve la información de una asignación específica.",
+                "operationId": "6b775cd675568760b5f618b1541531ae",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Relación obtenida exitosamente"
+                    },
+                    "404": {
+                        "description": "Relación no encontrada"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Team Players"
+                ],
+                "summary": "Actualizar relación",
+                "description": "Actualiza el número de camiseta o estado de la asignación.",
+                "operationId": "0d5ea7c4e08346f0485842901ae75cab",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "jersey_number": {
+                                        "type": "integer",
+                                        "example": 10
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "example": "inactivo"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Relación actualizada exitosamente"
+                    },
+                    "404": {
+                        "description": "Relación no encontrada"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Team Players"
+                ],
+                "summary": "Eliminar relación",
+                "description": "Remueve la asignación de un jugador a un equipo.",
+                "operationId": "601b49bfedc27acee901a534ab9c2ddd",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Relación eliminada exitosamente"
+                    },
+                    "404": {
+                        "description": "Relación no encontrada"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/teams/{teamId}/players": {
+            "get": {
+                "tags": [
+                    "Team Players"
+                ],
+                "summary": "Jugadores de un equipo",
+                "description": "Retorna todos los jugadores asignados a un equipo específico.",
+                "operationId": "ee259915e6c9fc3681dfec8660c6bce3",
+                "parameters": [
+                    {
+                        "name": "teamId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Jugadores obtenidos exitosamente"
+                    },
+                    "404": {
+                        "description": "Equipo no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/players/{playerId}/teams": {
+            "get": {
+                "tags": [
+                    "Team Players"
+                ],
+                "summary": "Equipos de un jugador",
+                "description": "Retorna todos los equipos en los que ha participado un jugador.",
+                "operationId": "5e202bfda2e18d22843a2d0827e9ef7a",
+                "parameters": [
+                    {
+                        "name": "playerId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Equipos obtenidos exitosamente"
+                    },
+                    "404": {
+                        "description": "Jugador no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/users": {
@@ -1957,6 +3768,17 @@
                 "summary": "Listar escenarios",
                 "description": "Obtiene una lista de todos los escenarios deportivos.",
                 "operationId": "getVenues",
+                "parameters": [
+                    {
+                        "name": "championship_id",
+                        "in": "query",
+                        "description": "ID del campeonato (opcional)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Escenarios obtenidos exitosamente"
@@ -1978,9 +3800,14 @@
                                 "required": [
                                     "name",
                                     "venue_type",
-                                    "location"
+                                    "location",
+                                    "championship_id"
                                 ],
                                 "properties": {
+                                    "championship_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
                                     "name": {
                                         "type": "string",
                                         "example": "Estadio Nacional"
@@ -2141,6 +3968,17 @@
                 "summary": "Escenarios disponibles",
                 "description": "Obtiene una lista de escenarios deportivos disponibles.",
                 "operationId": "getAvailableVenues",
+                "parameters": [
+                    {
+                        "name": "championship_id",
+                        "in": "query",
+                        "description": "ID del campeonato (opcional)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Escenarios disponibles obtenidos exitosamente"
@@ -2164,20 +4002,48 @@
             "description": "Gestión de categorías de torneos deportivos, utilizadas para clasificar equipos según rango de edad"
         },
         {
-            "name": "Disciplines",
-            "description": "Gestión de disciplinas deportivas como fútbol, vóley, básquet, etc."
+            "name": "Championships",
+            "description": "Gestión de campeonatos (tenants del sistema)"
         },
         {
-            "name": "Organizations",
-            "description": "Gestión de delegaciones o instituciones deportivas que representan equipos en el torneo"
+            "name": "Championship Disciplines",
+            "description": "Administración de las disciplinas habilitadas para un campeonato."
+        },
+        {
+            "name": "Championship Users",
+            "description": "Gestión de usuarios asignados a campeonatos"
+        },
+        {
+            "name": "Disciplines",
+            "description": "Gestión de catálogo de disciplinas deportivas disponibles en el sistema."
+        },
+        {
+            "name": "Groups",
+            "description": "Gestión de grupos en fase de grupos"
+        },
+        {
+            "name": "Group Teams",
+            "description": "Gestión de equipos asignados a grupos"
         },
         {
             "name": "Players",
             "description": "Gestión de jugadores registrados en equipos, incluyendo validación de edad según categoría"
         },
         {
+            "name": "Public Search",
+            "description": "Búsqueda global de información pública"
+        },
+        {
             "name": "Teams",
-            "description": "Gestión de equipos deportivos registrados por delegaciones en diferentes disciplinas y categorías"
+            "description": "Gestión de equipos deportivos dentro de un campeonato"
+        },
+        {
+            "name": "Team Players",
+            "description": "Gestión de jugadores asignados a equipos (relación muchos a muchos)"
+        },
+        {
+            "name": "Discipline Statistics",
+            "description": "Discipline Statistics"
         },
         {
             "name": "Fixture",
@@ -2194,6 +4060,10 @@
         {
             "name": "Match Reports",
             "description": "Match Reports"
+        },
+        {
+            "name": "Player Statistics",
+            "description": "Player Statistics"
         },
         {
             "name": "Sanctions",

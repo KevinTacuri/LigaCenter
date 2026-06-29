@@ -26,15 +26,26 @@ class ChampionshipController extends Controller
             new OA\Response(response: 200, description: "Campeonatos obtenidos exitosamente")
         ]
     )]
+
     public function index(Request $request)
     {
-        $championships = Championship::where('user_id', $request->user()->id)
-            ->orWhereHas('users', function ($query) use ($request) {
-                $query->where('user_id', $request->user()->id);
-            })
+        // Si el usuario está autenticado, mostrar sus campeonatos
+        if ($request->user()) {
+            $championships = Championship::where('user_id', $request->user()->id)
+                ->orWhereHas('users', function ($query) use ($request) {
+                    $query->where('user_id', $request->user()->id);
+                })
+                ->get();
+            
+            return $this->successResponse($championships, 'Campeonatos obtenidos exitosamente');
+        }
+        
+        // Si NO está autenticado, mostrar todos los públicos
+        $championships = Championship::where('is_public', true)
+            ->with(['disciplines'])
             ->get();
-
-        return $this->successResponse($championships, 'Campeonatos obtenidos exitosamente');
+        
+        return $this->successResponse($championships, 'Campeonatos públicos obtenidos exitosamente');
     }
 
     #[OA\Post(
@@ -329,5 +340,31 @@ class ChampionshipController extends Controller
         }
 
         return Storage::disk('public')->download($championship->rules_pdf);
+    }
+
+    #[OA\Get(
+        path: "/api/public/championships/{id}/disciplines",
+        operationId: "getPublicChampionshipDisciplines",
+        summary: "Listar disciplinas de un campeonato público",
+        description: "Obtiene las disciplinas asociadas a un campeonato que está marcado como público.",
+        tags: ["Championships"],
+        parameters: [
+            new OA\Parameter(name: "id", description: "ID del campeonato público", in: "path", required: true, schema: new OA\Schema(type: "integer"))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: "Disciplinas obtenidas exitosamente"),
+            new OA\Response(response: 404, description: "Campeonato público no encontrado")
+        ]
+    )]
+    public function disciplines($id)
+    {
+        $championship = Championship::where('is_public', true)
+            ->with(['disciplines', 'championshipDisciplines.discipline'])
+            ->findOrFail($id);
+        
+        return $this->successResponse(
+            $championship->disciplines,
+            'Disciplinas obtenidas exitosamente'
+        );
     }
 }
