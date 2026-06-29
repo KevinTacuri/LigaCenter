@@ -7,13 +7,19 @@ import logoImg from '../assets/logo.svg';
 import deportesFondo from '../assets/deportes_fondo.png';
 
 export const Login: React.FC = () => {
+  const navegar = useNavigate();
+  const { iniciarSesion, usuario } = useAutenticacion();
   const [correo, setCorreo] = useState('');
   const [contrasenia, setContrasenia] = useState('');
   const [verContrasenia, setVerContrasenia] = useState(false);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
   const [procesando, setProcesando] = useState(false);
-  const { iniciarSesion } = useAutenticacion();
-  const navegar = useNavigate();
+
+  // Redirigir si ya hay sesión
+  if (usuario) {
+    navegar('/tablero', { replace: true });
+    return null;
+  }
 
   const manejarEnvio = async (e: React.FormEvent) => {
     e.preventDefault();

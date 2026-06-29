@@ -150,8 +150,6 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
       setToken(null);
       setUsuario(null);
       setCargando(false);
-      // Redirigir y forzar recarga para limpiar todos los contextos en memoria
-      window.location.href = '/login';
     }
   };
 

@@ -4,32 +4,14 @@ import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 
 interface Props {
   children: React.ReactNode;
-  roles?: string[]; // opcional: restringir por rol
+  roles?: string[];
 }
 
 export const RutaProtegida: React.FC<Props> = ({ children, roles }) => {
-  const { usuario, cargando } = useAutenticacion();
-  const ubicacion = useLocation();
+  const { usuario } = useAutenticacion();
 
-  if (cargando) {
-    return (
-      <div className="min-h-screen bg-[#0a0b10] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-4 border-slate-800 border-t-indigo-500 animate-spin" />
-      </div>
-    );
-  }
-
-    const tokenGuardado = localStorage.getItem('token_autenticacion');
-    if (!usuario && !tokenGuardado) {
-    return <Navigate to="/login" state={{ desde: ubicacion.pathname }} replace />;
-    }
-    if (!usuario && tokenGuardado) {
-    // Hay token pero el contexto aún no hidrato el usuario — mostrar spinner
-    return (
-        <div className="min-h-screen bg-[#0a0b10] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-4 border-slate-800 border-t-indigo-500 animate-spin" />
-        </div>
-    );
+    if (!usuario) {
+    return <Navigate to="/publico" replace />;
     }
 
   if (roles && roles.length > 0) {

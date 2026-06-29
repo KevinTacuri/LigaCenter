@@ -26,7 +26,7 @@ const PASOS_TORNEO = [
 ];
 
 export const Tablero: React.FC = () => {
-  const { usuario, cargando, tienePermiso, tieneRol } = useAutenticacion();
+  const { usuario, tienePermiso, tieneRol } = useAutenticacion();
   const { campeonatoActivo, seleccionarCampeonato, setPanelCampeonatosAbierto } = useCampeonato();
   const navegar = useNavigate();
   const [mostrarGuia, setMostrarGuia] = useState(false);
@@ -482,29 +482,6 @@ export const Tablero: React.FC = () => {
       setSimulando(false);
     }
   };
-
-  useEffect(() => {
-    if (!cargando && !usuario) {
-      navegar('/login');
-    }
-  }, [usuario, cargando, navegar]);
-
-  if (cargando) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f4f6f7] text-slate-800">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative flex items-center justify-center">
-            <div className="w-14 h-14 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
-            <img src={logoImg} className="w-7 h-7 object-contain absolute" alt="Cargando..." />
-          </div>
-          <span className="text-primary font-bold tracking-wider text-xs uppercase animate-pulse">Cargando Tablero...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!usuario) return null;
-
 
   return (
     <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans relative overflow-hidden">
