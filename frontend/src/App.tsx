@@ -21,6 +21,13 @@ import { PanelLateralCampeonatos } from './componentes/PanelLateralCampeonatos';
 import { Toaster } from 'sileo';
 import { ConfirmDialogProvider } from '@omit/react-confirm-dialog';
 
+// Landing pages
+import { Inicio }        from './paginas/landing/Inicio';
+import { Nosotros }      from './paginas/landing/Nosotros';
+import { Logros }        from './paginas/landing/Logros';
+import { Tecnologias }   from './paginas/landing/Tecnologias';
+import { Documentacion } from './paginas/landing/Documentacion';
+
 const App: React.FC = () => {
   return (
     <ProveedorAutenticacion>
@@ -33,6 +40,11 @@ const App: React.FC = () => {
           <BrowserRouter>
             <Routes>
               {/* Rutas Públicas */}
+              <Route path="/"               element={<Navigate to="/publico" replace />} />
+              <Route path="/nosotros"       element={<Nosotros />} />
+              <Route path="/logros"         element={<Logros />} />
+              <Route path="/tecnologias"    element={<Tecnologias />} />
+              <Route path="/documentacion"  element={<Documentacion />} />
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Registro />} />
               <Route path="/recuperar-contrasenia" element={<RecuperarContrasenia />} />

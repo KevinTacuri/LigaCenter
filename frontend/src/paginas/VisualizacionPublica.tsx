@@ -19,6 +19,8 @@ import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../contexto/ContextoCampeonato';
 import { BarraLateral } from '../componentes/BarraLateral';
 import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
+import { Inicio } from './landing/Inicio';
+
 
 interface Props {
   esVistaAnonima?: boolean;
@@ -422,6 +424,14 @@ export const VisualizacionPublica: React.FC<Props> = ({ esVistaAnonima = false }
             <span className="text-xs text-slate-500">•</span>
             <span className="text-xs text-slate-300 font-bold">{campeonatoActivo?.name}</span>
           </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navegar('/login')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30 hover:bg-indigo-600/30 text-xs font-bold text-indigo-300 hover:text-white transition-all cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-xs">login</span>
+            Iniciar sesión
+          </button>
           <button
             onClick={() => limpiarCampeonato()}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#171a26] border border-slate-850 hover:border-indigo-500/30 text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer"
@@ -429,6 +439,7 @@ export const VisualizacionPublica: React.FC<Props> = ({ esVistaAnonima = false }
             <span className="material-symbols-outlined text-xs">swap_horiz</span>
             Cambiar Campeonato
           </button>
+        </div>
         </div>
       )}
       <CabeceraEstandar titulo="Estadísticas y Posiciones" subtitulo="Consulta Pública de Resultados en Tiempo Real" />
@@ -1039,63 +1050,10 @@ export const VisualizacionPublica: React.FC<Props> = ({ esVistaAnonima = false }
 
   if (esVistaAnonima && !campeonatoActivo) {
     return (
-      <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans flex flex-col relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950/20 via-[#0a0b10] to-[#0a0b10] z-0" />
-        
-        <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 max-w-4xl mx-auto w-full">
-          <div className="text-center space-y-3 mb-10">
-            <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-200 to-indigo-500">
-              LigaCenter — Portal Público
-            </h2>
-            <p className="text-sm text-slate-400 font-medium">
-              Selecciona un campeonato para visualizar el fixture, posiciones y estadísticas en tiempo real.
-            </p>
-          </div>
-
-          {campeonatosPublicos.length === 0 ? (
-            <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-8 text-center max-w-md w-full space-y-4">
-              <span className="material-symbols-outlined text-slate-500 text-4xl animate-bounce">sports_score</span>
-              <p className="text-sm text-slate-400">No hay campeonatos disponibles en este momento.</p>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 w-full">
-              {campeonatosPublicos.map((camp) => (
-                <div
-                  key={camp.id}
-                  onClick={() => seleccionarCampeonato(camp)}
-                  className="p-6 rounded-2xl bg-[#11131c] border border-slate-900 hover:border-indigo-500/50 hover:bg-indigo-950/5 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-sm uppercase tracking-wider">
-                        {camp.type === 'completo' ? 'Multidisciplina' : 'Básico'}
-                      </span>
-                      <span className="material-symbols-outlined text-xs text-slate-500 group-hover:text-indigo-400 transition-colors">
-                        arrow_forward_ios
-                      </span>
-                    </div>
-                    <h3 className="font-bold text-slate-200 group-hover:text-white transition-colors">{camp.name}</h3>
-                    {camp.description && (
-                      <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{camp.description}</p>
-                    )}
-                  </div>
-                  <div className="mt-6 pt-4 border-t border-slate-900/60 flex items-center justify-between text-[11px] text-slate-400 font-medium">
-                    <span className="flex items-center gap-1">
-                      <span className="material-symbols-outlined text-xs">calendar_today</span>
-                      {camp.start_date || '—'}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
-                      camp.status === 'en_curso' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-400'
-                    }`}>
-                      {camp.status === 'en_curso' ? 'En Curso' : camp.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      <Inicio
+        campeonatosPublicos={campeonatosPublicos}
+        seleccionarCampeonato={seleccionarCampeonato}
+      />
     );
   }
 
