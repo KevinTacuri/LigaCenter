@@ -1,8 +1,8 @@
 <?php
 
-use AppHttpControllersApiChampionshipController;
-use AppHttpControllersApiChampionshipUserController;
-use IlluminateSupportFacadesRoute;
+use App\Http\Controllers\Api\ChampionshipController;
+use App\Http\Controllers\Api\ChampionshipUserController;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'championship.access'])->group(function () {
     Route::get('championships', [ChampionshipController::class, 'index']);

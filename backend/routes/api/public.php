@@ -1,16 +1,16 @@
 <?php
 
-use AppHttpControllersApiCategoryController;
-use AppHttpControllersApiChampionshipController;
-use AppHttpControllersApiDisciplineController;
-use AppHttpControllersApiGameMatchController;
-use AppHttpControllersApiGroupController;
-use AppHttpControllersApiPlayerController;
-use AppHttpControllersApiPlayerStatisticController;
-use AppHttpControllersApiPublicSearchController;
-use AppHttpControllersApiStandingController;
-use AppHttpControllersApiTeamController;
-use IlluminateSupportFacadesRoute;
+use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\ChampionshipController;
+use App\Http\Controllers\Api\DisciplineController;
+use App\Http\Controllers\Api\GameMatchController;
+use App\Http\Controllers\Api\GroupController;
+use App\Http\Controllers\Api\PlayerController;
+use App\Http\Controllers\Api\PlayerStatisticController;
+use App\Http\Controllers\Api\PublicSearchController;
+use App\Http\Controllers\Api\StandingController;
+use App\Http\Controllers\Api\TeamController;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware(['public.access', 'throttle:60,1'])->prefix('public')->group(function () {
     Route::get('/championships', [ChampionshipController::class, 'indexPublic']);
