@@ -98,4 +98,27 @@ class GroupController extends Controller
             'standings' => $standings,
         ], 'Tabla de posiciones obtenida exitosamente');
     }
+
+    #[OA\Get(path: '/api/public/standings/group/{groupId}', operationId: 'getPublicGroupStandings', summary: 'Obtener posiciones públicas por grupo', tags: ['Groups'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    public function getPublicStandings($groupId)
+    {
+        $group = Group::whereHas('championship', fn ($q) => $q->where('is_public', true))
+            ->find($groupId);
+
+        if (!$group) {
+            return $this->errorResponse('Grupo público no encontrado', 404);
+        }
+
+        $standings = GroupTeam::with(['team' => fn ($q) => $q->select('id', 'name', 'logo')])
+            ->where('group_id', $groupId)
+            ->orderByDesc('points')
+            ->orderByDesc('goals_for')
+            ->get();
+
+        return $this->successResponse([
+            'group' => $group,
+            'standings' => $standings,
+        ], 'Tabla pública del grupo obtenida exitosamente');
+    }
+
 }

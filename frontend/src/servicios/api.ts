@@ -334,7 +334,7 @@ export interface Incidencia {
   match_id: number;
   player_id?: number | null;
   team_id: number;
-  incidence_type: 'goal' | 'yellow_card' | 'red_card' | 'foul' | 'injury';
+  incidence_type: 'goal' | 'assist' | 'yellow_card' | 'red_card' | 'foul' | 'injury';
   minute: number;
   second?: number | null;
   description?: string | null;

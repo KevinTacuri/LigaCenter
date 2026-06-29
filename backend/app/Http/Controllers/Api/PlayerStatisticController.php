@@ -144,22 +144,7 @@ class PlayerStatisticController extends Controller
     )]
     public function getTopScorers(Request $request)
     {
-        $request->validate([
-            'championship_id' => 'nullable|exists:championships,id',
-            'discipline_id' => 'nullable|exists:disciplines,id',
-            'category_id' => 'nullable|exists:categories,id',
-            'limit' => 'nullable|integer|min:1|max:50',
-        ]);
-
-        $ranking = $this->playerStatisticService->getRanking(
-            disciplineId: $request->discipline_id,
-            statisticTypeId: 1, // ID para "Goles" en statistic_types
-            championshipId: $request->championship_id,
-            categoryId: $request->category_id,
-            limit: $request->limit ?? 10
-        );
-
-        return $this->successResponse($ranking, 'Máximos goleadores obtenidos exitosamente');
+        return $this->rankingBySlug($request, 'goals', false, 'Máximos goleadores obtenidos exitosamente');
     }
 
     #[OA\Get(
@@ -181,22 +166,96 @@ class PlayerStatisticController extends Controller
     )]
     public function getTopAssists(Request $request)
     {
+        return $this->rankingBySlug($request, 'assists', false, 'Máximos asistentes obtenidos exitosamente');
+    }
+
+
+    public function getTopYellowCards(Request $request)
+    {
+        return $this->rankingBySlug($request, 'yellow_cards', false, 'Ranking de tarjetas amarillas obtenido exitosamente');
+    }
+
+    public function getTopRedCards(Request $request)
+    {
+        return $this->rankingBySlug($request, 'red_cards', false, 'Ranking de tarjetas rojas obtenido exitosamente');
+    }
+
+    #[OA\Get(path: '/api/public/statistics/ranking', operationId: 'getPublicStatisticsRanking', summary: 'Obtener ranking público', tags: ['Player Statistics'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    public function getPublicRanking(Request $request)
+    {
         $request->validate([
-            'championship_id' => 'nullable|exists:championships,id',
-            'discipline_id' => 'nullable|exists:disciplines,id',
-            'category_id' => 'nullable|exists:categories,id',
-            'limit' => 'nullable|integer|min:1|max:50',
+            'discipline_id' => 'required|exists:disciplines,id',
+            'statistic_type_id' => 'required|exists:statistic_types,id',
+            'championship_id' => 'nullable|integer',
+            'category_id' => 'nullable|integer',
+            'limit' => 'nullable|integer|min:1|max:100',
         ]);
 
         $ranking = $this->playerStatisticService->getRanking(
-            disciplineId: $request->discipline_id,
-            statisticTypeId: 2, // ID para "Asistencias" en statistic_types
-            championshipId: $request->championship_id,
-            categoryId: $request->category_id,
-            limit: $request->limit ?? 10
+            disciplineId: $request->integer('discipline_id'),
+            statisticTypeId: $request->integer('statistic_type_id'),
+            championshipId: $request->filled('championship_id') ? $request->integer('championship_id') : null,
+            categoryId: $request->filled('category_id') ? $request->integer('category_id') : null,
+            limit: $request->integer('limit', 10),
+            publicOnly: true
         );
 
-        return $this->successResponse($ranking, 'Máximos asistentes obtenidos exitosamente');
+        return $this->successResponse($ranking, 'Ranking público obtenido correctamente');
+    }
+
+    public function getPublicTopScorers(Request $request)
+    {
+        return $this->rankingBySlug($request, 'goals', true, 'Máximos goleadores públicos obtenidos exitosamente');
+    }
+
+    public function getPublicTopAssists(Request $request)
+    {
+        return $this->rankingBySlug($request, 'assists', true, 'Máximos asistentes públicos obtenidos exitosamente');
+    }
+
+    #[OA\Get(path: '/api/public/statistics/top-yellow-cards', operationId: 'getPublicTopYellowCards', summary: 'Obtener ranking público de tarjetas amarillas', tags: ['Player Statistics'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    public function getPublicTopYellowCards(Request $request)
+    {
+        return $this->rankingBySlug($request, 'yellow_cards', true, 'Tarjetas amarillas públicas obtenidas exitosamente');
+    }
+
+    #[OA\Get(path: '/api/public/statistics/top-red-cards', operationId: 'getPublicTopRedCards', summary: 'Obtener ranking público de tarjetas rojas', tags: ['Player Statistics'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    public function getPublicTopRedCards(Request $request)
+    {
+        return $this->rankingBySlug($request, 'red_cards', true, 'Tarjetas rojas públicas obtenidas exitosamente');
+    }
+
+    #[OA\Get(path: '/api/public/players/{id}/history', operationId: 'getPublicPlayerHistory', summary: 'Obtener historial público del jugador', tags: ['Player Statistics'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    public function getPublicHistory($id)
+    {
+        $history = $this->playerStatisticService->getPlayerHistory($id, true);
+
+        if (!$history) {
+            return $this->errorResponse('Jugador público no encontrado', 404);
+        }
+
+        return $this->successResponse($history, 'Historial público obtenido exitosamente');
+    }
+
+    private function rankingBySlug(Request $request, string $slug, bool $publicOnly, string $message)
+    {
+        $request->validate([
+            'championship_id' => 'nullable|integer',
+            'discipline_id' => 'nullable|integer',
+            'category_id' => 'nullable|integer',
+            'limit' => 'nullable|integer|min:1|max:50',
+        ]);
+
+        $ranking = $this->playerStatisticService->getRankingBySlug(
+            slug: $slug,
+            disciplineId: $request->filled('discipline_id') ? $request->integer('discipline_id') : null,
+            championshipId: $request->filled('championship_id') ? $request->integer('championship_id') : null,
+            categoryId: $request->filled('category_id') ? $request->integer('category_id') : null,
+            limit: $request->integer('limit', 10),
+            publicOnly: $publicOnly
+        );
+
+        return $this->successResponse($ranking, $message);
     }
 
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Standing;
+use App\Models\Championship;
 use App\Traits\ApiResponse;
 use OpenApi\Attributes as OA;
 
@@ -46,32 +47,20 @@ class StandingController extends Controller
     #[OA\Security(name: 'sanctum')]
     public function index(Request $request)
     {
-        $query = Standing::with([
-            'team',
-            'discipline',
-            'category'
-        ]);
+        $query = Standing::with(['team', 'category.championshipDiscipline.discipline']);
 
-        if ($request->has('championship_id')) {
-            $query->where('championship_id', $request->championship_id);
+        if ($request->filled('championship_id')) {
+            $query->where('championship_id', $request->integer('championship_id'));
         }
-
-        if ($request->has('discipline_id')) {
-            $query->where('discipline_id', $request->discipline_id);
+        if ($request->filled('discipline_id')) {
+            $query->whereHas('category.championshipDiscipline', fn ($q) => $q->where('discipline_id', $request->integer('discipline_id')));
         }
-
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->integer('category_id'));
         }
-
-        $standings = $query
-            ->orderByDesc('total_points')
-            ->orderByDesc('goal_difference')
-            ->orderByDesc('goals_for')
-            ->get();
 
         return $this->successResponse(
-            $standings,
+            $query->orderByDesc('points')->orderByDesc('goal_difference')->orderByDesc('goals_for')->get(),
             'Tabla de posiciones obtenida exitosamente'
         );
     }
@@ -93,23 +82,11 @@ class StandingController extends Controller
     #[OA\Security(name: 'sanctum')]
     public function show($id)
     {
-        $standing = Standing::with([
-            'team',
-            'discipline',
-            'category'
-        ])->find($id);
-
+        $standing = Standing::with(['team', 'category.championshipDiscipline.discipline'])->find($id);
         if (!$standing) {
-            return $this->errorResponse(
-                'Registro no encontrado',
-                404
-            );
+            return $this->errorResponse('Registro no encontrado', 404);
         }
-
-        return $this->successResponse(
-            $standing,
-            'Registro obtenido exitosamente'
-        );
+        return $this->successResponse($standing, 'Registro obtenido exitosamente');
     }
 
     #[OA\Get(
@@ -150,37 +127,24 @@ class StandingController extends Controller
     #[OA\Security(name: 'sanctum')]
     public function getByTeam($teamId, Request $request)
     {
-        $query = Standing::with([
-            'team',
-            'discipline',
-            'category'
-        ])->where('team_id', $teamId);
+        $query = Standing::with(['team', 'category.championshipDiscipline.discipline'])
+            ->where('team_id', $teamId);
 
-        if ($request->has('championship_id')) {
-            $query->where('championship_id', $request->championship_id);
+        if ($request->filled('championship_id')) {
+            $query->where('championship_id', $request->integer('championship_id'));
         }
-
-        if ($request->has('discipline_id')) {
-            $query->where('discipline_id', $request->discipline_id);
+        if ($request->filled('discipline_id')) {
+            $query->whereHas('category.championshipDiscipline', fn ($q) => $q->where('discipline_id', $request->integer('discipline_id')));
         }
-
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->integer('category_id'));
         }
 
         $standing = $query->first();
-
         if (!$standing) {
-            return $this->errorResponse(
-                'Registro no encontrado',
-                404
-            );
+            return $this->errorResponse('Registro no encontrado', 404);
         }
-
-        return $this->successResponse(
-            $standing,
-            'Registro obtenido exitosamente'
-        );
+        return $this->successResponse($standing, 'Registro obtenido exitosamente');
     }
 
     #[OA\Get(
@@ -201,27 +165,63 @@ class StandingController extends Controller
     )]
     public function byChampionship($championshipId, Request $request)
     {
-        $championship = Championship::where('is_public', true)->findOrFail($championshipId);
+        $request->validate([
+            'discipline_id' => 'nullable|integer',
+            'category_id' => 'nullable|integer',
+        ]);
 
-        $query = Standing::with(['team', 'discipline', 'category'])
+        if (!Championship::where('is_public', true)->whereKey($championshipId)->exists()) {
+            return $this->errorResponse('Campeonato público no encontrado', 404);
+        }
+
+        $query = Standing::with([
+                'team:id,name,logo',
+                'category.championshipDiscipline.discipline',
+            ])
             ->where('championship_id', $championshipId);
 
-        if ($request->has('discipline_id')) {
-            $query->where('discipline_id', $request->discipline_id);
+        if ($request->filled('discipline_id')) {
+            $query->whereHas('category.championshipDiscipline', fn ($q) => $q->where('discipline_id', $request->integer('discipline_id')));
         }
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->integer('category_id'));
         }
-
-        $standings = $query
-            ->orderByDesc('total_points')
-            ->orderByDesc('goal_difference')
-            ->orderByDesc('goals_for')
-            ->get();
 
         return $this->successResponse(
-            $standings,
+            $query->orderByDesc('points')->orderByDesc('goal_difference')->orderByDesc('goals_for')->get(),
             'Tabla de posiciones obtenida exitosamente'
         );
     }
+
+    #[OA\Get(path: '/api/public/standings', operationId: 'getPublicStandings', summary: 'Listar posiciones públicas', tags: ['Standings'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    public function indexPublic(Request $request)
+    {
+        $request->validate([
+            'championship_id' => 'nullable|integer',
+            'discipline_id' => 'nullable|integer',
+            'category_id' => 'nullable|integer',
+        ]);
+
+        $query = Standing::with([
+                'team:id,name,logo',
+                'category.championshipDiscipline.discipline',
+            ])
+            ->whereHas('championship', fn ($q) => $q->where('is_public', true));
+
+        if ($request->filled('championship_id')) {
+            $query->where('championship_id', $request->integer('championship_id'));
+        }
+        if ($request->filled('discipline_id')) {
+            $query->whereHas('category.championshipDiscipline', fn ($q) => $q->where('discipline_id', $request->integer('discipline_id')));
+        }
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->integer('category_id'));
+        }
+
+        return $this->successResponse(
+            $query->orderByDesc('points')->orderByDesc('goal_difference')->orderByDesc('goals_for')->get(),
+            'Tabla de posiciones pública obtenida exitosamente'
+        );
+    }
+
 }

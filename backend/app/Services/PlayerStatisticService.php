@@ -45,6 +45,7 @@ class PlayerStatisticService
             $playerIncidences = $incidences->where('player_id', $player->id);
 
             $goalsCount = 0;
+            $assistsCount = 0;
             $yellowCardsCount = 0;
             $redCardsCount = 0;
 
@@ -52,6 +53,9 @@ class PlayerStatisticService
                 switch ($incidence->incidence_type) {
                     case 'goal':
                         $goalsCount++;
+                        break;
+                    case 'assist':
+                        $assistsCount++;
                         break;
                     case 'yellow_card':
                         $yellowCardsCount++;
@@ -93,6 +97,7 @@ class PlayerStatisticService
 
             $this->addStatistic($player, $teamPlayer, $match, $championshipId, $disciplineStatistics->get('matches_played'), 1);
             $this->addStatistic($player, $teamPlayer, $match, $championshipId, $disciplineStatistics->get('goals'), $goalsCount);
+            $this->addStatistic($player, $teamPlayer, $match, $championshipId, $disciplineStatistics->get('assists'), $assistsCount);
             $this->addStatistic($player, $teamPlayer, $match, $championshipId, $disciplineStatistics->get('yellow_cards'), $yellowCardsCount);
             $this->addStatistic($player, $teamPlayer, $match, $championshipId, $disciplineStatistics->get('red_cards'), $redCardsCount);
 
@@ -121,7 +126,7 @@ class PlayerStatisticService
     }
 
     /*
-    public function getPlayerHistory($playerId)
+    public function getPlayerHistory($playerId, bool $publicOnly = false)
     {
         $player = Player::find($playerId);
 
@@ -158,7 +163,7 @@ class PlayerStatisticService
     }
     */
 
-    public function getPlayerHistory($playerId)
+    public function getPlayerHistory($playerId, bool $publicOnly = false)
     {
         $player = Player::find($playerId);
 
@@ -173,7 +178,14 @@ class PlayerStatisticService
             'disciplineStatistic.statisticType',
         ])
         ->where('player_id', $playerId)
+        ->when($publicOnly, function ($query) {
+            $query->whereHas('championship', fn ($championship) => $championship->where('is_public', true));
+        })
         ->get();
+
+        if ($publicOnly && $statistics->isEmpty()) {
+            return null;
+        }
 
         $history = $statistics
             ->groupBy(function ($item) {
@@ -304,10 +316,10 @@ class PlayerStatisticService
         TeamPlayer $teamPlayer,
         GameMatch $match,
         ?int $championshipId,
-        DisciplineStatistic $disciplineStatistic,
+        ?DisciplineStatistic $disciplineStatistic,
         int $amount = 1
     ): void {
-        if ($amount <= 0) {
+        if (!$disciplineStatistic || $amount <= 0) {
             return;
         }
 
@@ -333,7 +345,8 @@ class PlayerStatisticService
         int $statisticTypeId,
         ?int $championshipId = null,
         ?int $categoryId = null,
-        int $limit = 10
+        int $limit = 10,
+        bool $publicOnly = false
     ) {
         $disciplineStatistic = DisciplineStatistic::where('discipline_id', $disciplineId)
             ->where('statistic_type_id', $statisticTypeId)
@@ -348,7 +361,10 @@ class PlayerStatisticService
             'team',
             'disciplineStatistic.statisticType',
         ])
-        ->where('discipline_statistic_id', $disciplineStatistic->id);
+        ->where('discipline_statistic_id', $disciplineStatistic->id)
+        ->when($publicOnly, function ($query) {
+            $query->whereHas('championship', fn ($championship) => $championship->where('is_public', true));
+        });
 
         if ($championshipId) {
             $query->where('championship_id', $championshipId);
@@ -378,4 +394,51 @@ class PlayerStatisticService
                 ];
             });
     }
+
+    public function getRankingBySlug(
+        string $slug,
+        ?int $disciplineId = null,
+        ?int $championshipId = null,
+        ?int $categoryId = null,
+        int $limit = 10,
+        bool $publicOnly = false
+    ) {
+        $query = PlayerStatistic::with([
+                'player',
+                'team',
+                'disciplineStatistic.statisticType',
+            ])
+            ->whereHas('disciplineStatistic.statisticType', fn ($type) => $type->where('slug', $slug))
+            ->when($publicOnly, function ($statistics) {
+                $statistics->whereHas('championship', fn ($championship) => $championship->where('is_public', true));
+            });
+
+        if ($disciplineId) {
+            $query->where('discipline_id', $disciplineId);
+        }
+        if ($championshipId) {
+            $query->where('championship_id', $championshipId);
+        }
+        if ($categoryId) {
+            $query->where('category_id', $categoryId);
+        }
+
+        return $query->orderByDesc('value')
+            ->limit($limit)
+            ->get()
+            ->map(function ($stat) {
+                return [
+                    'player_id' => $stat->player?->id,
+                    'player_name' => trim(($stat->player?->names ?? '') . ' ' . ($stat->player?->last_names ?? '')),
+                    'team' => $stat->team?->name,
+                    'value' => $stat->value,
+                    'statistic' => [
+                        'id' => $stat->disciplineStatistic?->statisticType?->id,
+                        'slug' => $stat->disciplineStatistic?->statisticType?->slug,
+                        'display_name' => $stat->disciplineStatistic?->statisticType?->display_name,
+                    ],
+                ];
+            });
+    }
+
 }

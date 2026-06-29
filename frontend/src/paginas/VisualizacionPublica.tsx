@@ -949,7 +949,11 @@ export const VisualizacionPublica: React.FC<Props> = ({ esVistaAnonima = false }
                             let icon = 'sports_soccer';
                             let iconColor = 'text-white';
                             let label = 'GOL';
-                            if (inc.incidence_type === 'yellow_card') {
+                            if (inc.incidence_type === 'assist') {
+                              icon = 'handshake';
+                              iconColor = 'text-blue-400';
+                              label = 'Asistencia';
+                            } else if (inc.incidence_type === 'yellow_card') {
                               icon = 'style';
                               iconColor = 'text-amber-400';
                               label = 'Tarjeta Amarilla';

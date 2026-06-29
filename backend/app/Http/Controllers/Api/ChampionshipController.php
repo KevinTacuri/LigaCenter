@@ -29,23 +29,14 @@ class ChampionshipController extends Controller
 
     public function index(Request $request)
     {
-        // Si el usuario está autenticado, mostrar sus campeonatos
-        if ($request->user()) {
-            $championships = Championship::where('user_id', $request->user()->id)
-                ->orWhereHas('users', function ($query) use ($request) {
-                    $query->where('user_id', $request->user()->id);
-                })
-                ->get();
-            
-            return $this->successResponse($championships, 'Campeonatos obtenidos exitosamente');
-        }
-        
-        // Si NO está autenticado, mostrar todos los públicos
-        $championships = Championship::where('is_public', true)
-            ->with(['disciplines'])
+        $user = $request->user();
+        $championships = Championship::where('user_id', $user->id)
+            ->orWhereHas('users', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
             ->get();
-        
-        return $this->successResponse($championships, 'Campeonatos públicos obtenidos exitosamente');
+
+        return $this->successResponse($championships, 'Campeonatos obtenidos exitosamente');
     }
 
     #[OA\Post(
@@ -127,17 +118,18 @@ class ChampionshipController extends Controller
     )]
     public function show($id, Request $request)
     {
-        $championship = Championship::where('id', $id)
-            ->where(function ($query) use ($request) {
-                $query->where('user_id', $request->user()->id)
-                    ->orWhereHas('users', function ($q) use ($request) {
-                        $q->where('user_id', $request->user()->id);
+        $user = $request->user();
+        $championship = Championship::whereKey($id)
+            ->where(function ($query) use ($user) {
+                $query->where('user_id', $user->id)
+                    ->orWhereHas('users', function ($q) use ($user) {
+                        $q->where('user_id', $user->id);
                     });
             })
             ->first();
 
         if (!$championship) {
-            return $this->errorResponse('Campeonato no encontrado', 404);
+            return $this->errorResponse('Campeonato no encontrado o no autorizado', 404);
         }
 
         return $this->successResponse($championship, 'Campeonato obtenido exitosamente');
@@ -367,4 +359,36 @@ class ChampionshipController extends Controller
             'Disciplinas obtenidas exitosamente'
         );
     }
+
+    #[OA\Get(path: '/api/public/championships', operationId: 'getPublicChampionships', summary: 'Listar campeonatos públicos', tags: ['Championships'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    public function indexPublic()
+    {
+        $championships = Championship::select([
+                'id', 'name', 'description', 'type', 'status', 'start_date', 'end_date', 'is_public',
+            ])
+            ->where('is_public', true)
+            ->with('disciplines:id,name')
+            ->orderByDesc('start_date')
+            ->get();
+
+        return $this->successResponse($championships, 'Campeonatos públicos obtenidos exitosamente');
+    }
+
+    #[OA\Get(path: '/api/public/championships/{id}', operationId: 'getPublicChampionship', summary: 'Obtener campeonato público', tags: ['Championships'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    public function showPublic($id)
+    {
+        $championship = Championship::select([
+                'id', 'name', 'description', 'type', 'status', 'start_date', 'end_date', 'is_public',
+            ])
+            ->where('is_public', true)
+            ->with('disciplines:id,name')
+            ->find($id);
+
+        if (!$championship) {
+            return $this->errorResponse('Campeonato público no encontrado', 404);
+        }
+
+        return $this->successResponse($championship, 'Campeonato público obtenido exitosamente');
+    }
+
 }

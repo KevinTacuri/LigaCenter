@@ -228,18 +228,26 @@ class GameMatchController extends Controller
     )]
     public function live(Request $request)
     {
-        $query = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'discipline', 'category'])
-            ->where('status', 'en_curso')
-            ->whereHas('championship', function($q) {
-                $q->where('is_public', true);
-            });
+        $request->validate(['championship_id' => 'nullable|integer']);
 
-        if ($request->has('championship_id')) {
-            $query->where('championship_id', $request->championship_id);
+        $query = GameMatch::with([
+                'localTeam:id,name,logo',
+                'visitorTeam:id,name,logo',
+                'venue:id,name,location',
+                'discipline:id,name',
+                'category:id,name',
+            ])
+            ->where('status', 'en_curso')
+            ->whereHas('championship', fn ($q) => $q->where('is_public', true));
+
+        if ($request->filled('championship_id')) {
+            $query->where('championship_id', $request->integer('championship_id'));
         }
 
-        $matches = $query->orderBy('match_date')->orderBy('match_time')->get();
-        return $this->successResponse($matches, 'Partidos en vivo obtenidos exitosamente');
+        return $this->successResponse(
+            $query->orderBy('match_date')->orderBy('match_time')->get(),
+            'Partidos en vivo obtenidos exitosamente'
+        );
     }
 
     #[OA\Get(
@@ -260,27 +268,87 @@ class GameMatchController extends Controller
     )]
     public function upcoming(Request $request)
     {
-        $query = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'discipline', 'category'])
+        $request->validate([
+            'championship_id' => 'nullable|integer',
+            'discipline_id' => 'nullable|integer',
+            'category_id' => 'nullable|integer',
+            'limit' => 'nullable|integer|min:1|max:50',
+        ]);
+
+        $query = GameMatch::with([
+                'localTeam:id,name,logo',
+                'visitorTeam:id,name,logo',
+                'venue:id,name,location',
+                'discipline:id,name',
+                'category:id,name',
+            ])
             ->where('status', 'programado')
             ->whereDate('match_date', '>=', now()->toDateString())
-            ->whereHas('championship', function($q) {
-                $q->where('is_public', true);
-            });
+            ->whereHas('championship', fn ($q) => $q->where('is_public', true));
 
-        if ($request->has('championship_id')) {
-            $query->where('championship_id', $request->championship_id);
-        }
-        if ($request->has('discipline_id')) {
-            $query->where('discipline_id', $request->discipline_id);
-        }
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
+        foreach (['championship_id', 'discipline_id', 'category_id'] as $filter) {
+            if ($request->filled($filter)) {
+                $query->where($filter, $request->input($filter));
+            }
         }
 
-        $matches = $query->orderBy('match_date')->orderBy('match_time')
-            ->limit($request->limit ?? 20)
-            ->get();
-
-        return $this->successResponse($matches, 'Próximos partidos obtenidos exitosamente');
+        return $this->successResponse(
+            $query->orderBy('match_date')->orderBy('match_time')->limit($request->integer('limit', 20))->get(),
+            'Próximos partidos obtenidos exitosamente'
+        );
     }
+
+    #[OA\Get(path: '/api/public/matches', operationId: 'getPublicMatches', summary: 'Listar partidos públicos', tags: ['Partidos'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    public function indexPublic(Request $request)
+    {
+        $request->validate([
+            'championship_id' => 'nullable|integer',
+            'discipline_id' => 'nullable|integer',
+            'category_id' => 'nullable|integer',
+            'round' => 'nullable|integer',
+            'status' => 'nullable|in:programado,en_curso,finalizado,cancelado,reprogramado',
+        ]);
+
+        $query = GameMatch::with([
+                'localTeam:id,name,logo',
+                'visitorTeam:id,name,logo',
+                'venue:id,name,location',
+                'discipline:id,name',
+                'category:id,name',
+            ])
+            ->whereHas('championship', fn ($q) => $q->where('is_public', true));
+
+        foreach (['championship_id', 'discipline_id', 'category_id', 'round', 'status'] as $filter) {
+            if ($request->filled($filter)) {
+                $query->where($filter, $request->input($filter));
+            }
+        }
+
+        return $this->successResponse(
+            $query->orderBy('match_date')->orderBy('match_time')->get(),
+            'Partidos públicos obtenidos exitosamente'
+        );
+    }
+
+    #[OA\Get(path: '/api/public/matches/{id}', operationId: 'getPublicMatch', summary: 'Obtener partido público', tags: ['Partidos'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    public function showPublic($id)
+    {
+        $match = GameMatch::with([
+                'localTeam:id,name,logo',
+                'visitorTeam:id,name,logo',
+                'venue:id,name,location',
+                'discipline:id,name',
+                'category:id,name',
+                'championship:id,name',
+            ])
+            ->whereHas('championship', fn ($q) => $q->where('is_public', true))
+            ->find($id);
+
+        if (!$match) {
+            return $this->errorResponse('Partido público no encontrado', 404);
+        }
+
+        return $this->successResponse($match, 'Partido público obtenido exitosamente');
+    }
+
 }

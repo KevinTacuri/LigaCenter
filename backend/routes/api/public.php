@@ -1,58 +1,49 @@
 <?php
 
-use App\Http\Controllers\Api\ChampionshipController;
-use App\Http\Controllers\Api\GameMatchController;
-use App\Http\Controllers\Api\StandingController;
-use App\Http\Controllers\Api\TeamController;
-use App\Http\Controllers\Api\PlayerController;
-use App\Http\Controllers\Api\DisciplineController;
-use App\Http\Controllers\Api\CategoryController;
-use App\Http\Controllers\Api\GroupController;
-use App\Http\Controllers\Api\PlayerStatisticController;
+use AppHttpControllersApiCategoryController;
+use AppHttpControllersApiChampionshipController;
+use AppHttpControllersApiDisciplineController;
+use AppHttpControllersApiGameMatchController;
+use AppHttpControllersApiGroupController;
+use AppHttpControllersApiPlayerController;
+use AppHttpControllersApiPlayerStatisticController;
+use AppHttpControllersApiPublicSearchController;
+use AppHttpControllersApiStandingController;
+use AppHttpControllersApiTeamController;
+use IlluminateSupportFacadesRoute;
 
-Route::middleware(['public.access'])->prefix('public')->group(function () {
+Route::middleware(['public.access', 'throttle:60,1'])->prefix('public')->group(function () {
+    Route::get('/championships', [ChampionshipController::class, 'indexPublic']);
+    Route::get('/championships/{championship}', [ChampionshipController::class, 'showPublic']);
+    Route::get('/championships/{championship}/disciplines', [ChampionshipController::class, 'disciplines']);
 
-    // ========== CAMPEONATOS ==========
-    Route::get('/championships', [ChampionshipController::class, 'index']);
-    Route::get('/championships/{championship}', [ChampionshipController::class, 'show']);
-    Route::get('/championships/{championship}/disciplines', [ChampionshipController::class, 'disciplines']); // Nuevo método
+    Route::get('/matches', [GameMatchController::class, 'indexPublic']);
+    Route::get('/matches/live', [GameMatchController::class, 'live']);
+    Route::get('/matches/upcoming', [GameMatchController::class, 'upcoming']);
+    Route::get('/matches/{id}', [GameMatchController::class, 'showPublic']);
 
-    // ========== PARTIDOS ==========
-    Route::get('/matches', [GameMatchController::class, 'index']);
-    Route::get('/matches/live', [GameMatchController::class, 'live']); // Nuevo método
-    Route::get('/matches/upcoming', [GameMatchController::class, 'upcoming']); // Nuevo método
-    Route::get('/matches/{id}', [GameMatchController::class, 'show']);
+    Route::get('/standings', [StandingController::class, 'indexPublic']);
+    Route::get('/standings/championship/{championshipId}', [StandingController::class, 'byChampionship']);
+    Route::get('/standings/group/{groupId}', [GroupController::class, 'getPublicStandings']);
 
-    // ========== TABLA DE POSICIONES ==========
-    Route::get('/standings', [StandingController::class, 'index']);
-    Route::get('/standings/championship/{championshipId}', [StandingController::class, 'byChampionship']); // Nuevo método
-    Route::get('/standings/group/{groupId}', [GroupController::class, 'getStandings']);
+    Route::get('/teams', [TeamController::class, 'indexPublic']);
+    Route::get('/teams/{id}', [TeamController::class, 'showPublic']);
 
-    // ========== EQUIPOS ==========
-    Route::get('/teams', [TeamController::class, 'index']);
-    Route::get('/teams/{id}', [TeamController::class, 'show']);
+    Route::get('/players', [PlayerController::class, 'indexPublic']);
+    Route::get('/players/{id}', [PlayerController::class, 'showPublic']);
 
-    // ========== JUGADORES ==========
-    Route::get('/players', [PlayerController::class, 'index']);
-    Route::get('/players/{id}', [PlayerController::class, 'show']);
+    Route::get('/disciplines', [DisciplineController::class, 'indexPublic']);
+    Route::get('/disciplines/{id}', [DisciplineController::class, 'showPublic']);
 
-    // ========== DISCIPLINAS ==========
-    Route::get('/disciplines', [DisciplineController::class, 'index']);
-    Route::get('/disciplines/{id}', [DisciplineController::class, 'show']);
+    Route::get('/categories', [CategoryController::class, 'indexPublic']);
+    Route::get('/categories/{id}', [CategoryController::class, 'showPublic']);
 
-    // ========== CATEGORÍAS ==========
-    Route::get('/categories', [CategoryController::class, 'indexPublic']); // Nuevo método
-    Route::get('/categories/{id}', [CategoryController::class, 'show']);
+    Route::get('/statistics/ranking', [PlayerStatisticController::class, 'getPublicRanking']);
+    Route::get('/statistics/top-scorers', [PlayerStatisticController::class, 'getPublicTopScorers']);
+    Route::get('/statistics/top-assists', [PlayerStatisticController::class, 'getPublicTopAssists']);
+    Route::get('/statistics/top-yellow-cards', [PlayerStatisticController::class, 'getPublicTopYellowCards']);
+    Route::get('/statistics/top-red-cards', [PlayerStatisticController::class, 'getPublicTopRedCards']);
+    Route::get('/players/{id}/history', [PlayerStatisticController::class, 'getPublicHistory']);
 
-    // ========== ESTADÍSTICAS ==========
-    Route::get('/statistics/ranking', [PlayerStatisticController::class, 'getRanking']);
-    Route::get('/statistics/top-scorers', [PlayerStatisticController::class, 'getTopScorers']); // Nuevo método
-    Route::get('/statistics/top-assists', [PlayerStatisticController::class, 'getTopAssists']); // Nuevo método
-    Route::get('/statistics/top-yellow-cards', [PlayerStatisticController::class, 'getTopYellowCards']);
-    Route::get('/statistics/top-red-cards', [PlayerStatisticController::class, 'getTopRedCards']);
-    Route::get('/players/{id}/history', [PlayerStatisticController::class, 'getHistory']);
-
-    // ========== BÚSQUEDA ==========
-    Route::get('/search', [App\Http\Controllers\Api\PublicSearchController::class, 'search']); // Nuevo controlador
-
+    Route::get('/search', [PublicSearchController::class, 'search']);
 });

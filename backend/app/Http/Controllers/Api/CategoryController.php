@@ -366,7 +366,10 @@ class CategoryController extends Controller
     )]
     public function indexPublic(Request $request)
     {
-        $query = Category::with(['championshipDiscipline.discipline', 'teams'])
+        $query = Category::with([
+            'championshipDiscipline.discipline',
+            'teams' => fn ($q) => $q->select('id', 'category_id', 'championship_id', 'name', 'logo', 'description'),
+        ])
             ->whereHas('championshipDiscipline.championship', function($q) {
                 $q->where('is_public', true);
             });
@@ -384,4 +387,22 @@ class CategoryController extends Controller
 
         return response()->json($query->get());
     }
+
+    #[OA\Get(path: '/api/public/categories/{id}', operationId: 'getPublicCategory', summary: 'Obtener categoría pública', tags: ['Categories'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    public function showPublic($id)
+    {
+        $category = Category::whereHas('championshipDiscipline.championship', fn ($q) => $q->where('is_public', true))
+            ->with([
+                'championshipDiscipline.discipline',
+                'teams' => fn ($q) => $q->select('id', 'category_id', 'championship_id', 'name', 'logo', 'description'),
+            ])
+            ->find($id);
+
+        if (!$category) {
+            return response()->json(['message' => 'Categoría pública no encontrada'], 404);
+        }
+
+        return response()->json($category);
+    }
+
 }

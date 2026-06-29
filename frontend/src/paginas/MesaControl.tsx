@@ -18,7 +18,7 @@ import type {
 } from '../servicios/api';
 
 interface IncidentTypeConfig {
-  type: 'goal' | 'yellow_card' | 'red_card' | 'foul' | 'injury' | 'exclusion';
+  type: 'goal' | 'assist' | 'yellow_card' | 'red_card' | 'foul' | 'injury' | 'exclusion';
   label: string;
   icon: string;
   colorClass: string;
@@ -26,6 +26,7 @@ interface IncidentTypeConfig {
 
 const FUTBOL_INCIDENTS: IncidentTypeConfig[] = [
   { type: 'goal', label: 'Gol', icon: 'sports_soccer', colorClass: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
+  { type: 'assist', label: 'Asistencia', icon: 'handshake', colorClass: 'bg-blue-600 hover:bg-blue-700 text-white' },
   { type: 'yellow_card', label: 'T. Amarilla', icon: 'square', colorClass: 'bg-amber-500 hover:bg-amber-600 text-white' },
   { type: 'red_card', label: 'T. Roja', icon: 'square', colorClass: 'bg-rose-600 hover:bg-rose-700 text-white' },
   { type: 'foul', label: 'Falta', icon: 'sports_handball', colorClass: 'bg-slate-500 hover:bg-slate-600 text-white' },
@@ -147,6 +148,9 @@ export const MesaControl: React.FC = () => {
       }
       return { label: 'Gol', icon: 'sports_soccer', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
     }
+    if (tipo === 'assist') {
+      return { label: 'Asistencia', icon: 'handshake', color: 'bg-blue-50 text-blue-700 border-blue-200' };
+    }
     if (tipo === 'yellow_card') {
       return { label: 'T. Amarilla', icon: 'square', color: 'bg-amber-50 text-amber-700 border-amber-200' };
     }
@@ -244,7 +248,7 @@ export const MesaControl: React.FC = () => {
     mostrar: boolean;
     teamId: number;
     teamName: string;
-    type: 'goal' | 'yellow_card' | 'red_card' | 'foul' | 'injury' | 'exclusion';
+    type: 'goal' | 'assist' | 'yellow_card' | 'red_card' | 'foul' | 'injury' | 'exclusion';
     capturedMinute: number;
     capturedSecond: number;
   } | null>(null);
@@ -254,7 +258,7 @@ export const MesaControl: React.FC = () => {
   const abrirRegistroRapido = (
     teamId: number,
     teamName: string,
-    type: 'goal' | 'yellow_card' | 'red_card' | 'foul' | 'injury' | 'exclusion'
+    type: 'goal' | 'assist' | 'yellow_card' | 'red_card' | 'foul' | 'injury' | 'exclusion'
   ) => {
     const normas = obtenerNormasDeporte();
     let minutoActual = 1;
@@ -296,6 +300,7 @@ export const MesaControl: React.FC = () => {
         second: modalIncidenciaRapida.capturedSecond,
         description: `${
           modalIncidenciaRapida.type === 'goal' ? 'Gol/Punto' : 
+          modalIncidenciaRapida.type === 'assist' ? 'Asistencia' : 
           modalIncidenciaRapida.type === 'yellow_card' ? 'Tarjeta Amarilla' : 
           modalIncidenciaRapida.type === 'red_card' ? 'Tarjeta Roja' : 
           modalIncidenciaRapida.type === 'exclusion' ? 'Exclusión 2 Minutos' : 
@@ -1203,12 +1208,14 @@ export const MesaControl: React.FC = () => {
                 <h3 className="font-extrabold text-sm text-white uppercase tracking-wide flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[#c9244b]">
                     {modalIncidenciaRapida.type === 'goal' ? 'sports_soccer' :
+                     modalIncidenciaRapida.type === 'assist' ? 'handshake' :
                      modalIncidenciaRapida.type === 'yellow_card' ? 'square' :
                      modalIncidenciaRapida.type === 'red_card' ? 'square' :
                      modalIncidenciaRapida.type === 'exclusion' ? 'timer' : 'info'}
                   </span>
                   Registrar {
                     modalIncidenciaRapida.type === 'goal' ? 'Gol/Punto' : 
+          modalIncidenciaRapida.type === 'assist' ? 'Asistencia' : 
                     modalIncidenciaRapida.type === 'yellow_card' ? 'Tarjeta Amarilla' : 
                     modalIncidenciaRapida.type === 'red_card' ? 'Tarjeta Roja' : 
                     modalIncidenciaRapida.type === 'exclusion' ? 'Exclusión (2 min)' : 

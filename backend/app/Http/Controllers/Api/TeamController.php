@@ -9,6 +9,7 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 use App\Http\Resources\TeamResource;
+use App\Http\Resources\PublicTeamResource;
 use App\Models\Category;
 use \App\Http\Resources\TeamListResource;
 
@@ -297,4 +298,41 @@ class TeamController extends Controller
 
         return $this->successResponse(null, 'Jugador removido del equipo exitosamente');
     }
+
+    #[OA\Get(path: '/api/public/teams', operationId: 'getPublicTeams', summary: 'Listar equipos públicos', tags: ['Teams'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    public function indexPublic(Request $request)
+    {
+        $request->validate(['championship_id' => 'nullable|integer']);
+
+        $query = Team::with('category')
+            ->withCount('players')
+            ->whereHas('championship', fn ($q) => $q->where('is_public', true));
+
+        if ($request->filled('championship_id')) {
+            $query->where('championship_id', $request->integer('championship_id'));
+        }
+
+        return $this->successResponse(
+            PublicTeamResource::collection($query->orderBy('name')->get()),
+            'Equipos públicos obtenidos exitosamente'
+        );
+    }
+
+    #[OA\Get(path: '/api/public/teams/{id}', operationId: 'getPublicTeam', summary: 'Obtener equipo público', tags: ['Teams'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    public function showPublic($id)
+    {
+        $team = Team::with([
+                'category',
+                'players' => fn ($q) => $q->select('players.id', 'names', 'last_names', 'photo'),
+            ])
+            ->whereHas('championship', fn ($q) => $q->where('is_public', true))
+            ->find($id);
+
+        if (!$team) {
+            return $this->errorResponse('Equipo público no encontrado', 404);
+        }
+
+        return $this->successResponse(new PublicTeamResource($team), 'Equipo público obtenido exitosamente');
+    }
+
 }

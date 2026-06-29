@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Models;
+namespace AppModels;
 
-use Illuminate\Database\Eloquent\Model;
+use IlluminateDatabaseEloquentModel;
 
 class Standing extends Model
 {
@@ -10,17 +10,16 @@ class Standing extends Model
 
     protected $fillable = [
         'team_id',
-        'discipline_id',
         'category_id',
         'championship_id',
         'matches_played',
-        'matches_won',
-        'matches_drawn',
-        'matches_lost',
+        'wins',
+        'draws',
+        'losses',
         'goals_for',
         'goals_against',
         'goal_difference',
-        'total_points',
+        'points',
         'last_updated',
     ];
 
@@ -31,11 +30,6 @@ class Standing extends Model
     public function team()
     {
         return $this->belongsTo(Team::class);
-    }
-
-    public function discipline()
-    {
-        return $this->belongsTo(Discipline::class);
     }
 
     public function category()

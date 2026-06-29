@@ -7,6 +7,7 @@ use App\Models\Player;
 use App\Models\Team;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
+use App\Http\Resources\PublicPlayerResource;
 
 #[OA\Tag(
     name: "Players",
@@ -324,4 +325,43 @@ class PlayerController extends Controller
             'message' => 'Jugador eliminado correctamente'
         ]);
     }
+
+    #[OA\Get(path: '/api/public/players', operationId: 'getPublicPlayers', summary: 'Listar jugadores públicos', tags: ['Players'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    public function indexPublic(Request $request)
+    {
+        $request->validate(['championship_id' => 'nullable|integer']);
+
+        $query = Player::select(['id', 'names', 'last_names', 'photo'])
+            ->whereHas('teams.championship', fn ($q) => $q->where('is_public', true))
+            ->with(['teams' => function ($q) use ($request) {
+                $q->select('teams.id', 'name', 'logo', 'description', 'championship_id')
+                    ->whereHas('championship', fn ($championship) => $championship->where('is_public', true));
+                if ($request->filled('championship_id')) {
+                    $q->where('teams.championship_id', $request->integer('championship_id'));
+                }
+            }]);
+
+        if ($request->filled('championship_id')) {
+            $query->whereHas('teams', fn ($q) => $q->where('teams.championship_id', $request->integer('championship_id')));
+        }
+
+        return response()->json(PublicPlayerResource::collection($query->orderBy('names')->get()));
+    }
+
+    #[OA\Get(path: '/api/public/players/{id}', operationId: 'getPublicPlayer', summary: 'Obtener jugador público', tags: ['Players'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    public function showPublic($id)
+    {
+        $player = Player::select(['id', 'names', 'last_names', 'photo'])
+            ->whereHas('teams.championship', fn ($q) => $q->where('is_public', true))
+            ->with(['teams' => fn ($q) => $q->select('teams.id', 'name', 'logo', 'description', 'championship_id')
+                ->whereHas('championship', fn ($championship) => $championship->where('is_public', true))])
+            ->find($id);
+
+        if (!$player) {
+            return response()->json(['message' => 'Jugador público no encontrado'], 404);
+        }
+
+        return response()->json(new PublicPlayerResource($player));
+    }
+
 }

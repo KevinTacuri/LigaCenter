@@ -75,16 +75,35 @@ class PublicSearchController extends Controller
                 ->get(['id', 'name', 'logo', 'description', 'championship_id']);
         }
 
-        // Búsqueda por texto en jugadores
+        // Solo jugadores vinculados a equipos de campeonatos públicos.
+        // Nunca se exponen documento, fecha de nacimiento u otros datos personales.
         if ($type === 'all' || $type === 'players') {
-            $results['players'] = Player::where(function($q) use ($query) {
-                    $q->where('names', 'LIKE', "%{$query}%")
-                      ->orWhere('last_names', 'LIKE', "%{$query}%")
-                      ->orWhere('document_number', 'LIKE', "%{$query}%");
+            $results['players'] = Player::whereHas('teams.championship', function ($q) {
+                    $q->where('is_public', true);
                 })
-                ->with(['teams:id,name'])
+                ->where(function ($q) use ($query) {
+                    $q->where('names', 'LIKE', "%{$query}%")
+                        ->orWhere('last_names', 'LIKE', "%{$query}%");
+                })
+                ->with(['teams' => function ($q) {
+                    $q->select('teams.id', 'name', 'logo', 'championship_id')
+                        ->whereHas('championship', fn ($championship) => $championship->where('is_public', true));
+                }])
                 ->limit($limit)
-                ->get(['id', 'names', 'last_names', 'document_number', 'birth_date']);
+                ->get(['id', 'names', 'last_names', 'photo'])
+                ->map(fn ($player) => [
+                    'id' => $player->id,
+                    'name' => trim($player->names . ' ' . $player->last_names),
+                    'names' => $player->names,
+                    'last_names' => $player->last_names,
+                    'photo' => $player->photo,
+                    'teams' => $player->teams->map(fn ($team) => [
+                        'id' => $team->id,
+                        'name' => $team->name,
+                        'logo' => $team->logo,
+                        'championship_id' => $team->championship_id,
+                    ])->values(),
+                ]);
         }
 
         // Búsqueda por texto en partidos

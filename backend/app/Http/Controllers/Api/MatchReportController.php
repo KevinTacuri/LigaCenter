@@ -250,11 +250,9 @@ class MatchReportController extends Controller
             return $this->errorResponse('Partido no encontrado', 404);
         }
 
-        $tournamentId = $request->input('tournament_id', null);
-
         $this->standingService->updateFromMatch($match, $report->local_score, $report->visitor_score);
 
-        $this->playerStatisticService->updateFromMatch($match, $tournamentId);
+        $this->playerStatisticService->updateFromMatch($match, $match->championship_id);
 
         $this->sanctionService->generateAutomaticSanctions($match->id);
 
