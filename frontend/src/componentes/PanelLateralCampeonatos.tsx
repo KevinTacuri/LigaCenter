@@ -3,8 +3,10 @@ import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../contexto/ContextoCampeonato';
 import { serviciosCampeonatos, type Campeonato } from '../servicios/api';
 import { sileo } from 'sileo';
+import { useLocation } from 'react-router-dom';
 
 export const PanelLateralCampeonatos: React.FC = () => {
+  const ubicacion = useLocation();
   const { usuario } = useAutenticacion();
   const { 
     campeonatoActivo, 
@@ -12,6 +14,14 @@ export const PanelLateralCampeonatos: React.FC = () => {
     panelCampeonatosAbierto, 
     setPanelCampeonatosAbierto 
   } = useCampeonato();
+  
+  const esOrganizador = usuario?.roles?.includes('organizador');
+  const estaEnTablero = ubicacion.pathname.startsWith('/tablero');
+
+  if (!usuario || !esOrganizador || !estaEnTablero) {
+    if (panelCampeonatosAbierto) setPanelCampeonatosAbierto(false);
+    return null;
+  }
 
   const [campeonatos, setCampeonatos] = useState<Campeonato[]>([]);
   const [cargando, setCargando] = useState(false);
