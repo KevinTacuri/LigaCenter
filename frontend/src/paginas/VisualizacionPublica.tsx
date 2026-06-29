@@ -27,7 +27,7 @@ interface Props {
 }
 
 export const VisualizacionPublica: React.FC<Props> = ({ esVistaAnonima = false }) => {
-  const { usuario, iniciarSesion } = useAutenticacion();
+  const { usuario } = useAutenticacion();
   const { campeonatoActivo, seleccionarCampeonato, limpiarCampeonato } = useCampeonato();
   const navegar = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -39,38 +39,21 @@ export const VisualizacionPublica: React.FC<Props> = ({ esVistaAnonima = false }
 
   // Login silencioso y listado de campeonatos para vista anónima
   useEffect(() => {
-    const loginPublicoYListar = async () => {
-      if (esVistaAnonima) {
-        sessionStorage.setItem('vista_publica_activa', 'true');
-        if (!usuario) {
-          setCargandoPublico(true);
-          try {
-            const success = await iniciarSesion('organizador@ligacenter.com', '12345678');
-            if (success) {
-              const res = await serviciosCampeonatos.obtenerCampeonatos();
-              if (res.success && res.data) {
-                setCampeonatosPublicos(res.data);
-              }
-            }
-          } catch (err) {
-            console.error("Error en login público silencioso:", err);
-          } finally {
-            setCargandoPublico(false);
-          }
-        } else {
-          try {
-            const res = await serviciosCampeonatos.obtenerCampeonatos();
-            if (res.success && res.data) {
-              setCampeonatosPublicos(res.data);
-            }
-          } catch (err) {}
-        }
-      } else {
-        sessionStorage.removeItem('vista_publica_activa');
+    if (!esVistaAnonima) return;
+
+    const cargarCampeonatosPublicos = async () => {
+      setCargandoPublico(true);
+      try {
+        const res = await serviciosCampeonatos.obtenerCampeonatos();
+        if (res.success && res.data) setCampeonatosPublicos(res.data);
+      } catch (err) {
+        console.error('Error cargando campeonatos públicos:', err);
+      } finally {
+        setCargandoPublico(false);
       }
     };
-    loginPublicoYListar();
-  }, [esVistaAnonima, usuario]);
+    cargarCampeonatosPublicos();
+  }, [esVistaAnonima]);
 
   // Redirigir si no hay campeonato activo (solo vista autenticada ordinaria)
   useEffect(() => {

@@ -44,21 +44,18 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
           if (respuesta.success) {
             setUsuario(respuesta.data);
           } else {
-            // Si falla la verificación, limpiar localStorage
             localStorage.removeItem('token_autenticacion');
             setToken(null);
           }
         } catch (e) {
-          console.error('Error verificando la sesión del usuario:', e);
           localStorage.removeItem('token_autenticacion');
           setToken(null);
         }
       }
       setCargando(false);
     };
-
     verificarSesion();
-  }, [token]);
+  }, []); // ← sin dependencias: solo al montar
 
   // Función para iniciar sesión
   const iniciarSesion = async (email: string, contrasenia: string): Promise<boolean> => {
@@ -73,6 +70,7 @@ export const ProveedorAutenticacion: React.FC<{ children: React.ReactNode }> = (
         localStorage.removeItem('campeonato_activo_name');
         localStorage.removeItem('campeonato_activo_type');
         localStorage.removeItem('campeonato_activo_status');
+        sessionStorage.removeItem('vista_publica_activa');
         
         localStorage.setItem('token_autenticacion', tokenApi);
         setToken(tokenApi);

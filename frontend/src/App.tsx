@@ -21,6 +21,8 @@ import { PanelLateralCampeonatos } from './componentes/PanelLateralCampeonatos';
 import { Toaster } from 'sileo';
 import { ConfirmDialogProvider } from '@omit/react-confirm-dialog';
 
+import { RutaProtegida } from './componentes/RutaProtegida';
+
 // Landing pages
 import { Inicio }        from './paginas/landing/Inicio';
 import { Nosotros }      from './paginas/landing/Nosotros';
@@ -39,33 +41,51 @@ const App: React.FC = () => {
           <Toaster position="top-center" />
           <BrowserRouter>
             <Routes>
-              {/* Rutas Públicas */}
-              <Route path="/"               element={<Navigate to="/publico" replace />} />
-              <Route path="/nosotros"       element={<Nosotros />} />
-              <Route path="/logros"         element={<Logros />} />
-              <Route path="/tecnologias"    element={<Tecnologias />} />
-              <Route path="/documentacion"  element={<Documentacion />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/registro" element={<Registro />} />
-              <Route path="/recuperar-contrasenia" element={<RecuperarContrasenia />} />
+              {/* Rutas Públicas — sin autenticación */}
+              <Route path="/"                       element={<Navigate to="/publico" replace />} />
+              <Route path="/publico"                element={<VisualizacionPublica esVistaAnonima={true} />} />
+              <Route path="/nosotros"               element={<Nosotros />} />
+              <Route path="/logros"                 element={<Logros />} />
+              <Route path="/tecnologias"            element={<Tecnologias />} />
+              <Route path="/documentacion"          element={<Documentacion />} />
+              <Route path="/login"                  element={<Login />} />
+              <Route path="/registro"               element={<Registro />} />
+              <Route path="/recuperar-contrasenia"  element={<RecuperarContrasenia />} />
               <Route path="/restablecer-contrasenia" element={<RestablecerContrasenia />} />
-              <Route path="/publico" element={<VisualizacionPublica esVistaAnonima={true} />} />
 
-              {/* Rutas Privadas / Protegidas */}
-              <Route path="/seleccion-campeonato" element={<Navigate to="/tablero" replace />} />
-              <Route path="/tablero" element={<Tablero />} />
-              <Route path="/tablero/usuarios" element={<GestionUsuarios />} />
-              <Route path="/tablero/delegados" element={<GestionDelegados />} />
-              <Route path="/tablero/participantes" element={<GestionParticipantes />} />
-              <Route path="/tablero/fixture" element={<ProgramacionFixture />} />
-              <Route path="/tablero/mesa" element={<MesaControl />} />
-              <Route path="/tablero/publico" element={<VisualizacionPublica />} />
-              <Route path="/tablero/saas-admin" element={<ConsolaSaaS />} />
-              <Route path="/tablero/configuracion" element={<Configuracion />} />
-              <Route path="/tablero/perfil" element={<Perfil />} />
+              {/* Rutas Protegidas — requieren sesión */}
+              <Route path="/tablero" element={
+                <RutaProtegida><Tablero /></RutaProtegida>
+              } />
+              <Route path="/tablero/usuarios" element={
+                <RutaProtegida roles={['administrador', 'organizador']}><GestionUsuarios /></RutaProtegida>
+              } />
+              <Route path="/tablero/delegados" element={
+                <RutaProtegida><GestionDelegados /></RutaProtegida>
+              } />
+              <Route path="/tablero/participantes" element={
+                <RutaProtegida><GestionParticipantes /></RutaProtegida>
+              } />
+              <Route path="/tablero/fixture" element={
+                <RutaProtegida><ProgramacionFixture /></RutaProtegida>
+              } />
+              <Route path="/tablero/mesa" element={
+                <RutaProtegida><MesaControl /></RutaProtegida>
+              } />
+              <Route path="/tablero/publico" element={
+                <RutaProtegida><VisualizacionPublica /></RutaProtegida>
+              } />
+              <Route path="/tablero/saas-admin" element={
+                <RutaProtegida roles={['administrador']}><ConsolaSaaS /></RutaProtegida>
+              } />
+              <Route path="/tablero/configuracion" element={
+                <RutaProtegida><Configuracion /></RutaProtegida>
+              } />
+              <Route path="/tablero/perfil" element={
+                <RutaProtegida><Perfil /></RutaProtegida>
+              } />
 
-              {/* Redirección por defecto */}
-              <Route path="*" element={<Navigate to="/tablero" replace />} />
+              <Route path="*" element={<Navigate to="/publico" replace />} />
             </Routes>
             <PanelLateralCampeonatos />
           </BrowserRouter>

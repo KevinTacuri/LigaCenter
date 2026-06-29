@@ -28,7 +28,7 @@ export const Login: React.FC = () => {
     try {
       const exito = await iniciarSesion(correo, contrasenia);
       if (exito) {
-        navegar('/tablero');
+        navegar('/tablero', { replace: true });
       } else {
         setErrorLocal('Credenciales inválidas o cuenta desactivada.');
       }
