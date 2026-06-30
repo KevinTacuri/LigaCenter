@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProveedorAutenticacion } from './contexto/ContextoAutenticacion';
 import { ProveedorCampeonato } from './contexto/ContextoCampeonato';
@@ -21,8 +21,26 @@ import { PanelLateralCampeonatos } from './componentes/PanelLateralCampeonatos';
 
 import { Toaster } from 'sileo';
 import { ConfirmDialogProvider } from '@omit/react-confirm-dialog';
+import { Nosotros } from './paginas/landing/Nosotros';
+import { HomePublic } from './componentes/public/HomePublic'; 
 
 const App: React.FC = () => {
+    const [tema, setTema] = useState<'light' | 'dark'>(
+    () => (localStorage.getItem('theme') as 'light' | 'dark') || 'dark'
+  );
+
+  useEffect(() => {
+    const sync = () => {
+      setTema((localStorage.getItem('theme') as 'light' | 'dark') || 'dark');
+    };
+    window.addEventListener('storage', sync);
+    const intervalo = setInterval(sync, 300);
+    return () => {
+      window.removeEventListener('storage', sync);
+      clearInterval(intervalo);
+    };
+  }, []);
+  
   return (
     <ProveedorAutenticacion>
       <ProveedorCampeonato>
@@ -30,7 +48,7 @@ const App: React.FC = () => {
           confirmText: 'Confirmar',
           cancelText: 'Cancelar',
         }}>
-          <Toaster position="top-center" />
+          <Toaster position="top-center" theme={tema} />
           <BrowserRouter>
             <Routes>
               {/* 🔥 RUTA PRINCIPAL - VISTA PÚBLICA */}
@@ -42,6 +60,8 @@ const App: React.FC = () => {
               <Route path="/recuperar-contrasenia" element={<RecuperarContrasenia />} />
               <Route path="/restablecer-contrasenia" element={<RestablecerContrasenia />} />
               <Route path="/publico" element={<VisualizacionPublica esVistaAnonima={true} />} />
+              <Route path="/nosotros" element={<Nosotros />} />
+              <Route path="/inicio" element={<HomePublic />} />
 
               {/* Rutas Privadas */}
               <Route path="/tablero" element={<Tablero />} />
