@@ -1,4 +1,6 @@
 import React from 'react';
+import { useState, useEffect } from 'react';
+
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProveedorAutenticacion, useAutenticacion } from './contexto/ContextoAutenticacion';
 import { ProveedorCampeonato, useCampeonato } from './contexto/ContextoCampeonato';
@@ -47,6 +49,22 @@ const AppLista: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 const App: React.FC = () => {
+  const [tema, setTema] = useState<'light' | 'dark'>(
+    () => (localStorage.getItem('theme') as 'light' | 'dark') || 'dark'
+  );
+
+  useEffect(() => {
+    const sync = () => {
+      setTema((localStorage.getItem('theme') as 'light' | 'dark') || 'dark');
+    };
+    window.addEventListener('storage', sync);
+    const intervalo = setInterval(sync, 300);
+    return () => {
+      window.removeEventListener('storage', sync);
+      clearInterval(intervalo);
+    };
+  }, []);
+  
   return (
     <ProveedorAutenticacion>
       <ProveedorCampeonato>
@@ -54,7 +72,7 @@ const App: React.FC = () => {
           confirmText: 'Confirmar',
           cancelText: 'Cancelar',
         }}>
-          <Toaster position="top-center" />
+          <Toaster position="top-center" theme={tema} />
           <BrowserRouter>
             <AppLista>
               <Routes>
