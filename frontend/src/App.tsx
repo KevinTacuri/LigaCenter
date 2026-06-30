@@ -12,6 +12,7 @@ import { GestionDelegados } from './paginas/GestionDelegados';
 import { GestionParticipantes } from './paginas/GestionParticipantes';
 import { ProgramacionFixture } from './paginas/ProgramacionFixture';
 import { MesaControl } from './paginas/MesaControl';
+import { EstadisticasOrganizador } from './paginas/EstadisticasOrganizador';
 import { VisualizacionPublica } from './paginas/VisualizacionPublica';
 import { ConsolaSaaS } from './paginas/ConsolaSaaS';
 import { Configuracion } from './paginas/Configuracion';
@@ -53,6 +54,7 @@ const App: React.FC = () => {
               <Route path="/tablero/saas-admin" element={<ConsolaSaaS />} />
               <Route path="/tablero/configuracion" element={<Configuracion />} />
               <Route path="/tablero/perfil" element={<Perfil />} />
+              <Route path="/tablero/estadisticas" element={<EstadisticasOrganizador />} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

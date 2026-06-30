@@ -112,7 +112,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
       id: 'posiciones',
       titulo: 'Posiciones y Estadísticas',
       icono: 'leaderboard',
-      ruta: '/tablero/publico',
+      ruta: '/tablero/estadisticas',
       visible: !!campeonatoActivo && rol !== 'administrador'
     }
   ];
