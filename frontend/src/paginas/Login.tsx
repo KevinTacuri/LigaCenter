@@ -64,9 +64,19 @@ export const Login: React.FC = () => {
       </section>
 
       {/* Sección 2: Formulario de Acceso (Limpio y centrado sin tarjeta) */}
-      <section className="flex flex-col items-center justify-center p-6 md:p-12 relative z-10">
+      <section className="relative flex flex-col items-center justify-center p-6 md:p-12 z-10">
         <div className="w-full max-w-[360px] space-y-7">
           
+          {/* Botón Regresar */}
+          <button
+            type="button"
+            onClick={() => navegar('/')}
+            className="absolute top-6 left-6 flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold tracking-wide transition-colors cursor-pointer z-20"
+          >
+            <span className="material-symbols-outlined text-base">arrow_back</span>
+            <span>Regresar</span>
+          </button>
+
           {/* Logo y Encabezado del Mockup */}
           <div className="text-center space-y-1.5">
             <header className="flex flex-col items-center justify-center gap-3 mb-2">
