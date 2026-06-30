@@ -10,17 +10,16 @@ class Standing extends Model
 
     protected $fillable = [
         'team_id',
-        'discipline_id',
         'category_id',
         'championship_id',
         'matches_played',
-        'matches_won',
-        'matches_drawn',
-        'matches_lost',
+        'wins',
+        'draws',
+        'losses',
         'goals_for',
         'goals_against',
         'goal_difference',
-        'total_points',
+        'points',
         'last_updated',
     ];
 
@@ -33,11 +32,6 @@ class Standing extends Model
         return $this->belongsTo(Team::class);
     }
 
-    public function discipline()
-    {
-        return $this->belongsTo(Discipline::class);
-    }
-
     public function category()
     {
         return $this->belongsTo(Category::class);
@@ -46,5 +40,17 @@ class Standing extends Model
     public function championship()
     {
         return $this->belongsTo(Championship::class);
+    }
+
+    // Accesor para obtener la disciplina a través de la categoría
+    public function getDisciplineAttribute()
+    {
+        return $this->category?->championshipDiscipline?->discipline;
+    }
+
+    // Accesor para obtener el ID de la disciplina
+    public function getDisciplineIdAttribute()
+    {
+        return $this->category?->championshipDiscipline?->discipline_id;
     }
 }

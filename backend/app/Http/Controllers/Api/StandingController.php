@@ -44,28 +44,33 @@ class StandingController extends Controller
         description: 'Tabla de posiciones obtenida exitosamente'
     )]
     #[OA\Security(name: 'sanctum')]
+
     public function index(Request $request)
     {
         $query = Standing::with([
             'team',
-            'discipline',
-            'category'
+            'category.championshipDiscipline.discipline'  // ← Cargar disciplina a través de categoría
         ]);
 
+        // Filtrar por campeonato
         if ($request->has('championship_id')) {
             $query->where('championship_id', $request->championship_id);
         }
 
-        if ($request->has('discipline_id')) {
-            $query->where('discipline_id', $request->discipline_id);
-        }
-
+        // Filtrar por categoría
         if ($request->has('category_id')) {
             $query->where('category_id', $request->category_id);
         }
 
+        // Filtrar por disciplina (a través de la relación con categoría)
+        if ($request->has('discipline_id')) {
+            $query->whereHas('category.championshipDiscipline', function ($q) use ($request) {
+                $q->where('discipline_id', $request->discipline_id);
+            });
+        }
+
         $standings = $query
-            ->orderByDesc('total_points')
+            ->orderByDesc('points')
             ->orderByDesc('goal_difference')
             ->orderByDesc('goals_for')
             ->get();
