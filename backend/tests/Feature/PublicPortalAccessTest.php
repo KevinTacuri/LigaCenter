@@ -1,6 +1,6 @@
 <?php
 
-namespace TestsFeature;
+namespace Tests\Feature;
 
 use AppModelsCategory;
 use AppModelsChampionship;
