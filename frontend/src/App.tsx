@@ -32,6 +32,9 @@ const App: React.FC = () => {
           <Toaster position="top-center" />
           <BrowserRouter>
             <Routes>
+              {/* 🔥 RUTA PRINCIPAL - VISTA PÚBLICA */}
+              <Route path="/" element={<VisualizacionPublica esVistaAnonima={true} />} />
+              
               {/* Rutas Públicas */}
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Registro />} />
@@ -39,8 +42,7 @@ const App: React.FC = () => {
               <Route path="/restablecer-contrasenia" element={<RestablecerContrasenia />} />
               <Route path="/publico" element={<VisualizacionPublica esVistaAnonima={true} />} />
 
-              {/* Rutas Privadas / Protegidas */}
-              <Route path="/seleccion-campeonato" element={<Navigate to="/tablero" replace />} />
+              {/* Rutas Privadas */}
               <Route path="/tablero" element={<Tablero />} />
               <Route path="/tablero/usuarios" element={<GestionUsuarios />} />
               <Route path="/tablero/delegados" element={<GestionDelegados />} />
@@ -52,8 +54,7 @@ const App: React.FC = () => {
               <Route path="/tablero/configuracion" element={<Configuracion />} />
               <Route path="/tablero/perfil" element={<Perfil />} />
 
-              {/* Redirección por defecto */}
-              <Route path="*" element={<Navigate to="/tablero" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             <PanelLateralCampeonatos />
           </BrowserRouter>
