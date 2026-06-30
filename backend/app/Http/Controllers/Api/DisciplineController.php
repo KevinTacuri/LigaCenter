@@ -207,31 +207,41 @@ class DisciplineController extends Controller
         ]);
     }
 
-
-
-    #[OA\Get(path: '/api/public/disciplines', operationId: 'getPublicDisciplines', summary: 'Listar disciplinas públicas', tags: ['Disciplines'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    #[OA\Get(
+        path: '/api/public/disciplines',
+        operationId: 'getPublicDisciplines',
+        summary: 'Listar disciplinas públicas',
+        tags: ['Disciplines'],
+        responses: [
+            new OA\Response(response: 200, description: 'Consulta exitosa'),
+            new OA\Response(response: 404, description: 'Recurso no encontrado')
+        ]
+    )]
     public function indexPublic()
     {
         return response()->json(
-            AppModelsDiscipline::whereHas('championships', fn ($q) => $q->where('is_public', true))
-                ->with('statistics')
-                ->orderBy('name')
-                ->get()
+            Discipline::orderBy('name')->get()
         );
     }
 
-    #[OA\Get(path: '/api/public/disciplines/{id}', operationId: 'getPublicDiscipline', summary: 'Obtener disciplina pública', tags: ['Disciplines'], responses: [new OA\Response(response: 200, description: 'Consulta exitosa'), new OA\Response(response: 404, description: 'Recurso no encontrado')])]
+    #[OA\Get(
+        path: '/api/public/disciplines/{id}',
+        operationId: 'getPublicDiscipline',
+        summary: 'Obtener disciplina pública',
+        tags: ['Disciplines'],
+        responses: [
+            new OA\Response(response: 200, description: 'Consulta exitosa'),
+            new OA\Response(response: 404, description: 'Recurso no encontrado')
+        ]
+    )]
     public function showPublic($id)
     {
-        $discipline = AppModelsDiscipline::whereHas('championships', fn ($q) => $q->where('is_public', true))
-            ->with(['statistics', 'championshipDisciplines' => fn ($q) => $q->whereHas('championship', fn ($c) => $c->where('is_public', true))])
-            ->find($id);
+        $discipline = Discipline::with('teams')->find($id);
 
         if (!$discipline) {
-            return response()->json(['message' => 'Disciplina pública no encontrada'], 404);
+            return response()->json(['message' => 'Disciplina no encontrada'], 404);
         }
 
         return response()->json($discipline);
     }
-
 }

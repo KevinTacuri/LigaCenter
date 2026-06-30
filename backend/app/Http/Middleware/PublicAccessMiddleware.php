@@ -1,9 +1,9 @@
 <?php
 
-namespace AppHttpMiddleware;
+namespace App\Http\Middleware;
 
 use Closure;
-use IlluminateHttpRequest;
+use Illuminate\Http\Request;
 
 class PublicAccessMiddleware
 {

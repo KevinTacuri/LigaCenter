@@ -1,25 +1,25 @@
 <?php
 
-namespace AppHttpMiddleware;
+namespace App\Http\Middleware;
 
-use AppModelsCategory;
-use AppModelsChampionship;
-use AppModelsChampionshipDiscipline;
-use AppModelsChampionshipUser;
-use AppModelsGameMatch;
-use AppModelsGroup;
-use AppModelsGroupTeam;
-use AppModelsMatchIncidence;
-use AppModelsMatchReport;
-use AppModelsPlayer;
-use AppModelsSanction;
-use AppModelsStanding;
-use AppModelsTeam;
-use AppModelsTeamPlayer;
-use AppModelsVenue;
+use App\Models\Category;
+use App\Models\Championship;
+use App\Models\ChampionshipDiscipline;
+use App\Models\ChampionshipUser;
+use App\Models\GameMatch;
+use App\Models\Group;
+use App\Models\GroupTeam;
+use App\Models\MatchIncidence;
+use App\Models\MatchReport;
+use App\Models\Player;
+use App\Models\Sanction;
+use App\Models\Standing;
+use App\Models\Team;
+use App\Models\TeamPlayer;
+use App\Models\Venue;
 use Closure;
-use IlluminateDatabaseEloquentModel;
-use IlluminateHttpRequest;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 
 class CheckChampionshipAccess
 {

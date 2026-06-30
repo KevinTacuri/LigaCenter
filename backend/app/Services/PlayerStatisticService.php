@@ -441,4 +441,9 @@ class PlayerStatisticService
             });
     }
 
+    public function skipWalkoverStatistics(GameMatch $match)
+    {
+        return true;
+    }
+
 }

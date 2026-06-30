@@ -241,7 +241,7 @@ class MatchReportController extends Controller
             return $this->errorResponse('El acta ya está bloqueada', 400);
         }
 
-        if ($report->local_score === null || $report->visitor_score === null) {
+        if ($report->home_score === null || $report->away_score === null) {
             return $this->errorResponse('No hay resultados registrados para este partido', 400);
         }
 
@@ -250,7 +250,7 @@ class MatchReportController extends Controller
             return $this->errorResponse('Partido no encontrado', 404);
         }
 
-        $this->standingService->updateFromMatch($match, $report->local_score, $report->visitor_score);
+        $this->standingService->updateFromMatch($match, $report->home_score, $report->away_score);
 
         $this->playerStatisticService->updateFromMatch($match, $match->championship_id);
 
@@ -298,5 +298,127 @@ class MatchReportController extends Controller
 
         $report->delete();
         return $this->successResponse(null, 'Acta eliminada exitosamente');
+    }
+
+    #[OA\Post(
+        path: '/api/match-reports/{id}/walkover',
+        operationId: 'walkoverMatch',
+        summary: 'Registrar Walkover (WO)',
+        description: 'Marca un partido como walkover cuando un equipo no se presenta.',
+        tags: ['Match Reports']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Walkover registrado exitosamente'
+    )]
+    #[OA\Response(
+        response: 400,
+        description: 'El partido ya está bloqueado o tiene resultados'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Acta no encontrada'
+    )]
+    #[OA\Security(name: 'sanctum')]
+
+    public function walkover(Request $request, $id)
+    {
+        try {
+            $report = MatchReport::find($id);
+            if (!$report) {
+                return $this->errorResponse('Acta no encontrada', 404);
+            }
+
+            if ($report->is_locked) {
+                return $this->errorResponse('El acta ya está bloqueada', 400);
+            }
+
+            $request->validate([
+                'forfeited_team_id' => 'required|in:local,visitor',
+            ]);
+
+            $match = GameMatch::find($report->match_id);
+            if (!$match) {
+                return $this->errorResponse('Partido no encontrado', 404);
+            }
+
+            if ($match->status === 'finalizado') {
+                return $this->errorResponse('El partido ya está finalizado', 400);
+            }
+
+            $isLocalForfeit = $request->forfeited_team_id === 'local';
+            
+            // Valores por defecto
+            $localScore = 0;
+            $visitorScore = 3;
+            $winnerTeamId = $match->visitor_team_id;
+            $loserTeamId = $match->local_team_id;
+            $forfeitedTeam = 'local';
+
+            if (!$isLocalForfeit) {
+                $localScore = 3;
+                $visitorScore = 0;
+                $winnerTeamId = $match->local_team_id;
+                $loserTeamId = $match->visitor_team_id;
+                $forfeitedTeam = 'visitante';
+            }
+
+            // Ajustar por deporte
+            $disciplineName = $match->discipline?->name ?? '';
+            $disciplineLower = strtolower($disciplineName);
+            
+            if (str_contains($disciplineLower, 'basquet') || 
+                str_contains($disciplineLower, 'básquet') || 
+                str_contains($disciplineLower, 'basketball') || 
+                str_contains($disciplineLower, 'baloncesto')) {
+                $localScore = $isLocalForfeit ? 0 : 20;
+                $visitorScore = $isLocalForfeit ? 20 : 0;
+            }
+
+            // Actualizar el reporte
+            $report->home_score = $localScore;
+            $report->away_score = $visitorScore;
+            $report->observations = '[WALKOVER] Equipo ' . $forfeitedTeam . ' no se presentó. Resultado: ' . $localScore . '-' . $visitorScore;
+            $report->is_locked = true;
+            $report->save();
+
+            // Actualizar standings
+            $this->standingService->updateFromMatch($match, $localScore, $visitorScore);
+
+            // Actualizar estado del partido
+            $match->status = 'finalizado';
+            $match->save();
+
+            // Registrar incidencia
+            try {
+                \App\Models\MatchIncidence::create([
+                    'match_id' => $match->id,
+                    'team_id' => $loserTeamId,
+                    'type' => 'walkover',
+                    'incidence_type' => 'walkover',
+                    'minute' => 0,
+                    'description' => 'Walkover - Equipo no se presentó',
+                    'created_by_user_id' => $request->user()->id,
+                ]);
+            } catch (\Exception $e) {
+                // No fallar si no se puede crear la incidencia
+            }
+
+            return $this->successResponse([
+                'report' => $report,
+                'match' => $match,
+                'winner_team_id' => $winnerTeamId,
+                'loser_team_id' => $loserTeamId,
+                'forfeited_team' => $forfeitedTeam,
+            ], 'Walkover registrado exitosamente.');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->errorResponse($e->errors(), 422);
+        } catch (\Exception $e) {
+            \Log::error('Walkover error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return $this->errorResponse('Error al procesar walkover: ' . $e->getMessage(), 500);
+        }
     }
 }
