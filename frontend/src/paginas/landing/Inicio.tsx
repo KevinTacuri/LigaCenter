@@ -47,6 +47,35 @@ export const Inicio: React.FC<InicioProps> = ({
     }
   };
 
+  // Helper: logo del equipo o avatar con inicial si no hay logo
+  const TeamLogo: React.FC<{ name?: string; logo?: string | null; size?: 'sm' | 'md' }> = ({
+    name,
+    logo,
+    size = 'md',
+  }) => {
+    const dimensions = size === 'sm' ? 'w-9 h-9 text-sm' : 'w-14 h-14 text-lg';
+
+    if (logo) {
+      return (
+        <img
+          src={logo}
+          alt={name || 'Equipo'}
+          className={`${dimensions} rounded-full object-cover border border-slate-700 bg-[#171a26]`}
+        />
+      );
+    }
+
+    const initial = name?.trim()?.[0]?.toUpperCase() || '?';
+
+    return (
+      <div
+        className={`${dimensions} rounded-full border border-slate-700 bg-[#171a26] flex items-center justify-center font-bold text-slate-300`}
+      >
+        {initial}
+      </div>
+    );
+  };
+
   return (
     <>
       {/* Selector de Campeonato */}
@@ -216,36 +245,61 @@ export const Inicio: React.FC<InicioProps> = ({
                 <Link
                   key={match.id}
                   to={`/partidos/${match.id}`}
-                  className="bg-[#11131c] rounded-xl p-4 border border-slate-800 hover:border-indigo-500/50 transition-all hover:scale-[1.02]"
+                  className="group bg-[#11131c] rounded-xl border border-slate-800 hover:border-indigo-650/60 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-650/10 transition-all duration-200 overflow-hidden flex flex-col"
                 >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] text-slate-500 font-bold truncate max-w-[120px]">
+                  {/* Header: campeonato + estado */}
+                  <div className="flex justify-between items-center px-4 pt-3 pb-2">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wide truncate max-w-[65%]">
                       {match.championship?.name || 'Competición'}
                     </span>
                     {getStatusBadge(match.status)}
                   </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm text-slate-200 truncate">{match.home_team?.name || '—'}</span>
-                      <span className="font-bold text-base text-white">{match.home_score ?? '-'}</span>
+
+                  {/* Marcador principal: logo - score - logo */}
+                  <div className="px-4 pb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                    {/* Equipo local */}
+                    <div className="flex flex-col items-center gap-1.5 min-w-0">
+                      <TeamLogo name={match.home_team?.name} logo={match.home_team?.logo} />
+                      <span className="text-xs font-semibold text-slate-200 text-center truncate w-full">
+                        {match.home_team?.name || '—'}
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm text-slate-200 truncate">{match.away_team?.name || '—'}</span>
-                      <span className="font-bold text-base text-white">{match.away_score ?? '-'}</span>
+
+                    {/* Marcador / VS */}
+                    <div className="flex flex-col items-center px-1">
+                      {match.status === 'pendiente' || match.status === 'reprogramado' ? (
+                        <span className="text-lg font-black text-slate-500 tracking-wider">VS</span>
+                      ) : (
+                        <span className="text-2xl font-black text-white tabular-nums whitespace-nowrap">
+                          {match.home_score ?? '-'} <span className="text-slate-600">:</span> {match.away_score ?? '-'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Equipo visitante */}
+                    <div className="flex flex-col items-center gap-1.5 min-w-0">
+                      <TeamLogo name={match.away_team?.name} logo={match.away_team?.logo} />
+                      <span className="text-xs font-semibold text-slate-200 text-center truncate w-full">
+                        {match.away_team?.name || '—'}
+                      </span>
                     </div>
                   </div>
-                  <div className="mt-3 flex items-center justify-between text-[10px] text-slate-500">
-                    <span className="flex items-center gap-1">
+
+                  {/* Footer: fecha, sede */}
+                  <div className="mt-auto border-t border-slate-800 px-4 py-2.5 flex items-center justify-between gap-2 text-[10px] text-slate-500">
+                    <span className="flex items-center gap-1 truncate">
                       <span className="material-symbols-outlined text-xs">schedule</span>
-                      {match.match_date ? new Date(match.match_date + 'T' + (match.match_time || '00:00')).toLocaleString('es-ES', {
-                        day: '2-digit',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }) : '—'}
+                      {match.match_date
+                        ? new Date(match.match_date + 'T' + (match.match_time || '00:00')).toLocaleString('es-ES', {
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : '—'}
                     </span>
                     {match.venue && (
-                      <span className="flex items-center gap-1 truncate max-w-[100px]">
+                      <span className="flex items-center gap-1 truncate max-w-[45%]">
                         <span className="material-symbols-outlined text-xs">location_on</span>
                         {match.venue.name}
                       </span>
