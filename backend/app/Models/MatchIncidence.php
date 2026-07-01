@@ -35,7 +35,7 @@ class MatchIncidence extends Model
 
     public function match()
     {
-        return $this->belongsTo(GameMatch::class);
+        return $this->belongsTo(GameMatch::class, 'match_id');
     }
 
     public function player()

@@ -92,7 +92,7 @@ class GameMatch extends Model
 
     public function incidences()
     {
-        return $this->hasMany(MatchIncidence::class);
+        return $this->hasMany(MatchIncidence::class, 'match_id');
     }
 
     public function championship()
