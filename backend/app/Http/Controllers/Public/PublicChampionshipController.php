@@ -82,7 +82,7 @@ class PublicChampionshipController extends PublicController
 
         $standings = Standing::where('championship_id', $id)
             ->with(['team'])
-            ->orderBy('total_points', 'desc')
+            ->orderBy('points', 'desc')
             ->orderBy('goal_difference', 'desc')
             ->orderBy('goals_for', 'desc')
             ->get();

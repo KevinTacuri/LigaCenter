@@ -104,6 +104,19 @@ export const Inicio: React.FC<InicioProps> = ({
         </div>
       )}
 
+      {/* Selector detalle de campeonato */}
+      {selectedChampionship && (
+        <div className="mb-4">
+          <Link
+            to={`/campeonatos/${selectedChampionship}`}
+            className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 font-bold"
+          >
+            Ver detalle completo del campeonato
+            <span className="material-symbols-outlined text-sm">arrow_forward</span>
+          </Link>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="mb-6 border-b border-slate-800">
         <nav className="flex gap-6">
@@ -165,7 +178,11 @@ export const Inicio: React.FC<InicioProps> = ({
                     {standings.map((standing, index) => (
                       <tr key={standing.team.id} className="hover:bg-[#171a26]/40">
                         <td className="p-3 pl-4 text-center font-bold text-slate-400">{index + 1}</td>
-                        <td className="p-3 font-bold text-white">{standing.team.name}</td>
+                        <td className="p-3 font-bold text-white">
+                          <Link to={`/equipos/${standing.team.id}`} className="hover:text-indigo-400 transition-colors">
+                            {standing.team.name}
+                          </Link>
+                        </td>
                         <td className="p-3 text-center text-slate-300">{standing.matches_played}</td>
                         <td className="p-3 text-center text-emerald-400">{standing.wins}</td>
                         <td className="p-3 text-center text-slate-400">{standing.draws}</td>

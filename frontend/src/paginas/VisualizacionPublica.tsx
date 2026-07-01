@@ -30,6 +30,11 @@ export const VisualizacionPublica: React.FC<Props> = ({ esVistaAnonima = true })
   const [selectedChampionship, setSelectedChampionship] = useState<number | null>(null);
   const [championships, setChampionships] = useState<PublicChampionship[]>([]);
 
+  const handleDisciplineChange = (id: number | null) => {
+    setSelectedDiscipline(id);
+    setSelectedChampionship(null);
+  };
+  
   useEffect(() => {
     if (tabParam && tabParam !== tabActiva) {
       setTabActivaState(tabParam);
@@ -38,7 +43,7 @@ export const VisualizacionPublica: React.FC<Props> = ({ esVistaAnonima = true })
 
   useEffect(() => {
     loadData();
-  }, [tabActiva, selectedDiscipline, selectedChampionship]);
+  }, [tabActiva, selectedDiscipline, selectedChampionship]); 
 
   const setTabActiva = (tab: string) => {
     setSearchParams({ tab });
@@ -104,7 +109,7 @@ export const VisualizacionPublica: React.FC<Props> = ({ esVistaAnonima = true })
         tabActiva={tabActiva}
         setTabActiva={setTabActiva}
         selectedDiscipline={selectedDiscipline}
-        setSelectedDiscipline={setSelectedDiscipline}
+        setSelectedDiscipline={handleDisciplineChange}
         selectedChampionship={selectedChampionship}
         setSelectedChampionship={setSelectedChampionship}
       />

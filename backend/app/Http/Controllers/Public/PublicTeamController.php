@@ -84,17 +84,17 @@ class PublicTeamController extends PublicController
                     'date' => $match->match_date?->format('Y-m-d'),
                 ];
             }),
-            'standing' => $standing ? [
-                'position' => null, // Se calculará en el frontend o se puede agregar un campo
-                'points' => $standing->total_points,
-                'matches_played' => $standing->matches_played,
-                'wins' => $standing->matches_won,
-                'draws' => $standing->matches_drawn,
-                'losses' => $standing->matches_lost,
-                'goals_for' => $standing->goals_for,
-                'goals_against' => $standing->goals_against,
-                'goal_difference' => $standing->goal_difference,
-            ] : null,
+                'standing' => $standing ? [
+                    'position' => null,
+                    'points' => $standing->points,
+                    'matches_played' => $standing->matches_played,
+                    'wins' => $standing->wins,
+                    'draws' => $standing->draws,
+                    'losses' => $standing->losses,
+                    'goals_for' => $standing->goals_for,
+                    'goals_against' => $standing->goals_against,
+                    'goal_difference' => $standing->goal_difference,
+                ] : null,
         ];
 
         return $this->successResponse($data, 'Equipo obtenido exitosamente');

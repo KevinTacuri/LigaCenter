@@ -56,6 +56,9 @@ class PublicPlayerController extends PublicController
 
         // Estadísticas del jugador
         $statistics = PlayerStatistic::where('player_id', $id)
+            ->whereHas('championship', function ($q) {
+                $q->where('is_public', true);
+            })
             ->with(['disciplineStatistic', 'championship'])
             ->get();
 

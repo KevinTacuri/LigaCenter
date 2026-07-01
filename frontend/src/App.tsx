@@ -24,6 +24,12 @@ import { ConfirmDialogProvider } from '@omit/react-confirm-dialog';
 import { Nosotros } from './paginas/landing/Nosotros';
 import { HomePublic } from './componentes/public/HomePublic'; 
 
+import { PartidoDetalle } from './paginas/PartidoDetalle';
+import { ResultadosBusqueda } from './paginas/ResultadosBusqueda';
+import { EquipoDetalle } from './paginas/EquipoDetalle';
+import { JugadorDetalle } from './paginas/JugadorDetalle';
+import { CampeonatoDetalle } from './paginas/CampeonatoDetalle';
+
 const App: React.FC = () => {
     const [tema, setTema] = useState<'light' | 'dark'>(
     () => (localStorage.getItem('theme') as 'light' | 'dark') || 'dark'
@@ -62,6 +68,11 @@ const App: React.FC = () => {
               <Route path="/publico" element={<VisualizacionPublica esVistaAnonima={true} />} />
               <Route path="/nosotros" element={<Nosotros />} />
               <Route path="/inicio" element={<HomePublic />} />
+              <Route path="/partidos/:id" element={<PartidoDetalle />} />
+              <Route path="/buscar" element={<ResultadosBusqueda />} />
+              <Route path="/equipos/:id" element={<EquipoDetalle />} /> 
+              <Route path="/jugadores/:id" element={<JugadorDetalle />} />
+              <Route path="/campeonatos/:id" element={<CampeonatoDetalle />} />
 
               {/* Rutas Privadas */}
               <Route path="/tablero" element={<Tablero />} />

@@ -24,6 +24,7 @@ export const PanelLateralCampeonatos: React.FC = () => {
   const [nuevoTipo, setNuevoTipo] = useState<'basico' | 'completo'>('basico');
   const [nuevoReglamento, setNuevoReglamento] = useState<File | null>(null);
   const [creando, setCreando] = useState(false);
+  const [nuevoEsPublico, setNuevoEsPublico] = useState(false);
 
   useEffect(() => {
     if (panelCampeonatosAbierto && usuario) {
@@ -34,6 +35,7 @@ export const PanelLateralCampeonatos: React.FC = () => {
       setNuevoReglamento(null);
       setErrorLocal(null);
       setBusqueda('');
+      setNuevoEsPublico(false);
     }
   }, [panelCampeonatosAbierto, usuario]);
 
@@ -74,6 +76,7 @@ export const PanelLateralCampeonatos: React.FC = () => {
       const formData = new FormData();
       formData.append('name', nuevoNombre.trim());
       formData.append('type', nuevoTipo);
+      formData.append('is_public', nuevoEsPublico ? '1' : '0');
       if (nuevoReglamento) {
         formData.append('rules_pdf', nuevoReglamento);
       }
@@ -222,6 +225,38 @@ export const PanelLateralCampeonatos: React.FC = () => {
                     onChange={(e) => setNuevoReglamento(e.target.files?.[0] || null)}
                     className="w-full text-xs text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-black file:bg-indigo-500/10 file:text-indigo-400 file:hover:bg-indigo-500/20 file:cursor-pointer outline-none bg-[#11131c] border border-slate-850 p-1.5 rounded-lg"
                   />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-350 block">Visibilidad</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className={`p-2 rounded-lg border text-center cursor-pointer transition-all flex flex-col gap-0.5 ${
+                      !nuevoEsPublico ? 'border-indigo-500 bg-indigo-500/5' : 'border-slate-850 bg-[#11131c] hover:bg-[#1a1d2a]'
+                    }`}>
+                      <input
+                        type="radio" name="lateral_visibilidad_camp" checked={!nuevoEsPublico}
+                        onChange={() => setNuevoEsPublico(false)} className="sr-only"
+                      />
+                      <span className="text-xs font-extrabold text-white uppercase flex items-center justify-center gap-1">
+                        <span className="material-symbols-outlined text-sm">lock</span>
+                        Privado
+                      </span>
+                      <span className="text-[10px] text-slate-500 leading-none">Solo tú lo ves</span>
+                    </label>
+                    <label className={`p-2 rounded-lg border text-center cursor-pointer transition-all flex flex-col gap-0.5 ${
+                      nuevoEsPublico ? 'border-indigo-500 bg-indigo-500/5' : 'border-slate-850 bg-[#11131c] hover:bg-[#1a1d2a]'
+                    }`}>
+                      <input
+                        type="radio" name="lateral_visibilidad_camp" checked={nuevoEsPublico}
+                        onChange={() => setNuevoEsPublico(true)} className="sr-only"
+                      />
+                      <span className="text-xs font-extrabold text-white uppercase flex items-center justify-center gap-1">
+                        <span className="material-symbols-outlined text-sm">public</span>
+                        Público
+                      </span>
+                      <span className="text-[10px] text-slate-500 leading-none">Visible sin login</span>
+                    </label>
+                  </div>
                 </div>
 
                 <button
