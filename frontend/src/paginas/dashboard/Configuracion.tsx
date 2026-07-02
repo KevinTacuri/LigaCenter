@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAutenticacion } from '../contexto/ContextoAutenticacion';
-import { useCampeonato } from '../contexto/ContextoCampeonato';
-import { serviciosCampeonatos } from '../servicios/api';
+import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
+import { useCampeonato } from '../../contexto/ContextoCampeonato';
+import { serviciosCampeonatos } from '../../servicios/api';
 import { sileo } from 'sileo';
-import { BarraLateral } from '../componentes/BarraLateral';
-import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
+import { BarraLateral } from '../../componentes/BarraLateral';
+import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
 
 export const Configuracion: React.FC = () => {
   const { usuario, cargando, tieneRol } = useAutenticacion();

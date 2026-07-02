@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAutenticacion } from '../contexto/ContextoAutenticacion';
-import { useCampeonato } from '../contexto/ContextoCampeonato';
-import { BarraLateral } from '../componentes/BarraLateral';
-import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
+import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
+import { useCampeonato } from '../../contexto/ContextoCampeonato';
+import { BarraLateral } from '../../componentes/BarraLateral';
+import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
 import { 
   serviciosParticipantes, 
   serviciosResultados, 
@@ -13,7 +13,7 @@ import {
   type Posicion,
   type Partido,
   type Sancion
-} from '../servicios/api';
+} from '../../servicios/api';
 import { sileo } from 'sileo';
 
 export const EstadisticasOrganizador: React.FC = () => {

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { LayoutPublico } from '../componentes/public/LayoutPublico';
+import { LayoutPublico } from '../../componentes/public/LayoutPublico';
 import type { 
   PublicMatch, 
   PublicStanding, 
   PublicChampionship, 
   PublicDiscipline 
-} from '../servicios/apiPublic';
-import { publicApi } from '../servicios/apiPublic';
-import { Inicio } from './landing/Inicio';
+} from '../../servicios/apiPublic';
+import { publicApi } from '../../servicios/apiPublic';
+import { Inicio } from '../landing/Inicio';
 
 interface Props {
   esVistaAnonima?: boolean;

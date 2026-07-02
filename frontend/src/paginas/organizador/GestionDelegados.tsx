@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAutenticacion } from '../contexto/ContextoAutenticacion';
-import { useCampeonato } from '../contexto/ContextoCampeonato';
-import { serviciosCampeonatos, serviciosParticipantes, serviciosUsuarios } from '../servicios/api';
-import type { ChampionshipUser, Usuario, Equipo } from '../servicios/api';
-import { BarraLateral } from '../componentes/BarraLateral';
-import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
+import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
+import { useCampeonato } from '../../contexto/ContextoCampeonato';
+import { serviciosCampeonatos, serviciosParticipantes, serviciosUsuarios } from '../../servicios/api';
+import type { ChampionshipUser, Usuario, Equipo } from '../../servicios/api';
+import { BarraLateral } from '../../componentes/BarraLateral';
+import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
 import { sileo } from 'sileo';
 
 interface FormularioAgregar {

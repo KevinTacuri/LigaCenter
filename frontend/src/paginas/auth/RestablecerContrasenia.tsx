@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { serviciosAutenticacion } from '../servicios/api';
+import { serviciosAutenticacion } from '../../servicios/api';
 
 // Importación de recursos
 import logoImg from '../assets/logo.svg';

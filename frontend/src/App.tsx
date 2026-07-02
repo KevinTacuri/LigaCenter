@@ -2,21 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProveedorAutenticacion } from './contexto/ContextoAutenticacion';
 import { ProveedorCampeonato } from './contexto/ContextoCampeonato';
-import { Login } from './paginas/Login';
-import { Registro } from './paginas/Registro';
-import { Tablero } from './paginas/Tablero';
-import { RecuperarContrasenia } from './paginas/RecuperarContrasenia';
-import { RestablecerContrasenia } from './paginas/RestablecerContrasenia';
-import { GestionUsuarios } from './paginas/GestionUsuarios';
-import { GestionDelegados } from './paginas/GestionDelegados';
-import { GestionParticipantes } from './paginas/GestionParticipantes';
-import { ProgramacionFixture } from './paginas/ProgramacionFixture';
-import { MesaControl } from './paginas/MesaControl';
-import { EstadisticasOrganizador } from './paginas/EstadisticasOrganizador';
-import { VisualizacionPublica } from './paginas/VisualizacionPublica';
-import { ConsolaSaaS } from './paginas/ConsolaSaaS';
-import { Configuracion } from './paginas/Configuracion';
-import { Perfil } from './paginas/Perfil';
+import { Login } from './paginas/auth/Login';
+import { Registro } from './paginas/auth/Registro';
+import { Tablero } from './paginas/dashboard/Tablero';
+import { RecuperarContrasenia } from './paginas/auth/RecuperarContrasenia';
+import { RestablecerContrasenia } from './paginas/auth/RestablecerContrasenia';
+import { GestionUsuarios } from './paginas/organizador/GestionUsuarios';
+import { GestionDelegados } from './paginas/organizador/GestionDelegados';
+import { GestionParticipantes } from './paginas/organizador/GestionParticipantes';
+import { ProgramacionFixture } from './paginas/organizador/ProgramacionFixture';
+import { MesaControl } from './paginas/organizador/MesaControl';
+import { EstadisticasOrganizador } from './paginas/organizador/EstadisticasOrganizador';
+import { VisualizacionPublica } from './paginas/public/VisualizacionPublica';
+import { ConsolaSaaS } from './paginas/dashboard/ConsolaSaaS';
+import { Configuracion } from './paginas/dashboard/Configuracion';
+import { Perfil } from './paginas/dashboard/Perfil';
 import { PanelLateralCampeonatos } from './componentes/PanelLateralCampeonatos';
 
 import { Toaster } from 'sileo';
@@ -24,11 +24,11 @@ import { ConfirmDialogProvider } from '@omit/react-confirm-dialog';
 import { Nosotros } from './paginas/landing/Nosotros';
 import { HomePublic } from './componentes/public/HomePublic'; 
 
-import { PartidoDetalle } from './paginas/PartidoDetalle';
-import { ResultadosBusqueda } from './paginas/ResultadosBusqueda';
-import { EquipoDetalle } from './paginas/EquipoDetalle';
-import { JugadorDetalle } from './paginas/JugadorDetalle';
-import { CampeonatoDetalle } from './paginas/CampeonatoDetalle';
+import { PartidoDetalle } from './paginas/public/PartidoDetalle';
+import { ResultadosBusqueda } from './paginas/public/ResultadosBusqueda';
+import { EquipoDetalle } from './paginas/public/EquipoDetalle';
+import { JugadorDetalle } from './paginas/public/JugadorDetalle';
+import { CampeonatoDetalle } from './paginas/public/CampeonatoDetalle';
 
 const App: React.FC = () => {
     const [tema, setTema] = useState<'light' | 'dark'>(

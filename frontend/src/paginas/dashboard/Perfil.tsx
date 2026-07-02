@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAutenticacion } from '../contexto/ContextoAutenticacion';
-import { serviciosUsuarios } from '../servicios/api';
-import { BarraLateral } from '../componentes/BarraLateral';
-import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
+import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
+import { serviciosUsuarios } from '../../servicios/api';
+import { BarraLateral } from '../../componentes/BarraLateral';
+import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
 
 type TabConfigType = 'perfil' | 'guia';
 

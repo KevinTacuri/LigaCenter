@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { LayoutPublico } from '../componentes/public/LayoutPublico';
-import { publicApi } from '../servicios/apiPublic';
-import type { PublicChampionship, ChampionshipStats } from '../servicios/apiPublic';
+import { LayoutPublico } from '../../componentes/public/LayoutPublico';
+import { publicApi } from '../../servicios/apiPublic';
+import type { PublicChampionship, ChampionshipStats } from '../../servicios/apiPublic';
 
 interface ChampionshipDetailData {
   championship: PublicChampionship;

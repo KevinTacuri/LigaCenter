@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { LayoutPublico } from '../componentes/public/LayoutPublico';
-import { publicApi } from '../servicios/apiPublic';
-import type { SearchResults } from '../servicios/apiPublic';
+import { LayoutPublico } from '../../componentes/public/LayoutPublico';
+import { publicApi } from '../../servicios/apiPublic';
+import type { SearchResults } from '../../servicios/apiPublic';
 
 export const ResultadosBusqueda: React.FC = () => {
   const [searchParams] = useSearchParams();

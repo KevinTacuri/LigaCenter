@@ -1,20 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAutenticacion } from '../contexto/ContextoAutenticacion';
-import { useCampeonato } from '../contexto/ContextoCampeonato';
-import { BarraLateral } from '../componentes/BarraLateral';
+import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
+import { useCampeonato } from '../../contexto/ContextoCampeonato';
+import { BarraLateral } from '../../componentes/BarraLateral';
 import { 
   serviciosParticipantes, 
   serviciosCampeonatos, 
   serviciosFixture,
   serviciosUsuarios,
   serviciosSuperAdmin
-} from '../servicios/api';
+} from '../../servicios/api';
 import { sileo } from 'sileo';
 
 // Importación de recursos
 import logoImg from '../assets/logo.svg';
-import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
+import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
 
 const PASOS_TORNEO = [
   { step: '1', title: 'Disciplinas y Categorías', desc: 'Registra deportes, define categorías y configura el formato de competencia.', icon: 'sports' },

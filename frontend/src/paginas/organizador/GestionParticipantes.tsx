@@ -1,18 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { sileo } from 'sileo';
-import { useAutenticacion } from '../contexto/ContextoAutenticacion';
-import { serviciosParticipantes, serviciosCampeonatos } from '../servicios/api';
-import { BarraLateral } from '../componentes/BarraLateral';
-import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
+import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
+import { serviciosParticipantes, serviciosCampeonatos } from '../../servicios/api';
+import { BarraLateral } from '../../componentes/BarraLateral';
+import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
 import { useConfirm } from '@omit/react-confirm-dialog';
 import type {
   Disciplina,
   Categoria,
   Equipo,
   Jugador
-} from '../servicios/api';
-import { useCampeonato } from '../contexto/ContextoCampeonato';
+} from '../../servicios/api';
+import { useCampeonato } from '../../contexto/ContextoCampeonato';
 
 // ─────────────────────────────────────────────
 // TIPOS

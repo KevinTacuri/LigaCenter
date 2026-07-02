@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAutenticacion } from '../contexto/ContextoAutenticacion';
+import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
 
 // Importación de recursos
 import logoImg from '../assets/logo.svg';

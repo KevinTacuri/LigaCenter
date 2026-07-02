@@ -1,21 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sileo } from 'sileo';
-import { useAutenticacion } from '../contexto/ContextoAutenticacion';
-import { BarraLateral } from '../componentes/BarraLateral';
-import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
+import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
+import { BarraLateral } from '../../componentes/BarraLateral';
+import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
 import { useConfirm } from '@omit/react-confirm-dialog';
 import {
   serviciosFixture,
   serviciosResultados,
   serviciosParticipantes
-} from '../servicios/api';
+} from '../../servicios/api';
 import type {
   Partido,
   ActaPartido,
   Incidencia,
   Jugador
-} from '../servicios/api';
+} from '../../servicios/api';
 
 interface IncidentTypeConfig {
   type: 'goal' | 'yellow_card' | 'red_card' | 'foul' | 'injury' | 'exclusion';

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { LayoutPublico } from '../componentes/public/LayoutPublico';
-import { publicApi } from '../servicios/apiPublic';
+import { LayoutPublico } from '../../componentes/public/LayoutPublico';
+import { publicApi } from '../../servicios/apiPublic';
 
 interface PlayerInfo {
   id: number;

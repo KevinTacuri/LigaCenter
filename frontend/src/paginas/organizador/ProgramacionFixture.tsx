@@ -1,22 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { sileo } from 'sileo';
-import { useAutenticacion } from '../contexto/ContextoAutenticacion';
-import { useCampeonato } from '../contexto/ContextoCampeonato';
-import { BarraLateral } from '../componentes/BarraLateral';
-import { CabeceraEstandar } from '../componentes/CabeceraEstandar';
+import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
+import { useCampeonato } from '../../contexto/ContextoCampeonato';
+import { BarraLateral } from '../../componentes/BarraLateral';
+import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
 import { useConfirm } from '@omit/react-confirm-dialog';
 import {
   serviciosFixture,
   serviciosParticipantes
-} from '../servicios/api';
+} from '../../servicios/api';
 import type {
   Escenario,
   Partido,
   Disciplina,
   Categoria,
   Jugador
-} from '../servicios/api';
+} from '../../servicios/api';
 
 type TabType = 'escenarios' | 'generar' | 'programar' | 'partidos';
 
