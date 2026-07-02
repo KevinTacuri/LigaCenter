@@ -13,7 +13,7 @@ import {
 import { sileo } from 'sileo';
 
 // Importación de recursos
-import logoImg from '../assets/logo.svg';
+import logoImg from '../../assets/logo.svg';
 import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
 
 const PASOS_TORNEO = [

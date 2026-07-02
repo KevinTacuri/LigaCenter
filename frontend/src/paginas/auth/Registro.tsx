@@ -3,8 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
 
 // Importación de recursos
-import logoImg from '../assets/logo.svg';
-import deportesFondo from '../assets/deportes_fondo.png';
+import logoImg from '../../assets/logo.svg';
+import deportesFondo from '../../assets/deportes_fondo.png';
 
 export const Registro: React.FC = () => {
   const [nombre, setNombre] = useState('');

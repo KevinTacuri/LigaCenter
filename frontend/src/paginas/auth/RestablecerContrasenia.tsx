@@ -3,8 +3,8 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { serviciosAutenticacion } from '../../servicios/api';
 
 // Importación de recursos
-import logoImg from '../assets/logo.svg';
-import deportesFondo from '../assets/deportes_fondo.png';
+import logoImg from '../../assets/logo.svg';
+import deportesFondo from '../../assets/deportes_fondo.png';
 
 export const RestablecerContrasenia: React.FC = () => {
   const [parametros] = useSearchParams();
