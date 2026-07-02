@@ -316,6 +316,10 @@ export interface Partido {
   visitor_team?: Equipo;
   report?: ActaPartido;
   incidences?: Incidencia[];
+  current_elapsed_time?: number;
+  current_period?: number;
+  timer_status?: 'stopped' | 'running' | 'paused' | 'finished';
+  timer_started_at?: string | null;
 }
 
 export interface ActaPartido {
@@ -538,6 +542,16 @@ export const serviciosFixture = {
   },
   reprogramarPartido: async (id: number, datos: { match_date: string; match_time: string; venue_id: number }): Promise<RespuestaApi<Partido>> => {
     const res = await clienteApi.put(`/matches/${id}/reschedule`, datos);
+    return res.data;
+  },
+
+  sincronizarTimer: async (id: number, datos: {
+  current_elapsed_time: number;
+  current_period: number;
+  timer_status: 'stopped' | 'running' | 'paused' | 'finished';
+  timer_started_at: string | null;
+  }): Promise<RespuestaApi<any>> => {
+    const res = await clienteApi.put(`/matches/${id}/sync-timer`, datos);
     return res.data;
   },
 

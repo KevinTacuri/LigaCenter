@@ -205,4 +205,32 @@ class GameMatchController extends Controller
 
         return $this->successResponse($match, 'Partido reprogramado exitosamente');
     }
+
+    public function syncTimer(Request $request, $id)
+    {
+        $request->validate([
+            'current_elapsed_time' => 'required|integer|min:0',
+            'current_period' => 'required|integer|min:0',
+            'timer_status' => 'required|in:stopped,running,paused,finished',
+            'timer_started_at' => 'nullable|date',
+        ]);
+
+        $match = GameMatch::findOrFail($id);
+        
+        $match->current_elapsed_time = $request->current_elapsed_time;
+        $match->current_period = $request->current_period;
+        $match->timer_status = $request->timer_status;
+        $match->timer_started_at = $request->timer_started_at;
+        $match->save();
+
+        return $this->successResponse(
+            [
+                'current_elapsed_time' => $match->current_elapsed_time,
+                'current_period' => $match->current_period,
+                'timer_status' => $match->timer_status,
+                'timer_started_at' => $match->timer_started_at,
+            ],
+            'Timer sincronizado correctamente'
+        );
+    }
 }

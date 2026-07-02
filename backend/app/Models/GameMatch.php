@@ -31,6 +31,10 @@ class GameMatch extends Model
         'championship_id',
         'home_score',
         'away_score',
+        'current_elapsed_time',
+        'current_period',
+        'timer_status',
+        'timer_started_at',
     ];
 
     protected $casts = [
@@ -38,6 +42,9 @@ class GameMatch extends Model
         'match_time' => 'string',
         'home_score' => 'integer',
         'away_score' => 'integer',
+        'current_elapsed_time' => 'integer',
+        'current_period' => 'integer',
+        'timer_started_at' => 'datetime',
     ];
 
     public function getLocalTeamIdAttribute()
@@ -103,5 +110,16 @@ class GameMatch extends Model
     public function group()
     {
         return $this->belongsTo(Group::class);
+    }
+
+    public function toJson($options = 0)
+    {
+        $data = $this->toArray();
+        $data['current_elapsed_time'] = $this->current_elapsed_time;
+        $data['current_period'] = $this->current_period;
+        $data['timer_status'] = $this->timer_status;
+        $data['timer_started_at'] = $this->timer_started_at;
+        
+        return json_encode($data, $options);
     }
 }

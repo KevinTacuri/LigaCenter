@@ -196,17 +196,6 @@ export const MesaControl: React.FC = () => {
   };
 
   const [periodoActualIdx, setPeriodoActualIdx] = useState(0);
-
-  const cambiarPeriodo = (nuevoIdx: number) => {
-    const normas = obtenerNormasDeporte();
-    if (nuevoIdx < 0 || nuevoIdx >= normas.periods.length) return;
-    setPeriodoActualIdx(nuevoIdx);
-    if (normas.hasTimer) {
-      setCronometroActivo(false);
-      setSegundosTranscurridos(0);
-    }
-  };
-
   const [partidos, setPartidos] = useState<Partido[]>([]);
   const [partidoSeleccionado, setPartidoSeleccionado] = useState<Partido | null>(null);
   const [acta, setActa] = useState<ActaPartido | null>(null);
@@ -226,7 +215,6 @@ export const MesaControl: React.FC = () => {
     { paso: '4', titulo: 'Cerrar y Bloquear Acta', desc: 'Al finalizar el encuentro, cierra el acta. Esto recalculará automáticamente la tabla de posiciones y aplicará sanciones.', icono: 'lock' },
   ];
 
-  // Campos de formulario del acta
   const [golesLocal, setGolesLocal] = useState('0');
   const [golesVisita, setGolesVisita] = useState('0');
   const [firmaArbitro, setFirmaArbitro] = useState('');
@@ -235,10 +223,11 @@ export const MesaControl: React.FC = () => {
   const [firmaDelegadoMesa, setFirmaDelegadoMesa] = useState('');
   const [observaciones, setObservaciones] = useState('');
 
-  // Estados de cronómetro y subestado
   const [segundosTranscurridos, setSegundosTranscurridos] = useState(0);
   const [cronometroActivo, setCronometroActivo] = useState(false);
   const [subEstadoPartido, setSubEstadoPartido] = useState<'programado' | 'jugando' | 'descanso' | 'suspendido' | 'finalizado'>('programado');
+  const [timerStartedAt, setTimerStartedAt] = useState<Date | null>(null);
+  const [baseElapsedTime, setBaseElapsedTime] = useState(0);
   
   const [modalIncidenciaRapida, setModalIncidenciaRapida] = useState<{
     mostrar: boolean;
@@ -250,6 +239,34 @@ export const MesaControl: React.FC = () => {
   } | null>(null);
 
   const [filtroJugadorModal, setFiltroJugadorModal] = useState('');
+
+  const sincronizarTimerConBackend = async (
+    elapsedTime: number,
+    period: number,
+    status: 'stopped' | 'running' | 'paused' | 'finished'
+  ) => {
+    if (!partidoSeleccionado) return;
+    
+    try {
+      let startedAt = null;
+      let baseTime = elapsedTime;
+      
+      if (status === 'running') {
+        startedAt = timerStartedAt ? timerStartedAt.toISOString() : new Date().toISOString();
+        // Guardamos el tiempo BASE (el que teniamos cuando se inicio el timer)
+        baseTime = baseElapsedTime;
+      }
+      
+      await serviciosFixture.sincronizarTimer(partidoSeleccionado.id, {
+        current_elapsed_time: baseTime,  // Guardamos el tiempo BASE, no el total
+        current_period: period,
+        timer_status: status,
+        timer_started_at: startedAt,
+      });
+    } catch (err) {
+      console.error('Error al sincronizar timer:', err);
+    }
+  };
 
   const abrirRegistroRapido = (
     teamId: number,
@@ -266,12 +283,11 @@ export const MesaControl: React.FC = () => {
       minutoActual = Math.min(Math.max(accMin + Math.floor(segundosTranscurridos / 60) + 1, 1), 130);
       segundoActual = segundosTranscurridos % 60;
     } else {
-      // Para voleibol, guardamos el número del Set (periodoActualIdx + 1) en el campo minute
       minutoActual = periodoActualIdx + 1;
       segundoActual = 0;
     }
     
-    setFiltroJugadorModal(''); // Resetear buscador
+    setFiltroJugadorModal('');
     setModalIncidenciaRapida({
       mostrar: true,
       teamId,
@@ -286,7 +302,6 @@ export const MesaControl: React.FC = () => {
     if (!partidoSeleccionado || !modalIncidenciaRapida) return;
 
     try {
-      // Si el tipo es 'exclusion' (exclusión de balonmano), en el backend se guarda como 'foul' con descripción
       const res = await serviciosResultados.registrarIncidencia({
         match_id: partidoSeleccionado.id,
         team_id: modalIncidenciaRapida.teamId,
@@ -307,7 +322,6 @@ export const MesaControl: React.FC = () => {
         mostrarMensaje('Incidencia en tiempo real registrada.');
         setIncidencias((prev) => [...prev, res.data]);
         
-        // Si es Gol, actualizamos el marcador en caliente para comodidad
         if (modalIncidenciaRapida.type === 'goal') {
           const localId = partidoSeleccionado.local_team_id || (partidoSeleccionado as any).home_team_id;
           if (modalIncidenciaRapida.teamId === localId) {
@@ -326,29 +340,24 @@ export const MesaControl: React.FC = () => {
 
   useEffect(() => {
     let intervalo: any = null;
-    if (cronometroActivo) {
+    
+    if (cronometroActivo && timerStartedAt) {
       intervalo = setInterval(() => {
-        setSegundosTranscurridos((prev) => {
-          const normas = obtenerNormasDeporte();
-          if (normas.hasTimer) {
-            const limit = (normas.periods[periodoActualIdx]?.durationMinutes || 0) * 60;
-            const esFutbol = partidoSeleccionado?.discipline?.name?.toLowerCase().includes('futbol') || 
-                              partidoSeleccionado?.discipline?.name?.toLowerCase().includes('fútbol');
-            // Si no es fútbol y el límite de tiempo del periodo se alcanza, detener el reloj
-            if (!esFutbol && limit > 0 && prev + 1 >= limit) {
-              setCronometroActivo(false);
-              mostrarMensaje(`Fin del ${normas.periods[periodoActualIdx]?.name || 'Periodo'}`);
-              return limit;
-            }
-          }
-          return prev + 1;
-        });
+        const now = new Date();
+        const diff = Math.floor((now.getTime() - timerStartedAt.getTime()) / 1000);
+        const totalTime = baseElapsedTime + diff;
+        setSegundosTranscurridos(totalTime);
+        
+        if (totalTime % 15 === 0) {
+          sincronizarTimerConBackend(totalTime, periodoActualIdx, 'running');
+        }
       }, 1000);
-    } else {
-      clearInterval(intervalo);
     }
-    return () => clearInterval(intervalo);
-  }, [cronometroActivo, periodoActualIdx, partidoSeleccionado]);
+    
+    return () => {
+      clearInterval(intervalo);
+    };
+  }, [cronometroActivo, timerStartedAt, baseElapsedTime]);
 
   const formatearTiempo = (totalSegundos: number) => {
     const mins = Math.floor(totalSegundos / 60);
@@ -372,14 +381,24 @@ export const MesaControl: React.FC = () => {
       const res = await serviciosFixture.actualizarPartido(partidoSeleccionado.id, {
         status: statusBackend
       });
+      
       if (res.success) {
         setSubEstadoPartido(nuevoSubEstado);
         setPartidoSeleccionado((prev) => prev ? { ...prev, status: statusBackend } : null);
         
         if (nuevoSubEstado === 'jugando') {
+          const now = new Date();
+          setTimerStartedAt(now);
+          setBaseElapsedTime(segundosTranscurridos);
           setCronometroActivo(true);
+          await sincronizarTimerConBackend(segundosTranscurridos, periodoActualIdx, 'running');
         } else {
           setCronometroActivo(false);
+          const currentTime = segundosTranscurridos;
+          setBaseElapsedTime(currentTime);
+          setTimerStartedAt(null);
+          const timerStatus = nuevoSubEstado === 'finalizado' ? 'finished' : 'paused';
+          await sincronizarTimerConBackend(currentTime, periodoActualIdx, timerStatus);
         }
         
         mostrarMensaje(`Estado del partido actualizado a: ${
@@ -393,8 +412,6 @@ export const MesaControl: React.FC = () => {
       mostrarMensaje('Error al actualizar el estado del partido.', true);
     }
   };
-
-
 
   useEffect(() => {
     const localId = partidoSeleccionado?.local_team_id || (partidoSeleccionado as any)?.home_team_id;
@@ -437,7 +454,6 @@ export const MesaControl: React.FC = () => {
     setActa(null);
     setIncidencias([]);
     
-    // Inicializar campos
     setGolesLocal('0');
     setGolesVisita('0');
     setFirmaArbitro('');
@@ -447,7 +463,6 @@ export const MesaControl: React.FC = () => {
     setObservaciones('');
 
     try {
-      // Cargar jugadores de ambos equipos para asociarlos a incidencias
       const resJugadores = await serviciosParticipantes.obtenerJugadores();
       if (resJugadores.success) {
         const localId = partido.local_team_id || (partido as any).home_team_id;
@@ -456,7 +471,6 @@ export const MesaControl: React.FC = () => {
         setJugadoresVisita(resJugadores.data.filter((j) => (j.team_id || j.team?.id) === visitorId));
       }
 
-      // Cargar acta si ya existe
       const resActa = await serviciosResultados.obtenerActaPorPartido(partido.id);
       if (resActa.success && resActa.data) {
         const a = resActa.data;
@@ -487,11 +501,8 @@ export const MesaControl: React.FC = () => {
         
         setObservaciones(a.observations || '');
       }
-    } catch (err) {
-      // Si da 404 es porque no existe acta, es normal.
-    }
+    } catch (err) { }
 
-    // Cargar incidencias del partido desde el servidor
     try {
       const resInc = await serviciosResultados.obtenerIncidenciasPorPartido(partido.id);
       if (resInc.success) {
@@ -505,19 +516,36 @@ export const MesaControl: React.FC = () => {
       }
     }
 
-    // Inicializar cronómetro y subestado según estado
-    if (partido.status === 'en_curso') {
-      setSubEstadoPartido('jugando');
-      setCronometroActivo(false);
-    } else if (partido.status === 'finalizado') {
-      setSubEstadoPartido('finalizado');
-      setCronometroActivo(false);
+    const timerData = (partido as any).current_elapsed_time || 0;
+    const currentPeriod = (partido as any).current_period || 0;
+    const timerStatus = (partido as any).timer_status || 'stopped';
+    const timerStartedAtValue = (partido as any).timer_started_at || null;
+
+    if (timerStatus === 'running' && timerStartedAtValue) {
+      const start = new Date(timerStartedAtValue);
+      const now = new Date();
+      const diffSeconds = Math.floor((now.getTime() - start.getTime()) / 1000);
+      const totalTime = timerData + diffSeconds;  // timerData es el tiempo BASE
+      setSegundosTranscurridos(totalTime);
+      setTimerStartedAt(start);
+      setBaseElapsedTime(timerData);  // El tiempo BASE
+      setCronometroActivo(true);
     } else {
-      setSubEstadoPartido('programado');
+      setSegundosTranscurridos(timerData);
+      setTimerStartedAt(null);
+      setBaseElapsedTime(timerData);
       setCronometroActivo(false);
     }
-    setSegundosTranscurridos(0);
-    setPeriodoActualIdx(0);
+
+    setPeriodoActualIdx(currentPeriod);
+    
+    if (partido.status === 'en_curso') {
+      setSubEstadoPartido(timerStatus === 'running' ? 'jugando' : 'descanso');
+    } else if (partido.status === 'finalizado') {
+      setSubEstadoPartido('finalizado');
+    } else {
+      setSubEstadoPartido('programado');
+    }
   };
 
   const mostrarMensaje = (msg: string, esError: boolean = false) => {
@@ -625,8 +653,6 @@ export const MesaControl: React.FC = () => {
     });
   };
 
-
-
   const eliminarIncidencia = async (id: number) => {
     const isConfirmed = await confirm({
       title: '¿Quitar incidencia?',
@@ -650,6 +676,23 @@ export const MesaControl: React.FC = () => {
     }
   };
 
+  const cambiarPeriodo = (nuevoIdx: number) => {
+    const normas = obtenerNormasDeporte();
+    if (nuevoIdx < 0 || nuevoIdx >= normas.periods.length) return;
+    
+    setPeriodoActualIdx(nuevoIdx);
+    
+    if (normas.hasTimer) {
+      setCronometroActivo(false);
+      setSegundosTranscurridos(0);
+      setTimerStartedAt(null);
+      setBaseElapsedTime(0);
+      if (partidoSeleccionado) {
+        sincronizarTimerConBackend(0, nuevoIdx, 'stopped');
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans relative overflow-hidden">
       <BarraLateral rol={usuario?.roles?.[0] || 'usuario_publico'} />
@@ -667,10 +710,8 @@ export const MesaControl: React.FC = () => {
         )}
       />
 
-      {/* Contenido Principal */}
       <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto space-y-6 px-4 md:px-8">
         
-        {/* Toasts */}
         {mensajeExito && (
           <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-450 text-sm flex items-center gap-2">
             <span className="material-symbols-outlined text-sm">check_circle</span>
@@ -686,7 +727,6 @@ export const MesaControl: React.FC = () => {
         )}
 
         {!partidoSeleccionado ? (
-          /* Vista 1: Listado completo de partidos (Full Screen Grid) */
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
@@ -715,10 +755,8 @@ export const MesaControl: React.FC = () => {
                         <span className={`px-2 py-0.5 rounded-md font-extrabold text-[8px] uppercase tracking-wider border ${
                           part.status === 'finalizado' 
                             ? 'bg-[#1c1f2e] text-slate-350 border-slate-800' 
-                            : part.status === 'jugando'
+                            : part.status === 'en_curso'
                             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 animate-pulse'
-                            : part.status === 'descanso'
-                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                             : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
                         }`}>{part.status}</span>
                       </div>
@@ -726,7 +764,7 @@ export const MesaControl: React.FC = () => {
                       <div className="space-y-3 my-2">
                         <div className="flex items-center justify-between">
                           <span className="font-extrabold text-slate-200 text-sm group-hover:text-primary transition-colors">{part.local_team?.name}</span>
-                          {part.status === 'finalizado' || part.status === 'jugando' || part.status === 'descanso' ? (
+                          {part.status === 'finalizado' || part.status === 'en_curso' ? (
                             <span className="font-black text-slate-200 text-xs bg-[#1c1f2e] px-2 py-1 rounded-md">
                               {localScore}
                             </span>
@@ -734,7 +772,7 @@ export const MesaControl: React.FC = () => {
                         </div>
                         <div className="flex items-center justify-between border-t border-slate-900 pt-2">
                           <span className="font-extrabold text-slate-200 text-sm group-hover:text-primary transition-colors">{part.visitor_team?.name}</span>
-                          {part.status === 'finalizado' || part.status === 'jugando' || part.status === 'descanso' ? (
+                          {part.status === 'finalizado' || part.status === 'en_curso' ? (
                             <span className="font-black text-slate-200 text-xs bg-[#1c1f2e] px-2 py-1 rounded-md">
                               {visitorScore}
                             </span>
@@ -764,9 +802,7 @@ export const MesaControl: React.FC = () => {
             )}
           </div>
         ) : (
-          /* Vista 2: Mesa de Control del Partido Seleccionado (Full Screen Grid con Form) */
           <form onSubmit={guardarProgresoActa} className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
-            {/* Columnas Izquierda: Marcador, Cronómetro, Incidencias Rápidas */}
             <div className="lg:col-span-2 space-y-6">
               <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-6 shadow-xs space-y-5">
                 <div className="border-b border-slate-900 pb-2 flex justify-between items-center">
@@ -776,7 +812,6 @@ export const MesaControl: React.FC = () => {
                   )}
                 </div>
 
-                {/* Cronómetro y Controles de Estado de Estadio */}
                 <div className="bg-slate-950 border border-slate-900 text-white p-6 rounded-2xl flex flex-col items-center justify-center gap-4 relative overflow-hidden shadow-md">
                   <div className="absolute top-3 left-3 flex items-center gap-1.5">
                     <span className={`w-2.5 h-2.5 rounded-full ${subEstadoPartido === 'jugando' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
@@ -787,7 +822,6 @@ export const MesaControl: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Selector de Periodo / Set */}
                   <div className="flex items-center gap-3 bg-slate-900 border border-slate-850 px-4 py-2 rounded-xl mt-4 z-10">
                     <button
                       type="button"
@@ -817,7 +851,6 @@ export const MesaControl: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* Reloj y Controles (Si tiene cronómetro) */}
                   {obtenerNormasDeporte().hasTimer ? (
                     <div className="flex flex-col items-center gap-2 z-10">
                       <div className="text-4xl sm:text-5xl font-mono font-black tracking-widest text-white">
@@ -838,7 +871,13 @@ export const MesaControl: React.FC = () => {
                           ) : (
                             <button
                               type="button"
-                              onClick={() => setCronometroActivo(false)}
+                              onClick={() => {
+                                setCronometroActivo(false);
+                                const currentTime = segundosTranscurridos;
+                                setBaseElapsedTime(currentTime);
+                                setTimerStartedAt(null);
+                                sincronizarTimerConBackend(currentTime, periodoActualIdx, 'paused');
+                              }}
                               className="flex items-center gap-1 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shadow-lg"
                             >
                               <span className="material-symbols-outlined text-sm">pause</span>
@@ -871,7 +910,6 @@ export const MesaControl: React.FC = () => {
                       )}
                     </div>
                   ) : (
-                    // Voleibol / Deportes sin Cronómetro por Tiempo
                     <div className="flex flex-col items-center gap-2 z-10 py-2">
                       <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Estado del Encuentro</span>
                       {!acta?.is_locked && (
@@ -909,7 +947,6 @@ export const MesaControl: React.FC = () => {
                   )}
                 </div>
 
-                {/* Scoreboard Digital */}
                 <div className="grid grid-cols-3 gap-4 bg-[#07080c] border border-slate-900 p-6 rounded-2xl items-center text-center">
                   <div className="font-extrabold text-sm text-slate-200 truncate">{partidoSeleccionado.local_team?.name}</div>
                   <div className="flex flex-col items-center justify-center gap-1">
@@ -937,7 +974,6 @@ export const MesaControl: React.FC = () => {
                   <div className="font-extrabold text-sm text-slate-200 truncate">{partidoSeleccionado.visitor_team?.name}</div>
                 </div>
 
-                {/* Opciones Especiales: Walkover (W.O.) */}
                 {!acta?.is_locked && (
                   <div className="bg-[#07080c] border border-slate-900 p-4 rounded-2xl space-y-3 animate-fadeIn">
                     <h4 className="text-[10px] font-bold text-amber-500 uppercase tracking-wider flex items-center gap-1.5 font-sans">
@@ -968,7 +1004,6 @@ export const MesaControl: React.FC = () => {
                   </div>
                 )}
 
-                {/* Botones de Incidencia Rápida (Eventos Rápidos de un Clic) */}
                 {!acta?.is_locked && (
                   <div className="p-4 bg-[#07080c] border border-slate-900 rounded-2xl space-y-3 shadow-xs">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-1.5 border-b border-slate-900 pb-2">
@@ -982,7 +1017,6 @@ export const MesaControl: React.FC = () => {
                       )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      {/* Eventos Equipo Local */}
                       <div className="space-y-2 border-r border-slate-900 pr-2">
                         <span className="text-[10px] font-bold text-slate-200 block text-center truncate">{partidoSeleccionado.local_team?.name}</span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
@@ -1000,7 +1034,6 @@ export const MesaControl: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Eventos Equipo Visitante */}
                       <div className="space-y-2 pl-2">
                         <span className="text-[10px] font-bold text-slate-200 block text-center truncate">{partidoSeleccionado.visitor_team?.name}</span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
@@ -1023,9 +1056,7 @@ export const MesaControl: React.FC = () => {
               </div>
             </div>
 
-            {/* Columna Derecha: Signatures, Observations, and Event History */}
             <div className="lg:col-span-1 space-y-6">
-              {/* Firmas y Observaciones */}
               <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-6 shadow-xs space-y-4">
                 <h3 className="font-extrabold text-sm uppercase tracking-wider text-white border-b border-slate-900 pb-2">Firmas y Cierre</h3>
                 
@@ -1090,7 +1121,6 @@ export const MesaControl: React.FC = () => {
                 )}
               </div>
 
-              {/* Registro de Incidencias / Historial */}
               <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-6 shadow-xs space-y-4">
                 <h2 className="font-extrabold text-sm uppercase tracking-wider text-white border-b border-slate-900 pb-2">Historial de Sucesos</h2>
                 
@@ -1134,7 +1164,6 @@ export const MesaControl: React.FC = () => {
 
       </main>
 
-      {/* Botón Flotante de Ayuda */}
       <button
         onClick={() => setMostrarAyuda(true)}
         className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-[#800f2f] hover:bg-[#a4133c] text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95 z-40 cursor-pointer"
@@ -1143,11 +1172,9 @@ export const MesaControl: React.FC = () => {
         <span className="material-symbols-outlined text-lg">question_mark</span>
       </button>
 
-      {/* Drawer de Ayuda */}
       {mostrarAyuda && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex justify-end animate-fadeIn">
           <div className="w-full max-w-sm bg-[#11131c] border-l border-slate-900 h-full shadow-2xl flex flex-col animate-slideLeft">
-            {/* Cabecera del Drawer */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-900 bg-[#07080c]">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#c9244b] text-base">help</span>
@@ -1161,7 +1188,6 @@ export const MesaControl: React.FC = () => {
               </button>
             </div>
 
-            {/* Contenido del Drawer */}
             <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-[#11131c]">
               <p className="text-[10px] text-slate-400 font-semibold leading-relaxed mb-4">
                 Sigue estos pasos para registrar y finalizar los partidos oficiales de tu torneo:
@@ -1182,9 +1208,8 @@ export const MesaControl: React.FC = () => {
               ))}
             </div>
 
-            {/* Pie del Drawer */}
             <div className="px-5 py-4 border-t border-slate-900 bg-[#07080c]/50">
-              <p className="text-[10px] text-[#c9244b] font-semibold mb-1">⚠️ Importante:</p>
+              <p className="text-[10px] text-[#c9244b] font-semibold mb-1">Importante:</p>
               <p className="text-[10px] text-slate-400 leading-normal font-medium">
                 Cerrar y bloquear el acta es un paso irreversible que calcula los puntos finales del standing y genera sanciones aplicables a los jugadores para las siguientes fechas.
               </p>
@@ -1193,11 +1218,9 @@ export const MesaControl: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Emergente de Incidencia Rápida (Selección de Jugador) */}
       {modalIncidenciaRapida && (
         <div className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-[#11131c] rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-[#222738] flex flex-col max-h-[85vh] animate-scaleIn">
-            {/* Cabecera */}
             <div className="px-5 py-4 border-b border-slate-900 flex items-center justify-between bg-[#07080c]">
               <div>
                 <h3 className="font-extrabold text-sm text-white uppercase tracking-wide flex items-center gap-1.5">
@@ -1227,9 +1250,7 @@ export const MesaControl: React.FC = () => {
               </button>
             </div>
 
-            {/* Contenido / Listado de Jugadores del Equipo */}
             <div className="p-5 overflow-y-auto space-y-4 flex-1 bg-[#11131c]">
-              {/* Ajustar Tiempo Capturado */}
               <div className="bg-[#07080c] border border-slate-900 p-3 rounded-xl">
                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-2 text-center">Ajustar Tiempo del Suceso</span>
                 <div className="flex gap-3 justify-center items-center">
@@ -1261,19 +1282,17 @@ export const MesaControl: React.FC = () => {
                 </div>
               </div>
 
-              {/* Filtro/Buscador Rápido */}
               <div className="space-y-1">
                 <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Buscar Jugador</label>
                 <input
                   type="text"
-                  placeholder="🔍 Ingrese nombre o número..."
+                  placeholder="Ingrese nombre o numero..."
                   value={filtroJugadorModal}
                   onChange={(e) => setFiltroJugadorModal(e.target.value)}
                   className="w-full text-xs border border-slate-800 rounded-xl p-2.5 bg-[#171a26] text-white focus:ring-1 focus:ring-[#800f2f] focus:outline-hidden"
                 />
               </div>
 
-              {/* Lista */}
               <div className="space-y-1.5">
                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block pb-1">Seleccionar:</span>
                 <div className="space-y-1 max-h-[200px] overflow-y-auto pr-1">
@@ -1329,7 +1348,6 @@ export const MesaControl: React.FC = () => {
               </div>
             </div>
 
-            {/* Acciones */}
             <div className="px-5 py-3.5 border-t border-slate-900 bg-[#07080c] flex justify-end gap-2">
               <button
                 type="button"
