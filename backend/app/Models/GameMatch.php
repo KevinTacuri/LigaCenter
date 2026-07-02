@@ -14,6 +14,7 @@ class GameMatch extends Model
     protected $appends = [
         'local_team_id',
         'visitor_team_id',
+        'discipline', // ← AGREGAR ESTO
     ];
 
     protected $fillable = [
@@ -65,6 +66,18 @@ class GameMatch extends Model
     public function setVisitorTeamIdAttribute($value)
     {
         $this->attributes['away_team_id'] = $value;
+    }
+
+    // ACCESOR PARA DISCIPLINE
+    public function getDisciplineAttribute()
+    {
+        // Primero intentar con la relacion directa
+        if ($this->relationLoaded('discipline') && $this->discipline) {
+            return $this->discipline;
+        }
+        
+        // Si no, obtener a traves de la categoria
+        return $this->category?->championshipDiscipline?->discipline;
     }
 
     public function venue()

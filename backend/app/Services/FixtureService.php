@@ -95,6 +95,10 @@ class FixtureService
             throw new \Exception('Se necesitan al menos 2 equipos');
         }
 
+        // Obtener el discipline_id de la categoria
+        $category = Category::find($categoryId);
+        $disciplineId = $category?->championshipDiscipline?->discipline_id;
+
         $teamIds = $teams->pluck('id')->toArray();
         $rounds = [];
 
@@ -146,6 +150,7 @@ class FixtureService
                 $matchData = [
                     'championship_id' => $championshipId,
                     'category_id' => $categoryId,
+                    'discipline_id' => $disciplineId,  // ← AGREGAR ESTA LINEA
                     'home_team_id' => $match['local'],
                     'away_team_id' => $match['visitor'],
                     'venue_id' => $venueCount > 0 ? $venues[$venueIndex % $venueCount] : null,

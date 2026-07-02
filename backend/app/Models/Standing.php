@@ -42,15 +42,13 @@ class Standing extends Model
         return $this->belongsTo(Championship::class);
     }
 
-    // Accesor para obtener la disciplina a través de la categoría
-    public function getDisciplineAttribute()
-    {
-        return $this->category?->championshipDiscipline?->discipline;
-    }
-
-    // Accesor para obtener el ID de la disciplina
     public function getDisciplineIdAttribute()
     {
         return $this->category?->championshipDiscipline?->discipline_id;
+    }
+
+    public function getDisciplineAttribute()
+    {
+        return $this->category?->championshipDiscipline?->discipline;
     }
 }

@@ -50,7 +50,9 @@ class Team extends Model
 
     public function standing()
     {
-        return $this->hasOne(Standing::class)->where('category_id', $this->category_id);
+        return $this->hasOne(Standing::class, 'team_id')
+            ->where('category_id', $this->category_id)
+            ->where('championship_id', $this->championship_id);
     }
 
     public function getChampionshipAttribute()

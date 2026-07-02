@@ -6,6 +6,7 @@ use App\Models\Team;
 use App\Models\GameMatch;
 use App\Models\Group;
 use App\Models\GroupTeam;
+use App\Models\Category;
 use Carbon\Carbon;
 
 class GroupStageService
@@ -21,7 +22,6 @@ class GroupStageService
             ->where('phase', 'grupos')
             ->delete();
 
-
         $teams = Team::where('championship_id', $championshipId)
             ->where('category_id', $categoryId)
             ->where('registration_status', 'aprobado')
@@ -30,6 +30,10 @@ class GroupStageService
         if ($teams->count() < 2) {
             throw new \Exception('Se necesitan al menos 2 equipos');
         }
+
+        // Obtener discipline_id de la categoria
+        $category = Category::find($categoryId);
+        $disciplineId = $category?->championshipDiscipline?->discipline_id;
 
         $numGroups = $settings['num_groups'] ?? 4;
         $advancePerGroup = $settings['advance_per_group'] ?? 2;
@@ -58,7 +62,7 @@ class GroupStageService
             }
 
             $groups[] = $group;
-            $this->generateGroupMatches($group, $categoryId, $championshipId, $startDate, $venueIds);
+            $this->generateGroupMatches($group, $categoryId, $championshipId, $startDate, $venueIds, $disciplineId);
         }
 
         return [
@@ -68,7 +72,7 @@ class GroupStageService
         ];
     }
 
-    private function generateGroupMatches($group, $categoryId, $championshipId, $startDate, $venueIds)
+    private function generateGroupMatches($group, $categoryId, $championshipId, $startDate, $venueIds, $disciplineId)
     {
         $teamIds = $group->teams->pluck('id')->toArray();
 
@@ -98,6 +102,7 @@ class GroupStageService
                 'championship_id' => $championshipId,
                 'category_id' => $categoryId,
                 'group_id' => $group->id,
+                'discipline_id' => $disciplineId,
                 'home_team_id' => $match['home'],
                 'away_team_id' => $match['away'],
                 'venue_id' => $venueIds[$venueIndex % $venueCount],

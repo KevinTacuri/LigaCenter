@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Standing;
+use App\Models\Team;
 use App\Traits\ApiResponse;
 use OpenApi\Attributes as OA;
 
@@ -44,25 +45,18 @@ class StandingController extends Controller
         description: 'Tabla de posiciones obtenida exitosamente'
     )]
     #[OA\Security(name: 'sanctum')]
-
     public function index(Request $request)
     {
-        $query = Standing::with([
-            'team',
-            'category.championshipDiscipline.discipline'  // ← Cargar disciplina a través de categoría
-        ]);
+        $query = Standing::with(['team', 'category.championshipDiscipline.discipline']);
 
-        // Filtrar por campeonato
         if ($request->has('championship_id')) {
             $query->where('championship_id', $request->championship_id);
         }
 
-        // Filtrar por categoría
         if ($request->has('category_id')) {
             $query->where('category_id', $request->category_id);
         }
 
-        // Filtrar por disciplina (a través de la relación con categoría)
         if ($request->has('discipline_id')) {
             $query->whereHas('category.championshipDiscipline', function ($q) use ($request) {
                 $q->where('discipline_id', $request->discipline_id);
@@ -78,6 +72,73 @@ class StandingController extends Controller
         return $this->successResponse(
             $standings,
             'Tabla de posiciones obtenida exitosamente'
+        );
+    }
+
+    #[OA\Get(
+        path: '/api/standings/complete',
+        operationId: 'getCompleteStandings',
+        summary: 'Tabla de posiciones completa con todos los equipos de la categoria',
+        tags: ['Standings']
+    )]
+    public function getCompleteStandings(Request $request)
+    {
+        $championshipId = $request->input('championship_id');
+        $categoryId = $request->input('category_id');
+        $disciplineId = $request->input('discipline_id');
+
+        if (!$championshipId || !$categoryId) {
+            return $this->errorResponse('Se requiere championship_id y category_id', 400);
+        }
+
+        $teams = Team::where('category_id', $categoryId)
+            ->where('championship_id', $championshipId)
+            ->get();
+
+        $standings = Standing::where('championship_id', $championshipId)
+            ->where('category_id', $categoryId)
+            ->get()
+            ->keyBy('team_id');
+
+        $result = [];
+        foreach ($teams as $team) {
+            if ($standings->has($team->id)) {
+                $standing = $standings->get($team->id);
+                $standing->team = $team;
+                $result[] = $standing;
+            } else {
+                $result[] = (object) [
+                    'id' => null,
+                    'team_id' => $team->id,
+                    'team' => $team,
+                    'category_id' => $categoryId,
+                    'championship_id' => $championshipId,
+                    'matches_played' => 0,
+                    'wins' => 0,
+                    'draws' => 0,
+                    'losses' => 0,
+                    'goals_for' => 0,
+                    'goals_against' => 0,
+                    'goal_difference' => 0,
+                    'points' => 0,
+                    'last_updated' => null,
+                ];
+            }
+        }
+
+        usort($result, function ($a, $b) {
+            if ($a->points != $b->points) {
+                return $b->points - $a->points;
+            }
+            if ($a->goal_difference != $b->goal_difference) {
+                return $b->goal_difference - $a->goal_difference;
+            }
+            return $b->goals_for - $a->goals_for;
+        });
+
+        return $this->successResponse(
+            $result,
+            'Tabla de posiciones completa obtenida exitosamente'
         );
     }
 
@@ -100,8 +161,7 @@ class StandingController extends Controller
     {
         $standing = Standing::with([
             'team',
-            'discipline',
-            'category'
+            'category.championshipDiscipline.discipline'
         ])->find($id);
 
         if (!$standing) {
@@ -131,13 +191,6 @@ class StandingController extends Controller
         schema: new OA\Schema(type: 'integer')
     )]
     #[OA\Parameter(
-        name: 'discipline_id',
-        description: 'ID de la disciplina (opcional)',
-        in: 'query',
-        required: false,
-        schema: new OA\Schema(type: 'integer')
-    )]
-    #[OA\Parameter(
         name: 'category_id',
         description: 'ID de la categoría (opcional)',
         in: 'query',
@@ -157,16 +210,11 @@ class StandingController extends Controller
     {
         $query = Standing::with([
             'team',
-            'discipline',
-            'category'
+            'category.championshipDiscipline.discipline'
         ])->where('team_id', $teamId);
 
         if ($request->has('championship_id')) {
             $query->where('championship_id', $request->championship_id);
-        }
-
-        if ($request->has('discipline_id')) {
-            $query->where('discipline_id', $request->discipline_id);
         }
 
         if ($request->has('category_id')) {

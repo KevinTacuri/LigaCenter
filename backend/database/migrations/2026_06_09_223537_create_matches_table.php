@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignId('championship_id')->constrained()->onDelete('cascade');
             $table->foreignId('category_id')->constrained()->onDelete('cascade');
             $table->foreignId('venue_id')->constrained()->onDelete('cascade');
+            $table->foreignId('discipline_id')->nullable()->constrained('disciplines')->onDelete('set null');
             $table->foreignId('home_team_id')->constrained('teams')->onDelete('cascade');
             $table->foreignId('away_team_id')->constrained('teams')->onDelete('cascade');
             $table->date('match_date');

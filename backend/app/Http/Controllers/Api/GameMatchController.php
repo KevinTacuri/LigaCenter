@@ -59,9 +59,10 @@ class GameMatchController extends Controller
         response: 200,
         description: 'Partidos obtenidos exitosamente'
     )]
+    
     public function index(Request $request)
     {
-        $query = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'discipline', 'category', 'report']);
+        $query = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'category', 'report']);
 
         if ($request->has('championship_id')) {
             $query->where('championship_id', $request->championship_id);

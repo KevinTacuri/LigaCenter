@@ -35,6 +35,8 @@ export const EstadisticasOrganizador: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('todos');
 
+  const [totalEquipos, setTotalEquipos] = useState(0);
+
   const [stats, setStats] = useState({
     totalTeams: 0,
     totalMatches: 0,
@@ -54,15 +56,35 @@ export const EstadisticasOrganizador: React.FC = () => {
     }
   }, [campeonatoActivo, selectedDiscipline, selectedCategory]);
 
-  // Función para obtener el score local de un partido
   const getLocalScore = (match: Partido): number => {
     return match.report?.local_score ?? 0;
   };
 
-  // Función para obtener el score visitante de un partido
   const getVisitorScore = (match: Partido): number => {
     return match.report?.visitor_score ?? 0;
   };
+
+  const calculateStats = () => {
+    const totalMatches = partidos.length;
+    let totalGoals = 0;
+    
+    partidos.forEach(match => {
+      if (match.status === 'finalizado') {
+        totalGoals += getLocalScore(match) + getVisitorScore(match);
+      }
+    });
+    
+    setStats({
+      totalTeams: totalEquipos,
+      totalMatches,
+      totalGoals,
+      avgGoals: totalMatches > 0 ? Number((totalGoals / totalMatches).toFixed(2)) : 0
+    });
+  };
+
+  useEffect(() => {
+    calculateStats();
+  }, [posiciones, partidos, totalEquipos]);
 
   const loadData = async () => {
     setLoading(true);
@@ -70,7 +92,6 @@ export const EstadisticasOrganizador: React.FC = () => {
     try {
       const champId = campeonatoActivo!.id;
 
-      // 1. Obtener disciplinas del campeonato
       const discRes = await serviciosParticipantes.obtenerDisciplinasCampeonato(champId);
       if (discRes.success) {
         const discData = discRes.data || [];
@@ -82,25 +103,37 @@ export const EstadisticasOrganizador: React.FC = () => {
         }
       }
 
-      // 2. Obtener categorías del campeonato
       const catRes = await serviciosParticipantes.obtenerCategoriasPorCampeonato(champId);
       if (catRes.success) {
-        setCategorias(catRes.data || []);
+        const categoriasData = catRes.data || [];
+        setCategorias(categoriasData);
+        if (!selectedCategory && categoriasData.length > 0) {
+          setSelectedCategory(categoriasData[0].id);
+        }
       }
 
-      // 3. Obtener posiciones
-      const posRes = await serviciosResultados.obtenerPosiciones(
-        selectedDiscipline || undefined,
-        selectedCategory || undefined
-      );
-      if (posRes.success) {
-        setPosiciones(posRes.data || []);
+      let posicionesData: Posicion[] = [];
+      if (selectedCategory && campeonatoActivo) {
+        const posRes = await serviciosResultados.obtenerPosicionesCompletas({
+          championship_id: champId,
+          category_id: selectedCategory,
+          discipline_id: selectedDiscipline || undefined
+        });
+        if (posRes.success) {
+          posicionesData = posRes.data || [];
+          setPosiciones(posicionesData);
+          if (totalEquipos === 0 && posicionesData.length > 0) {
+            setTotalEquipos(posicionesData.length);
+          }
+        }
+      } else {
+        setPosiciones([]);
       }
 
-      // 4. Obtener partidos
       const matchRes = await serviciosFixture.obtenerPartidos();
+      let matches: Partido[] = [];
       if (matchRes.success) {
-        let matches = matchRes.data || [];
+        matches = matchRes.data || [];
         if (selectedDiscipline) {
           matches = matches.filter((m: any) => m.discipline_id === selectedDiscipline);
         }
@@ -110,13 +143,11 @@ export const EstadisticasOrganizador: React.FC = () => {
         setPartidos(matches);
       }
 
-      // 5. Obtener sanciones
       const sanRes = await serviciosResultados.obtenerSanciones();
       if (sanRes.success) {
         setSanciones(sanRes.data || []);
       }
 
-      // 6. Obtener top goleadores
       if (selectedDiscipline) {
         try {
           const statsTypesRes = await serviciosResultados.obtenerEstadisticasPorDisciplina(selectedDiscipline);
@@ -157,12 +188,10 @@ export const EstadisticasOrganizador: React.FC = () => {
           }
         } catch (err) {
           console.error('Error obteniendo goleadores:', err);
-          const goals = calculateTopScorersFromMatches(partidos);
+          const goals = calculateTopScorersFromMatches(matches);
           setTopScorers(goals);
         }
       }
-
-      calculateStats();
 
     } catch (err) {
       console.error('Error cargando estadísticas:', err);
@@ -211,25 +240,6 @@ export const EstadisticasOrganizador: React.FC = () => {
       .slice(0, 10);
   };
 
-  const calculateStats = () => {
-    const totalTeams = posiciones.length;
-    const totalMatches = partidos.length;
-    let totalGoals = 0;
-    
-    partidos.forEach(match => {
-      if (match.status === 'finalizado') {
-        totalGoals += getLocalScore(match) + getVisitorScore(match);
-      }
-    });
-    
-    setStats({
-      totalTeams,
-      totalMatches,
-      totalGoals,
-      avgGoals: totalMatches > 0 ? Number((totalGoals / totalMatches).toFixed(2)) : 0
-    });
-  };
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'en_curso':
@@ -266,7 +276,6 @@ export const EstadisticasOrganizador: React.FC = () => {
 
         <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto space-y-6 px-4 md:px-8">
 
-          {/* Filtros */}
           <div className="bg-[#11131c] border border-slate-900 rounded-xl p-5 space-y-4">
             <div className="flex flex-wrap items-center gap-4">
               {disciplinas.length > 0 && (
@@ -274,7 +283,12 @@ export const EstadisticasOrganizador: React.FC = () => {
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Disciplina</label>
                   <select
                     value={selectedDiscipline || ''}
-                    onChange={(e) => setSelectedDiscipline(e.target.value ? Number(e.target.value) : null)}
+                    onChange={(e) => {
+                      const newDiscipline = e.target.value ? Number(e.target.value) : null;
+                      setSelectedDiscipline(newDiscipline);
+                      setSelectedCategory(null);
+                      setTotalEquipos(0);
+                    }}
                     className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
                   >
                     {disciplinas.map(d => (
@@ -289,10 +303,14 @@ export const EstadisticasOrganizador: React.FC = () => {
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Categoría</label>
                   <select
                     value={selectedCategory || ''}
-                    onChange={(e) => setSelectedCategory(e.target.value ? Number(e.target.value) : null)}
+                    onChange={(e) => {
+                      const newCategory = e.target.value ? Number(e.target.value) : null;
+                      setSelectedCategory(newCategory);
+                      setTotalEquipos(0);
+                    }}
                     className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
                   >
-                    <option value="">Todas</option>
+                    <option value="">Seleccionar categoría</option>
                     {categorias
                       .filter(c => !selectedDiscipline || c.championship_discipline?.discipline_id === selectedDiscipline)
                       .map(c => (
@@ -315,6 +333,17 @@ export const EstadisticasOrganizador: React.FC = () => {
                   <option value="finalizado">Finalizados</option>
                 </select>
               </div>
+
+              <div className="ml-auto">
+                <button
+                  onClick={() => loadData()}
+                  disabled={loading}
+                  className="text-xs bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 px-3 py-2 rounded-lg transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="material-symbols-outlined text-sm">refresh</span>
+                  {loading ? 'Cargando...' : 'Recargar'}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -325,7 +354,6 @@ export const EstadisticasOrganizador: React.FC = () => {
             </div>
           )}
 
-          {/* Estadísticas Rápidas */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-[#11131c] border border-slate-900 rounded-xl p-5 text-center">
               <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Equipos</p>
@@ -345,63 +373,80 @@ export const EstadisticasOrganizador: React.FC = () => {
             </div>
           </div>
 
-          {/* Tabla de Posiciones y Goleadores */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             <div className="lg:col-span-2 bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-slate-900">
+              <div className="px-5 py-3 border-b border-slate-900 flex justify-between items-center">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                   <span className="material-symbols-outlined text-indigo-400 text-base">leaderboard</span>
                   Tabla de Posiciones
                 </h3>
+                <button
+                  onClick={() => loadData()}
+                  disabled={loading}
+                  className="text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="material-symbols-outlined text-sm">refresh</span>
+                  {loading ? 'Cargando...' : 'Recargar'}
+                </button>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-[#171a26] text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                      <th className="p-3 pl-5 text-center w-10">Pos</th>
-                      <th className="p-3">Equipo</th>
-                      <th className="p-3 text-center">PJ</th>
-                      <th className="p-3 text-center">G</th>
-                      <th className="p-3 text-center">E</th>
-                      <th className="p-3 text-center">P</th>
-                      <th className="p-3 text-center">GF</th>
-                      <th className="p-3 text-center">GC</th>
-                      <th className="p-3 text-center">DG</th>
-                      <th className="p-3 pr-5 text-center font-bold">Pts</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {posiciones.length === 0 ? (
-                      <tr>
-                        <td colSpan={10} className="p-8 text-center text-slate-500 text-sm">
-                          No hay posiciones disponibles para los filtros seleccionados
-                        </td>
+                {!selectedCategory ? (
+                  <div className="p-8 text-center text-slate-400">
+                    <span className="material-symbols-outlined text-4xl block mb-2 opacity-50">info</span>
+                    <p className="text-sm font-medium">Selecciona una categoría para ver la tabla de posiciones</p>
+                    <p className="text-xs text-slate-500 mt-1">Las categorías disponibles aparecen en el filtro superior</p>
+                  </div>
+                ) : posiciones.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500 text-sm">
+                    No hay posiciones disponibles para la categoría seleccionada
+                  </div>
+                ) : (
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-[#171a26] text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                        <th className="p-3 pl-5 text-center w-10">Pos</th>
+                        <th className="p-3">Equipo</th>
+                        <th className="p-3 text-center">PJ</th>
+                        <th className="p-3 text-center">G</th>
+                        <th className="p-3 text-center">E</th>
+                        <th className="p-3 text-center">P</th>
+                        <th className="p-3 text-center">GF</th>
+                        <th className="p-3 text-center">GC</th>
+                        <th className="p-3 text-center">DG</th>
+                        <th className="p-3 pr-5 text-center font-bold">Pts</th>
                       </tr>
-                    ) : (
-                      posiciones.map((pos, index) => (
-                        <tr key={pos.id} className="hover:bg-[#171a26]/40 transition-colors">
-                          <td className="p-3 pl-5 text-center font-bold text-slate-400">{index + 1}</td>
-                          <td className="p-3 font-bold text-white text-sm">{pos.team?.name || '—'}</td>
-                          <td className="p-3 text-center text-slate-300">{pos.matches_played}</td>
-                          <td className="p-3 text-center text-emerald-400">{pos.matches_won}</td>
-                          <td className="p-3 text-center text-slate-400">{pos.matches_drawn}</td>
-                          <td className="p-3 text-center text-rose-400">{pos.matches_lost}</td>
-                          <td className="p-3 text-center text-slate-300">{pos.goals_for}</td>
-                          <td className="p-3 text-center text-slate-300">{pos.goals_against}</td>
-                          <td className="p-3 text-center font-bold text-white">
-                            {pos.goal_difference > 0 ? `+${pos.goal_difference}` : pos.goal_difference}
-                          </td>
-                          <td className="p-3 pr-5 text-center font-extrabold text-indigo-400 text-base">{pos.total_points}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                      {posiciones.map((pos, index) => {
+                        const wins = pos.wins ?? 0;
+                        const draws = pos.draws ?? 0;
+                        const losses = pos.losses ?? 0;
+                        const points = pos.points ?? 0;
+                        
+                        return (
+                          <tr key={pos.team_id || `pos-${index}`} className="hover:bg-[#171a26]/40 transition-colors">
+                            <td className="p-3 pl-5 text-center font-bold text-slate-400">{index + 1}</td>
+                            <td className="p-3 font-bold text-white text-sm">{pos.team?.name || '—'}</td>
+                            <td className="p-3 text-center text-slate-300">{pos.matches_played || 0}</td>
+                            <td className="p-3 text-center text-emerald-400">{wins}</td>
+                            <td className="p-3 text-center text-slate-400">{draws}</td>
+                            <td className="p-3 text-center text-rose-400">{losses}</td>
+                            <td className="p-3 text-center text-slate-300">{pos.goals_for || 0}</td>
+                            <td className="p-3 text-center text-slate-300">{pos.goals_against || 0}</td>
+                            <td className="p-3 text-center font-bold text-white">
+                              {pos.goal_difference > 0 ? `+${pos.goal_difference}` : pos.goal_difference || 0}
+                            </td>
+                            <td className="p-3 pr-5 text-center font-extrabold text-indigo-400 text-base">{points}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
 
-            {/* Goleadores */}
             <div className="bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden">
               <div className="px-5 py-3 border-b border-slate-900">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -440,7 +485,6 @@ export const EstadisticasOrganizador: React.FC = () => {
             </div>
           </div>
 
-          {/* Partidos */}
           <div className="bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden">
             <div className="px-5 py-3 border-b border-slate-900 flex justify-between items-center">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -448,48 +492,58 @@ export const EstadisticasOrganizador: React.FC = () => {
                 Partidos
               </h3>
               <span className="text-[10px] text-slate-400">
-                {partidos.filter(p => filterStatus === 'todos' || p.status === filterStatus).length} encuentros
+                {partidos.length} encuentros totales
+                {filterStatus !== 'todos' && (
+                  <span className="ml-1">
+                    ({partidos.filter(p => p.status === filterStatus).length} con filtro)
+                  </span>
+                )}
               </span>
             </div>
             <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-              {partidos
-                .filter(p => filterStatus === 'todos' || p.status === filterStatus)
-                .slice(0, 10)
-                .map(match => (
-                  <div key={match.id} className="bg-[#171a26]/40 border border-slate-800 rounded-lg p-3 hover:border-indigo-500/30 transition-all">
-                    <div className="flex justify-between items-center text-[10px] text-slate-400 mb-2">
-                      <span>{match.discipline?.name || '—'}</span>
-                      <span>{match.category?.name || '—'}</span>
-                      {getStatusBadge(match.status)}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="font-bold text-sm text-white truncate">{match.local_team?.name || 'Local'}</p>
-                      </div>
-                      <div className="flex items-center gap-2 px-3">
-                        <span className="font-bold text-base text-indigo-400">{getLocalScore(match)}</span>
-                        <span className="text-slate-500 text-xs font-bold">VS</span>
-                        <span className="font-bold text-base text-indigo-400">{getVisitorScore(match)}</span>
-                      </div>
-                      <div className="flex-1 text-right">
-                        <p className="font-bold text-sm text-white truncate">{match.visitor_team?.name || 'Visitante'}</p>
-                      </div>
-                    </div>
-                    <div className="mt-2 text-[9px] text-slate-500 flex justify-between">
-                      <span>{match.match_date ? new Date(match.match_date).toLocaleDateString() : '—'}</span>
-                      <span>{match.venue?.name || '—'}</span>
-                    </div>
-                  </div>
-                ))}
-              {partidos.filter(p => filterStatus === 'todos' || p.status === filterStatus).length === 0 && (
+              {partidos.length === 0 ? (
                 <div className="col-span-2 p-6 text-center text-slate-500 text-sm">
-                  No hay partidos para los filtros seleccionados
+                  No hay partidos disponibles para los filtros seleccionados
+                </div>
+              ) : (
+                partidos
+                  .filter(p => filterStatus === 'todos' || p.status === filterStatus)
+                  .slice(0, 10)
+                  .map(match => (
+                    <div key={match.id} className="bg-[#171a26]/40 border border-slate-800 rounded-lg p-3 hover:border-indigo-500/30 transition-all">
+                      <div className="flex justify-between items-center text-[10px] text-slate-400 mb-2">
+                        <span>{match.discipline?.name || '—'}</span>
+                        <span>{match.category?.name || '—'}</span>
+                        {getStatusBadge(match.status)}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-bold text-sm text-white truncate">{match.local_team?.name || 'Local'}</p>
+                        </div>
+                        <div className="flex items-center gap-2 px-3">
+                          <span className="font-bold text-base text-indigo-400">{getLocalScore(match)}</span>
+                          <span className="text-slate-500 text-xs font-bold">VS</span>
+                          <span className="font-bold text-base text-indigo-400">{getVisitorScore(match)}</span>
+                        </div>
+                        <div className="flex-1 text-right">
+                          <p className="font-bold text-sm text-white truncate">{match.visitor_team?.name || 'Visitante'}</p>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-[9px] text-slate-500 flex justify-between">
+                        <span>{match.match_date ? new Date(match.match_date).toLocaleDateString() : '—'}</span>
+                        <span>{match.venue?.name || '—'}</span>
+                      </div>
+                    </div>
+                  ))
+              )}
+              {partidos.filter(p => filterStatus === 'todos' || p.status === filterStatus).length === 0 && partidos.length > 0 && (
+                <div className="col-span-2 p-4 text-center text-slate-500 text-sm">
+                  No hay partidos con estado "{filterStatus}"
                 </div>
               )}
             </div>
           </div>
 
-          {/* Sanciones */}
           <div className="bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden">
             <div className="px-5 py-3 border-b border-slate-900">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">

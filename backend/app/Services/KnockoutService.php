@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Team;
 use App\Models\GameMatch;
+use App\Models\Category;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -14,6 +15,10 @@ class KnockoutService
         if ($qualifiedTeams->count() < 2) {
             throw new \Exception('Se necesitan al menos 2 equipos');
         }
+
+        // Obtener discipline_id de la categoria
+        $category = Category::find($categoryId);
+        $disciplineId = $category?->championshipDiscipline?->discipline_id;
 
         $numTeams = $qualifiedTeams->count();
 
@@ -40,7 +45,8 @@ class KnockoutService
                 $date,
                 $venueIds,
                 $round,
-                $phaseIndex
+                $phaseIndex,
+                $disciplineId
             );
 
             $matches = array_merge($matches, $phaseMatches);
@@ -51,7 +57,7 @@ class KnockoutService
         }
 
         if ($thirdPlace) {
-            $this->generateThirdPlaceMatch($championshipId, $categoryId, $matches, $date, $venueIds);
+            $this->generateThirdPlaceMatch($championshipId, $categoryId, $matches, $date, $venueIds, $disciplineId);
         }
 
         return $matches;
@@ -71,7 +77,7 @@ class KnockoutService
         return $phases[$numPhases] ?? ['final'];
     }
 
-    private function generatePhaseMatches($teams, $phaseName, $championshipId, $categoryId, $date, $venueIds, $round, $phaseIndex)
+    private function generatePhaseMatches($teams, $phaseName, $championshipId, $categoryId, $date, $venueIds, $round, $phaseIndex, $disciplineId)
     {
         $matches = [];
         $teamIds = $teams->pluck('id')->toArray();
@@ -82,6 +88,7 @@ class KnockoutService
                 $match = GameMatch::create([
                     'championship_id' => $championshipId,
                     'category_id' => $categoryId,
+                    'discipline_id' => $disciplineId,
                     'home_team_id' => $teamIds[$i],
                     'away_team_id' => $teamIds[$i + 1],
                     'venue_id' => $venueIds[$i % $venueCount],
@@ -118,7 +125,7 @@ class KnockoutService
         return $winners;
     }
 
-    private function generateThirdPlaceMatch($championshipId, $categoryId, $matches, $date, $venueIds)
+    private function generateThirdPlaceMatch($championshipId, $categoryId, $matches, $date, $venueIds, $disciplineId)
     {
         $semifinalLosers = [];
 
@@ -138,6 +145,7 @@ class KnockoutService
             GameMatch::create([
                 'championship_id' => $championshipId,
                 'category_id' => $categoryId,
+                'discipline_id' => $disciplineId,
                 'home_team_id' => $semifinalLosers[0]->id,
                 'away_team_id' => $semifinalLosers[1]->id,
                 'venue_id' => $venueIds[0],

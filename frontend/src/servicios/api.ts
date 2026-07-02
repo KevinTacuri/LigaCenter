@@ -360,19 +360,25 @@ export interface Sancion {
 }
 
 export interface Posicion {
-  id: number;
+  id?: number | null;
   team_id: number;
-  discipline_id: number;
+  discipline_id?: number;
   category_id: number;
   matches_played: number;
-  matches_won: number;
-  matches_drawn: number;
-  matches_lost: number;
+  matches_won?: number;    // Opcional para compatibilidad
+  matches_drawn?: number;  // Opcional para compatibilidad
+  matches_lost?: number;   // Opcional para compatibilidad
+  wins: number;
+  draws: number;
+  losses: number;
   goals_for: number;
   goals_against: number;
   goal_difference: number;
-  total_points: number;
+  total_points?: number;   // Opcional para compatibilidad
+  points: number;
   team?: Equipo;
+  championship_id?: number;
+  last_updated?: string | null;
 }
 
 export interface TipoEstadistica {
@@ -678,6 +684,21 @@ export const serviciosResultados = {
     if (params.championship_id) parts.push(`championship_id=${params.championship_id}`);
     if (params.category_id) parts.push(`category_id=${params.category_id}`);
     if (params.limit) parts.push(`limit=${params.limit}`);
+    url += `?${parts.join('&')}`;
+    const res = await clienteApi.get(url);
+    return res.data;
+  },
+
+  obtenerPosicionesCompletas: async (params: {
+    championship_id: number;
+    category_id: number;
+    discipline_id?: number;
+  }): Promise<RespuestaApi<any[]>> => {
+    let url = '/standings/complete';
+    const parts: string[] = [];
+    parts.push(`championship_id=${params.championship_id}`);
+    parts.push(`category_id=${params.category_id}`);
+    if (params.discipline_id) parts.push(`discipline_id=${params.discipline_id}`);
     url += `?${parts.join('&')}`;
     const res = await clienteApi.get(url);
     return res.data;

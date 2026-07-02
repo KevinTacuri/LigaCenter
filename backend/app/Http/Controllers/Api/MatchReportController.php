@@ -268,13 +268,17 @@ class MatchReportController extends Controller
         $isWalkover = strpos($report->observations ?? '', 'WALKOVER') !== false || 
                       strpos($report->observations ?? '', 'W.O.') !== false;
 
+        $tournamentId = $request->input('tournament_id', null);
+        
+        // SIEMPRE actualizar la tabla de posiciones (incluso para Walkover)
+        $this->standingService->updateFromMatch($match, $report->local_score, $report->visitor_score);
+
+        // Solo actualizar estadisticas de jugadores y sanciones si NO es WO
         if (!$isWalkover) {
-            $tournamentId = $request->input('tournament_id', null);
-            $this->standingService->updateFromMatch($match, $report->local_score, $report->visitor_score);
             $this->playerStatisticService->updateFromMatch($match, $tournamentId);
             $this->sanctionService->generateAutomaticSanctions($match->id);
         } else {
-            \Log::info('Walkover detectado para el partido ' . $match->id . ', saltando actualizacion de estadisticas y sanciones');
+            \Log::info('Walkover detectado para el partido ' . $match->id . '. Tabla de posiciones actualizada, estadisticas y sanciones omitidas.');
         }
 
         $report->update(['is_locked' => true]);
