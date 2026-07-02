@@ -17,8 +17,9 @@ class PublicChampionshipResource extends JsonResource
             'start_date' => $this->start_date?->format('Y-m-d'),
             'end_date' => $this->end_date?->format('Y-m-d'),
             'disciplines' => PublicDisciplineResource::collection($this->whenLoaded('disciplines')),
-            'teams_count' => $this->whenCounted('teams', $this->teams_count),
-            'matches_count' => $this->whenCounted('matches', $this->matches_count),
+            'teams_count' => $this->whenCounted('teams', $this->teams_count ?? 0),
+            'matches_count' => $this->whenCounted('matches', $this->matches_count ?? 0),
+            'is_public' => $this->is_public,
         ];
     }
 }

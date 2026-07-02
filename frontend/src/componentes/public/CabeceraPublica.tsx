@@ -33,7 +33,6 @@ export const CabeceraPublica: React.FC<CabeceraPublicaProps> = ({ onSearch }) =>
 
   return (
     <header className="bg-[#11131c]/95 backdrop-blur-md border-b border-slate-800 px-4 sm:px-6 h-16 sticky top-0 z-40 flex items-center justify-between shrink-0 gap-3">
-      {/* Logo */}
       <Link to="/" className="flex items-center gap-2 shrink-0">
         <img src={logoImg} className="w-8 h-8 object-contain" alt="LigaCenter" />
         <span className="font-black text-white text-sm uppercase tracking-tight hidden sm:block">
@@ -41,22 +40,15 @@ export const CabeceraPublica: React.FC<CabeceraPublicaProps> = ({ onSearch }) =>
         </span>
       </Link>
 
-      {/* Navegación */}
       <nav className="hidden md:flex items-center gap-1 shrink-0">
         <NavLink to="/" end className={navLinkClass}>
           Inicio
         </NavLink>
-
-        <NavLink to="/inicio" className={navLinkClass}>
-          Partidos
-        </NavLink>
-
         <NavLink to="/nosotros" className={navLinkClass}>
           Nosotros
         </NavLink>
       </nav>
 
-      {/* Buscador */}
       <form onSubmit={handleSearch} className="flex-1 max-w-xl mx-1 sm:mx-2">
         <div className="relative">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-base pointer-events-none">
@@ -72,10 +64,8 @@ export const CabeceraPublica: React.FC<CabeceraPublicaProps> = ({ onSearch }) =>
         </div>
       </form>
 
-      {/* Acciones derecha */}
       <div className="flex items-center gap-2 shrink-0">
         <BotonTema />
-
         {isAuthenticated ? (
           <Link
             to="/tablero"

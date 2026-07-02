@@ -83,8 +83,8 @@ export const CampeonatoDetalle: React.FC = () => {
                 {getStatusLabel(data.championship.status)}
               </div>
 
-              {/* Disciplinas */}
-              {data.championship.disciplines.length > 0 && (
+              {/* Disciplinas - con verificacion de existencia */}
+              {data.championship.disciplines && data.championship.disciplines.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
                   {data.championship.disciplines.map((d) => (
                     <span
@@ -140,7 +140,7 @@ export const CampeonatoDetalle: React.FC = () => {
             {/* Goleadores */}
             <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Máximos Goleadores</h3>
-              {data.stats.top_scorers.length === 0 ? (
+              {!data.stats.top_scorers || data.stats.top_scorers.length === 0 ? (
                 <p className="text-slate-500 text-sm">No hay goleadores registrados.</p>
               ) : (
                 <div className="space-y-2">
@@ -165,14 +165,14 @@ export const CampeonatoDetalle: React.FC = () => {
             {/* Accesos rápidos */}
             <div className="mt-6 grid grid-cols-2 gap-4">
               <Link
-                to={`/?tab=posiciones`}
+                to={`/publico?tab=posiciones&campeonato=${data.championship.id}`}
                 className="bg-[#11131c] rounded-xl border border-slate-800 hover:border-indigo-500/50 transition-all p-4 text-center"
               >
                 <span className="material-symbols-outlined text-2xl text-indigo-400 block mb-1">leaderboard</span>
                 <p className="text-xs font-bold text-slate-300">Tabla de Posiciones</p>
               </Link>
               <Link
-                to={`/?tab=partidos`}
+                to={`/publico?tab=partidos&campeonato=${data.championship.id}`}
                 className="bg-[#11131c] rounded-xl border border-slate-800 hover:border-indigo-500/50 transition-all p-4 text-center"
               >
                 <span className="material-symbols-outlined text-2xl text-indigo-400 block mb-1">sports_soccer</span>

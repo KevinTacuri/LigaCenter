@@ -82,6 +82,7 @@ export interface PublicMatch {
     match_date: string | null;
     match_time: string | null;
     datetime: string | null;
+    elapsed_time: number | null;
     venue: {
         id: number;
         name: string;
@@ -174,7 +175,12 @@ export const publicApi = {
             `/public/championships/${id}/statistics`
         ),
 
-    // Partidos
+    getChampionshipStandingsComplete: (id: number) =>
+    apiPublic.get<{ success: boolean; data: PublicStanding[]; message: string }>(
+        `/public/championships/${id}/standings-complete`
+    ),
+    
+        // Partidos
     getMatches: (params?: { discipline_id?: number; status?: string; championship_id?: number; search?: string; page?: number }) =>
         apiPublic.get<{ success: boolean; data: { data: PublicMatch[] }; message: string }>('/public/matches', { 
             params 

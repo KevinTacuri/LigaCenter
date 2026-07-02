@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { LayoutPublico } from '../../componentes/public/LayoutPublico';
+import { TiempoEnVivo } from '../../componentes/public/TiempoEnVivo';
 import type { 
   PublicMatch, 
   PublicDiscipline, 
@@ -14,10 +15,56 @@ export const HomePublic: React.FC = () => {
   const [championships, setChampionships] = useState<PublicChampionship[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDiscipline, setSelectedDiscipline] = useState<number | null>(null);
+  
+  const [position, setPosition] = useState(0);
+  const animationRef = useRef<number | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     loadData();
   }, [selectedDiscipline]);
+
+  useEffect(() => {
+    if (highlightedMatches.length === 0 || isPaused) {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+      return;
+    }
+
+    let lastTimestamp = 0;
+    const speed = 0.5;
+
+    const animate = (timestamp: number) => {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const delta = timestamp - lastTimestamp;
+      lastTimestamp = timestamp;
+
+      setPosition((prev) => {
+        let newPos = prev + (speed * delta) / 16;
+        const totalWidth = highlightedMatches.length * 280;
+        if (newPos >= totalWidth / 2) {
+          newPos = 0;
+        }
+        return newPos;
+      });
+
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+    };
+  }, [highlightedMatches, isPaused]);
+
+  const handleMouseEnter = () => setIsPaused(true);
+  const handleMouseLeave = () => setIsPaused(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -60,7 +107,7 @@ export const HomePublic: React.FC = () => {
       <section className="mb-10">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-white">⚡ Destacados</h2>
-          <Link to="/partidos" className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">
+          <Link to="/publico" className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">
             Ver todos →
           </Link>
         </div>
@@ -76,40 +123,105 @@ export const HomePublic: React.FC = () => {
             <p className="text-slate-400 text-sm">No hay partidos destacados en este momento</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {highlightedMatches.map(match => (
-              <Link
-                key={match.id}
-                to={`/partidos/${match.id}`}
-                className="bg-[#11131c] rounded-xl p-4 border border-slate-800 hover:border-indigo-500/50 transition-all hover:scale-[1.02]"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[10px] text-slate-500 font-bold truncate max-w-[100px]">
-                    {match.championship?.name || 'Competición'}
-                  </span>
-                  {getStatusBadge(match.status)}
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm text-slate-200 truncate">{match.home_team?.name || '—'}</span>
-                    <span className="font-bold text-base text-white">{match.home_score ?? '-'}</span>
+          <div 
+            className="relative overflow-hidden rounded-xl"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            <div 
+              className="flex gap-4"
+              style={{
+                transform: `translateX(-${position}px)`,
+                transition: 'none',
+                width: 'max-content',
+              }}
+            >
+              {highlightedMatches.map(match => (
+                <Link
+                  key={match.id}
+                  to={`/partidos/${match.id}`}
+                  className="bg-[#11131c] rounded-xl p-4 border border-slate-800 hover:border-indigo-500/50 transition-all hover:scale-[1.02] min-w-[260px] max-w-[260px] flex-shrink-0"
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] text-slate-500 font-bold truncate max-w-[100px]">
+                      {match.championship?.name || 'Competición'}
+                    </span>
+                    {match.status === 'en_vivo' ? (
+                      <TiempoEnVivo elapsedTime={match.elapsed_time} status={match.status} size="sm" />
+                    ) : (
+                      getStatusBadge(match.status)
+                    )}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm text-slate-200 truncate">{match.away_team?.name || '—'}</span>
-                    <span className="font-bold text-base text-white">{match.away_score ?? '-'}</span>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm text-slate-200 truncate">{match.home_team?.name || '—'}</span>
+                      <span className="font-bold text-base text-white">
+                        {match.status === 'en_vivo' ? (match.home_score ?? 0) : (match.home_score ?? '-')}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm text-slate-200 truncate">{match.away_team?.name || '—'}</span>
+                      <span className="font-bold text-base text-white">
+                        {match.status === 'en_vivo' ? (match.away_score ?? 0) : (match.away_score ?? '-')}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-2 text-[10px] text-slate-500 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-xs">schedule</span>
-                  {match.match_date ? new Date(match.match_date + 'T' + (match.match_time || '00:00')).toLocaleString('es-ES', {
-                    day: '2-digit',
-                    month: 'short',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  }) : '—'}
-                </div>
-              </Link>
-            ))}
+                  <div className="mt-2 text-[10px] text-slate-500 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-xs">schedule</span>
+                    {match.match_date ? new Date(match.match_date + 'T' + (match.match_time || '00:00')).toLocaleString('es-ES', {
+                      day: '2-digit',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : '—'}
+                  </div>
+                </Link>
+              ))}
+              {highlightedMatches.map(match => (
+                <Link
+                  key={`dup-${match.id}`}
+                  to={`/partidos/${match.id}`}
+                  className="bg-[#11131c] rounded-xl p-4 border border-slate-800 hover:border-indigo-500/50 transition-all hover:scale-[1.02] min-w-[260px] max-w-[260px] flex-shrink-0"
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] text-slate-500 font-bold truncate max-w-[100px]">
+                      {match.championship?.name || 'Competición'}
+                    </span>
+                    {match.status === 'en_vivo' ? (
+                      <TiempoEnVivo elapsedTime={match.elapsed_time} status={match.status} size="sm" />
+                    ) : (
+                      getStatusBadge(match.status)
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm text-slate-200 truncate">{match.home_team?.name || '—'}</span>
+                      <span className="font-bold text-base text-white">
+                        {match.status === 'en_vivo' ? (match.home_score ?? 0) : (match.home_score ?? '-')}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm text-slate-200 truncate">{match.away_team?.name || '—'}</span>
+                      <span className="font-bold text-base text-white">
+                        {match.status === 'en_vivo' ? (match.away_score ?? 0) : (match.away_score ?? '-')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-[10px] text-slate-500 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-xs">schedule</span>
+                    {match.match_date ? new Date(match.match_date + 'T' + (match.match_time || '00:00')).toLocaleString('es-ES', {
+                      day: '2-digit',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : '—'}
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#0a0b10] to-transparent pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#0a0b10] to-transparent pointer-events-none" />
           </div>
         )}
       </section>
@@ -145,7 +257,7 @@ export const HomePublic: React.FC = () => {
       <div className="mb-6 border-b border-slate-800">
         <nav className="flex gap-6">
           <Link
-            to="/partidos"
+            to="/publico"
             className="py-3 text-sm font-bold text-indigo-400 border-b-2 border-indigo-400"
           >
             Todos los Partidos
@@ -157,7 +269,7 @@ export const HomePublic: React.FC = () => {
             Mis Favoritos
           </Link>
           <Link
-            to="/competiciones"
+            to="/campeonatos"
             className="py-3 text-sm font-bold text-slate-400 hover:text-slate-200 border-b-2 border-transparent"
           >
             Competiciones
@@ -168,7 +280,7 @@ export const HomePublic: React.FC = () => {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-white">🏆 Competiciones</h2>
-          <Link to="/competiciones" className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">
+          <Link to="/campeonatos" className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">
             Ver todas →
           </Link>
         </div>
@@ -188,7 +300,7 @@ export const HomePublic: React.FC = () => {
             {championships.slice(0, 6).map(champ => (
               <Link
                 key={champ.id}
-                to={`/competiciones/${champ.id}`}
+                to={`/campeonatos/${champ.id}`}
                 className="bg-[#11131c] rounded-xl p-4 border border-slate-800 hover:border-indigo-500/50 transition-all hover:scale-[1.02]"
               >
                 <div className="flex items-center justify-between mb-2">

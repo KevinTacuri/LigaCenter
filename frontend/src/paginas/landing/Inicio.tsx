@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { TiempoEnVivo } from '../../componentes/public/TiempoEnVivo';
 import type { 
   PublicMatch, 
   PublicStanding, 
@@ -47,7 +48,6 @@ export const Inicio: React.FC<InicioProps> = ({
     }
   };
 
-  // Helper: logo del equipo o avatar con inicial si no hay logo
   const TeamLogo: React.FC<{ name?: string; logo?: string | null; size?: 'sm' | 'md' }> = ({
     name,
     logo,
@@ -78,7 +78,6 @@ export const Inicio: React.FC<InicioProps> = ({
 
   return (
     <>
-      {/* Selector de Campeonato */}
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Campeonato:</label>
         <div className="flex flex-wrap gap-2">
@@ -101,7 +100,6 @@ export const Inicio: React.FC<InicioProps> = ({
         </div>
       </div>
 
-      {/* Selector de Disciplina */}
       {disciplines.length > 0 && (
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Disciplina:</label>
@@ -133,7 +131,6 @@ export const Inicio: React.FC<InicioProps> = ({
         </div>
       )}
 
-      {/* Selector detalle de campeonato */}
       {selectedChampionship && (
         <div className="mb-4">
           <Link
@@ -146,7 +143,6 @@ export const Inicio: React.FC<InicioProps> = ({
         </div>
       )}
 
-      {/* Tabs */}
       <div className="mb-6 border-b border-slate-800">
         <nav className="flex gap-6">
           <button
@@ -172,7 +168,6 @@ export const Inicio: React.FC<InicioProps> = ({
         </nav>
       </div>
 
-      {/* Contenido */}
       {error && (
         <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 text-rose-400 text-sm">
           {error}
@@ -204,29 +199,35 @@ export const Inicio: React.FC<InicioProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
-                    {standings.map((standing, index) => (
-                      <tr key={standing.team.id} className="hover:bg-[#171a26]/40">
-                        <td className="p-3 pl-4 text-center font-bold text-slate-400">{index + 1}</td>
-                        <td className="p-3 font-bold text-white">
-                          <Link to={`/equipos/${standing.team.id}`} className="hover:text-indigo-400 transition-colors">
-                            {standing.team.name}
-                          </Link>
-                        </td>
-                        <td className="p-3 text-center text-slate-300">{standing.matches_played}</td>
-                        <td className="p-3 text-center text-emerald-400">{standing.wins}</td>
-                        <td className="p-3 text-center text-slate-400">{standing.draws}</td>
-                        <td className="p-3 text-center text-rose-400">{standing.losses}</td>
-                        <td className="p-3 text-center text-slate-300">{standing.goals_for}</td>
-                        <td className="p-3 text-center text-slate-300">{standing.goals_against}</td>
-                        <td className="p-3 text-center font-bold text-white">
-                          {standing.goal_difference > 0 ? `+${standing.goal_difference}` : standing.goal_difference}
-                        </td>
-                        <td className="p-3 pr-4 text-center font-extrabold text-indigo-400 text-base">
-                          {standing.points}
-                        </td>
-                      </tr>
-                    ))}
-                    {standings.length === 0 && (
+                    {standings && standings.length > 0 ? (
+                      standings.map((standing, index) => {
+                        if (!standing || !standing.team) {
+                          return null;
+                        }
+                        return (
+                          <tr key={standing.team?.id || index} className="hover:bg-[#171a26]/40">
+                            <td className="p-3 pl-4 text-center font-bold text-slate-400">{index + 1}</td>
+                            <td className="p-3 font-bold text-white">
+                              <Link to={`/equipos/${standing.team?.id}`} className="hover:text-indigo-400 transition-colors">
+                                {standing.team?.name || '—'}
+                              </Link>
+                            </td>
+                            <td className="p-3 text-center text-slate-300">{standing.matches_played || 0}</td>
+                            <td className="p-3 text-center text-emerald-400">{standing.wins || 0}</td>
+                            <td className="p-3 text-center text-slate-400">{standing.draws || 0}</td>
+                            <td className="p-3 text-center text-rose-400">{standing.losses || 0}</td>
+                            <td className="p-3 text-center text-slate-300">{standing.goals_for || 0}</td>
+                            <td className="p-3 text-center text-slate-300">{standing.goals_against || 0}</td>
+                            <td className="p-3 text-center font-bold text-white">
+                              {standing.goal_difference > 0 ? `+${standing.goal_difference}` : standing.goal_difference || 0}
+                            </td>
+                            <td className="p-3 pr-4 text-center font-extrabold text-indigo-400 text-base">
+                              {standing.points || 0}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
                       <tr>
                         <td colSpan={10} className="p-10 text-center text-slate-500 text-sm">
                           No hay posiciones disponibles para este campeonato
@@ -241,73 +242,76 @@ export const Inicio: React.FC<InicioProps> = ({
 
           {tabActiva === 'partidos' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {matches.map(match => (
-                <Link
-                  key={match.id}
-                  to={`/partidos/${match.id}`}
-                  className="group bg-[#11131c] rounded-xl border border-slate-800 hover:border-indigo-650/60 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-650/10 transition-all duration-200 overflow-hidden flex flex-col"
-                >
-                  {/* Header: campeonato + estado */}
-                  <div className="flex justify-between items-center px-4 pt-3 pb-2">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wide truncate max-w-[65%]">
-                      {match.championship?.name || 'Competición'}
-                    </span>
-                    {getStatusBadge(match.status)}
-                  </div>
-
-                  {/* Marcador principal: logo - score - logo */}
-                  <div className="px-4 pb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                    {/* Equipo local */}
-                    <div className="flex flex-col items-center gap-1.5 min-w-0">
-                      <TeamLogo name={match.home_team?.name} logo={match.home_team?.logo} />
-                      <span className="text-xs font-semibold text-slate-200 text-center truncate w-full">
-                        {match.home_team?.name || '—'}
+              {matches && matches.length > 0 ? (
+                matches.map(match => (
+                  <Link
+                    key={match.id}
+                    to={`/partidos/${match.id}`}
+                    className="group bg-[#11131c] rounded-xl border border-slate-800 hover:border-indigo-650/60 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-650/10 transition-all duration-200 overflow-hidden flex flex-col"
+                  >
+                    <div className="flex justify-between items-center px-4 pt-3 pb-2">
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wide truncate max-w-[65%]">
+                        {match.championship?.name || 'Competición'}
                       </span>
-                    </div>
-
-                    {/* Marcador / VS */}
-                    <div className="flex flex-col items-center px-1">
-                      {match.status === 'pendiente' || match.status === 'reprogramado' ? (
-                        <span className="text-lg font-black text-slate-500 tracking-wider">VS</span>
+                      {match.status === 'en_vivo' ? (
+                        <TiempoEnVivo elapsedTime={match.elapsed_time} status={match.status} size="sm" />
                       ) : (
-                        <span className="text-2xl font-black text-white tabular-nums whitespace-nowrap">
-                          {match.home_score ?? '-'} <span className="text-slate-600">:</span> {match.away_score ?? '-'}
-                        </span>
+                        getStatusBadge(match.status)
                       )}
                     </div>
 
-                    {/* Equipo visitante */}
-                    <div className="flex flex-col items-center gap-1.5 min-w-0">
-                      <TeamLogo name={match.away_team?.name} logo={match.away_team?.logo} />
-                      <span className="text-xs font-semibold text-slate-200 text-center truncate w-full">
-                        {match.away_team?.name || '—'}
-                      </span>
-                    </div>
-                  </div>
+                    <div className="px-4 pb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                      <div className="flex flex-col items-center gap-1.5 min-w-0">
+                        <TeamLogo name={match.home_team?.name} logo={match.home_team?.logo} />
+                        <span className="text-xs font-semibold text-slate-200 text-center truncate w-full">
+                          {match.home_team?.name || '—'}
+                        </span>
+                      </div>
 
-                  {/* Footer: fecha, sede */}
-                  <div className="mt-auto border-t border-slate-800 px-4 py-2.5 flex items-center justify-between gap-2 text-[10px] text-slate-500">
-                    <span className="flex items-center gap-1 truncate">
-                      <span className="material-symbols-outlined text-xs">schedule</span>
-                      {match.match_date
-                        ? new Date(match.match_date + 'T' + (match.match_time || '00:00')).toLocaleString('es-ES', {
-                            day: '2-digit',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
-                        : '—'}
-                    </span>
-                    {match.venue && (
-                      <span className="flex items-center gap-1 truncate max-w-[45%]">
-                        <span className="material-symbols-outlined text-xs">location_on</span>
-                        {match.venue.name}
+                      <div className="flex flex-col items-center px-1">
+                        {match.status === 'pendiente' || match.status === 'reprogramado' ? (
+                          <span className="text-lg font-black text-slate-500 tracking-wider">VS</span>
+                        ) : match.status === 'en_vivo' ? (
+                          <span className="text-2xl font-black text-white tabular-nums whitespace-nowrap">
+                            {match.home_score ?? 0} <span className="text-slate-600">:</span> {match.away_score ?? 0}
+                          </span>
+                        ) : (
+                          <span className="text-2xl font-black text-white tabular-nums whitespace-nowrap">
+                            {match.home_score ?? '-'} <span className="text-slate-600">:</span> {match.away_score ?? '-'}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col items-center gap-1.5 min-w-0">
+                        <TeamLogo name={match.away_team?.name} logo={match.away_team?.logo} />
+                        <span className="text-xs font-semibold text-slate-200 text-center truncate w-full">
+                          {match.away_team?.name || '—'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-auto border-t border-slate-800 px-4 py-2.5 flex items-center justify-between gap-2 text-[10px] text-slate-500">
+                      <span className="flex items-center gap-1 truncate">
+                        <span className="material-symbols-outlined text-xs">schedule</span>
+                        {match.match_date
+                          ? new Date(match.match_date + 'T' + (match.match_time || '00:00')).toLocaleString('es-ES', {
+                              day: '2-digit',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : '—'}
                       </span>
-                    )}
-                  </div>
-                </Link>
-              ))}
-              {matches.length === 0 && (
+                      {match.venue && (
+                        <span className="flex items-center gap-1 truncate max-w-[45%]">
+                          <span className="material-symbols-outlined text-xs">location_on</span>
+                          {match.venue.name}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                ))
+              ) : (
                 <div className="col-span-full bg-[#11131c] rounded-xl p-8 text-center border border-slate-800">
                   <p className="text-slate-400 text-sm">No hay partidos disponibles para este campeonato</p>
                 </div>

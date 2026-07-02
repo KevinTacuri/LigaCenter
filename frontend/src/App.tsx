@@ -13,7 +13,7 @@ import { GestionParticipantes } from './paginas/organizador/GestionParticipantes
 import { ProgramacionFixture } from './paginas/organizador/ProgramacionFixture';
 import { MesaControl } from './paginas/organizador/MesaControl';
 import { EstadisticasOrganizador } from './paginas/organizador/EstadisticasOrganizador';
-import { VisualizacionPublica } from './paginas/public/VisualizacionPublica';
+import { TablaPosiciones } from './paginas/public/TablaPosiciones';
 import { ConsolaSaaS } from './paginas/dashboard/ConsolaSaaS';
 import { Configuracion } from './paginas/dashboard/Configuracion';
 import { Perfil } from './paginas/dashboard/Perfil';
@@ -22,7 +22,7 @@ import { PanelLateralCampeonatos } from './componentes/PanelLateralCampeonatos';
 import { Toaster } from 'sileo';
 import { ConfirmDialogProvider } from '@omit/react-confirm-dialog';
 import { Nosotros } from './paginas/landing/Nosotros';
-import { HomePublic } from './componentes/public/HomePublic'; 
+import { HomePublic } from './componentes/public/HomePublic';
 
 import { PartidoDetalle } from './paginas/public/PartidoDetalle';
 import { ResultadosBusqueda } from './paginas/public/ResultadosBusqueda';
@@ -31,7 +31,7 @@ import { JugadorDetalle } from './paginas/public/JugadorDetalle';
 import { CampeonatoDetalle } from './paginas/public/CampeonatoDetalle';
 
 const App: React.FC = () => {
-    const [tema, setTema] = useState<'light' | 'dark'>(
+  const [tema, setTema] = useState<'light' | 'dark'>(
     () => (localStorage.getItem('theme') as 'light' | 'dark') || 'dark'
   );
 
@@ -46,7 +46,7 @@ const App: React.FC = () => {
       clearInterval(intervalo);
     };
   }, []);
-  
+
   return (
     <ProveedorAutenticacion>
       <ProveedorCampeonato>
@@ -57,20 +57,21 @@ const App: React.FC = () => {
           <Toaster position="top-center" theme={tema} />
           <BrowserRouter>
             <Routes>
-              {/* 🔥 RUTA PRINCIPAL - VISTA PÚBLICA */}
-              <Route path="/" element={<VisualizacionPublica esVistaAnonima={true} />} />
-              
+              {/* 🔥 RUTA PRINCIPAL - Landing Page con Destacados */}
+              <Route path="/" element={<HomePublic />} />
+
+              {/* 📊 Vista de Posiciones y Partidos (cuando se necesita ver tabla) */}
+              <Route path="/publico" element={<TablaPosiciones esVistaAnonima={true} />} />
+
               {/* Rutas Públicas */}
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Registro />} />
               <Route path="/recuperar-contrasenia" element={<RecuperarContrasenia />} />
               <Route path="/restablecer-contrasenia" element={<RestablecerContrasenia />} />
-              <Route path="/publico" element={<VisualizacionPublica esVistaAnonima={true} />} />
               <Route path="/nosotros" element={<Nosotros />} />
-              <Route path="/inicio" element={<HomePublic />} />
               <Route path="/partidos/:id" element={<PartidoDetalle />} />
               <Route path="/buscar" element={<ResultadosBusqueda />} />
-              <Route path="/equipos/:id" element={<EquipoDetalle />} /> 
+              <Route path="/equipos/:id" element={<EquipoDetalle />} />
               <Route path="/jugadores/:id" element={<JugadorDetalle />} />
               <Route path="/campeonatos/:id" element={<CampeonatoDetalle />} />
 
@@ -81,7 +82,7 @@ const App: React.FC = () => {
               <Route path="/tablero/participantes" element={<GestionParticipantes />} />
               <Route path="/tablero/fixture" element={<ProgramacionFixture />} />
               <Route path="/tablero/mesa" element={<MesaControl />} />
-              <Route path="/tablero/publico" element={<VisualizacionPublica />} />
+              <Route path="/tablero/publico" element={<TablaPosiciones />} />
               <Route path="/tablero/saas-admin" element={<ConsolaSaaS />} />
               <Route path="/tablero/configuracion" element={<Configuracion />} />
               <Route path="/tablero/perfil" element={<Perfil />} />

@@ -1,48 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { LayoutPublico } from '../../componentes/public/LayoutPublico';
+import { TiempoEnVivo } from '../../componentes/public/TiempoEnVivo';
 import { publicApi } from '../../servicios/apiPublic';
-import type { PublicMatch } from '../../servicios/apiPublic';
 
-interface IncidenciaItem {
-  id: number;
-  minute: number;
-  type: string;
-  player: string | null;
-  description: string | null;
+interface PartidoDetalleData {
+  match: any;
+  incidences: any;
+  report: any;
 }
-
-interface MatchDetailData {
-  match: PublicMatch;
-  incidences: Record<string, IncidenciaItem[]>;
-  report: { id: number; summary: string | null; created_at: string | null } | null;
-}
-
-const iconoIncidencia = (tipo: string) => {
-  switch (tipo) {
-    case 'goal': return { icon: 'sports_soccer', color: 'text-emerald-400', label: 'Gol' };
-    case 'yellow_card': return { icon: 'square', color: 'text-yellow-400', label: 'Tarjeta amarilla' };
-    case 'red_card': return { icon: 'square', color: 'text-rose-500', label: 'Tarjeta roja' };
-    case 'foul': return { icon: 'sports', color: 'text-slate-400', label: 'Falta' };
-    case 'injury': return { icon: 'medical_services', color: 'text-orange-400', label: 'Lesión' };
-    default: return { icon: 'info', color: 'text-slate-400', label: tipo };
-  }
-};
-
-const getStatusBadge = (status: string) => {
-  switch (status) {
-    case 'en_vivo':
-      return <span className="px-3 py-1 text-xs font-bold rounded-full bg-red-500/20 text-red-400 animate-pulse">EN VIVO</span>;
-    case 'finalizado':
-      return <span className="px-3 py-1 text-xs font-bold rounded-full bg-slate-700/50 text-slate-400">FINALIZADO</span>;
-    default:
-      return <span className="px-3 py-1 text-xs font-bold rounded-full bg-blue-500/20 text-blue-400">PRÓXIMO</span>;
-  }
-};
 
 export const PartidoDetalle: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [data, setData] = useState<MatchDetailData | null>(null);
+  const [data, setData] = useState<PartidoDetalleData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,9 +32,70 @@ export const PartidoDetalle: React.FC = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'en_vivo':
+        return <span className="px-3 py-1 text-xs font-bold rounded-full bg-red-500/20 text-red-400 animate-pulse">EN VIVO</span>;
+      case 'finalizado':
+        return <span className="px-3 py-1 text-xs font-bold rounded-full bg-slate-700/50 text-slate-400">FINALIZADO</span>;
+      default:
+        return <span className="px-3 py-1 text-xs font-bold rounded-full bg-blue-500/20 text-blue-400">PRÓXIMO</span>;
+    }
+  };
+
+  const TeamLogo: React.FC<{ name?: string; logo?: string | null; size?: 'lg' }> = ({
+    name,
+    logo,
+    size = 'lg',
+  }) => {
+    const dimensions = size === 'lg' ? 'w-20 h-20 text-2xl' : 'w-14 h-14 text-lg';
+
+    if (logo) {
+      return (
+        <img
+          src={logo}
+          alt={name || 'Equipo'}
+          className={`${dimensions} rounded-full object-cover border border-slate-700 bg-[#171a26]`}
+        />
+      );
+    }
+
+    const initial = name?.trim()?.[0]?.toUpperCase() || '?';
+
+    return (
+      <div
+        className={`${dimensions} rounded-full border border-slate-700 bg-[#171a26] flex items-center justify-center font-bold text-slate-300`}
+      >
+        {initial}
+      </div>
+    );
+  };
+
   const handleSearch = (query: string) => {
     window.location.href = `/buscar?q=${encodeURIComponent(query)}`;
   };
+
+  if (loading) {
+    return (
+      <LayoutPublico onSearch={handleSearch}>
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 rounded-full border-4 border-slate-800 border-t-indigo-500 animate-spin" />
+        </div>
+      </LayoutPublico>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <LayoutPublico onSearch={handleSearch}>
+        <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 text-rose-400 text-sm">
+          {error || 'No se encontró el partido'}
+        </div>
+      </LayoutPublico>
+    );
+  }
+
+  const match = data.match;
 
   return (
     <LayoutPublico onSearch={handleSearch}>
@@ -77,105 +108,111 @@ export const PartidoDetalle: React.FC = () => {
           <span>Volver</span>
         </Link>
 
-        {loading && (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 rounded-full border-4 border-slate-800 border-t-indigo-500 animate-spin" />
+        {/* Header del partido */}
+        <div className="bg-[#11131c] rounded-xl border border-slate-800 p-6 md:p-8">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h2 className="text-lg font-bold text-white">
+                {match.championship?.name || 'Competición'}
+              </h2>
+              <span className="text-xs text-slate-500">
+                {match.venue?.name || '—'} · {match.match_date || '—'}
+              </span>
+            </div>
+            {match.status === 'en_vivo' ? (
+              <TiempoEnVivo elapsedTime={match.elapsed_time} status={match.status} size="lg" />
+            ) : (
+              getStatusBadge(match.status)
+            )}
           </div>
-        )}
 
-        {error && (
-          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 text-rose-400 text-sm">
-            {error}
-          </div>
-        )}
-
-        {!loading && !error && data && (
-          <>
-            {/* Marcador */}
-            <div className="bg-[#11131c] rounded-xl border border-slate-800 p-6 md:p-8">
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-xs text-slate-500 font-bold">
-                  {data.match.championship?.name || 'Competición'}
-                </span>
-                {getStatusBadge(data.match.status)}
-              </div>
-
-              <div className="grid grid-cols-3 items-center gap-4">
-                <div className="text-center">
-                  <p className="font-bold text-white text-lg truncate">{data.match.home_team?.name || '—'}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-4xl font-black text-white">
-                    {data.match.home_score ?? '-'} : {data.match.away_score ?? '-'}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="font-bold text-white text-lg truncate">{data.match.away_team?.name || '—'}</p>
-                </div>
-              </div>
-
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500">
-                {data.match.match_date && (
-                  <span className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">schedule</span>
-                    {new Date(data.match.match_date + 'T' + (data.match.match_time || '00:00')).toLocaleString('es-ES', {
-                      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                    })}
-                  </span>
-                )}
-                {data.match.venue && (
-                  <span className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">location_on</span>
-                    {data.match.venue.name}
-                  </span>
-                )}
-                {data.match.round && (
-                  <span className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">flag</span>
-                    Ronda {data.match.round}
-                  </span>
-                )}
-              </div>
+          {/* Marcador principal */}
+          <div className="flex items-center justify-center gap-8 md:gap-12 py-6">
+            <div className="text-center">
+              <TeamLogo name={match.home_team?.name} logo={match.home_team?.logo} size="lg" />
+              <p className="text-sm font-bold text-white mt-2">{match.home_team?.name || '—'}</p>
             </div>
 
-            {/* Incidencias */}
-            <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Incidencias</h3>
-              {Object.keys(data.incidences).length === 0 ? (
-                <p className="text-slate-500 text-sm">No hay incidencias registradas para este partido.</p>
-              ) : (
-                <div className="space-y-3">
-                  {Object.entries(data.incidences).map(([tipo, items]) =>
-                    items.map((item) => {
-                      const meta = iconoIncidencia(tipo);
-                      return (
-                        <div key={item.id} className="flex items-center gap-3 p-3 rounded-lg bg-[#171a26] border border-slate-800">
-                          <span className={`material-symbols-outlined text-lg ${meta.color}`}>{meta.icon}</span>
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-white">
-                              {meta.label} {item.player ? `— ${item.player}` : ''}
-                            </p>
-                            {item.description && (
-                              <p className="text-xs text-slate-500">{item.description}</p>
-                            )}
-                          </div>
-                          <span className="text-xs font-bold text-slate-400">{item.minute}'</span>
-                        </div>
-                      );
-                    })
-                  )}
+            <div className="text-center">
+              <div className="flex items-center gap-4">
+                <span className="text-5xl md:text-6xl font-black text-white">
+                  {match.status === 'en_vivo' ? (match.home_score ?? 0) : (match.home_score ?? '-')}
+                </span>
+                <span className="text-2xl font-bold text-slate-600">VS</span>
+                <span className="text-5xl md:text-6xl font-black text-white">
+                  {match.status === 'en_vivo' ? (match.away_score ?? 0) : (match.away_score ?? '-')}
+                </span>
+              </div>
+              {match.status === 'en_vivo' && match.elapsed_time !== null && (
+                <div className="mt-2">
+                  <TiempoEnVivo elapsedTime={match.elapsed_time} status={match.status} size="md" />
                 </div>
               )}
             </div>
 
-            {/* Reporte / Acta */}
-            {data.report?.summary && (
-              <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">Resumen del partido</h3>
-                <p className="text-sm text-slate-300 leading-relaxed">{data.report.summary}</p>
+            <div className="text-center">
+              <TeamLogo name={match.away_team?.name} logo={match.away_team?.logo} size="lg" />
+              <p className="text-sm font-bold text-white mt-2">{match.away_team?.name || '—'}</p>
+            </div>
+          </div>
+
+          {match.status === 'finalizado' && match.report && (
+            <div className="mt-4 pt-4 border-t border-slate-800 text-center text-xs text-slate-500">
+              Acta oficializada · {match.report.created_at}
+            </div>
+          )}
+        </div>
+
+        {/* Incidencias */}
+        {data.incidences && Object.keys(data.incidences).length > 0 && (
+          <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Incidencias del Partido</h3>
+            <div className="space-y-3">
+              {Object.entries(data.incidences).map(([type, items]: [string, any]) => (
+                <div key={type}>
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{type}</h4>
+                  <div className="space-y-1">
+                    {items.map((inc: any) => (
+                      <div key={inc.id} className="flex items-center gap-3 text-sm bg-[#171a26] p-2 rounded-lg border border-slate-800">
+                        <span className="font-bold text-slate-400">{inc.minute}'</span>
+                        <span className="text-white">{inc.player || '—'}</span>
+                        <span className="text-slate-500 text-xs">{inc.description || ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Estadisticas rapidas */}
+        {match.status === 'finalizado' && (
+          <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Resumen</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-black text-white">{match.home_score ?? 0}</p>
+                <p className="text-[10px] text-slate-500 uppercase mt-1">Goles Local</p>
               </div>
-            )}
-          </>
+              <div>
+                <p className="text-2xl font-black text-white">{match.away_score ?? 0}</p>
+                <p className="text-[10px] text-slate-500 uppercase mt-1">Goles Visita</p>
+              </div>
+              <div>
+                <p className="text-2xl font-black text-white">
+                  {(match.home_score ?? 0) + (match.away_score ?? 0)}
+                </p>
+                <p className="text-[10px] text-slate-500 uppercase mt-1">Total Goles</p>
+              </div>
+              <div>
+                <p className="text-2xl font-black text-white">
+                  {data.incidences ? Object.values(data.incidences).reduce((acc: number, curr: any) => acc + curr.length, 0) : 0}
+                </p>
+                <p className="text-[10px] text-slate-500 uppercase mt-1">Incidencias</p>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </LayoutPublico>

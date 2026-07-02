@@ -16,6 +16,7 @@ export const Configuracion: React.FC = () => {
   const [nombre, setNombre] = useState('');
   const [tipo, setTipo] = useState<'basico' | 'completo'>('basico');
   const [estado, setEstado] = useState('creado');
+  const [isPublic, setIsPublic] = useState(false);
   const [reglamento, setReglamento] = useState<File | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
@@ -35,6 +36,7 @@ export const Configuracion: React.FC = () => {
       setNombre(campeonatoActivo.name || '');
       setTipo(campeonatoActivo.type || 'basico');
       setEstado(campeonatoActivo.status || 'creado');
+      setIsPublic(campeonatoActivo.is_public || false);
     }
   }, [campeonatoActivo]);
 
@@ -49,6 +51,7 @@ export const Configuracion: React.FC = () => {
       formData.append('name', nombre.trim());
       formData.append('type', tipo);
       formData.append('status', estado);
+      formData.append('is_public', isPublic ? '1' : '0');
       if (reglamento) {
         formData.append('rules_pdf', reglamento);
       }
@@ -159,6 +162,70 @@ export const Configuracion: React.FC = () => {
                     <option value="en_curso">En Curso / Partidos programados</option>
                     <option value="finalizado">Finalizado / Premiación</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Visibilidad Publica - Toggle Switch */}
+              <div className="space-y-3 pt-2 border-t border-slate-900/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-bold text-slate-350 block">Visibilidad del Campeonato</label>
+                    <p className="text-[10px] text-slate-500 leading-none mt-0.5">
+                      {isPublic 
+                        ? 'Público - Visible para todos los visitantes' 
+                        : 'Privado - Solo usuarios con acceso pueden verlo'}
+                    </p>
+                  </div>
+                  
+                  {/* Toggle Switch */}
+                  <button
+                    type="button"
+                    onClick={() => setIsPublic(!isPublic)}
+                    className={`relative w-12 h-7 rounded-full transition-all duration-300 cursor-pointer flex-shrink-0 ${
+                      isPublic ? 'bg-emerald-500' : 'bg-slate-700'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300 ${
+                        isPublic ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div className={`p-3 rounded-xl border transition-all ${
+                    !isPublic 
+                      ? 'border-indigo-500 bg-indigo-500/5' 
+                      : 'border-slate-800 bg-[#171a26]/40 opacity-50'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-slate-400 text-sm">lock</span>
+                      <span className="text-xs font-bold text-white">Privado</span>
+                    </div>
+                    <span className="text-[9px] text-slate-500">Solo usuarios autenticados</span>
+                  </div>
+                  <div className={`p-3 rounded-xl border transition-all ${
+                    isPublic 
+                      ? 'border-emerald-500 bg-emerald-500/5' 
+                      : 'border-slate-800 bg-[#171a26]/40 opacity-50'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-emerald-400 text-sm">public</span>
+                      <span className="text-xs font-bold text-white">Público</span>
+                    </div>
+                    <span className="text-[9px] text-slate-500">Visible sin login</span>
+                  </div>
+                </div>
+                
+                <div className={`text-[10px] font-medium px-3 py-1.5 rounded-lg ${
+                  isPublic 
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                    : 'bg-slate-700/20 text-slate-400 border border-slate-700/30'
+                }`}>
+                  {isPublic 
+                    ? 'El campeonato aparecerá en la página pública y será visible para todos los visitantes.' 
+                    : 'El campeonato solo será visible para usuarios autenticados en el panel de control.'}
                 </div>
               </div>
 

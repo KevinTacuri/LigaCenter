@@ -14,9 +14,10 @@ interface Props {
   esVistaAnonima?: boolean;
 }
 
-export const VisualizacionPublica: React.FC<Props> = ({ esVistaAnonima = true }) => {
+export const TablaPosiciones: React.FC<Props> = ({ esVistaAnonima = true }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
+  const campeonatoParam = searchParams.get('campeonato');
   const [tabActiva, setTabActivaState] = useState<string>(tabParam || 'posiciones');
 
   const [matches, setMatches] = useState<PublicMatch[]>([]);
@@ -27,7 +28,9 @@ export const VisualizacionPublica: React.FC<Props> = ({ esVistaAnonima = true })
   const [error, setError] = useState<string | null>(null);
 
   const [selectedDiscipline, setSelectedDiscipline] = useState<number | null>(null);
-  const [selectedChampionship, setSelectedChampionship] = useState<number | null>(null);
+  const [selectedChampionship, setSelectedChampionship] = useState<number | null>(
+    campeonatoParam ? Number(campeonatoParam) : null
+  );
   const [championships, setChampionships] = useState<PublicChampionship[]>([]);
 
   const handleDisciplineChange = (id: number | null) => {
@@ -42,11 +45,17 @@ export const VisualizacionPublica: React.FC<Props> = ({ esVistaAnonima = true })
   }, [tabParam]);
 
   useEffect(() => {
+    if (campeonatoParam && !selectedChampionship) {
+      setSelectedChampionship(Number(campeonatoParam));
+    }
+  }, [campeonatoParam]);
+
+  useEffect(() => {
     loadData();
-  }, [tabActiva, selectedDiscipline, selectedChampionship]); 
+  }, [tabActiva, selectedDiscipline, selectedChampionship]);
 
   const setTabActiva = (tab: string) => {
-    setSearchParams({ tab });
+    setSearchParams({ tab, campeonato: selectedChampionship?.toString() || '' });
   };
 
   const loadData = async () => {
@@ -59,7 +68,7 @@ export const VisualizacionPublica: React.FC<Props> = ({ esVistaAnonima = true })
         setDisciplines(disciplinesRes.data.data);
       }
 
-      // Campeonatos - EXTRAER data.data correctamente
+      // Campeonatos
       const champRes = await publicApi.getChampionships({
         discipline_id: selectedDiscipline || undefined
       });
@@ -72,13 +81,19 @@ export const VisualizacionPublica: React.FC<Props> = ({ esVistaAnonima = true })
       }
 
       if (selectedChampionship) {
+        console.log('Cargando standings para campeonato:', selectedChampionship);
+        
         const [standingsRes, matchesRes] = await Promise.all([
-          publicApi.getChampionshipStandings(selectedChampionship),
+          publicApi.getChampionshipStandingsComplete(selectedChampionship),
           publicApi.getChampionshipMatches(selectedChampionship)
         ]);
 
+        console.log('Respuesta standings:', standingsRes.data);
+        
         if (standingsRes.data.success) {
-          setStandings(standingsRes.data.data);
+          const standingsData = standingsRes.data.data || [];
+          console.log('Standings data:', standingsData);
+          setStandings(standingsData);
         }
         if (matchesRes.data.success) {
           const matchesData = matchesRes.data.data?.data || [];
