@@ -215,8 +215,8 @@ export const MesaControl: React.FC = () => {
     { paso: '4', titulo: 'Cerrar y Bloquear Acta', desc: 'Al finalizar el encuentro, cierra el acta. Esto recalculará automáticamente la tabla de posiciones y aplicará sanciones.', icono: 'lock' },
   ];
 
-  const [golesLocal, setGolesLocal] = useState('0');
-  const [golesVisita, setGolesVisita] = useState('0');
+  const [golesHome, setGolesHome] = useState('0');
+  const [golesAway, setGolesAway] = useState('0');
   const [firmaArbitro, setFirmaArbitro] = useState('');
   const [firmaDelegadoLocal, setFirmaDelegadoLocal] = useState('');
   const [firmaDelegadoVisita, setFirmaDelegadoVisita] = useState('');
@@ -253,12 +253,11 @@ export const MesaControl: React.FC = () => {
       
       if (status === 'running') {
         startedAt = timerStartedAt ? timerStartedAt.toISOString() : new Date().toISOString();
-        // Guardamos el tiempo BASE (el que teniamos cuando se inicio el timer)
         baseTime = baseElapsedTime;
       }
       
       await serviciosFixture.sincronizarTimer(partidoSeleccionado.id, {
-        current_elapsed_time: baseTime,  // Guardamos el tiempo BASE, no el total
+        current_elapsed_time: baseTime,
         current_period: period,
         timer_status: status,
         timer_started_at: startedAt,
@@ -325,9 +324,9 @@ export const MesaControl: React.FC = () => {
         if (modalIncidenciaRapida.type === 'goal') {
           const localId = partidoSeleccionado.local_team_id || (partidoSeleccionado as any).home_team_id;
           if (modalIncidenciaRapida.teamId === localId) {
-            setGolesLocal((prev) => (parseInt(prev) + 1).toString());
+            setGolesHome((prev) => (parseInt(prev) + 1).toString());
           } else {
-            setGolesVisita((prev) => (parseInt(prev) + 1).toString());
+            setGolesAway((prev) => (parseInt(prev) + 1).toString());
           }
         }
         
@@ -420,8 +419,8 @@ export const MesaControl: React.FC = () => {
     if (localId && visitorId) {
       const gLocal = incidencias.filter((i) => i.team_id === localId && i.incidence_type === 'goal').length;
       const gVisita = incidencias.filter((i) => i.team_id === visitorId && i.incidence_type === 'goal').length;
-      setGolesLocal(gLocal.toString());
-      setGolesVisita(gVisita.toString());
+      setGolesHome(gLocal.toString());
+      setGolesAway(gVisita.toString());
     }
   }, [incidencias, partidoSeleccionado]);
 
@@ -454,8 +453,8 @@ export const MesaControl: React.FC = () => {
     setActa(null);
     setIncidencias([]);
     
-    setGolesLocal('0');
-    setGolesVisita('0');
+    setGolesHome('0');
+    setGolesAway('0');
     setFirmaArbitro('');
     setFirmaDelegadoLocal('');
     setFirmaDelegadoVisita('');
@@ -475,8 +474,8 @@ export const MesaControl: React.FC = () => {
       if (resActa.success && resActa.data) {
         const a = resActa.data;
         setActa(a);
-        setGolesLocal(a.local_score.toString());
-        setGolesVisita(a.visitor_score.toString());
+        setGolesHome(a.local_score.toString());
+        setGolesAway(a.visitor_score.toString());
         setFirmaArbitro(a.referee_signature || '');
         
         const sig = a.delegate_signature || '';
@@ -525,10 +524,10 @@ export const MesaControl: React.FC = () => {
       const start = new Date(timerStartedAtValue);
       const now = new Date();
       const diffSeconds = Math.floor((now.getTime() - start.getTime()) / 1000);
-      const totalTime = timerData + diffSeconds;  // timerData es el tiempo BASE
+      const totalTime = timerData + diffSeconds;
       setSegundosTranscurridos(totalTime);
       setTimerStartedAt(start);
-      setBaseElapsedTime(timerData);  // El tiempo BASE
+      setBaseElapsedTime(timerData);
       setCronometroActivo(true);
     } else {
       setSegundosTranscurridos(timerData);
@@ -563,8 +562,8 @@ export const MesaControl: React.FC = () => {
     try {
       if (acta) {
         const res = await serviciosResultados.actualizarActa(acta.id, {
-          local_score: parseInt(golesLocal),
-          visitor_score: parseInt(golesVisita),
+          local_score: parseInt(golesHome),
+          visitor_score: parseInt(golesAway),
           referee_signature: firmaArbitro || undefined,
           delegate_signature: combinedSignature,
           observations: observaciones || undefined
@@ -576,8 +575,8 @@ export const MesaControl: React.FC = () => {
       } else {
         const res = await serviciosResultados.registrarActa({
           match_id: partidoSeleccionado.id,
-          local_score: parseInt(golesLocal),
-          visitor_score: parseInt(golesVisita),
+          local_score: parseInt(golesHome),
+          visitor_score: parseInt(golesAway),
           referee_signature: firmaArbitro || undefined,
           delegate_signature: combinedSignature,
           observations: observaciones || undefined
@@ -636,21 +635,66 @@ export const MesaControl: React.FC = () => {
 
     const esLocalForfeited = forfeitedTeamId === (partidoSeleccionado.local_team_id || (partidoSeleccionado as any).home_team_id);
     
+    const equipoPerdedor = esLocalForfeited 
+      ? partidoSeleccionado.local_team?.name || 'Local' 
+      : partidoSeleccionado.visitor_team?.name || 'Visita';
+    
+    const equipoGanador = esLocalForfeited 
+      ? partidoSeleccionado.visitor_team?.name || 'Visita' 
+      : partidoSeleccionado.local_team?.name || 'Local';
+
     const nuevoGolesLocal = esLocalForfeited ? scorePerdedor : scoreGanador;
     const nuevoGolesVisita = esLocalForfeited ? scoreGanador : scorePerdedor;
 
-    setGolesLocal(nuevoGolesLocal);
-    setGolesVisita(nuevoGolesVisita);
-    setObservaciones(`[WALKOVER] forfeited_team_id: ${forfeitedTeamId}`);
-    setFirmaArbitro('W.O. REGLAMENTARIO');
-    setFirmaDelegadoLocal('W.O.');
-    setFirmaDelegadoVisita('W.O.');
-    setFirmaDelegadoMesa(usuario?.name || 'Mesa Control');
-
-    sileo.warning({
-      title: 'Walkover Declarado',
-      description: `Se ha establecido el marcador reglamentario (${nuevoGolesLocal}-${nuevoGolesVisita}) y la observación correspondiente. Guarde los cambios para confirmar.`
-    });
+    setGolesHome(nuevoGolesLocal);
+    setGolesAway(nuevoGolesVisita);
+    setObservaciones(`WALKOVER: El equipo ${equipoPerdedor} no se presentó al encuentro. Victoria para ${equipoGanador} por ${scoreGanador}-${scorePerdedor}.`);
+    
+    setCronometroActivo(false);
+    setSubEstadoPartido('finalizado');
+    
+    try {
+      await serviciosFixture.actualizarPartido(partidoSeleccionado.id, {
+        status: 'finalizado'
+      });
+      
+      const combinedSignature = `Local: ${firmaDelegadoLocal.trim()} | Visita: ${firmaDelegadoVisita.trim()} | Mesa: ${firmaDelegadoMesa.trim()}`;
+      
+      if (acta) {
+        await serviciosResultados.actualizarActa(acta.id, {
+          local_score: parseInt(nuevoGolesLocal),
+          visitor_score: parseInt(nuevoGolesVisita),
+          referee_signature: firmaArbitro || undefined,
+          delegate_signature: combinedSignature,
+          observations: `WALKOVER: El equipo ${equipoPerdedor} no se presentó al encuentro. Victoria para ${equipoGanador} por ${scoreGanador}-${scorePerdedor}.`
+        });
+      } else {
+        const res = await serviciosResultados.registrarActa({
+          match_id: partidoSeleccionado.id,
+          local_score: parseInt(nuevoGolesLocal),
+          visitor_score: parseInt(nuevoGolesVisita),
+          referee_signature: firmaArbitro || undefined,
+          delegate_signature: combinedSignature,
+          observations: `WALKOVER: El equipo ${equipoPerdedor} no se presentó al encuentro. Victoria para ${equipoGanador} por ${scoreGanador}-${scorePerdedor}.`
+        });
+        if (res.success) {
+          setActa(res.data);
+        }
+      }
+      
+      await cargarPartidos();
+      
+      sileo.warning({
+        title: 'Walkover Declarado',
+        description: `Se ha declarado W.O. para ${equipoPerdedor}. Victoria para ${equipoGanador} por ${scoreGanador}-${scorePerdedor}. El acta se ha guardado automaticamente.`
+      });
+    } catch (err) {
+      console.error('Error al guardar acta con WO:', err);
+      sileo.error({
+        title: 'Error',
+        description: 'Error al guardar el acta del Walkover. Complete las firmas y guarde manualmente.'
+      });
+    }
   };
 
   const eliminarIncidencia = async (id: number) => {
@@ -742,8 +786,8 @@ export const MesaControl: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {partidos.map((part) => {
-                  const localScore = part.report?.local_score ?? 0;
-                  const visitorScore = part.report?.visitor_score ?? 0;
+                  const homeScore = part.report?.local_score ?? 0;
+                  const awayScore = part.report?.visitor_score ?? 0;
                   return (
                     <div
                       key={part.id}
@@ -766,7 +810,7 @@ export const MesaControl: React.FC = () => {
                           <span className="font-extrabold text-slate-200 text-sm group-hover:text-primary transition-colors">{part.local_team?.name}</span>
                           {part.status === 'finalizado' || part.status === 'en_curso' ? (
                             <span className="font-black text-slate-200 text-xs bg-[#1c1f2e] px-2 py-1 rounded-md">
-                              {localScore}
+                              {homeScore}
                             </span>
                           ) : null}
                         </div>
@@ -774,7 +818,7 @@ export const MesaControl: React.FC = () => {
                           <span className="font-extrabold text-slate-200 text-sm group-hover:text-primary transition-colors">{part.visitor_team?.name}</span>
                           {part.status === 'finalizado' || part.status === 'en_curso' ? (
                             <span className="font-black text-slate-200 text-xs bg-[#1c1f2e] px-2 py-1 rounded-md">
-                              {visitorScore}
+                              {awayScore}
                             </span>
                           ) : null}
                         </div>
@@ -857,7 +901,7 @@ export const MesaControl: React.FC = () => {
                         {formatearTiempo(segundosTranscurridos)}
                       </div>
                       
-                      {!acta?.is_locked && (
+                      {!acta?.is_locked && subEstadoPartido !== 'finalizado' && subEstadoPartido !== 'suspendido' && (
                         <div className="flex gap-2.5 mt-2">
                           {!cronometroActivo ? (
                             <button
@@ -896,7 +940,7 @@ export const MesaControl: React.FC = () => {
                             </button>
                           )}
 
-                          {subEstadoPartido !== 'finalizado' && subEstadoPartido !== 'programado' && (
+                          {(subEstadoPartido === 'jugando' || subEstadoPartido === 'descanso') && (
                             <button
                               type="button"
                               onClick={() => cambiarEstadoPartidoMesa('suspendido')}
@@ -908,11 +952,17 @@ export const MesaControl: React.FC = () => {
                           )}
                         </div>
                       )}
+                      
+                      {subEstadoPartido === 'finalizado' && (
+                        <div className="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-lg mt-2">
+                          Partido finalizado - No se puede modificar el timer
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-2 z-10 py-2">
                       <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Estado del Encuentro</span>
-                      {!acta?.is_locked && (
+                      {!acta?.is_locked && subEstadoPartido !== 'finalizado' && subEstadoPartido !== 'suspendido' && (
                         <div className="flex gap-2">
                           {subEstadoPartido !== 'jugando' && (
                             <button
@@ -932,15 +982,21 @@ export const MesaControl: React.FC = () => {
                               Fin de Set / Descanso
                             </button>
                           )}
-                          {subEstadoPartido !== 'finalizado' && subEstadoPartido !== 'programado' && (
+                          {(subEstadoPartido === 'jugando' || subEstadoPartido === 'descanso') && (
                             <button
                               type="button"
                               onClick={() => cambiarEstadoPartidoMesa('suspendido')}
                               className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
                             >
+                              <span className="material-symbols-outlined text-sm">block</span>
                               Suspender
                             </button>
                           )}
+                        </div>
+                      )}
+                      {subEstadoPartido === 'finalizado' && (
+                        <div className="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-lg mt-2">
+                          Partido finalizado - No se puede modificar el timer
                         </div>
                       )}
                     </div>
@@ -954,7 +1010,7 @@ export const MesaControl: React.FC = () => {
                       <input
                         type="text"
                         readOnly
-                        value={golesLocal}
+                        value={golesHome}
                         className="w-14 text-center text-2xl font-black border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 outline-hidden cursor-not-allowed select-none"
                         title="El marcador se calcula automáticamente a partir de las incidencias registradas"
                       />
@@ -962,7 +1018,7 @@ export const MesaControl: React.FC = () => {
                       <input
                         type="text"
                         readOnly
-                        value={golesVisita}
+                        value={golesAway}
                         className="w-14 text-center text-2xl font-black border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 outline-hidden cursor-not-allowed select-none"
                         title="El marcador se calcula automáticamente a partir de las incidencias registradas"
                       />
