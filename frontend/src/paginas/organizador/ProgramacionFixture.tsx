@@ -62,7 +62,16 @@ export const ProgramacionFixture: React.FC = () => {
 
   // Estados de formularios
   const [nuevoEsc, setNuevoEsc] = useState({ name: '', venue_type: 'cancha', location: '', capacity: '', status: 'active' });
-  const [datosFixture, setDatosFixture] = useState({ discipline_id: '', category_id: '', start_date: '', venue_ids: [] as number[], format: 'liga' as 'liga' | 'grupos' | 'eliminacion_directa' });
+  const [datosFixture, setDatosFixture] = useState({ 
+    discipline_id: '', 
+    category_id: '', 
+    start_date: '', 
+    venue_ids: [] as number[], 
+    format: 'liga' as 'liga' | 'grupos' | 'eliminacion_directa',
+    num_groups: '',
+    advance_per_group: '',
+    third_place: false 
+  });
   
   // Asignar fecha
   const [datosFecha, setDatosFecha] = useState({ discipline_id: '', category_id: '', round: '', available_hours: '', venue_ids: [] as number[] });
@@ -174,18 +183,51 @@ export const ProgramacionFixture: React.FC = () => {
   // Generar Fixture
   const manejarGenerarFixture = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { discipline_id, category_id, start_date, venue_ids, format } = datosFixture;
+    const { 
+      discipline_id, 
+      category_id, 
+      start_date, 
+      venue_ids, 
+      format,
+      num_groups,
+      advance_per_group,
+      third_place
+    } = datosFixture;
     if (!discipline_id || !category_id || !start_date || venue_ids.length === 0) {
       mostrarMensaje('Complete todos los campos y seleccione al menos un escenario.', true);
       return;
     }
+
+    // Construir format_settings dinámicamente según lo seleccionado en el formulario
+    let format_settings: any = null;
+    if (format === 'grupos') {
+      const parsedGroups = parseInt(num_groups);
+      const parsedAdvance = parseInt(advance_per_group);
+      if (isNaN(parsedGroups) || isNaN(parsedAdvance)) {
+        mostrarMensaje('Debes ingresar el número de grupos y de clasificados.', true);
+        return;
+      }
+      format_settings = {
+        num_groups: parsedGroups,
+        advance_per_group: parsedAdvance,
+        third_place: third_place
+      };
+    } else if (format === 'eliminacion_directa') {
+      format_settings = {
+        third_place: third_place
+      };
+    } else {
+      format_settings = {};
+    }
+
     try {
       // Primero actualizar el formato de la categoría en el backend si difiere del actual
       const catOriginal = categorias.find(c => c.id === parseInt(category_id));
-      if (catOriginal && catOriginal.format !== format) {
+      if (catOriginal) {
         await serviciosParticipantes.actualizarCategoria(parseInt(category_id), {
           ...catOriginal,
-          format: format
+          format: format,
+          format_settings: format_settings
         });
         const champId = parseInt(localStorage.getItem('campeonato_activo_id') || '0');
         const resCat = await serviciosParticipantes.obtenerCategoriasPorCampeonato(champId);
@@ -200,7 +242,16 @@ export const ProgramacionFixture: React.FC = () => {
       });
       if (res.success) {
         mostrarMensaje('Fixture completo generado con éxito para este campeonato.');
-        setDatosFixture({ discipline_id: '', category_id: '', start_date: '', venue_ids: [], format: 'liga' });
+        setDatosFixture({ 
+          discipline_id: '', 
+          category_id: '', 
+          start_date: '', 
+          venue_ids: [], 
+          format: 'liga',
+          num_groups: '',
+          advance_per_group: '',
+          third_place: false 
+        });
       }
     } catch (err: any) {
       mostrarMensaje(err.response?.data?.message || 'Error en la generación del fixture.', true);
@@ -611,18 +662,51 @@ export const ProgramacionFixture: React.FC = () => {
                     className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Formato de Competición *</label>
-                  <select
-                    required value={datosFixture.format}
-                    onChange={(e) => setDatosFixture({ ...datosFixture, format: e.target.value as any })}
-                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
-                  >
-                    <option value="liga">Liga (Todos contra todos)</option>
-                    <option value="grupos">Fase de Grupos + Eliminatoria</option>
-                    <option value="eliminacion_directa">Eliminación Directa (Playoffs)</option>
-                  </select>
-                </div>
+                {/* Formato de Competencia */}
+                  <div className="space-y-1 border-t border-slate-105 pt-3">
+                    <label className="text-xs font-bold text-slate-700 block">Formato de Competencia</label>
+                    <select value={datosFixture.format} onChange={(e) => setDatosFixture({ ...datosFixture, format: e.target.value as any })}
+                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
+                      <option value="liga">Liga (Todos contra todos)</option>
+                      <option value="grupos">Fase de Grupos + Eliminación</option>
+                      <option value="eliminacion_directa">Eliminación Directa</option>
+                    </select>
+                  </div>
+
+                  {/* Campos condicionales de format_settings */}
+                  {datosFixture.format === 'grupos' && (
+                    <div className="space-y-3 bg-slate-50 p-3 rounded-xl border border-slate-100 animate-fadeIn">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700 block">N° de Grupos *</label>
+                          <input type="number" min="2" placeholder="Ej: 4"
+                            value={datosFixture.num_groups} onChange={(e) => setDatosFixture({ ...datosFixture, num_groups: e.target.value })}
+                            className="w-full text-xs border border-slate-200 rounded-lg p-2 outline-hidden bg-white" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700 block">Clasificados/Grupo *</label>
+                          <input type="number" min="1" placeholder="Ej: 2"
+                            value={datosFixture.advance_per_group} onChange={(e) => setDatosFixture({ ...datosFixture, advance_per_group: e.target.value })}
+                            className="w-full text-xs border border-slate-200 rounded-lg p-2 outline-hidden bg-white" />
+                        </div>
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" checked={datosFixture.third_place} onChange={(e) => setDatosFixture({ ...datosFixture, third_place: e.target.checked })}
+                          className="rounded-sm border-slate-300 text-indigo-600 outline-hidden" />
+                        <span className="text-[10px] font-bold text-slate-650 uppercase">Partido por 3° Puesto</span>
+                      </label>
+                    </div>
+                  )}
+
+                  {datosFixture.format === 'eliminacion_directa' && (
+                    <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-100 animate-fadeIn">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" checked={datosFixture.third_place} onChange={(e) => setDatosFixture({ ...datosFixture, third_place: e.target.checked })}
+                          className="rounded-sm border-slate-300 text-indigo-600 outline-hidden" />
+                        <span className="text-[10px] font-bold text-slate-650 uppercase">Partido por 3° Puesto</span>
+                      </label>
+                    </div>
+                  )}
               </div>
 
               <div className="space-y-2">

@@ -214,10 +214,6 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     age_max: '',
     gender: 'Masculino',
     discipline_id: '',
-    format: 'liga' as 'liga' | 'grupos' | 'eliminacion_directa',
-    num_groups: '',
-    advance_per_group: '',
-    third_place: false
   });
   const [nuevoEq, setNuevoEq] = useState({ name: '', representative: '', discipline_id: '', category_id: '' });
   const [nuevoJug, setNuevoJug] = useState({ name: '', dni: '', age: '', phone: '', team_id: '', number: '', position: 'Delantero' });
@@ -531,36 +527,12 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       mostrarMensaje('El nombre y la disciplina son obligatorios.', true); return;
     }
 
-    // Construir format_settings dinámicamente según el formato seleccionado
-    let format_settings: any = null;
-    if (nuevaCat.format === 'grupos') {
-      const numGroups = parseInt(nuevaCat.num_groups);
-      const advancePerGroup = parseInt(nuevaCat.advance_per_group);
-      if (isNaN(numGroups) || isNaN(advancePerGroup)) {
-        mostrarMensaje('Debes ingresar el número de grupos y de clasificados.', true);
-        return;
-      }
-      format_settings = {
-        num_groups: numGroups,
-        advance_per_group: advancePerGroup,
-        third_place: nuevaCat.third_place
-      };
-    } else if (nuevaCat.format === 'eliminacion_directa') {
-      format_settings = {
-        third_place: nuevaCat.third_place
-      };
-    } else {
-      format_settings = {};
-    }
-
     try {
       const res = await serviciosParticipantes.crearCategoria(parseInt(nuevaCat.discipline_id), {
         name: nuevaCat.name,
         age_min: nuevaCat.age_min ? parseInt(nuevaCat.age_min) : null,
         age_max: nuevaCat.age_max ? parseInt(nuevaCat.age_max) : null,
-        gender_type: nuevaCat.gender,
-        format: nuevaCat.format,
-        format_settings: format_settings
+        gender_type: nuevaCat.gender
       });
       if (res.success) {
         mostrarMensaje('Categoría registrada exitosamente.');
@@ -569,11 +541,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
           age_min: '',
           age_max: '',
           gender: 'Masculino',
-          discipline_id: '',
-          format: 'liga',
-          num_groups: '',
-          advance_per_group: '',
-          third_place: false
+          discipline_id: ''
         });
         cargarDatos();
       }
@@ -581,7 +549,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       // Capturar errores de validación HTTP 422
       if (err.response && err.response.status === 422) {
         const errors = err.response.data.errors;
-        const msg = errors ? Object.values(errors).flat().join('\n') : 'Datos inválidos para el formato seleccionado.';
+        const msg = errors ? Object.values(errors).flat().join('\n') : 'Datos inválidos.';
         sileo.error({
           title: 'Error de Configuración',
           description: msg
@@ -1284,52 +1252,6 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                       <option value="Mixto">Mixto</option>
                     </select>
                   </div>
-
-                  {/* Formato de Competencia */}
-                  <div className="space-y-1 border-t border-slate-105 pt-3">
-                    <label className="text-xs font-bold text-slate-700 block">Formato de Competencia</label>
-                    <select value={nuevaCat.format} onChange={(e) => setNuevaCat({ ...nuevaCat, format: e.target.value as any })}
-                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
-                      <option value="liga">Liga (Todos contra todos)</option>
-                      <option value="grupos">Fase de Grupos + Eliminación</option>
-                      <option value="eliminacion_directa">Eliminación Directa</option>
-                    </select>
-                  </div>
-
-                  {/* Campos condicionales de format_settings */}
-                  {nuevaCat.format === 'grupos' && (
-                    <div className="space-y-3 bg-slate-50 p-3 rounded-xl border border-slate-100 animate-fadeIn">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-700 block">N° de Grupos *</label>
-                          <input type="number" min="2" placeholder="Ej: 4"
-                            value={nuevaCat.num_groups} onChange={(e) => setNuevaCat({ ...nuevaCat, num_groups: e.target.value })}
-                            className="w-full text-xs border border-slate-200 rounded-lg p-2 outline-hidden bg-white" />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-700 block">Clasificados/Grupo *</label>
-                          <input type="number" min="1" placeholder="Ej: 2"
-                            value={nuevaCat.advance_per_group} onChange={(e) => setNuevaCat({ ...nuevaCat, advance_per_group: e.target.value })}
-                            className="w-full text-xs border border-slate-200 rounded-lg p-2 outline-hidden bg-white" />
-                        </div>
-                      </div>
-                      <label className="flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" checked={nuevaCat.third_place} onChange={(e) => setNuevaCat({ ...nuevaCat, third_place: e.target.checked })}
-                          className="rounded-sm border-slate-300 text-indigo-600 outline-hidden" />
-                        <span className="text-[10px] font-bold text-slate-650 uppercase">Partido por 3° Puesto</span>
-                      </label>
-                    </div>
-                  )}
-
-                  {nuevaCat.format === 'eliminacion_directa' && (
-                    <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-100 animate-fadeIn">
-                      <label className="flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" checked={nuevaCat.third_place} onChange={(e) => setNuevaCat({ ...nuevaCat, third_place: e.target.checked })}
-                          className="rounded-sm border-slate-300 text-indigo-600 outline-hidden" />
-                        <span className="text-[10px] font-bold text-slate-650 uppercase">Partido por 3° Puesto</span>
-                      </label>
-                    </div>
-                  )}
 
                   <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer">
                     Guardar Categoría
