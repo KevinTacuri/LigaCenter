@@ -35,6 +35,7 @@ export const EstadisticasOrganizador: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('todos');
 
+  const [subTabActiva, setSubTabActiva] = useState<'grupos' | 'knockout'>('grupos');
   const [totalEquipos, setTotalEquipos] = useState(0);
 
   const [stats, setStats] = useState({
@@ -251,6 +252,34 @@ export const EstadisticasOrganizador: React.FC = () => {
     }
   };
 
+  const agruparPosicionesPorGrupo = (): Record<string, Posicion[]> => {
+    const grupos: Record<string, Posicion[]> = {};
+    
+    posiciones.forEach(pos => {
+      // Como modificamos el backend, pos.group_name siempre tendrá el valor correcto del grupo
+      const nombreGrupo = (pos as any).group_name || 'Grupo Único';
+      
+      if (!grupos[nombreGrupo]) {
+        grupos[nombreGrupo] = [];
+      }
+      grupos[nombreGrupo].push(pos);
+    });
+
+    // Re-ordenar internamente cada grupo por rendimiento
+    Object.keys(grupos).forEach(grupo => {
+      grupos[grupo].sort((a, b) => {
+        if ((b.points ?? 0) !== (a.points ?? 0)) return (b.points ?? 0) - (a.points ?? 0);
+        if ((b.goal_difference ?? 0) !== (a.goal_difference ?? 0)) return (b.goal_difference ?? 0) - (a.goal_difference ?? 0);
+        return (b.goals_for ?? 0) - (a.goals_for ?? 0);
+      });
+    });
+
+    return grupos;
+  };
+
+  const categoriaActual = categorias.find(c => c.id === selectedCategory);
+  const esFormatoGrupos = categoriaActual?.format === 'grupos';
+
   if (cargando || loading) {
     return (
       <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans">
@@ -375,74 +404,117 @@ export const EstadisticasOrganizador: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
+            {/* CONTENEDOR MODIFICADO DE TABLA DE POSICIONES */}
             <div className="lg:col-span-2 bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-slate-900 flex justify-between items-center">
+              <div className="px-5 py-3 border-b border-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                   <span className="material-symbols-outlined text-indigo-400 text-base">leaderboard</span>
                   Tabla de Posiciones
                 </h3>
-                <button
-                  onClick={() => loadData()}
-                  disabled={loading}
-                  className="text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span className="material-symbols-outlined text-sm">refresh</span>
-                  {loading ? 'Cargando...' : 'Recargar'}
-                </button>
+                
+                {/* SUB-PESTAÑAS ESTILO SOFASCORE (Solo si la categoría es de formato 'grupos') */}
+                {esFormatoGrupos && (
+                  <div className="flex bg-[#0c0e16] p-1 rounded-lg border border-slate-800">
+                    <button
+                      onClick={() => setSubTabActiva('grupos')}
+                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                        subTabActiva === 'grupos' 
+                          ? 'bg-indigo-500 text-white shadow-xs' 
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Grupos
+                    </button>
+                    <button
+                      onClick={() => setSubTabActiva('knockout')}
+                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                        subTabActiva === 'knockout' 
+                          ? 'bg-indigo-500 text-white shadow-xs' 
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Eliminatoria (Knockout)
+                    </button>
+                  </div>
+                )}
               </div>
-              <div className="overflow-x-auto">
+
+              <div className="overflow-x-auto p-2">
                 {!selectedCategory ? (
                   <div className="p-8 text-center text-slate-400">
                     <span className="material-symbols-outlined text-4xl block mb-2 opacity-50">info</span>
                     <p className="text-sm font-medium">Selecciona una categoría para ver la tabla de posiciones</p>
-                    <p className="text-xs text-slate-500 mt-1">Las categorías disponibles aparecen en el filtro superior</p>
                   </div>
                 ) : posiciones.length === 0 ? (
                   <div className="p-8 text-center text-slate-500 text-sm">
                     No hay posiciones disponibles para la categoría seleccionada
                   </div>
+                ) : esFormatoGrupos && subTabActiva === 'knockout' ? (
+                  /* VISTA PREVENTIVA PARA EL BRACKET (Siguiente Paso) */
+                  <div className="p-12 text-center text-slate-400 border border-dashed border-slate-800 rounded-xl m-4">
+                    <span className="material-symbols-outlined text-4xl block mb-2 text-indigo-400">减速_hierarchy</span>
+                    <p className="text-sm font-bold uppercase tracking-wider">Brackets Dinámicos</p>
+                    <p className="text-xs text-slate-500 mt-1">Aquí renderizaremos las llaves de eliminación directa próximamente.</p>
+                  </div>
                 ) : (
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-[#171a26] text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                        <th className="p-3 pl-5 text-center w-10">Pos</th>
-                        <th className="p-3">Equipo</th>
-                        <th className="p-3 text-center">PJ</th>
-                        <th className="p-3 text-center">G</th>
-                        <th className="p-3 text-center">E</th>
-                        <th className="p-3 text-center">P</th>
-                        <th className="p-3 text-center">GF</th>
-                        <th className="p-3 text-center">GC</th>
-                        <th className="p-3 text-center">DG</th>
-                        <th className="p-3 pr-5 text-center font-bold">Pts</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800">
-                      {posiciones.map((pos, index) => {
-                        const wins = pos.wins ?? 0;
-                        const draws = pos.draws ?? 0;
-                        const losses = pos.losses ?? 0;
-                        const points = pos.points ?? 0;
-                        
-                        return (
-                          <tr key={pos.team_id || `pos-${index}`} className="hover:bg-[#171a26]/40 transition-colors">
-                            <td className="p-3 pl-5 text-center font-bold text-slate-400">{index + 1}</td>
-                            <td className="p-3 font-bold text-white text-sm">{pos.team?.name || '—'}</td>
-                            <td className="p-3 text-center text-slate-300">{pos.matches_played || 0}</td>
-                            <td className="p-3 text-center text-emerald-400">{wins}</td>
-                            <td className="p-3 text-center text-slate-400">{draws}</td>
-                            <td className="p-3 text-center text-rose-400">{losses}</td>
-                            <td className="p-3 text-center text-slate-300">{pos.goals_for || 0}</td>
-                            <td className="p-3 text-center text-slate-300">{pos.goals_against || 0}</td>
-                            <td className="p-3 text-center font-bold text-white">
-                              {pos.goal_difference > 0 ? `+${pos.goal_difference}` : pos.goal_difference || 0}
-                            </td>
-                            <td className="p-3 pr-5 text-center font-extrabold text-indigo-400 text-base">{points}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                  /* RENDERING DE TABLAS (LIGA SIMPLE O SEPARADO POR GRUPOS) */
+                  <div className="space-y-8 p-2">
+                    {(() => {
+                      // Si es formato grupos, usamos nuestra función de agrupación
+                      const datosTablas = esFormatoGrupos 
+                        ? agruparPosicionesPorGrupo() 
+                        : { "Tabla General": posiciones };
+
+                      return Object.keys(datosTablas).map((nombreGrupo) => (
+                        <div key={nombreGrupo} className="space-y-3">
+                          {/* Título de la tabla (Grupo A, Grupo B, etc.) */}
+                          {esFormatoGrupos && (
+                            <div className="flex items-center gap-2 px-3 py-1 bg-[#171a26] border border-slate-800 rounded-lg w-fit">
+                              <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                              <h4 className="text-xs font-black text-white uppercase tracking-wider">{nombreGrupo}</h4>
+                            </div>
+                          )}
+
+                          <div className="border border-slate-900/60 rounded-xl overflow-hidden bg-[#0c0e16]/20">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-[#171a26]/70 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                                  <th className="p-3 pl-5 text-center w-10">#</th>
+                                  <th className="p-3">Equipo</th>
+                                  <th className="p-3 text-center">PJ</th>
+                                  <th className="p-3 text-center">G</th>
+                                  <th className="p-3 text-center">E</th>
+                                  <th className="p-3 text-center">P</th>
+                                  <th className="p-3 text-center">GF</th>
+                                  <th className="p-3 text-center">GC</th>
+                                  <th className="p-3 text-center">DG</th>
+                                  <th className="p-3 pr-5 text-center font-bold">Pts</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-800/60">
+                                {datosTablas[nombreGrupo].map((pos, index) => (
+                                  <tr key={pos.team_id || `pos-${index}`} className="hover:bg-[#171a26]/40 transition-colors">
+                                    <td className="p-3 pl-5 text-center font-bold text-slate-400">{index + 1}</td>
+                                    <td className="p-3 font-bold text-white text-sm">{pos.team?.name || '—'}</td>
+                                    <td className="p-3 text-center text-slate-300">{pos.matches_played || 0}</td>
+                                    <td className="p-3 text-center text-emerald-400">{pos.wins ?? 0}</td>
+                                    <td className="p-3 text-center text-slate-400">{pos.draws ?? 0}</td>
+                                    <td className="p-3 text-center text-rose-400">{pos.losses ?? 0}</td>
+                                    <td className="p-3 text-center text-slate-300">{pos.goals_for || 0}</td>
+                                    <td className="p-3 text-center text-slate-300">{pos.goals_against || 0}</td>
+                                    <td className="p-3 text-center font-bold text-white">
+                                      {pos.goal_difference > 0 ? `+${pos.goal_difference}` : pos.goal_difference || 0}
+                                    </td>
+                                    <td className="p-3 pr-5 text-center font-extrabold text-indigo-400 text-base">{pos.points ?? 0}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
                 )}
               </div>
             </div>
