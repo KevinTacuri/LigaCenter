@@ -38,4 +38,10 @@ Route::middleware('auth:sanctum')->group(function () {
         [CategoryController::class, 'destroy']
     );
 
+    // Crear una categoría directamente asociada a un campeonato
+    Route::post(
+        '/championships/{championship}/categories',
+        [CategoryController::class, 'storeByChampionship']
+    );
+
 });

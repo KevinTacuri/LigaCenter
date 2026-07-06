@@ -7,6 +7,7 @@ use App\Models\Category;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 use App\Models\ChampionshipDiscipline;
+use App\Models\Championship;
 
 #[OA\Tag(
     name: "Categories",
@@ -332,5 +333,48 @@ class CategoryController extends Controller
                 ->with(['teams', 'championshipDiscipline.discipline'])
                 ->get()
         );
+    }
+
+    // ==================
+    public function storeByChampionship(Request $request, Championship $championship)
+    {
+        $validated = $request->validate([
+            'discipline_id' => 'required|integer|exists:disciplines,id',
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'gender_type' => 'nullable|string|in:Masculino,Femenino,Mixto',
+            'age_min' => 'nullable|integer|min:0',
+            'age_max' => 'nullable|integer|min:0',
+        ]);
+
+        // 1. Buscar o crear la relación campeonato-disciplina
+        $championshipDiscipline = ChampionshipDiscipline::firstOrCreate([
+            'championship_id' => $championship->id,
+            'discipline_id' => $validated['discipline_id'],
+        ]);
+
+        // 2. Crear categoría usando esa relación
+        $category = Category::create([
+            'championship_discipline_id' => $championshipDiscipline->id,
+            'name' => $validated['name'],
+            //'format' => $validated['format'] ?? null,
+            //'format_settings' => $validated['format_settings'] ?? null,
+            'description' => $validated['description'] ?? null,
+            'gender_type' => $validated['gender_type'] ?? null,
+            'age_min' => $validated['age_min'] ?? null,
+            'age_max' => $validated['age_max'] ?? null,
+            // default values for format and format_settings 
+            'format' => 'liga',
+            'format_settings' => json_encode([
+                'num_groups' => 1,
+                'advance_per_group' => 1,
+                'third_place' => false
+            ]),
+        ]);
+
+        return response()->json([
+            'message' => 'Categoría creada correctamente',
+            'data' => $category->load(['championshipDiscipline.discipline', 'teams'])
+        ], 201);
     }
 }
