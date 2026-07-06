@@ -308,7 +308,11 @@ export interface Partido {
   match_date?: string | null;
   match_time?: string | null;
   round: number;
+  phase?: string | null;
+  group_id?: number | null;
   status: string;
+  home_score?: number | null;
+  away_score?: number | null;
   venue?: Escenario;
   discipline?: Disciplina;
   category?: Categoria;

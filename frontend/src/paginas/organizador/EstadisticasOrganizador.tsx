@@ -36,6 +36,7 @@ export const EstadisticasOrganizador: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('todos');
 
   const [subTabActiva, setSubTabActiva] = useState<'grupos' | 'knockout'>('grupos');
+  const [faseIndexActiva, setFaseIndexActiva] = useState<number>(0);
   const [totalEquipos, setTotalEquipos] = useState(0);
 
   const [stats, setStats] = useState({
@@ -280,6 +281,41 @@ export const EstadisticasOrganizador: React.FC = () => {
   const categoriaActual = categorias.find(c => c.id === selectedCategory);
   const esFormatoGrupos = categoriaActual?.format === 'grupos';
 
+  // FUNCIÓN NUEVA: Filtra los partidos de eliminación directa y los organiza para el Bracket
+  const obtenerEstructuraBracket = () => {
+    // Definimos el orden estricto de las rondas eliminatorias
+    const ordenFases = ['octavos', 'cuartos', 'semifinal', 'final'];
+    
+    const estructura: Record<string, Partido[]> = {
+      octavos: [],
+      cuartos: [],
+      semifinal: [],
+      final: []
+    };
+
+    // Filtrar los partidos que NO pertenecen a la fase regular de grupos o liga
+    partidos.forEach((partido) => {
+      const fase = partido.phase?.toLowerCase();
+      if (fase && fase !== 'grupos' && fase !== 'liga' && fase !== 'fase_regular') {
+        // Si es tercer puesto, lo podemos empujar visualmente junto a la final
+        if (fase === 'tercer_puesto' || fase === 'tercer_lugar') {
+          if (!estructura['final']) estructura['final'] = [];
+          estructura['final'].push(partido);
+        } else if (estructura[fase]) {
+          estructura[fase].push(partido);
+        }
+      }
+    });
+
+    // Eliminar las fases que estén vacías (por ejemplo, si el torneo empieza desde Cuartos)
+    return Object.keys(estructura).reduce((acc, llave) => {
+      if (estructura[llave].length > 0) {
+        acc[llave] = estructura[llave];
+      }
+      return acc;
+    }, {} as Record<string, Partido[]>);
+  };
+
   if (cargando || loading) {
     return (
       <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans">
@@ -409,10 +445,10 @@ export const EstadisticasOrganizador: React.FC = () => {
               <div className="px-5 py-3 border-b border-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                   <span className="material-symbols-outlined text-indigo-400 text-base">leaderboard</span>
-                  Tabla de Posiciones
+                  {categoriaActual?.format === 'eliminacion_directa' ? 'Llaves de Eliminación Directa' : 'Tabla de Posiciones'}
                 </h3>
                 
-                {/* SUB-PESTAÑAS ESTILO SOFASCORE (Solo si la categoría es de formato 'grupos') */}
+                {/* SUB-PESTAÑAS (Solo si la categoría es de formato 'grupos') */}
                 {esFormatoGrupos && (
                   <div className="flex bg-[#0c0e16] p-1 rounded-lg border border-slate-800">
                     <button
@@ -449,12 +485,191 @@ export const EstadisticasOrganizador: React.FC = () => {
                   <div className="p-8 text-center text-slate-500 text-sm">
                     No hay posiciones disponibles para la categoría seleccionada
                   </div>
-                ) : esFormatoGrupos && subTabActiva === 'knockout' ? (
-                  /* VISTA PREVENTIVA PARA EL BRACKET (Siguiente Paso) */
-                  <div className="p-12 text-center text-slate-400 border border-dashed border-slate-800 rounded-xl m-4">
-                    <span className="material-symbols-outlined text-4xl block mb-2 text-indigo-400">减速_hierarchy</span>
-                    <p className="text-sm font-bold uppercase tracking-wider">Brackets Dinámicos</p>
-                    <p className="text-xs text-slate-500 mt-1">Aquí renderizaremos las llaves de eliminación directa próximamente.</p>
+                ) : categoriaActual?.format === 'eliminacion_directa' || (esFormatoGrupos && subTabActiva === 'knockout') ? (
+                  /* VISTA DEL BRACKET DINÁMICO REPARADO */
+                  <div className="p-4 select-none space-y-6">
+                    {(() => {
+                      const backendData = obtenerEstructuraBracket();
+                      
+                      // Forzamos un árbol completo de 3 rondas (Cuartos, Semis, Final) para garantizar consistencia visual
+                      const fasesFijas = ['cuartos', 'semifinal', 'final'];
+                      
+                      const nombresFases: Record<string, string> = {
+                        cuartos: 'Cuartos de final',
+                        semifinal: 'Semifinales',
+                        final: 'Final'
+                      };
+
+                      // Mapeo manual de la cantidad teórica de partidos por ronda para autogenerar cajas ficticias
+                      const conteoPartidosTeoricos: Record<string, number> = {
+                        cuartos: 4,
+                        semifinal: 2,
+                        final: 1
+                      };
+
+                      return (
+                        <div className="space-y-6">
+                          {/* CONTROLES SUPERIORES (Navegación Móvil y Sincronización) */}
+                          <div className="flex items-center justify-end gap-2 bg-[#0c0e16] p-1.5 rounded-xl border border-slate-800/80 max-w-fit ml-auto">
+                            <select
+                              value={faseIndexActiva}
+                              onChange={(e) => setFaseIndexActiva(Number(e.target.value))}
+                              className="bg-[#171a26] border border-slate-800 text-xs font-bold text-slate-200 px-3 py-1.5 rounded-lg outline-none focus:border-indigo-500/50 min-w-[140px]"
+                            >
+                              {fasesFijas.map((fase, idx) => (
+                                <option key={fase} value={idx}>
+                                  {nombresFases[fase]}
+                                </option>
+                              ))}
+                            </select>
+
+                            <button
+                              onClick={() => setFaseIndexActiva(prev => Math.max(0, prev - 1))}
+                              disabled={faseIndexActiva === 0}
+                              className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#171a26] border border-slate-800 text-slate-300 hover:text-white disabled:opacity-30 transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-sm">chevron_left</span>
+                            </button>
+
+                            <button
+                              onClick={() => setFaseIndexActiva(prev => Math.min(fasesFijas.length - 1, prev + 1))}
+                              disabled={faseIndexActiva === fasesFijas.length - 1}
+                              className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#171a26] border border-slate-800 text-slate-300 hover:text-white disabled:opacity-30 transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-sm">chevron_right</span>
+                            </button>
+                          </div>
+
+                          {/* VISTA COMPLETA (Soporta scroll horizontal si el contenedor es estrecho) */}
+                          <div className="flex flex-row items-start gap-12 py-6 overflow-x-auto min-w-max scrollbar-thin">
+                            {fasesFijas.map((fase, colIdx) => {
+                              const partidosBackend = backendData[fase] || [];
+                              const cantidadTeorica = conteoPartidosTeoricos[fase];
+                              
+                              // Combinamos lo que venga del backend con slots vacíos numerados
+                              const partidosAMostrar = Array.from({ length: cantidadTeorica }).map((_, idx) => {
+                                return partidosBackend[idx] || {
+                                  id: `${fase}-${idx}`,
+                                  phase: fase,
+                                  status: 'programado',
+                                  local_team: null,
+                                  visitor_team: null,
+                                  home_score: null,
+                                  away_score: null
+                                };
+                              });
+
+                              return (
+                                <div key={fase} className="flex flex-col w-64 relative">
+                                  {/* Encabezado de la fase */}
+                                  <div className="text-center bg-[#171a26] border border-slate-800/80 rounded-lg py-1.5 mb-6">
+                                    <span className="text-[10px] font-black tracking-widest text-indigo-400 uppercase">
+                                      {nombresFases[fase]}
+                                    </span>
+                                  </div>
+
+                                  {/* Caja contenedora con cálculo de espaciados elásticos */}
+                                  <div className="flex-1 flex flex-col justify-around gap-12 min-h-[400px] relative">
+                                    {partidosAMostrar.map((partido, partIdx) => {
+                                      const esPar = partIdx % 2 === 0;
+                                      
+                                      // Códigos calculados dinámicamente según la posición física en el árbol
+                                      let codigoLocal = 'Por definir';
+                                      let codigoVisita = 'Por definir';
+
+                                      if (fase === 'semifinal') {
+                                        codigoLocal = `W${partIdx * 2 + 1}`; // W1 o W3
+                                        codigoVisita = `W${partIdx * 2 + 2}`; // W2 o W4
+                                      } else if (fase === 'final') {
+                                        codigoLocal = 'W5'; // Ganador Semi 1
+                                        codigoVisita = 'W6'; // Ganador Semi 2
+                                      }
+
+                                      return (
+                                        <div key={partido.id} className="relative w-full flex items-center">
+                                          
+                                          {/* LÍNEAS CONECTORAS ENTRE FASES (Estilo Sofascore) */}
+                                          {colIdx < fasesFijas.length - 1 && (
+                                            <>
+                                              {/* Conector horizontal saliente */}
+                                              <div className="absolute right-0 top-1/2 -mr-6 w-6 h-[2px] bg-slate-800" />
+                                              
+                                              {/* Conector vertical del puente */}
+                                              <div 
+                                                className="absolute right-0 top-1/2 -mr-6 w-[2px] bg-slate-800" 
+                                                style={{
+                                                  height: fase === 'cuartos' ? '74px' : '140px',
+                                                  transform: esPar ? 'none' : 'translate-y(-100%)'
+                                                }}
+                                              />
+                                              
+                                              {/* Prolongación hacia la derecha al centro del nodo destino */}
+                                              {esPar && (
+                                                <div 
+                                                  className="absolute right-0 top-1/2 -mr-12 w-6 h-[2px] bg-slate-800" 
+                                                  style={{ transform: fase === 'cuartos' ? 'translateY(37px)' : 'translateY(70px)' }}
+                                                />
+                                              )}
+                                            </>
+                                          )}
+
+                                          {/* TARJETA DEL ENCUENTRO */}
+                                          <div className="bg-[#0c0e16] border border-slate-800/90 rounded-xl overflow-hidden shadow-xl hover:border-indigo-500/30 transition-all w-full z-10">
+                                            <div className="bg-[#171a26]/50 px-3 py-1.5 border-b border-slate-900 flex justify-between items-center">
+                                              <span className="text-[9px] font-bold text-slate-500 uppercase">
+                                                {fase === 'final' ? '🏆 Partido de Campeonato' : `Llave ${partIdx + 1}`}
+                                              </span>
+                                              <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
+                                                partido.status === 'finalizado' ? 'bg-slate-800 text-slate-400' : 'bg-indigo-500/10 text-indigo-400'
+                                              }`}>
+                                                {partido.status?.toUpperCase() === 'FINALIZADO' ? 'FIN' : 'PROG'}
+                                              </span>
+                                            </div>
+
+                                            <div className="p-2.5 space-y-2">
+                                              {/* Fila Equipo Local */}
+                                              <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2 truncate">
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                                  <span className={`text-xs font-bold truncate ${
+                                                    partido.local_team ? 'text-white' : 'text-slate-500 font-mono text-[10px]'
+                                                  }`}>
+                                                    {partido.local_team?.name || codigoLocal}
+                                                  </span>
+                                                </div>
+                                                <span className="text-xs font-black px-2 py-0.5 rounded bg-[#171a26] text-slate-400">
+                                                  {partido.home_score !== null ? partido.home_score : '-'}
+                                                </span>
+                                              </div>
+
+                                              {/* Fila Equipo Visitante */}
+                                              <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2 truncate">
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                                                  <span className={`text-xs font-bold truncate ${
+                                                    partido.visitor_team ? 'text-white' : 'text-slate-500 font-mono text-[10px]'
+                                                  }`}>
+                                                    {partido.visitor_team?.name || codigoVisita}
+                                                  </span>
+                                                </div>
+                                                <span className="text-xs font-black px-2 py-0.5 rounded bg-[#171a26] text-slate-400">
+                                                  {partido.away_score !== null ? partido.away_score : '-'}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 ) : (
                   /* RENDERING DE TABLAS (LIGA SIMPLE O SEPARADO POR GRUPOS) */
