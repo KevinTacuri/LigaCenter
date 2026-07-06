@@ -91,8 +91,11 @@ class StandingController extends Controller
             return $this->errorResponse('Se requiere championship_id y category_id', 400);
         }
 
-        $teams = Team::where('category_id', $categoryId)
-            ->where('championship_id', $championshipId)
+        $teams = Team::where('teams.category_id', $categoryId)
+            ->where('teams.championship_id', $championshipId)
+            ->leftJoin('group_teams', 'teams.id', '=', 'group_teams.team_id')
+            ->leftJoin('groups', 'group_teams.group_id', '=', 'groups.id')
+            ->select('teams.*', 'groups.name as group_name')
             ->get();
 
         $standings = Standing::where('championship_id', $championshipId)
@@ -102,9 +105,13 @@ class StandingController extends Controller
 
         $result = [];
         foreach ($teams as $team) {
+            $groupName = $team->group_name ?? 'Tabla General';
+            unset($team->group_name);
+
             if ($standings->has($team->id)) {
                 $standing = $standings->get($team->id);
                 $standing->team = $team;
+                $standing->group_name = $groupName;
                 $result[] = $standing;
             } else {
                 $result[] = (object) [
@@ -122,11 +129,15 @@ class StandingController extends Controller
                     'goal_difference' => 0,
                     'points' => 0,
                     'last_updated' => null,
+                    'group_name' => $groupName,
                 ];
             }
         }
 
         usort($result, function ($a, $b) {
+            if ($a->group_name != $b->group_name) {
+                return strcmp($a->group_name, $b->group_name);
+            }
             if ($a->points != $b->points) {
                 return $b->points - $a->points;
             }
