@@ -458,6 +458,10 @@ export const serviciosParticipantes = {
     const res = await clienteApi.post(`/championship-disciplines/${championshipDisciplineId}/categories`, datos);
     return res.data;
   },
+  crearCategoriaPorCampeonato: async (championshipId: number, datos: any): Promise<RespuestaApi<Categoria>> => {
+    const res = await clienteApi.post(`/championships/${championshipId}/categories`, datos);
+    return res.data;
+  },
   actualizarCategoria: async (id: number, datos: any): Promise<RespuestaApi<Categoria>> => {
     const res = await clienteApi.put(`/categories/${id}`, datos);
     return res.data;

@@ -397,16 +397,16 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       } else if (tabActiva === 'categorias') {
         const [resCat, resDisc] = await Promise.all([
           serviciosParticipantes.obtenerCategoriasPorCampeonato(campeonatoActivo.id),
-          serviciosParticipantes.obtenerDisciplinasCampeonato(campeonatoActivo.id),
+          serviciosParticipantes.obtenerDisciplinas(),
         ]);
         if (resCat.success) setCategorias(resCat.data);
         if (resDisc.success) {
           const mapped = resDisc.data.map(cd => ({
-            id: cd.id, // cd.id es el championship_discipline_id
-            name: cd.discipline?.name || 'Desconocido',
-            description: cd.discipline?.description || '',
-            rules: cd.discipline?.rules || '',
-            status: cd.discipline?.status || 'active'
+            id: cd.id, // cd.id es el id de la disciplina que pertence al catalogo de disciplinas 
+            name: cd.name || 'Desconocido',
+            description: '',
+            rules: '',
+            status: 'active'
           }));
           setDisciplinas(mapped);
         }
@@ -527,12 +527,18 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       mostrarMensaje('El nombre y la disciplina son obligatorios.', true); return;
     }
 
+    if (!campeonatoActivo) {
+      mostrarMensaje('No hay un campeonato activo para asociar la categoría.', true);
+      return;
+    }
+
     try {
-      const res = await serviciosParticipantes.crearCategoria(parseInt(nuevaCat.discipline_id), {
+      const res = await serviciosParticipantes.crearCategoriaPorCampeonato(campeonatoActivo.id, {
+        discipline_id: parseInt(nuevaCat.discipline_id),
         name: nuevaCat.name,
         age_min: nuevaCat.age_min ? parseInt(nuevaCat.age_min) : null,
         age_max: nuevaCat.age_max ? parseInt(nuevaCat.age_max) : null,
-        gender_type: nuevaCat.gender
+        gender_type: nuevaCat.gender,
       });
       if (res.success) {
         mostrarMensaje('Categoría registrada exitosamente.');
