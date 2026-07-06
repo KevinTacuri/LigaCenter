@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Championship;
+use App\Services\ChampionshipImportService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -16,6 +17,13 @@ use OpenApi\Attributes as OA;
 class ChampionshipController extends Controller
 {
     use ApiResponse;
+
+    protected $importService;
+
+    public function __construct(ChampionshipImportService $importService)
+    {
+        $this->importService = $importService;
+    }
 
     #[OA\Get(
         path: "/api/championships",
@@ -329,5 +337,20 @@ class ChampionshipController extends Controller
         }
 
         return Storage::disk('public')->download($championship->rules_pdf);
+    }
+
+    // ======================= Excel upload =====================
+    public function import(Request $request, Championship $championship)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls'
+        ]);
+
+        $result = $this->importService->import(
+            $championship,
+            $request->file('file')
+        );
+
+        return response()->json($result);
     }
 }
