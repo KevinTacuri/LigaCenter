@@ -475,7 +475,22 @@ export const serviciosParticipantes = {
     return res.data;
   },
 
-
+  // Importar categorías y equipos desde un archivo CSV o Excel
+  importarCategoriasYEquipos: async (
+    championshipId: number,
+    datos: FormData
+  ): Promise<RespuestaApi<any>> => {
+    const res = await clienteApi.post(
+      `/championships/${championshipId}/import`,
+      datos,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return res.data;
+  },
 
   // Equipos
   obtenerEquipos: async (): Promise<RespuestaApi<Equipo[]>> => {

@@ -225,6 +225,12 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
   const [resultadoCarga, setResultadoCarga] = useState<{ ok: number; errores: string[] } | null>(null);
   const inputArchivoRef = useRef<HTMLInputElement>(null);
 
+  // Agregar estado del modo de registro para Excel
+  const [archivoExcel, setArchivoExcel] = useState<File | null>(null);
+  const [importandoExcel, setImportandoExcel] = useState(false);
+  const inputExcelRef = useRef<HTMLInputElement>(null);
+  const [tabCategoria, setTabCategoria] = useState<'manual' | 'masiva'>('manual');
+
   // Agregar función de procesamiento CSV (Modo carga masiva)
   const procesarCsvJugadores = async () => {
     if (!archivoCsv || equipoIdMasiva === null) return;
@@ -563,6 +569,53 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       } else {
         mostrarMensaje('Error al registrar categoría.', true);
       }
+    }
+  };
+
+  const importarExcel = async () => {
+    if (!archivoExcel) {
+      mostrarMensaje("Seleccione un archivo Excel.", true);
+      return;
+    }
+
+    if (!campeonatoActivo) {
+      mostrarMensaje("No se encontró el campeonato.", true);
+      return;
+    }
+
+    try {
+      setImportandoExcel(true);
+
+      const formData = new FormData();
+      formData.append("file", archivoExcel);
+
+      console.log(archivoExcel);
+      console.log(archivoExcel instanceof File);
+
+      const respuesta = await serviciosParticipantes.importarCategoriasYEquipos(
+        campeonatoActivo.id,
+        formData
+      );
+      console.log(respuesta);
+
+      mostrarMensaje(respuesta.message || "Importación exitosa.", false);
+
+      // Limpiar selección
+      setArchivoExcel(null);
+
+      if (inputExcelRef.current) {
+        inputExcelRef.current.value = "";
+      }
+
+      // Volver a cargar la información
+      await cargarDatos();
+
+    } catch (error: any) {
+      mostrarMensaje(
+        error.response?.data?.message ?? "Error al importar el Excel.", true
+      );
+    } finally {
+      setImportandoExcel(false);
     }
   };
 
@@ -1219,50 +1272,162 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
               )}
 
               {tabActiva === 'categorias' && (
-                <form onSubmit={guardarCategoria} className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Disciplina *</label>
-                    <select required value={nuevaCat.discipline_id}
-                      onChange={(e) => setNuevaCat({ ...nuevaCat, discipline_id: e.target.value })}
-                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
-                      <option value="">-- Selecciona Disciplina --</option>
-                      {disciplinas.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Nombre Categoría *</label>
-                    <input type="text" required placeholder="Sub-15, Libres, Senior..."
-                      value={nuevaCat.name} onChange={(e) => setNuevaCat({ ...nuevaCat, name: e.target.value })}
-                      className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 block">Edad Mínima</label>
-                      <input type="number" placeholder="Ej: 10"
-                        value={nuevaCat.age_min} onChange={(e) => setNuevaCat({ ...nuevaCat, age_min: e.target.value })}
-                        className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 block">Edad Máxima</label>
-                      <input type="number" placeholder="Ej: 15"
-                        value={nuevaCat.age_max} onChange={(e) => setNuevaCat({ ...nuevaCat, age_max: e.target.value })}
-                        className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Género</label>
-                    <select value={nuevaCat.gender} onChange={(e) => setNuevaCat({ ...nuevaCat, gender: e.target.value })}
-                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
-                      <option value="Masculino">Masculino</option>
-                      <option value="Femenino">Femenino</option>
-                      <option value="Mixto">Mixto</option>
-                    </select>
-                  </div>
-
-                  <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer">
-                    Guardar Categoría
+                <div className="space-y-4">
+                {/* Importación Excel */}
+                <div className="flex rounded-xl border border-slate-200 overflow-hidden text-xs font-bold">
+                  <button
+                      type="button"
+                      onClick={() => setTabCategoria('manual')}
+                      className={`flex-1 py-2.5 flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        tabCategoria === 'manual'
+                          ? 'bg-indigo-600 text-white'
+                          : 'text-slate-500 hover:bg-slate-50'
+                      }`}
+                    >
+                      Registro Manual
                   </button>
-                </form>
+                  <button 
+                      type="button"
+                      onClick={() => setTabCategoria('masiva')}
+                      className={`flex-1 py-2.5 flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        tabCategoria === 'masiva'
+                          ? 'bg-sky-600 text-white'
+                          : 'text-slate-500 hover:bg-slate-50'
+                      }`}
+                    >
+                      Carga Masiva (Excel)
+                  </button>
+                </div>
+
+                {tabCategoria === 'manual' && (
+                  <form onSubmit={guardarCategoria} className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">Disciplina *</label>
+                      <select required value={nuevaCat.discipline_id}
+                        onChange={(e) => setNuevaCat({ ...nuevaCat, discipline_id: e.target.value })}
+                        className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
+                        <option value="">-- Selecciona Disciplina --</option>
+                        {disciplinas.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">Nombre Categoría *</label>
+                      <input type="text" required placeholder="Sub-15, Libres, Senior..."
+                        value={nuevaCat.name} onChange={(e) => setNuevaCat({ ...nuevaCat, name: e.target.value })}
+                        className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">Edad Mínima</label>
+                        <input type="number" placeholder="Ej: 10"
+                          value={nuevaCat.age_min} onChange={(e) => setNuevaCat({ ...nuevaCat, age_min: e.target.value })}
+                          className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">Edad Máxima</label>
+                        <input type="number" placeholder="Ej: 15"
+                          value={nuevaCat.age_max} onChange={(e) => setNuevaCat({ ...nuevaCat, age_max: e.target.value })}
+                          className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">Género</label>
+                      <select value={nuevaCat.gender} onChange={(e) => setNuevaCat({ ...nuevaCat, gender: e.target.value })}
+                        className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
+                        <option value="Masculino">Masculino</option>
+                        <option value="Femenino">Femenino</option>
+                        <option value="Mixto">Mixto</option>
+                      </select>
+                    </div>
+
+                    <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer">
+                      Guardar Categoría
+                    </button>
+                  </form>
+                )}
+
+                {tabCategoria === 'masiva' && (
+                    // selector de Excel + botón importar
+                  <div className="mb-4">
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      ref={inputExcelRef}
+                      className="hidden"
+                      onChange={(e) => setArchivoExcel(e.target.files?.[0] ?? null)}
+                    />
+                    {/* Drop zone */}
+                      {isDeadlineExpired ? (
+                        <div className="border-2 border-dashed border-amber-500/25 bg-amber-500/5 rounded-xl p-6 text-center">
+                          <span className="material-symbols-outlined text-3xl text-amber-500 block mb-2">lock</span>
+                          <p className="text-xs font-bold text-amber-300 font-sans">Carga Masiva Deshabilitada</p>
+                          <p className="text-[10px] text-slate-400 mt-1 font-sans">El plazo de inscripción de categorias ha vencido.</p>
+                        </div>
+                      ) : (
+                        <div
+                          onClick={() => inputExcelRef.current?.click()}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            const file = e.dataTransfer.files[0];
+                            if (file && (file.name.endsWith('.xlsx'))) {
+                              setArchivoExcel(file);
+                            } else {
+                              mostrarMensaje('Solo se permiten archivos Excel.', true);
+                            }
+                          }}
+                          className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:border-sky-400 hover:bg-sky-50/30 transition-all"
+                        >
+                          <span className="material-symbols-outlined text-3xl text-slate-300 block mb-2">cloud_upload</span>
+                          {archivoExcel ? (
+                            <div>
+                              <p className="text-xs font-bold text-sky-700">{archivoExcel.name}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">{(archivoExcel.size / 1024).toFixed(1)} KB · Haz clic para cambiar</p>
+                            </div>
+                          ) : (
+                            <div>
+                              <p className="text-xs font-bold text-slate-600">Arrastra tu archivo aquí</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">Formatos permitidos: .XLSX (Máx. 10MB)</p>
+                            </div>
+                          )}
+                          <input
+                            ref={inputExcelRef}
+                            type="file"
+                            accept=".xlsx"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) { setArchivoExcel(file)}
+                            }}
+                          />
+                        </div>
+                      )}
+
+
+                    <button
+                      type="button"
+                      onClick={() => importarExcel()}
+                      disabled={!archivoExcel || importandoExcel}
+                      className="
+                          w-full relative overflow-hidden
+                          py-3 rounded-xl text-xs font-bold tracking-wide uppercase font-sans
+                          bg-indigo-650 hover:bg-indigo-700 text-white disabled:opacity-60 disabled:cursor-not-allowed transition-all
+                          flex items-center justify-center gap-2
+                          transition-all duration-200 cursor-pointer
+                          focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2
+                          disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none
+                          bg-sky-600 hover:bg-sky-500 active:bg-sky-700
+                          shadow-md hover:shadow-sky-500/40 hover:shadow-lg active:shadow-none
+                          active:scale-[0.98] hover:scale-[1.01]
+                          text-white
+                        "
+                    >
+                      {importandoExcel ? "Importando..." : "Iniciar Carga"}
+                    </button >
+                  </div>
+                )}
+     
+                 </div>
               )}
 
               {tabActiva === 'equipos' && (
