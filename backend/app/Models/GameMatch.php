@@ -36,6 +36,10 @@ class GameMatch extends Model
         'current_period',
         'timer_status',
         'timer_started_at',
+        'parent_home_match_id',
+        'parent_away_match_id',
+        'placeholder_text_home',
+        'placeholder_text_away',
     ];
 
     protected $casts = [
