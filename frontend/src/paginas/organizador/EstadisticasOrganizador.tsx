@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../../contexto/ContextoCampeonato';
@@ -37,6 +37,7 @@ export const EstadisticasOrganizador: React.FC = () => {
 
   const [subTabActiva, setSubTabActiva] = useState<'grupos' | 'knockout'>('grupos');
   const [faseIndexActiva, setFaseIndexActiva] = useState<number>(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [totalEquipos, setTotalEquipos] = useState(0);
 
   const [stats, setStats] = useState({
@@ -57,6 +58,35 @@ export const EstadisticasOrganizador: React.FC = () => {
       loadData();
     }
   }, [campeonatoActivo, selectedDiscipline, selectedCategory]);
+
+  useEffect(() => {
+    // El setTimeout garantiza que el DOM esté completamente pintado antes de medir
+    const timer = setTimeout(() => {
+      if (scrollContainerRef.current) {
+        const container = scrollContainerRef.current;
+        const activeChild = container.querySelector(`[data-fase-index="${faseIndexActiva}"]`) as HTMLElement;
+        
+        if (activeChild) {
+          const containerRect = container.getBoundingClientRect();
+          const childRect = activeChild.getBoundingClientRect();
+          
+          const childLeftInContainer = childRect.left - containerRect.left + container.scrollLeft;
+          
+          const scrollPosition = 
+            childLeftInContainer - 
+            (container.clientWidth / 2) + 
+            (activeChild.clientWidth / 2);
+            
+          container.scrollTo({
+            left: scrollPosition,
+            behavior: 'smooth'
+          });
+        }
+      }
+    }, 50);
+    
+    return () => clearTimeout(timer);
+  }, [faseIndexActiva]);
 
   const getLocalScore = (match: Partido): number => {
     return match.report?.local_score ?? 0;
@@ -471,7 +501,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                 )}
               </div>
 
-              <div className="overflow-x-auto p-2">
+              <div className="w-full p-2">
                 {!selectedCategory ? (
                   <div className="p-8 text-center text-slate-400">
                     <span className="material-symbols-outlined text-4xl block mb-2 opacity-50">info</span>
@@ -548,63 +578,82 @@ export const EstadisticasOrganizador: React.FC = () => {
                             </button>
                           </div>
 
-                          {/* CONTENEDOR FLEX DEL ÁRBOL ELIMINATORIO */}
-                          <div className="flex flex-row items-start gap-12 py-6 overflow-x-auto min-w-max scrollbar-thin">
+                          {/* VISTA ARBOL COMPLETA (Soporta scroll horizontal) */}
+                          <div 
+                            ref={scrollContainerRef} 
+                            className="flex flex-row items-stretch gap-12 py-6 overflow-x-auto w-full scrollbar-thin scroll-smooth relative"
+                          >
                             
                             {columnasPrincipales.map((fase, colIdx) => {
                               const partidosAMostrar = backendData[fase] || [];
+                              const isFaseActiva = colIdx === faseIndexActiva;
 
                               return (
-                                <div key={fase} className="flex flex-col w-64 relative">
+                                <div 
+                                  key={fase}
+                                  data-fase-index={colIdx} 
+                                  className={`flex flex-col w-64 shrink-0 relative transition-all duration-300 ${
+                                    isFaseActiva ? 'opacity-100 scale-100' : 'opacity-40 scale-[0.98]'
+                                  }`}
+                                >
                                   {/* Encabezado dinámico de la fase */}
-                                  <div className="text-center bg-[#171a26] border border-slate-800/80 rounded-lg py-1.5 mb-6">
-                                    <span className="text-[10px] font-black tracking-widest text-indigo-400 uppercase">
+                                  <div className={`text-center bg-[#171a26] border rounded-lg py-1.5 mb-6 transition-colors ${
+                                    isFaseActiva ? 'border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.15)]' : 'border-slate-800/80'
+                                  }`}>
+                                    <span className={`text-[10px] font-black tracking-widest uppercase ${
+                                      isFaseActiva ? 'text-indigo-400' : 'text-slate-500'
+                                    }`}>
                                       {nombresFases[fase] || fase}
                                     </span>
                                   </div>
 
-                                  {/* Caja contenedora elástica basada en la densidad de partidos reales */}
-                                  <div className="flex-1 flex flex-col justify-around gap-12 min-h-[400px] relative">
+                                  {/* Caja contenedora usando justify-around para espaciado nativo */}
+                                  <div className="flex-1 flex flex-col w-full min-h-[400px] relative">
                                     {partidosAMostrar.map((partido, partIdx) => {
                                       const esPar = partIdx % 2 === 0;
                                       
-                                      // Si el backend no ha asignado equipo, leemos los textos predictivos del backend
                                       const textoPredecidoLocal = partido.placeholder_text_home || 'Por definir';
                                       const textoPredecidoVisita = partido.placeholder_text_away || 'Por definir';
 
                                       return (
-                                        <div key={partido.id} className="relative w-full flex items-center">
+                                        <div key={partido.id} className="relative w-full flex-1 flex flex-col justify-center py-2">
                                           
-                                          {/* LÍNEAS CONECTORAS DINÁMICAS (Se ajustan según la columna en la que estén) */}
+                                          {/* LÍNEAS CONECTORAS FLEXIBLES (Basadas en porcentajes relativos al contenedor del partido) */}
                                           {colIdx < columnasPrincipales.length - 1 && (
                                             <>
-                                              {/* Conector horizontal saliente */}
-                                              <div className="absolute right-0 top-1/2 -mr-6 w-6 h-[2px] bg-slate-800" />
+                                              {/* 1. Línea horizontal de salida */}
+                                              <div className="absolute top-1/2 right-[-24px] w-[24px] h-[2px] bg-slate-700/80 z-0" />
                                               
-                                              {/* Conector vertical calculado usando potencias de la fase para escalar la altura */}
+                                              {/* 2. Poste vertical (Sube si es par, baja si es impar) */}
                                               <div 
-                                                className="absolute right-0 top-1/2 -mr-6 w-[2px] bg-slate-800" 
-                                                style={{
-                                                  height: `${74 * Math.pow(2, colIdx)}px`,
-                                                  transform: esPar ? 'none' : 'translateY(-100%)'
+                                                className="absolute right-[-24px] w-[2px] bg-slate-700/80 z-0"
+                                                style={{ 
+                                                  top: esPar ? '50%' : '0', 
+                                                  height: '50%' 
                                                 }}
                                               />
                                               
-                                              {/* Prolongación hacia la derecha al nodo receptor */}
+                                              {/* 3. Brazo de conexión hacia la derecha (Solo sale de los pares para unir la rama) */}
                                               {esPar && (
-                                                <div 
-                                                  className="absolute right-0 top-1/2 -mr-12 w-6 h-[2px] bg-slate-800" 
-                                                  style={{ transform: `translateY(${(74 * Math.pow(2, colIdx)) / 2}px)` }}
-                                                />
+                                                <div className="absolute right-[-48px] bottom-0 w-[24px] h-[2px] bg-slate-700/80 z-0" />
                                               )}
                                             </>
                                           )}
 
                                           {/* TARJETA DEL PARTIDO REAL */}
-                                          <div className="bg-[#0c0e16] border border-slate-800/90 rounded-xl overflow-hidden shadow-xl hover:border-indigo-500/30 transition-all w-full z-10">
-                                            <div className="bg-[#171a26]/50 px-3 py-1.5 border-b border-slate-900 flex justify-between items-center">
+                                          <div className={`relative bg-[#0c0e16] rounded-xl overflow-hidden shadow-xl transition-all w-full z-10 border ${
+                                            isFaseActiva ? 'border-slate-700 hover:border-indigo-500/50' : 'border-slate-800/60'
+                                          }`}>
+                                            <div className="bg-[#171a26]/50 px-3 py-1.5 border-b border-slate-900/80 flex justify-between items-center">
                                               <span className="text-[9px] font-bold text-slate-500 uppercase">
-                                                {fase === 'final' ? '🏆 FINAL DEL CAMPEONATO' : `Llave ${partIdx + 1}`}
+                                                {fase === 'final' ? (
+                                                  <span className="flex items-center gap-1 text-amber-500">
+                                                    <span className="material-symbols-outlined text-xs font-normal">trophy</span>
+                                                    FINAL DEL CAMPEONATO
+                                                  </span>
+                                                ) : (
+                                                  `Llave ${partIdx + 1}`
+                                                )}
                                               </span>
                                               <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
                                                 partido.status?.toLowerCase() === 'finalizado' ? 'bg-slate-800 text-slate-400' : 'bg-indigo-500/10 text-indigo-400'
@@ -654,23 +703,38 @@ export const EstadisticasOrganizador: React.FC = () => {
                               );
                             })}
 
-                            {/* COLUMNA ADICIONAL: Renderizado automático del Tercer Puesto si existe */}
+                            {/* COLUMNA TERCER PUESTO */}
                             {tieneTercerPuesto && (() => {
+                              // Reutilizamos la lógica del sombreado.
+                              // Si la fase activa es la última del array real, y es el tercer puesto, lo sombrea.
+                              const isFaseActivaTercero = faseIndexActiva === fasesReales.length - 1;
                               const faseTercer = fasesReales.find(f => f === 'tercer_puesto' || f == 'tercer_lugar')!;
                               const partidoTercer = backendData[faseTercer][0];
 
                               if (!partidoTercer) return null;
 
                               return (
-                                <div className="flex flex-col w-64 relative border-l border-dashed border-slate-800/80 pl-6">
-                                  <div className="text-center bg-[#171a26] border border-slate-800/80 rounded-lg py-1.5 mb-6">
-                                    <span className="text-[10px] font-black tracking-widest text-amber-500 uppercase">
-                                      🥉 {nombresFases[faseTercer]}
+                                <div 
+                                  data-fase-index={fasesReales.length - 1}
+                                  className={`flex flex-col w-64 shrink-0 relative border-l border-dashed border-slate-800/80 pl-6 transition-all duration-300 ${
+                                  isFaseActivaTercero ? 'opacity-100 scale-100' : 'opacity-40 scale-[0.98]'
+                                }`}>
+                                  <div className={`text-center bg-[#171a26] border rounded-lg py-1.5 mb-6 transition-colors ${
+                                    isFaseActivaTercero ? 'border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.1)]' : 'border-slate-800/80'
+                                  }`}>
+                                    <span className={`text-[10px] font-black tracking-widest uppercase flex items-center justify-center gap-1.5 ${
+                                      isFaseActivaTercero ? 'text-amber-400' : 'text-slate-500'
+                                    }`}>
+                                      <span className="material-symbols-outlined text-sm font-normal">social_leaderboard</span>
+                                      {nombresFases[faseTercer]}
                                     </span>
                                   </div>
 
                                   <div className="flex-1 flex flex-col justify-center min-h-[400px]">
-                                    <div className="bg-[#0c0e16] border border-amber-500/20 rounded-xl overflow-hidden shadow-2xl w-full">
+                                    <div className={`bg-[#0c0e16] rounded-xl overflow-hidden shadow-2xl w-full border transition-all ${
+                                      isFaseActivaTercero ? 'border-amber-500/40' : 'border-amber-500/10'
+                                    }`}>
+                                      {/* ... resto del código del tercer puesto queda igual ... */}
                                       <div className="bg-amber-500/5 px-3 py-1.5 border-b border-slate-900 flex justify-between items-center">
                                         <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wider">
                                           Definición de Honor
@@ -726,7 +790,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                   </div>
                 ) : (
                   /* RENDERING DE TABLAS (LIGA SIMPLE O SEPARADO POR GRUPOS) */
-                  <div className="space-y-8 p-2">
+                  <div className="space-y-8 p-2 overflow-x-auto">
                     {(() => {
                       // Si es formato grupos, usamos nuestra función de agrupación
                       const datosTablas = esFormatoGrupos 
