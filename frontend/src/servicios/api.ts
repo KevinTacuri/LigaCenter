@@ -303,8 +303,8 @@ export interface Partido {
   venue_id?: number | null;
   discipline_id: number;
   category_id: number;
-  local_team_id: number;
-  visitor_team_id: number;
+  local_team_id: number | null;
+  visitor_team_id: number | null;
   match_date?: string | null;
   match_time?: string | null;
   round: number;
@@ -324,6 +324,10 @@ export interface Partido {
   current_period?: number;
   timer_status?: 'stopped' | 'running' | 'paused' | 'finished';
   timer_started_at?: string | null;
+  parent_home_match_id?: number | null;
+  parent_away_match_id?: number | null;
+  placeholder_text_home?: string | null;
+  placeholder_text_away?: string | null;
 }
 
 export interface ActaPartido {

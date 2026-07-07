@@ -281,37 +281,33 @@ export const EstadisticasOrganizador: React.FC = () => {
   const categoriaActual = categorias.find(c => c.id === selectedCategory);
   const esFormatoGrupos = categoriaActual?.format === 'grupos';
 
-  // FUNCIÓN NUEVA: Filtra los partidos de eliminación directa y los organiza para el Bracket
+  // Clasifica y ordena las fases según la data real del backend
   const obtenerEstructuraBracket = () => {
-    // Definimos el orden estricto de las rondas eliminatorias
-    const ordenFases = ['octavos', 'cuartos', 'semifinal', 'final'];
-    
-    const estructura: Record<string, Partido[]> = {
-      octavos: [],
-      cuartos: [],
-      semifinal: [],
-      final: []
-    };
+    const estructura: Record<string, Partido[]> = {};
 
-    // Filtrar los partidos que NO pertenecen a la fase regular de grupos o liga
+    // 1. Agrupar partidos por fase ignorando la liga o grupos
     partidos.forEach((partido) => {
       const fase = partido.phase?.toLowerCase();
       if (fase && fase !== 'grupos' && fase !== 'liga' && fase !== 'fase_regular') {
-        // Si es tercer puesto, lo podemos empujar visualmente junto a la final
-        if (fase === 'tercer_puesto' || fase === 'tercer_lugar') {
-          if (!estructura['final']) estructura['final'] = [];
-          estructura['final'].push(partido);
-        } else if (estructura[fase]) {
-          estructura[fase].push(partido);
+        // Agrupamos bajo su nombre de fase original
+        if (!estructura[fase]) {
+          estructura[fase] = [];
         }
+        estructura[fase].push(partido);
       }
     });
 
-    // Eliminar las fases que estén vacías (por ejemplo, si el torneo empieza desde Cuartos)
-    return Object.keys(estructura).reduce((acc, llave) => {
-      if (estructura[llave].length > 0) {
-        acc[llave] = estructura[llave];
-      }
+    // 2. Ordenar las fases basándonos en el campo 'round' del backend
+    // Esto garantiza que 'cuartos' (round 1) vaya antes que 'semifinal' (round 2) de forma nativa
+    const fasesOrdenadas = Object.keys(estructura).sort((faseA, faseB) => {
+      const roundA = estructura[faseA][0]?.round || 0;
+      const roundB = estructura[faseB][0]?.round || 0;
+      return roundA - roundB;
+    });
+
+    // 3. Reconstruir el objeto manteniendo el orden cronológico estricto de las columnas
+    return fasesOrdenadas.reduce((acc, fase) => {
+      acc[fase] = estructura[fase];
       return acc;
     }, {} as Record<string, Partido[]>);
   };
@@ -486,29 +482,41 @@ export const EstadisticasOrganizador: React.FC = () => {
                     No hay posiciones disponibles para la categoría seleccionada
                   </div>
                 ) : categoriaActual?.format === 'eliminacion_directa' || (esFormatoGrupos && subTabActiva === 'knockout') ? (
-                  /* VISTA DEL BRACKET DINÁMICO REPARADO */
+                  /* VISTA DEL BRACKET DINÁMICO*/
                   <div className="p-4 select-none space-y-6">
                     {(() => {
                       const backendData = obtenerEstructuraBracket();
                       
-                      // Forzamos un árbol completo de 3 rondas (Cuartos, Semis, Final) para garantizar consistencia visual
-                      const fasesFijas = ['cuartos', 'semifinal', 'final'];
-                      
+                      // Obtenemos las fases reales del torneo (Ej: ['cuartos', 'semifinal', 'final', 'tercer_puesto'])
+                      const fasesReales = Object.keys(backendData);
+
+                      // Mapeo amigable de nombres para los encabezados de columnas
                       const nombresFases: Record<string, string> = {
+                        octavos: 'Octavos de final',
                         cuartos: 'Cuartos de final',
                         semifinal: 'Semifinales',
-                        final: 'Final'
+                        final: 'Gran Final',
+                        tercer_puesto: 'Tercer Puesto',
+                        tercer_lugar: 'Tercer Puesto'
                       };
 
-                      // Mapeo manual de la cantidad teórica de partidos por ronda para autogenerar cajas ficticias
-                      const conteoPartidosTeoricos: Record<string, number> = {
-                        cuartos: 4,
-                        semifinal: 2,
-                        final: 1
-                      };
+                      if (fasesReales.length === 0) {
+                        return (
+                          <div className="text-center py-12 text-slate-500 text-sm font-medium">
+                            No hay partidos de eliminación directa generados para esta categoría.
+                          </div>
+                        );
+                      }
+
+                      // Separamos la fase de tercer puesto para pintarla abajo o al lado de la Final
+                      const tieneTercerPuesto = fasesReales.includes('tercer_puesto') || fasesReales.includes('tercer_lugar');
+                      
+                      // Columnas de árbol principal (quitando el tercer puesto para que no deforme las líneas conectoras)
+                      const columnasPrincipales = fasesReales.filter(f => f !== 'tercer_puesto' && f !== 'tercer_lugar');
 
                       return (
                         <div className="space-y-6">
+                          
                           {/* CONTROLES SUPERIORES (Navegación Móvil y Sincronización) */}
                           <div className="flex items-center justify-end gap-2 bg-[#0c0e16] p-1.5 rounded-xl border border-slate-800/80 max-w-fit ml-auto">
                             <select
@@ -516,9 +524,9 @@ export const EstadisticasOrganizador: React.FC = () => {
                               onChange={(e) => setFaseIndexActiva(Number(e.target.value))}
                               className="bg-[#171a26] border border-slate-800 text-xs font-bold text-slate-200 px-3 py-1.5 rounded-lg outline-none focus:border-indigo-500/50 min-w-[140px]"
                             >
-                              {fasesFijas.map((fase, idx) => (
+                              {fasesReales.map((fase, idx) => (
                                 <option key={fase} value={idx}>
-                                  {nombresFases[fase]}
+                                  {nombresFases[fase] || fase.toUpperCase()}
                                 </option>
                               ))}
                             </select>
@@ -532,95 +540,74 @@ export const EstadisticasOrganizador: React.FC = () => {
                             </button>
 
                             <button
-                              onClick={() => setFaseIndexActiva(prev => Math.min(fasesFijas.length - 1, prev + 1))}
-                              disabled={faseIndexActiva === fasesFijas.length - 1}
+                              onClick={() => setFaseIndexActiva(prev => Math.min(fasesReales.length - 1, prev + 1))}
+                              disabled={faseIndexActiva === fasesReales.length - 1}
                               className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#171a26] border border-slate-800 text-slate-300 hover:text-white disabled:opacity-30 transition-colors"
                             >
                               <span className="material-symbols-outlined text-sm">chevron_right</span>
                             </button>
                           </div>
 
-                          {/* VISTA COMPLETA (Soporta scroll horizontal si el contenedor es estrecho) */}
+                          {/* CONTENEDOR FLEX DEL ÁRBOL ELIMINATORIO */}
                           <div className="flex flex-row items-start gap-12 py-6 overflow-x-auto min-w-max scrollbar-thin">
-                            {fasesFijas.map((fase, colIdx) => {
-                              const partidosBackend = backendData[fase] || [];
-                              const cantidadTeorica = conteoPartidosTeoricos[fase];
-                              
-                              // Combinamos lo que venga del backend con slots vacíos numerados
-                              const partidosAMostrar = Array.from({ length: cantidadTeorica }).map((_, idx) => {
-                                return partidosBackend[idx] || {
-                                  id: `${fase}-${idx}`,
-                                  phase: fase,
-                                  status: 'programado',
-                                  local_team: null,
-                                  visitor_team: null,
-                                  home_score: null,
-                                  away_score: null
-                                };
-                              });
+                            
+                            {columnasPrincipales.map((fase, colIdx) => {
+                              const partidosAMostrar = backendData[fase] || [];
 
                               return (
                                 <div key={fase} className="flex flex-col w-64 relative">
-                                  {/* Encabezado de la fase */}
+                                  {/* Encabezado dinámico de la fase */}
                                   <div className="text-center bg-[#171a26] border border-slate-800/80 rounded-lg py-1.5 mb-6">
                                     <span className="text-[10px] font-black tracking-widest text-indigo-400 uppercase">
-                                      {nombresFases[fase]}
+                                      {nombresFases[fase] || fase}
                                     </span>
                                   </div>
 
-                                  {/* Caja contenedora con cálculo de espaciados elásticos */}
+                                  {/* Caja contenedora elástica basada en la densidad de partidos reales */}
                                   <div className="flex-1 flex flex-col justify-around gap-12 min-h-[400px] relative">
                                     {partidosAMostrar.map((partido, partIdx) => {
                                       const esPar = partIdx % 2 === 0;
                                       
-                                      // Códigos calculados dinámicamente según la posición física en el árbol
-                                      let codigoLocal = 'Por definir';
-                                      let codigoVisita = 'Por definir';
-
-                                      if (fase === 'semifinal') {
-                                        codigoLocal = `W${partIdx * 2 + 1}`; // W1 o W3
-                                        codigoVisita = `W${partIdx * 2 + 2}`; // W2 o W4
-                                      } else if (fase === 'final') {
-                                        codigoLocal = 'W5'; // Ganador Semi 1
-                                        codigoVisita = 'W6'; // Ganador Semi 2
-                                      }
+                                      // Si el backend no ha asignado equipo, leemos los textos predictivos del backend
+                                      const textoPredecidoLocal = partido.placeholder_text_home || 'Por definir';
+                                      const textoPredecidoVisita = partido.placeholder_text_away || 'Por definir';
 
                                       return (
                                         <div key={partido.id} className="relative w-full flex items-center">
                                           
-                                          {/* LÍNEAS CONECTORAS ENTRE FASES (Estilo Sofascore) */}
-                                          {colIdx < fasesFijas.length - 1 && (
+                                          {/* LÍNEAS CONECTORAS DINÁMICAS (Se ajustan según la columna en la que estén) */}
+                                          {colIdx < columnasPrincipales.length - 1 && (
                                             <>
                                               {/* Conector horizontal saliente */}
                                               <div className="absolute right-0 top-1/2 -mr-6 w-6 h-[2px] bg-slate-800" />
                                               
-                                              {/* Conector vertical del puente */}
+                                              {/* Conector vertical calculado usando potencias de la fase para escalar la altura */}
                                               <div 
                                                 className="absolute right-0 top-1/2 -mr-6 w-[2px] bg-slate-800" 
                                                 style={{
-                                                  height: fase === 'cuartos' ? '74px' : '140px',
-                                                  transform: esPar ? 'none' : 'translate-y(-100%)'
+                                                  height: `${74 * Math.pow(2, colIdx)}px`,
+                                                  transform: esPar ? 'none' : 'translateY(-100%)'
                                                 }}
                                               />
                                               
-                                              {/* Prolongación hacia la derecha al centro del nodo destino */}
+                                              {/* Prolongación hacia la derecha al nodo receptor */}
                                               {esPar && (
                                                 <div 
                                                   className="absolute right-0 top-1/2 -mr-12 w-6 h-[2px] bg-slate-800" 
-                                                  style={{ transform: fase === 'cuartos' ? 'translateY(37px)' : 'translateY(70px)' }}
+                                                  style={{ transform: `translateY(${(74 * Math.pow(2, colIdx)) / 2}px)` }}
                                                 />
                                               )}
                                             </>
                                           )}
 
-                                          {/* TARJETA DEL ENCUENTRO */}
+                                          {/* TARJETA DEL PARTIDO REAL */}
                                           <div className="bg-[#0c0e16] border border-slate-800/90 rounded-xl overflow-hidden shadow-xl hover:border-indigo-500/30 transition-all w-full z-10">
                                             <div className="bg-[#171a26]/50 px-3 py-1.5 border-b border-slate-900 flex justify-between items-center">
                                               <span className="text-[9px] font-bold text-slate-500 uppercase">
-                                                {fase === 'final' ? '🏆 Partido de Campeonato' : `Llave ${partIdx + 1}`}
+                                                {fase === 'final' ? '🏆 FINAL DEL CAMPEONATO' : `Llave ${partIdx + 1}`}
                                               </span>
                                               <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
-                                                partido.status === 'finalizado' ? 'bg-slate-800 text-slate-400' : 'bg-indigo-500/10 text-indigo-400'
+                                                partido.status?.toLowerCase() === 'finalizado' ? 'bg-slate-800 text-slate-400' : 'bg-indigo-500/10 text-indigo-400'
                                               }`}>
                                                 {partido.status?.toUpperCase() === 'FINALIZADO' ? 'FIN' : 'PROG'}
                                               </span>
@@ -634,7 +621,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                                                   <span className={`text-xs font-bold truncate ${
                                                     partido.local_team ? 'text-white' : 'text-slate-500 font-mono text-[10px]'
                                                   }`}>
-                                                    {partido.local_team?.name || codigoLocal}
+                                                    {partido.local_team?.name || textoPredecidoLocal}
                                                   </span>
                                                 </div>
                                                 <span className="text-xs font-black px-2 py-0.5 rounded bg-[#171a26] text-slate-400">
@@ -649,7 +636,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                                                   <span className={`text-xs font-bold truncate ${
                                                     partido.visitor_team ? 'text-white' : 'text-slate-500 font-mono text-[10px]'
                                                   }`}>
-                                                    {partido.visitor_team?.name || codigoVisita}
+                                                    {partido.visitor_team?.name || textoPredecidoVisita}
                                                   </span>
                                                 </div>
                                                 <span className="text-xs font-black px-2 py-0.5 rounded bg-[#171a26] text-slate-400">
@@ -666,6 +653,72 @@ export const EstadisticasOrganizador: React.FC = () => {
                                 </div>
                               );
                             })}
+
+                            {/* COLUMNA ADICIONAL: Renderizado automático del Tercer Puesto si existe */}
+                            {tieneTercerPuesto && (() => {
+                              const faseTercer = fasesReales.find(f => f === 'tercer_puesto' || f == 'tercer_lugar')!;
+                              const partidoTercer = backendData[faseTercer][0];
+
+                              if (!partidoTercer) return null;
+
+                              return (
+                                <div className="flex flex-col w-64 relative border-l border-dashed border-slate-800/80 pl-6">
+                                  <div className="text-center bg-[#171a26] border border-slate-800/80 rounded-lg py-1.5 mb-6">
+                                    <span className="text-[10px] font-black tracking-widest text-amber-500 uppercase">
+                                      🥉 {nombresFases[faseTercer]}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex-1 flex flex-col justify-center min-h-[400px]">
+                                    <div className="bg-[#0c0e16] border border-amber-500/20 rounded-xl overflow-hidden shadow-2xl w-full">
+                                      <div className="bg-amber-500/5 px-3 py-1.5 border-b border-slate-900 flex justify-between items-center">
+                                        <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wider">
+                                          Definición de Honor
+                                        </span>
+                                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
+                                          partidoTercer.status?.toLowerCase() === 'finalizado' ? 'bg-slate-800 text-slate-400' : 'bg-amber-500/10 text-amber-400'
+                                        }`}>
+                                          {partidoTercer.status?.toUpperCase() === 'FINALIZADO' ? 'FIN' : 'PROG'}
+                                        </span>
+                                      </div>
+
+                                      <div className="p-2.5 space-y-2">
+                                        {/* Local */}
+                                        <div className="flex items-center justify-between gap-2">
+                                          <div className="flex items-center gap-2 truncate">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                            <span className={`text-xs font-bold truncate ${
+                                              partidoTercer.local_team ? 'text-white' : 'text-slate-500 font-mono text-[10px]'
+                                            }`}>
+                                              {partidoTercer.local_team?.name || partidoTercer.placeholder_text_home || 'Perdedor Semi 1'}
+                                            </span>
+                                          </div>
+                                          <span className="text-xs font-black px-2 py-0.5 rounded bg-[#171a26] text-slate-400">
+                                            {partidoTercer.home_score !== null ? partidoTercer.home_score : '-'}
+                                          </span>
+                                        </div>
+
+                                        {/* Visitante */}
+                                        <div className="flex items-center justify-between gap-2">
+                                          <div className="flex items-center gap-2 truncate">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                            <span className={`text-xs font-bold truncate ${
+                                              partidoTercer.visitor_team ? 'text-white' : 'text-slate-500 font-mono text-[10px]'
+                                            }`}>
+                                              {partidoTercer.visitor_team?.name || partidoTercer.placeholder_text_away || 'Perdedor Semi 2'}
+                                            </span>
+                                          </div>
+                                          <span className="text-xs font-black px-2 py-0.5 rounded bg-[#171a26] text-slate-400">
+                                            {partidoTercer.away_score !== null ? partidoTercer.away_score : '-'}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
                           </div>
                         </div>
                       );
