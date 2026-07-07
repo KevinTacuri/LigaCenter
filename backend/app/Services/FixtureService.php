@@ -93,13 +93,21 @@ class FixtureService
                         ->where('registration_status', 'aprobado')
                         ->get();
 
+                    $hasThirdPlace = false;
+                    if ($category && is_array($category->format_settings)) {
+                        $hasThirdPlace = $category->format_settings['third_place'] ?? false;
+                    } elseif ($category && is_string($category->format_settings)) {
+                        $settingsDecoded = json_decode($category->format_settings, true);
+                        $hasThirdPlace = $settingsDecoded['third_place'] ?? false;
+                    }
+
                     return $this->knockoutService->generateKnockout(
                         $championshipId,
                         $categoryId,
                         $teams,
                         $startDate,
                         $venueIds,
-                        $settings['third_place'] ?? false
+                        $hasThirdPlace
                     );
 
                 case 'liga':

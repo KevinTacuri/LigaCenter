@@ -14,8 +14,15 @@ return new class extends Migration
             $table->foreignId('category_id')->constrained()->onDelete('cascade');
             $table->foreignId('venue_id')->constrained()->onDelete('cascade');
             $table->foreignId('discipline_id')->nullable()->constrained('disciplines')->onDelete('set null');
-            $table->foreignId('home_team_id')->constrained('teams')->onDelete('cascade');
-            $table->foreignId('away_team_id')->constrained('teams')->onDelete('cascade');
+            $table->foreignId('home_team_id')->nullable()->constrained('teams')->onDelete('cascade');
+            $table->foreignId('away_team_id')->nullable()->constrained('teams')->onDelete('cascade');
+            
+            // NUEVAS COLUMNAS PARA EL CONTROL DE LLAVES Y CONECTORES ESTILO SOFASCORE
+            $table->unsignedBigInteger('parent_home_match_id')->nullable();
+            $table->unsignedBigInteger('parent_away_match_id')->nullable();
+            $table->string('placeholder_text_home')->nullable();
+            $table->string('placeholder_text_away')->nullable();
+
             $table->date('match_date');
             $table->string('match_time')->nullable();
             $table->integer('round')->nullable();
@@ -30,6 +37,10 @@ return new class extends Migration
             $table->timestamp('timer_started_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
+            
+            // NUEVAS RELACIONES: Claves foráneas auto-referenciales
+            $table->foreign('parent_home_match_id')->references('id')->on('matches')->onDelete('set null');
+            $table->foreign('parent_away_match_id')->references('id')->on('matches')->onDelete('set null');
         });
     }
 

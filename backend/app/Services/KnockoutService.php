@@ -16,6 +16,11 @@ class KnockoutService
             throw new \Exception('Se necesitan al menos 2 equipos');
         }
 
+        GameMatch::where('championship_id', $championshipId)
+            ->where('category_id', $categoryId)
+            ->whereNotIn('phase', ['grupos', 'liga', 'fase_regular'])
+            ->delete();
+        
         // Obtener discipline_id de la categoria
         $category = Category::find($categoryId);
         $disciplineId = $category?->championshipDiscipline?->discipline_id;
@@ -29,38 +34,94 @@ class KnockoutService
         $numPhases = (int) log($numTeams, 2);
 
         $phaseNames = $this->getPhaseNames($numPhases);
-        $matches = [];
-        $currentTeams = $qualifiedTeams->shuffle();
+        
+        $currentTeams = $qualifiedTeams->shuffle()->toArray();
+        $previousRoundMatches = [];
+        $allCreatedMatches = [];
 
         $date = Carbon::parse($startDate);
         $venueCount = count($venueIds);
-        $round = 1;
 
         foreach ($phaseNames as $phaseIndex => $phaseName) {
-            $phaseMatches = $this->generatePhaseMatches(
-                $currentTeams,
-                $phaseName,
-                $championshipId,
-                $categoryId,
-                $date,
-                $venueIds,
-                $round,
-                $phaseIndex,
-                $disciplineId
-            );
+            $currentRoundMatches = [];
+            
+            // Calcular cuántos partidos matemáticos corresponden a esta fase actual
+            $matchesInPhase = (int) ($numTeams / pow(2, $phaseIndex + 1));
+            if ($matchesInPhase < 1) $matchesInPhase = 1;
 
-            $matches = array_merge($matches, $phaseMatches);
+            for ($i = 0; $i < $matchesInPhase; $i++) {
+                $matchData = [
+                    'championship_id' => $championshipId,
+                    'category_id'     => $categoryId,
+                    'discipline_id'   => $disciplineId,
+                    'venue_id'        => $venueIds[$i % $venueCount] ?? $venueIds[0],
+                    'round'           => $phaseIndex + 1,
+                    'phase'           => $phaseName,
+                    'match_date'      => $date->copy()->addDays($phaseIndex * 7)->toDateString(),
+                    'status'          => 'programado',
+                ];
 
-            $currentTeams = $this->getWinnersFromMatches($phaseMatches);
-            $date->addDays(7);
-            $round++;
+                if ($phaseIndex === 0) {
+                    // PRIMERA RONDA: Registramos los equipos reales mezclados que vienen de la petición
+                    $homeTeam = array_shift($currentTeams);
+                    $awayTeam = array_shift($currentTeams);
+
+                    $matchData['home_team_id'] = $homeTeam['id'] ?? null;
+                    $matchData['away_team_id'] = $awayTeam['id'] ?? null;
+                } else {
+                    // RONDAS AVANZADAS: Van vacías (null) pero enlazadas a los partidos padres de la ronda anterior
+                    $parentHome = $previousRoundMatches[$i * 2] ?? null;
+                    $parentAway = $previousRoundMatches[($i * 2) + 1] ?? null;
+
+                    $matchData['home_team_id'] = null;
+                    $matchData['away_team_id'] = null;
+                    
+                    $matchData['parent_home_match_id'] = $parentHome ? $parentHome->id : null;
+                    $matchData['parent_away_match_id'] = $parentAway ? $parentAway->id : null;
+
+                    // Textos informativos para pintar en el frontend estilo Sofascore
+                    $matchData['placeholder_text_home'] = "Ganador Llave " . ($parentHome ? ($i * 2 + 1) : '?');
+                    $matchData['placeholder_text_away'] = "Ganador Llave " . ($parentAway ? ($i * 2 + 2) : '?');
+                }
+
+                $match = GameMatch::create($matchData);
+                $currentRoundMatches[] = $match;
+                $allCreatedMatches[] = $match;
+            }
+
+            // Los partidos creados en esta ronda se convierten en los "padres" de la siguiente
+            $previousRoundMatches = $currentRoundMatches;
         }
 
-        if ($thirdPlace) {
-            $this->generateThirdPlaceMatch($championshipId, $categoryId, $matches, $date, $venueIds, $disciplineId);
+        // Generar definición de tercer puesto si se requiere, basándonos en las dos llaves de Semifinal
+        if ($thirdPlace && $numPhases >= 2) {
+            // Buscamos las semifinales dentro de los partidos creados
+            $semifinales = array_filter($allCreatedMatches, function($m) {
+                return $m->phase === 'semifinal';
+            });
+            $semifinales = array_values($semifinales); // Reindexar
+
+            if (count($semifinales) === 2) {
+                $thirdPlaceMatch = GameMatch::create([
+                    'championship_id'       => $championshipId,
+                    'category_id'           => $categoryId,
+                    'discipline_id'         => $disciplineId,
+                    'venue_id'              => $venueIds[0],
+                    'round'                 => $numPhases,
+                    'phase'                 => 'tercer_puesto',
+                    'parent_home_match_id'  => $semifinales[0]->id,
+                    'parent_away_match_id'  => $semifinales[1]->id,
+                    'placeholder_text_home' => "Perdedor Semifinal 1",
+                    'placeholder_text_away' => "Perdedor Semifinal 2",
+                    'match_date'            => $date->copy()->addDays(($numPhases - 1) * 7)->toDateString(),
+                    'status'                => 'programado',
+                ]);
+
+                $allCreatedMatches[] = $thirdPlaceMatch;
+            }
         }
 
-        return $matches;
+        return $allCreatedMatches;
     }
 
     private function getPhaseNames($numPhases)
