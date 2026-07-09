@@ -58,6 +58,36 @@ export interface PublicPlayer {
     id: number;
     name: string;
     photo: string | null;
+    jersey_number: number | null;
+}
+
+export interface PublicTeamStanding {
+    position: number | null;
+    points: number;
+    matches_played: number;
+    wins: number;
+    draws: number;
+    losses: number;
+    goals_for: number;
+    goals_against: number;
+    goal_difference: number;
+}
+
+export interface PublicTeamRecentMatch {
+    id: number;
+    home_team: string;
+    away_team: string;
+    home_score: number | null;
+    away_score: number | null;
+    status: string;
+    date: string | null;
+}
+
+export interface PublicTeamDetail {
+    team: PublicTeam;
+    players: PublicPlayer[];
+    recent_matches: PublicTeamRecentMatch[];
+    standing: PublicTeamStanding | null;
 }
 
 export interface PublicChampionship {
@@ -202,8 +232,8 @@ export const publicApi = {
         }),
 
     getTeam: (id: number) =>
-        apiPublic.get<{ success: boolean; data: any; message: string }>(`/public/teams/${id}`),
-
+        apiPublic.get<{ success: boolean; data: PublicTeamDetail; message: string }>(`/public/teams/${id}`),
+    
     // Jugadores
     getPlayers: (params?: { team_id?: number; championship_id?: number; search?: string; page?: number }) =>
         apiPublic.get<{ success: boolean; data: { data: PublicPlayer[] }; message: string }>('/public/players', { 

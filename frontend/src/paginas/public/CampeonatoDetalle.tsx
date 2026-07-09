@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { LayoutPublico } from '../../componentes/public/LayoutPublico';
 import { publicApi } from '../../servicios/apiPublic';
-import type { PublicChampionship, ChampionshipStats } from '../../servicios/apiPublic';
+import type { PublicChampionship, ChampionshipStats, PublicTeam } from '../../servicios/apiPublic';
 
 interface ChampionshipDetailData {
   championship: PublicChampionship;
@@ -23,6 +23,8 @@ const getStatusLabel = (status: string) => {
 export const CampeonatoDetalle: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [data, setData] = useState<ChampionshipDetailData | null>(null);
+  const [teams, setTeams] = useState<PublicTeam[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +42,16 @@ export const CampeonatoDetalle: React.FC = () => {
       })
       .catch(() => setError('Error al conectar con el servidor.'))
       .finally(() => setLoading(false));
+
+    setTeamsLoading(true);
+    publicApi.getTeams({ championship_id: Number(id) })
+      .then((res) => {
+        if (res.data.success) {
+          setTeams(res.data.data.data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setTeamsLoading(false));
   }, [id]);
 
   const handleSearch = (query: string) => {
@@ -137,7 +149,38 @@ export const CampeonatoDetalle: React.FC = () => {
               </div>
             </div>
 
-            {/* Goleadores */}
+            {/* Equipos */}
+            <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Equipos</h3>
+              {teamsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="w-6 h-6 rounded-full border-4 border-slate-800 border-t-indigo-500 animate-spin" />
+                </div>
+              ) : teams.length === 0 ? (
+                <p className="text-slate-500 text-sm">No hay equipos registrados en este campeonato.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {teams.map((team) => (
+                    <Link
+                      key={team.id}
+                      to={`/equipos/${team.id}`}
+                      className="flex flex-col items-center gap-2 p-4 rounded-lg bg-[#171a26] border border-slate-800 hover:border-indigo-500/50 hover:-translate-y-0.5 transition-all"
+                    >
+                      {team.logo ? (
+                        <img src={team.logo} alt={team.name} className="w-12 h-12 rounded-full object-cover border border-slate-800" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-lg font-black text-slate-500">
+                          {team.name.charAt(0)}
+                        </div>
+                      )}
+                      <p className="text-xs font-semibold text-white text-center truncate w-full">{team.name}</p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Máximos Goleadores */}
             <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Máximos Goleadores</h3>
               {!data.stats.top_scorers || data.stats.top_scorers.length === 0 ? (
@@ -161,6 +204,8 @@ export const CampeonatoDetalle: React.FC = () => {
                 </div>
               )}
             </div>
+
+            
 
             {/* Accesos rápidos */}
             <div className="mt-6 grid grid-cols-2 gap-4">

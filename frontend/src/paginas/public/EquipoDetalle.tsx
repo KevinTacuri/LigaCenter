@@ -161,14 +161,18 @@ export const EquipoDetalle: React.FC = () => {
                       {player.photo ? (
                         <img src={player.photo} alt={player.name} className="w-8 h-8 rounded-full object-cover" />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-slate-800" />
+                        <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                          {player.jersey_number ?? '—'}
+                        </div>
                       )}
-                      <p className="text-sm font-semibold text-white truncate">{player.name}</p>
+                      <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-white truncate">{player.name}</p>
+                        {player.jersey_number != null && (
+                          <span className="text-xs font-black text-indigo-400 shrink-0">#{player.jersey_number}</span>
+                        )}
+                      </div>
                     </Link>
                   ))}
-                </div>
-              )}
-            </div>
 
             {/* Últimos partidos */}
             <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">

@@ -13,6 +13,7 @@ class PublicPlayerResource extends JsonResource
             'id' => $this->id,
             'name' => $this->names . ' ' . $this->last_names,
             'photo' => $this->photo ? asset('storage/' . $this->photo) : null,
+            'jersey_number' => $this->number,
             // ⚠️ NO incluimos document_number (DNI) por seguridad
             // ⚠️ NO incluimos birth_date (fecha de nacimiento) por privacidad
         ];
