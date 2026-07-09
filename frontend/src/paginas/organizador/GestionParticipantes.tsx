@@ -158,6 +158,98 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
 };
 
 // ─────────────────────────────────────────────
+// COMPONENTE: Selector de Logo (archivo o URL)
+// ─────────────────────────────────────────────
+interface LogoInputProps {
+  logoFile: File | null;
+  logoUrlTexto: string;
+  logoActualUrl?: string | null; // logo ya guardado (modo edición)
+  onFileChange: (file: File | null) => void;
+  onUrlChange: (texto: string) => void;
+}
+
+const LogoInput: React.FC<LogoInputProps> = ({
+  logoFile, logoUrlTexto, logoActualUrl, onFileChange, onUrlChange
+}) => {
+  const [modo, setModo] = useState<'archivo' | 'url'>('archivo');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const previewSrc = logoFile
+    ? URL.createObjectURL(logoFile)
+    : (modo === 'url' && logoUrlTexto ? logoUrlTexto : logoActualUrl || null);
+
+  return (
+    <div className="space-y-2">
+      <label className="text-xs font-bold text-slate-700 block">Logo del Equipo</label>
+
+      <div className="flex rounded-lg border border-slate-200 overflow-hidden text-[10px] font-bold w-fit">
+        <button type="button" onClick={() => setModo('archivo')}
+          className={`px-3 py-1.5 transition-all cursor-pointer ${modo === 'archivo' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
+          Subir Imagen
+        </button>
+        <button type="button" onClick={() => setModo('url')}
+          className={`px-3 py-1.5 transition-all cursor-pointer ${modo === 'url' ? 'bg-sky-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
+          Pegar URL
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3">
+        {previewSrc && (
+          <img src={previewSrc} alt="Logo preview" className="w-14 h-14 rounded-full object-cover border border-slate-200" />
+        )}
+
+        {modo === 'archivo' ? (
+          <div className="flex-1">
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".png,.jpg,.jpeg,.webp"
+              onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
+              className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 cursor-pointer"
+            />
+            <p className="text-[10px] text-slate-400 mt-1">PNG, JPG o WEBP · Máx. 2MB</p>
+          </div>
+        ) : (
+          <input
+            type="url"
+            placeholder="https://ejemplo.com/logo.png"
+            value={logoUrlTexto}
+            onChange={(e) => onUrlChange(e.target.value)}
+            className="flex-1 text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+// COMPONENTE: Logo circular pequeño (tabla de equipos)
+// ─────────────────────────────────────────────
+interface LogoCircularProps {
+  nombre: string;
+  logo?: string | null;
+}
+
+const LogoCircular: React.FC<LogoCircularProps> = ({ nombre, logo }) => {
+  if (logo) {
+    return (
+      <img
+        src={logo}
+        alt={nombre}
+        className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
+      />
+    );
+  }
+  const inicial = nombre?.trim()?.[0]?.toUpperCase() || '?';
+  return (
+    <div className="w-8 h-8 rounded-full border border-slate-200 bg-slate-100 flex items-center justify-center font-bold text-slate-500 text-xs shrink-0">
+      {inicial}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────
 export const GestionParticipantes: React.FC = () => {
@@ -293,6 +385,17 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     URL.revokeObjectURL(url);
   };
 
+  // Logo: tab "equipos" (form clásico)
+  const [logoEqFile, setLogoEqFile] = useState<File | null>(null);
+  const [logoEqUrl, setLogoEqUrl] = useState('');
+
+  // Logo: tab "registro-equipo" (registro rápido)
+  const [logoReqFile, setLogoReqFile] = useState<File | null>(null);
+  const [logoReqUrl, setLogoReqUrl] = useState('');
+
+  // Logo: modal editar equipo
+  const [logoEditFile, setLogoEditFile] = useState<File | null>(null);
+  const [logoEditUrl, setLogoEditUrl] = useState('');
 
   // ── Estado: Tab "registro-equipo" ──────────
   const [reqEq, setReqEq] = useState({
@@ -625,19 +728,31 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       mostrarMensaje('Complete todos los campos obligatorios para el equipo.', true); return;
     }
     try {
-      const res = await serviciosParticipantes.crearEquipo({
-        name: nuevoEq.name,
-        discipline_id: parseInt(nuevoEq.discipline_id),
-        category_id: parseInt(nuevoEq.category_id),
-        representative: nuevoEq.representative || null,
-        registration_status: 'aprobado'
-      });
+      const formData = new FormData();
+      formData.append('name', nuevoEq.name);
+      formData.append('discipline_id', nuevoEq.discipline_id);
+      formData.append('category_id', nuevoEq.category_id);
+      if (nuevoEq.representative) formData.append('representative', nuevoEq.representative);
+      formData.append('registration_status', 'aprobado');
+      if (logoEqFile) formData.append('logo', logoEqFile);
+      else if (logoEqUrl.trim()) formData.append('logo', logoEqUrl.trim());
+
+      const res = await serviciosParticipantes.crearEquipo(formData);
       if (res.success) {
         mostrarMensaje('Equipo registrado y aprobado exitosamente.');
         setNuevoEq({ name: '', representative: '', discipline_id: '', category_id: '' });
+        setLogoEqFile(null); setLogoEqUrl('');
         cargarDatos();
       }
-    } catch { mostrarMensaje('Error al registrar equipo.', true); }
+    } catch (err: any) {
+      if (err.response && err.response.status === 422) {
+        const errors = err.response.data.errors;
+        const msg = errors ? Object.values(errors).flat().join('\n') : (err.response.data.message || 'Datos inválidos.');
+        sileo.error({ title: 'Error de Validación', description: msg });
+      } else {
+        mostrarMensaje(err.response?.data?.message || 'Error al registrar equipo.', true);
+      }
+    }
   };
 
   const cambiarEstadoEquipo = async (id: number, nuevoEstado: 'aprobado' | 'rechazado' | 'pendiente') => {
@@ -745,21 +860,32 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     }
     setGuardandoReqEq(true);
     try {
-      const res = await serviciosParticipantes.crearEquipo({
-        name: reqEq.nombre.trim(),
-        discipline_id: reqEq.discId,
-        category_id: reqEq.catId,
-        representative: reqEq.representante.trim() || null,
-        registration_status: 'aprobado'
-      });
+      const formData = new FormData();
+      formData.append('name', reqEq.nombre.trim());
+      formData.append('discipline_id', String(reqEq.discId));
+      formData.append('category_id', String(reqEq.catId));
+      if (reqEq.representante.trim()) formData.append('representative', reqEq.representante.trim());
+      formData.append('registration_status', 'aprobado');
+      if (logoReqFile) formData.append('logo', logoReqFile);
+      else if (logoReqUrl.trim()) formData.append('logo', logoReqUrl.trim());
+
+      const res = await serviciosParticipantes.crearEquipo(formData);
       if (res.success) {
         mostrarMensaje(`Equipo "${reqEq.nombre}" registrado y aprobado.`);
         setReqEq({ nombre: '', representante: '', discId: null, catId: null });
-        // Refrescar equipos para la planilla
+        setLogoReqFile(null); setLogoReqUrl('');
         const resEq = await serviciosParticipantes.obtenerEquipos();
         if (resEq.success) setEquipos(resEq.data);
       }
-    } catch { mostrarMensaje('Error al registrar el equipo.', true); }
+    } catch (err: any) {
+      if (err.response && err.response.status === 422) {
+        const errors = err.response.data.errors;
+        const msg = errors ? Object.values(errors).flat().join('\n') : (err.response.data.message || 'Datos inválidos.');
+        sileo.error({ title: 'Error de Validación', description: msg });
+      } else {
+        mostrarMensaje(err.response?.data?.message || 'Error al registrar el equipo.', true);
+      }
+    }
     finally { setGuardandoReqEq(false); }
   };
 
@@ -817,13 +943,11 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
   };
 
   const abrirModalEditar = (eq: Equipo) => {
+    setLogoEditFile(null);
+    setLogoEditUrl('');
     setModalEditarEq({
-      abierto: true,
-      eq,
-      nombre: eq.name,
-      representante: eq.representative || '',
-      estado: eq.registration_status || 'pendiente',
-      guardando: false,
+      abierto: true, eq, nombre: eq.name, representante: eq.representative || '',
+      estado: eq.registration_status || 'pendiente', guardando: false,
     });
   };
 
@@ -834,22 +958,27 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     }
     setModalEditarEq(prev => ({ ...prev, guardando: true }));
     try {
-      const res = await serviciosParticipantes.actualizarEquipo(modalEditarEq.eq.id, {
-        name: modalEditarEq.nombre.trim(),
-        representative: modalEditarEq.representante.trim() || null,
-        registration_status: modalEditarEq.estado,
-      });
+      const formData = new FormData();
+      formData.append('name', modalEditarEq.nombre.trim());
+      formData.append('representative', modalEditarEq.representante.trim() || '');
+      formData.append('registration_status', modalEditarEq.estado);
+      if (logoEditFile) formData.append('logo', logoEditFile);
+      else if (logoEditUrl.trim()) formData.append('logo', logoEditUrl.trim());
+
+      const res = await serviciosParticipantes.actualizarEquipo(modalEditarEq.eq.id, formData);
       if (res.success) {
-        setEquipos(prev => prev.map(e =>
-          e.id === modalEditarEq.eq!.id
-            ? { ...e, name: modalEditarEq.nombre.trim(), representative: modalEditarEq.representante.trim() || null, registration_status: modalEditarEq.estado }
-            : e
-        ));
+        setEquipos(prev => prev.map(e => e.id === modalEditarEq.eq!.id ? res.data : e));
         mostrarMensaje('Equipo actualizado correctamente.');
         setModalEditarEq({ abierto: false, eq: null, nombre: '', representante: '', estado: 'pendiente', guardando: false });
       }
-    } catch {
-      mostrarMensaje('Error al actualizar el equipo.', true);
+    } catch (err: any) {
+      if (err.response && err.response.status === 422) {
+        const errors = err.response.data.errors;
+        const msg = errors ? Object.values(errors).flat().join('\n') : (err.response.data.message || 'Datos inválidos.');
+        sileo.error({ title: 'Error de Validación', description: msg });
+      } else {
+        mostrarMensaje(err.response?.data?.message || 'Error al actualizar el equipo.', true);
+      }
     } finally {
       setModalEditarEq(prev => ({ ...prev, guardando: false }));
     }
@@ -1466,6 +1595,12 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                       </select>
                     </div>
                   </div>
+                  <LogoInput
+                    logoFile={logoEqFile}
+                    logoUrlTexto={logoEqUrl}
+                    onFileChange={setLogoEqFile}
+                    onUrlChange={setLogoEqUrl}
+                  />
                   <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer">
                     Guardar Equipo
                   </button>
@@ -1811,7 +1946,8 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                       <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
                         {tabActiva === 'equipos' ? (
                           <>
-                            <th className="p-3 pl-4">Nombre del Equipo</th>
+                            <th className="p-3 pl-4 w-12"></th>
+                            <th className="p-3">Nombre del Equipo</th>
                             <th className="p-3">Representante</th>
                             <th className="p-3">Estado</th>
                             <th className="p-3 pr-4 text-right">Acciones</th>
@@ -1860,6 +1996,9 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                       {tabActiva === 'equipos' && equiposFiltrados.map((eq) => (
                         <tr key={eq.id} className="hover:bg-slate-50/40">
                           <td className="p-3 pl-4">
+                            <LogoCircular nombre={eq.name} logo={eq.logo} />
+                          </td>
+                          <td className="p-3">
                             <div className="font-bold text-slate-900">{eq.name}</div>
                           </td>
                           <td className="p-3 text-sm text-slate-700">
@@ -1946,7 +2085,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                         (tabActiva === 'jugadores' && jugadoresFiltrados.length === 0)
                       ) && (
                         <tr>
-                          <td colSpan={4} className="p-10 text-center text-slate-500 text-xs">No hay registros cargados.</td>
+                          <td colSpan={tabActiva === 'equipos' ? 5 : 4} className="p-10 text-center text-slate-500 text-xs">No hay registros cargados.</td>
                         </tr>
                       )}
                     </tbody>
@@ -2034,6 +2173,13 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                 requerido
                 deshabilitado={!reqEq.discId}
                 textoCrear="categoría"
+              />
+              {/* Ingreso de logo */}
+              <LogoInput
+                logoFile={logoReqFile}
+                logoUrlTexto={logoReqUrl}
+                onFileChange={setLogoReqFile}
+                onUrlChange={setLogoReqUrl}
               />
 
               {/* Resumen */}
@@ -2347,6 +2493,14 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                   <option value="rechazado">Rechazado</option>
                 </select>
               </div>
+
+              <LogoInput
+                logoFile={logoEditFile}
+                logoUrlTexto={logoEditUrl}
+                logoActualUrl={modalEditarEq.eq?.logo}
+                onFileChange={setLogoEditFile}
+                onUrlChange={setLogoEditUrl}
+              />
             </div>
 
             {/* Footer */}

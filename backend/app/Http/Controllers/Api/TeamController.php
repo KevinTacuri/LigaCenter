@@ -11,6 +11,8 @@ use OpenApi\Attributes as OA;
 use App\Http\Resources\TeamResource;
 use App\Models\Category;
 use \App\Http\Resources\TeamListResource;
+use Illuminate\Support\Str;
+
 
 #[OA\Tag(
     name: "Teams",
@@ -85,6 +87,7 @@ class TeamController extends Controller
             new OA\Response(response: 422, description: "Error de validación")
         ]
     )]
+
     public function store(Request $request)
     {
         $request->validate([
@@ -92,7 +95,6 @@ class TeamController extends Controller
             'category_id' => 'required|exists:categories,id',
             'representative' => 'nullable|string|max:255',
             'name' => 'required|string|max:255',
-            'logo' => 'nullable|string',
             'description' => 'nullable|string',
             'registration_status' => 'nullable|string',
         ]);
@@ -107,12 +109,14 @@ class TeamController extends Controller
             return $this->errorResponse('La disciplina de la categoría no pertenece a este campeonato', 422);
         }
 
+        $logoValue = $this->resolveLogo($request);
+
         $team = Team::create([
             'championship_id' => $request->championship_id,
             'category_id' => $request->category_id,
             'representative' => $request->representative,
             'name' => $request->name,
-            'logo' => $request->logo,
+            'logo' => $logoValue,
             'description' => $request->description,
             'registration_status' => $request->registration_status ?? 'pendiente',
         ]);
@@ -187,14 +191,24 @@ class TeamController extends Controller
         $request->validate([
             'representative' => 'nullable|string|max:255',
             'name' => 'sometimes|string|max:255',
-            'logo' => 'nullable|string',
             'description' => 'nullable|string',
             'registration_status' => 'sometimes|string|in:pendiente,aprobado,rechazado',
         ]);
 
-        $team->update($request->only([
-            'representative', 'name', 'logo', 'description', 'registration_status'
-        ]));
+        $datosActualizar = $request->only(['representative', 'name', 'description', 'registration_status']);
+
+        // Solo tocamos el logo si el usuario mandó un archivo nuevo o una URL nueva
+        if ($request->hasFile('logo') || $request->filled('logo')) {
+            // Borrar el logo físico anterior, solo si era un archivo local (no una URL externa)
+            $logoAnterior = $team->getRawOriginal('logo');
+            if ($logoAnterior && !Str::startsWith($logoAnterior, ['http://', 'https://'])) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($logoAnterior);
+            }
+
+            $datosActualizar['logo'] = $this->resolveLogo($request);
+        }
+
+        $team->update($datosActualizar);
 
         return $this->successResponse($team, 'Equipo actualizado exitosamente');
     }
@@ -296,5 +310,27 @@ class TeamController extends Controller
         $team->players()->detach($playerId);
 
         return $this->successResponse(null, 'Jugador removido del equipo exitosamente');
+    }
+    /**
+     * Resuelve el valor a guardar en 'logo': procesa un archivo subido o
+     * devuelve la URL de texto tal cual fue enviada.
+     */
+    private function resolveLogo(Request $request): ?string
+    {
+        if ($request->hasFile('logo')) {
+            $request->validate([
+                'logo' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+            ]);
+            return $request->file('logo')->store('teams/logos', 'public');
+        }
+
+        if ($request->filled('logo')) {
+            $request->validate([
+                'logo' => 'string|max:2048|url',
+            ]);
+            return $request->input('logo');
+        }
+
+        return null;
     }
 }

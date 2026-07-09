@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Team extends Model
 {
@@ -20,6 +21,29 @@ class Team extends Model
         'logo',
         'description',
     ];
+
+    // Accessor: transforma el valor crudo de 'logo' en una URL lista para usar,
+    // sin importar si se guardó como ruta local (storage) o como URL externa.
+    public function getLogoAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+
+        // Si ya es una URL completa (http/https), se devuelve tal cual.
+        if (Str::startsWith($value, ['http://', 'https://'])) {
+            return $value;
+        }
+
+        // Si es una ruta relativa (subida por archivo), se arma la URL pública.
+        return asset('storage/' . $value);
+    }
+
+    // Devuelve el valor CRUDO de logo (sin transformar), útil para borrar el archivo viejo.
+    public function getLogoRawAttribute()
+    {
+        return $this->attributes['logo'] ?? null;
+    }
 
     public function category(): BelongsTo
     {

@@ -273,7 +273,7 @@ export interface Organizacion {
 export interface Equipo {
   id: number;
   name: string;
-  logo_url?: string | null;
+  logo?: string | null;
   representative?: string | null;
   registration_status?: 'pendiente' | 'aprobado' | 'rechazado';
 }
@@ -510,10 +510,25 @@ export const serviciosParticipantes = {
     return res.data;
   },
   crearEquipo: async (datos: any): Promise<RespuestaApi<Equipo>> => {
+    if (datos instanceof FormData) {
+      const res = await clienteApi.post('/teams', datos, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return res.data;
+    }
     const res = await clienteApi.post('/teams', datos);
     return res.data;
   },
   actualizarEquipo: async (id: number, datos: any): Promise<RespuestaApi<Equipo>> => {
+    if (datos instanceof FormData) {
+      if (!datos.has('_method')) {
+        datos.append('_method', 'PUT');
+      }
+      const res = await clienteApi.post(`/teams/${id}`, datos, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return res.data;
+    }
     const res = await clienteApi.put(`/teams/${id}`, datos);
     return res.data;
   },
