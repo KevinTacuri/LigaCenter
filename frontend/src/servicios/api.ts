@@ -65,6 +65,17 @@ clienteApi.interceptors.request.use(
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // ── NUEVO: si el body es FormData, dejar que el navegador/Axios
+    // generen el Content-Type con el boundary correcto.
+    if (config.data instanceof FormData && config.headers) {
+      if (typeof (config.headers as any).delete === 'function') {
+        (config.headers as any).delete('Content-Type');
+      } else {
+        delete (config.headers as any)['Content-Type'];
+      }
+    }
+
     const championshipId = localStorage.getItem('campeonato_activo_id');
     if (championshipId && config.headers) {
       config.headers['X-Championship-ID'] = championshipId;
@@ -484,21 +495,10 @@ export const serviciosParticipantes = {
   },
 
   // Importar categorías y equipos desde un archivo CSV o Excel
-  importarCategoriasYEquipos: async (
-    championshipId: number,
-    datos: FormData
-  ): Promise<RespuestaApi<any>> => {
-    const res = await clienteApi.post(
-      `/championships/${championshipId}/import`,
-      datos,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
-    );
-    return res.data;
-  },
+  importarCategoriasYEquipos: async (championshipId: number, datos: FormData) => {
+  const res = await clienteApi.post(`/championships/${championshipId}/import`, datos);
+  return res.data;
+},
 
   // Equipos
   obtenerEquipos: async (): Promise<RespuestaApi<Equipo[]>> => {
@@ -511,9 +511,7 @@ export const serviciosParticipantes = {
   },
   crearEquipo: async (datos: any): Promise<RespuestaApi<Equipo>> => {
     if (datos instanceof FormData) {
-      const res = await clienteApi.post('/teams', datos, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const res = await clienteApi.post('/teams', datos); // ← sin headers manuales
       return res.data;
     }
     const res = await clienteApi.post('/teams', datos);
@@ -524,9 +522,7 @@ export const serviciosParticipantes = {
       if (!datos.has('_method')) {
         datos.append('_method', 'PUT');
       }
-      const res = await clienteApi.post(`/teams/${id}`, datos, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const res = await clienteApi.post(`/teams/${id}`, datos); // ← sin headers manuales
       return res.data;
     }
     const res = await clienteApi.put(`/teams/${id}`, datos);
