@@ -61,7 +61,7 @@ const App: React.FC = () => {
               <Route path="/" element={<HomePublic />} />
 
               {/* 📊 Vista de Posiciones y Partidos (cuando se necesita ver tabla) */}
-              <Route path="/publico" element={<TablaPosiciones esVistaAnonima={true} />} />
+              <Route path="/publico" element={<TablaPosiciones />} />
 
               {/* Rutas Públicas */}
               <Route path="/login" element={<Login />} />

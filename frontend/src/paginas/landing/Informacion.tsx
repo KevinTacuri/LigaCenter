@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { NavLanding } from './NavLanding';
+import { CabeceraPublica } from '../../componentes/public/CabeceraPublica';
 import type { Campeonato } from '../../servicios/api';
 
 const FEATURES = [
@@ -22,7 +22,7 @@ export const Informacion: React.FC<Props> = ({ campeonatosPublicos, seleccionarC
 
   return (
     <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans overflow-x-hidden">
-      <NavLanding />
+      <CabeceraPublica />
 
       {/* HERO */}
       <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-20 pb-16 overflow-hidden">

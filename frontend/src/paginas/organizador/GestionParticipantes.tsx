@@ -166,10 +166,11 @@ interface LogoInputProps {
   logoActualUrl?: string | null; // logo ya guardado (modo edición)
   onFileChange: (file: File | null) => void;
   onUrlChange: (texto: string) => void;
+  label?: string;
 }
 
 const LogoInput: React.FC<LogoInputProps> = ({
-  logoFile, logoUrlTexto, logoActualUrl, onFileChange, onUrlChange
+  logoFile, logoUrlTexto, logoActualUrl, onFileChange, onUrlChange, label = 'Logo del Equipo'
 }) => {
   const [modo, setModo] = useState<'archivo' | 'url'>('archivo');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -180,7 +181,7 @@ const LogoInput: React.FC<LogoInputProps> = ({
 
   return (
     <div className="space-y-2">
-      <label className="text-xs font-bold text-slate-700 block">Logo del Equipo</label>
+      <label className="text-xs font-bold text-slate-700 block">{label}</label>
 
       <div className="flex rounded-lg border border-slate-200 overflow-hidden text-[10px] font-bold w-fit">
         <button type="button" onClick={() => setModo('archivo')}
@@ -256,7 +257,7 @@ const LogoCircular: React.FC<LogoCircularProps> = ({ nombre, logo }) => {
 export const GestionParticipantes: React.FC = () => {
   const { usuario, tienePermiso, tieneRol } = useAutenticacion();
   const navegar = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const confirm = useConfirm();
   const queryTab = searchParams.get('tab');
   const { campeonatoActivo } = useCampeonato();
@@ -292,6 +293,7 @@ export const GestionParticipantes: React.FC = () => {
   // ── Estado: Filtros y orden de la tabla de Equipos ──
   const [busquedaEq, setBusquedaEq] = useState('');
   const [filtroEstadoEq, setFiltroEstadoEq] = useState<'todos' | 'aprobado' | 'pendiente' | 'rechazado'>('todos');
+  const [filtroCategoriaEq, setFiltroCategoriaEq] = useState<string>('todos');
   const [ordenEq, setOrdenEq] = useState<'nombre_asc' | 'nombre_desc' | 'representante_asc' | 'representante_desc' | 'estado'>('nombre_asc');
 
   // ── Estado: Filtros y orden de la tabla de Jugadores ──
@@ -421,6 +423,9 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
   const [filasJugadores, setFilasJugadores] = useState<FilaJugador[]>([]);
   const [cargandoPlanilla, setCargandoPlanilla] = useState(false);
   const [equipoIdMasiva, setEquipoIdMasiva] = useState<number | null>(null);
+
+  const [modalNuevoEqAbierto, setModalNuevoEqAbierto] = useState(false);
+  const [modalVerEq, setModalVerEq] = useState<{ abierto: boolean; eq: Equipo | null }>({ abierto: false, eq: null });
 
   // ── Estado: Modal Editar Equipo ────────────
   const [modalEditarEq, setModalEditarEq] = useState<{
@@ -751,6 +756,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
         mostrarMensaje('Equipo registrado y aprobado exitosamente.');
         setNuevoEq({ name: '', representative: '', discipline_id: '', category_id: '' });
         setLogoEqFile(null); setLogoEqUrl('');
+        setModalNuevoEqAbierto(false);
         cargarDatos();
       }
     } catch (err: any) {
@@ -1093,7 +1099,10 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
         (eq.representative || '').toLowerCase().includes(texto);
       const coincideEstado = filtroEstadoEq === 'todos' || (eq.registration_status || 'pendiente') === filtroEstadoEq;
       const coincideEquipoDelegado = delegadoTeamId === null || eq.id === delegadoTeamId;
-      return coincideTexto && coincideEstado && coincideEquipoDelegado;
+      const coincideCategoria = filtroCategoriaEq === 'todos' || 
+        (eq.category && String(eq.category.id) === filtroCategoriaEq) ||
+        (!eq.category && filtroCategoriaEq === 'sin_categoria');
+      return coincideTexto && coincideEstado && coincideEquipoDelegado && coincideCategoria;
     })
     .sort((a, b) => {
       if (ordenEq === 'nombre_asc') return a.name.localeCompare(b.name);
@@ -1120,18 +1129,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       return 0;
     });
 
-  const TABS: { key: TabType; label: string; nuevo?: boolean }[] = delegadoTeamId !== null ? [
-    { key: 'jugadores', label: 'Jugadores' },
-    { key: 'planilla-jugadores', label: 'Planilla Jugadores', nuevo: true },
-  ] : [
-    // Ocultamos el TAB de "Disciplinas" por ahora para simplificar, pero se puede reactivar fácilmente si se necesita
-    // { key: 'disciplinas', label: 'Disciplinas' },
-    { key: 'categorias', label: 'Categorías' },
-    { key: 'equipos', label: 'Equipos' },
-    { key: 'jugadores', label: 'Jugadores' },
-    { key: 'registro-equipo', label: 'Registro Rápido Equipo', nuevo: true },
-    { key: 'planilla-jugadores', label: 'Planilla Jugadores', nuevo: true },
-  ];
+
 
   // Plazo de Cierre
   const limiteStr = delegadoTeamId && championshipSettings?.roster_deadlines?.[`team_${delegadoTeamId}`];
@@ -1317,25 +1315,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
         <CabeceraEstandar titulo="Gestión de Participantes" subtitulo="Inscripciones y Configuración del Campeonato" />
 
-      {/* Tabs para cambiar entre módulos (visible en todo tamaño) */}
-      <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2">
-        {TABS.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setSearchParams({ tab: tab.key })}
-            className={`px-4 py-2 text-xs font-bold rounded-lg uppercase tracking-wide cursor-pointer transition-all flex items-center gap-1.5 ${
-              tabActiva === tab.key
-                ? tab.nuevo
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-indigo-650 text-white shadow-xs'
-                : 'text-slate-400 hover:bg-[#171a26] hover:text-white'
-            }`}
-          >
-            {tab.nuevo && <span className="material-symbols-outlined text-xs">bolt</span>}
-            {tab.label}
-          </button>
-        ))}
-      </div>
+
 
       {/* Contenido Principal */}
       <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto space-y-6 px-4 md:px-8">
@@ -1355,10 +1335,11 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
         {(tabActiva === 'disciplinas' || tabActiva === 'categorias' || tabActiva === 'equipos' || tabActiva === 'jugadores') && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Columna Izquierda: Formulario de Registro */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs h-fit">
-              <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900 mb-4 border-b border-slate-100 pb-2">
-                Añadir {tabActiva.slice(0, -1)}
-              </h2>
+            {tabActiva !== 'equipos' && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs h-fit">
+                <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900 mb-4 border-b border-slate-100 pb-2">
+                  Añadir {tabActiva.slice(0, -1)}
+                </h2>
 
               {tabActiva === 'disciplinas' && (
                 <form onSubmit={guardarDisciplina} className="space-y-4">
@@ -1565,53 +1546,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                  </div>
               )}
 
-              {tabActiva === 'equipos' && (
-                <form onSubmit={guardarEquipo} className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Nombre del Equipo *</label>
-                    <input type="text" required placeholder="Ej: Real Arequipa"
-                      value={nuevoEq.name} onChange={(e) => setNuevoEq({ ...nuevoEq, name: e.target.value })}
-                      className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Delegado/Representante</label>
-                    <input type="text" placeholder="Representante del equipo"
-                      value={nuevoEq.representative} onChange={(e) => setNuevoEq({ ...nuevoEq, representative: e.target.value })}
-                      className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 block">Disciplina *</label>
-                      <select required value={nuevoEq.discipline_id}
-                        onChange={(e) => setNuevoEq({ ...nuevoEq, discipline_id: e.target.value, category_id: '' })}
-                        className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
-                        <option value="">Seleccionar Disciplina</option>
-                        {disciplinas.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 block">Categoría *</label>
-                      <select required value={nuevoEq.category_id}
-                        onChange={(e) => setNuevoEq({ ...nuevoEq, category_id: e.target.value })}
-                        className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
-                        <option value="">Seleccionar Categoría</option>
-                        {categorias
-                          .filter((c) => !nuevoEq.discipline_id || c.championship_discipline_id === parseInt(nuevoEq.discipline_id))
-                          .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <LogoInput
-                    logoFile={logoEqFile}
-                    logoUrlTexto={logoEqUrl}
-                    onFileChange={setLogoEqFile}
-                    onUrlChange={setLogoEqUrl}
-                  />
-                  <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer">
-                    Guardar Equipo
-                  </button>
-                </form>
-              )}
+
 
               {tabActiva === 'jugadores' && (
                 <div className="space-y-4">
@@ -1691,6 +1626,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                         logoUrlTexto={fotoJugUrl}
                         onFileChange={setFotoJugFile}
                         onUrlChange={setFotoJugUrl}
+                        label="Foto del Jugador"
                       />
                       <button
                         type="submit"
@@ -1853,17 +1789,29 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                 </div>
               )}
             </div>
+            )}
 
             {/* Columna Derecha: Listado */}
-            <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-              <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900 mb-4 border-b border-slate-100 pb-2">
-                Lista de {tabActiva}
-              </h2>
+            <div className={`${tabActiva === 'equipos' ? 'lg:col-span-3' : 'lg:col-span-2'} bg-white rounded-2xl border border-slate-200 p-6 shadow-xs`}>
+              <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
+                <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900">
+                  Lista de {tabActiva}
+                </h2>
+                {tabActiva === 'equipos' && (
+                  <button
+                    onClick={() => setModalNuevoEqAbierto(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#800f2f] hover:bg-[#991238] text-white text-xs font-bold uppercase tracking-wide rounded-lg cursor-pointer transition-all shadow-xs active:scale-95"
+                  >
+                    <span className="material-symbols-outlined text-xs">add</span>
+                    Añadir Equipo
+                  </button>
+                )}
+              </div>
 
               {/* ── Filtros y orden (solo tab Equipos) ── */}
               {tabActiva === 'equipos' && (
                 <div className="mb-4 space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                     {/* Buscador */}
                     <div className="relative md:col-span-1">
                       <input
@@ -1877,6 +1825,24 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                         search
                       </span>
                     </div>
+
+                    {/* Filtro Categoría */}
+                    <select
+                      value={filtroCategoriaEq}
+                      onChange={(e) => setFiltroCategoriaEq(e.target.value)}
+                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                    >
+                      <option value="todos">Todas las categorías</option>
+                      {categorias.map((c) => {
+                        const discName = c.championship_discipline?.discipline?.name || '';
+                        return (
+                          <option key={c.id} value={String(c.id)}>
+                            {c.name}{discName ? ` (${discName})` : ''}
+                          </option>
+                        );
+                      })}
+                      <option value="sin_categoria">Sin categoría</option>
+                    </select>
 
                     {/* Filtro Estado */}
                     <select
@@ -1951,20 +1917,58 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                   <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
                   <span className="text-xs text-slate-500 uppercase tracking-widest font-bold">Cargando registros...</span>
                 </div>
+              ) : tabActiva === 'equipos' ? (
+                /* Matrix/Grid Layout for Teams */
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 py-4 animate-fadeIn">
+                  {equiposFiltrados.map((eq) => (
+                    <div
+                      key={eq.id}
+                      onClick={() => setModalVerEq({ abierto: true, eq })}
+                      className="group flex flex-col items-center p-5 bg-slate-50 hover:bg-slate-100/70 dark:bg-[#171a26]/40 dark:hover:bg-[#171a26] border border-slate-200 dark:border-slate-800/80 rounded-2xl transition-all cursor-pointer text-center relative overflow-hidden shadow-xs hover:shadow-md"
+                    >
+                      {/* Logo wrapper */}
+                      <div className="w-20 h-20 rounded-full border-2 border-slate-200 dark:border-slate-800 flex items-center justify-center overflow-hidden bg-white dark:bg-[#11131c] mb-4 shadow-inner group-hover:scale-105 transition-transform duration-300">
+                        {eq.logo ? (
+                          <img src={resolverUrlImagen(eq.logo) || ''} alt={eq.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-2xl text-slate-400 dark:text-slate-500 font-extrabold uppercase">{eq.name[0] || '?'}</span>
+                        )}
+                      </div>
+
+                      {/* Info */}
+                      <h4 className="text-sm font-extrabold text-slate-800 dark:text-slate-200 line-clamp-1 mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        {eq.name}
+                      </h4>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider line-clamp-1 mb-2">
+                        {eq.representative || <span className="text-slate-400 dark:text-slate-500 italic">Sin delegado</span>}
+                      </p>
+
+                      {/* Status pill */}
+                      <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border ${
+                        eq.registration_status === 'aprobado'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
+                          : eq.registration_status === 'rechazado'
+                          ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-450 dark:border-rose-500/20'
+                          : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-450 dark:border-amber-500/20'
+                      }`}>
+                        {eq.registration_status || 'pendiente'}
+                      </span>
+                    </div>
+                  ))}
+                  {equiposFiltrados.length === 0 && (
+                    <div className="col-span-full py-12 flex flex-col items-center justify-center gap-2 text-slate-450 dark:text-slate-500">
+                      <span className="material-symbols-outlined text-4xl text-slate-350">group_off</span>
+                      <p className="text-xs font-bold uppercase tracking-wider">No se encontraron equipos</p>
+                    </div>
+                  )}
+                </div>
               ) : (
+                /* Classic Table Layout for other tabs */
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-                        {tabActiva === 'equipos' ? (
-                          <>
-                            <th className="p-3 pl-4 w-12"></th>
-                            <th className="p-3">Nombre del Equipo</th>
-                            <th className="p-3">Representante</th>
-                            <th className="p-3">Estado</th>
-                            <th className="p-3 pr-4 text-right">Acciones</th>
-                          </>
-                       ) : tabActiva === 'jugadores' ? (
+                        {tabActiva === 'jugadores' ? (
                           <>
                             <th className="p-3 pl-4 w-12"></th>
                             <th className="p-3">Nombre Completo</th>
@@ -2003,57 +2007,6 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                           </td>
                           <td className="p-3 pr-4 text-right">
                             <button onClick={() => eliminarElemento(c.id)} className="text-xs font-bold text-rose-600 hover:underline cursor-pointer">Eliminar</button>
-                          </td>
-                        </tr>
-                      ))}
-                      {tabActiva === 'equipos' && equiposFiltrados.map((eq) => (
-                        <tr key={eq.id} className="hover:bg-slate-50/40">
-                          <td className="p-3 pl-4">
-                            <LogoCircular nombre={eq.name} logo={eq.logo} />
-                          </td>
-                          <td className="p-3">
-                            <div className="font-bold text-slate-900">{eq.name}</div>
-                          </td>
-                          <td className="p-3 text-sm text-slate-700">
-                            {eq.representative || <span className="text-slate-400 italic text-xs">No registrado</span>}
-                          </td>
-                          <td className="p-3">
-                            <select
-                              value={eq.registration_status || 'pendiente'}
-                              onChange={async (e) => {
-                                const nuevoEstado = e.target.value as 'pendiente' | 'aprobado' | 'rechazado';
-                                await cambiarEstadoEquipo(eq.id, nuevoEstado);
-                              }}
-                              className={`text-[10px] font-bold uppercase tracking-wide rounded px-2 py-0.5 border cursor-pointer outline-hidden transition-colors ${
-                                eq.registration_status === 'aprobado'
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                  : eq.registration_status === 'rechazado'
-                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                  : 'bg-amber-50 text-amber-700 border-amber-200'
-                              }`}
-                            >
-                              <option value="pendiente">Pendiente</option>
-                              <option value="aprobado">Aprobado</option>
-                              <option value="rechazado">Rechazado</option>
-                            </select>
-                          </td>
-                          <td className="p-3 pr-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => abrirModalEditar(eq)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-600 hover:text-white hover:border-indigo-600 active:scale-95 transition-all cursor-pointer"
-                              >
-                                <span className="material-symbols-outlined text-xs">edit</span>
-                                Editar
-                              </button>
-                              <button
-                                onClick={() => eliminarElemento(eq.id)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-rose-600 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-600 hover:text-white hover:border-rose-600 active:scale-95 transition-all cursor-pointer"
-                              >
-                                <span className="material-symbols-outlined text-xs">delete</span>
-                                Eliminar
-                              </button>
-                            </div>
                           </td>
                         </tr>
                       ))}
@@ -2097,11 +2050,10 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                       {!cargando && (
                         (tabActiva === 'disciplinas' && disciplinas.length === 0) ||
                         (tabActiva === 'categorias' && categorias.length === 0) ||
-                        (tabActiva === 'equipos' && equiposFiltrados.length === 0) ||
                         (tabActiva === 'jugadores' && jugadoresFiltrados.length === 0)
                       ) && (
                         <tr>
-                          <td colSpan={tabActiva === 'equipos' || tabActiva === 'jugadores' ? 5 : 4} className="p-10 text-center text-slate-500 text-xs">No hay registros cargados.</td>
+                          <td colSpan={tabActiva === 'jugadores' ? 6 : 4} className="p-10 text-center text-slate-500 text-xs">No hay registros cargados.</td>
                         </tr>
                       )}
                     </tbody>
@@ -2452,6 +2404,242 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
         )}
       </main>
 
+      {/* ── Modal Añadir Equipo ── */}
+      {modalNuevoEqAbierto && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-indigo-650 text-base">group_add</span>
+                <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Añadir Nuevo Equipo</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setModalNuevoEqAbierto(false);
+                  setNuevoEq({ name: '', representative: '', discipline_id: '', category_id: '' });
+                  setLogoEqFile(null); setLogoEqUrl('');
+                }}
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+
+            {/* Body */}
+            <form onSubmit={guardarEquipo} className="p-6 space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Nombre del Equipo *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: Real Arequipa"
+                  value={nuevoEq.name}
+                  onChange={(e) => setNuevoEq({ ...nuevoEq, name: e.target.value })}
+                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Delegado/Representante</label>
+                <input
+                  type="text"
+                  placeholder="Representante del equipo"
+                  value={nuevoEq.representative}
+                  onChange={(e) => setNuevoEq({ ...nuevoEq, representative: e.target.value })}
+                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Disciplina *</label>
+                  <select
+                    required
+                    value={nuevoEq.discipline_id}
+                    onChange={(e) => setNuevoEq({ ...nuevoEq, discipline_id: e.target.value, category_id: '' })}
+                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                  >
+                    <option value="">Seleccionar Disciplina</option>
+                    {disciplinas.map((d) => <option key={d.id} value={String(d.id)}>{d.name}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Categoría *</label>
+                  <select
+                    required
+                    value={nuevoEq.category_id}
+                    onChange={(e) => setNuevoEq({ ...nuevoEq, category_id: e.target.value })}
+                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                  >
+                    <option value="">Seleccionar Categoría</option>
+                    {categorias
+                      .filter((c) => !nuevoEq.discipline_id || c.championship_discipline_id === parseInt(nuevoEq.discipline_id))
+                      .map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <LogoInput
+                logoFile={logoEqFile}
+                logoUrlTexto={logoEqUrl}
+                onFileChange={setLogoEqFile}
+                onUrlChange={setLogoEqUrl}
+              />
+
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalNuevoEqAbierto(false);
+                    setNuevoEq({ name: '', representative: '', discipline_id: '', category_id: '' });
+                    setLogoEqFile(null); setLogoEqUrl('');
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-slate-650 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold text-white bg-indigo-650 hover:bg-indigo-700 rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-xs">save</span>
+                  Guardar Equipo
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Ver Detalles del Equipo ── */}
+      {modalVerEq.abierto && modalVerEq.eq && (() => {
+        const eq = modalVerEq.eq;
+        const jugadoresDelEquipo = jugadores.filter(j => (j.team_id ?? j.team?.id) === eq.id);
+        return (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+            <div className="bg-white dark:bg-[#11131c] border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-[#151722]/50">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-indigo-500 dark:text-indigo-400 text-base">info</span>
+                  <h3 className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wide">Detalle del Equipo</h3>
+                </div>
+                <button
+                  onClick={() => setModalVerEq({ abierto: false, eq: null })}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">close</span>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="px-6 py-5 space-y-5">
+                {/* Logo y Nombre principal */}
+                <div className="flex flex-col items-center text-center pb-4 border-b border-slate-100 dark:border-slate-800">
+                  <div className="w-24 h-24 rounded-full border border-slate-200 dark:border-slate-850 flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-[#171a26] mb-3 shadow-inner">
+                    {eq.logo ? (
+                      <img src={resolverUrlImagen(eq.logo) || ''} alt={eq.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-3xl text-slate-400 dark:text-slate-500 font-extrabold uppercase">{eq.name[0] || '?'}</span>
+                    )}
+                  </div>
+                  <h2 className="text-xl font-black text-slate-900 dark:text-white">{eq.name}</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-450 font-bold uppercase tracking-wider mt-1">
+                    Delegado: {eq.representative || <span className="text-slate-400 dark:text-slate-500 italic">No registrado</span>}
+                  </p>
+                </div>
+
+                {/* Grid de Información Técnica */}
+                <div className="grid grid-cols-2 gap-4 text-xs font-sans">
+                  <div className="bg-slate-50 dark:bg-[#171a26] p-3 rounded-xl border border-slate-100 dark:border-slate-800/60">
+                    <p className="text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider mb-1">Disciplina</p>
+                    <p className="font-extrabold text-slate-850 dark:text-slate-200 text-sm">{eq.discipline?.name || 'No asignada'}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-[#171a26] p-3 rounded-xl border border-slate-100 dark:border-slate-800/60">
+                    <p className="text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider mb-1">Categoría</p>
+                    <p className="font-extrabold text-slate-850 dark:text-slate-200 text-sm">{eq.category?.name || 'No asignada'}</p>
+                  </div>
+                </div>
+
+                {/* Selector de Estado */}
+                <div className="flex items-center justify-between bg-slate-50 dark:bg-[#171a26] p-3 rounded-xl border border-slate-100 dark:border-slate-800/60 text-xs font-sans">
+                  <span className="text-slate-550 dark:text-slate-550 font-bold uppercase tracking-wider">Estado del Registro:</span>
+                  <select
+                    value={eq.registration_status || 'pendiente'}
+                    onChange={async (e) => {
+                      const nuevoEstado = e.target.value as 'pendiente' | 'aprobado' | 'rechazado';
+                      await cambiarEstadoEquipo(eq.id, nuevoEstado);
+                      setModalVerEq(prev => prev.eq ? { ...prev, eq: { ...prev.eq, registration_status: nuevoEstado } } : prev);
+                    }}
+                    className={`text-xs font-bold uppercase tracking-wide rounded px-2.5 py-1 border cursor-pointer outline-hidden transition-colors ${
+                      eq.registration_status === 'aprobado'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
+                        : eq.registration_status === 'rechazado'
+                        ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-450 dark:border-rose-500/20'
+                        : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-450 dark:border-amber-500/20'
+                    }`}
+                  >
+                    <option value="pendiente">Pendiente</option>
+                    <option value="aprobado">Aprobado</option>
+                    <option value="rechazado">Rechazado</option>
+                  </select>
+                </div>
+
+                {/* Jugadores Inscritos */}
+                <div className="border-t border-slate-100 dark:border-slate-800 pt-4 font-sans">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Jugadores Inscritos ({jugadoresDelEquipo.length})</h4>
+                  {jugadoresDelEquipo.length === 0 ? (
+                    <p className="text-xs text-slate-450 dark:text-slate-500 italic py-2">No hay jugadores registrados en este equipo.</p>
+                  ) : (
+                    <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                      {jugadoresDelEquipo.map(j => (
+                        <div key={j.id} className="flex items-center justify-between text-xs py-2 px-3 bg-slate-50 hover:bg-slate-100/70 border border-slate-100 dark:bg-[#171a26]/40 dark:hover:bg-[#171a26] dark:border-slate-800 rounded-xl transition-all">
+                          <span className="font-extrabold text-slate-700 dark:text-slate-350">{j.name}</span>
+                          <span className="text-[10px] text-indigo-650 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-500/5 px-2 py-0.5 rounded-lg border border-indigo-100 dark:border-indigo-550/10">
+                            #{j.number ?? 'S/N'} - {j.position || 'Jugador'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-[#161822] flex items-center justify-between">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setModalVerEq({ abierto: false, eq: null });
+                      abrirModalEditar(eq);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wide text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-xs">edit</span>
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setModalVerEq({ abierto: false, eq: null });
+                      eliminarElemento(eq.id);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wide text-rose-600 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-xs">delete</span>
+                    Eliminar
+                  </button>
+                </div>
+                <button
+                  onClick={() => setModalVerEq({ abierto: false, eq: null })}
+                  className="px-4 py-2 text-xs font-bold text-slate-550 dark:text-slate-400 border border-slate-205 dark:border-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── Modal Editar Equipo ── */}
       {modalEditarEq.abierto && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
@@ -2619,6 +2807,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                 logoActualUrl={modalEditarJug.jug?.photo}
                 onFileChange={setFotoEditJugFile}
                 onUrlChange={setFotoEditJugUrl}
+                label="Foto del Jugador"
               />
             </div>
 

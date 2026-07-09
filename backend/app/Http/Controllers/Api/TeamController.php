@@ -45,7 +45,10 @@ class TeamController extends Controller
                 return $this->errorResponse('Categoría no encontrada', 404);
             }
 
-            $teams = $category->teams()->withCount('players')->get();
+            $teams = $category->teams()
+                ->with(['category.championshipDiscipline.discipline'])
+                ->withCount('players')
+                ->get();
 
             return $this->successResponse(TeamListResource::collection($teams), 'Equipos obtenidos exitosamente');
         }
@@ -57,7 +60,10 @@ class TeamController extends Controller
             return $this->errorResponse('Falta el ID del campeonato', 400);
         }
 
-        $teams = Team::where('championship_id', $championshipId)->withCount('players')->get();
+        $teams = Team::where('championship_id', $championshipId)
+            ->with(['category.championshipDiscipline.discipline'])
+            ->withCount('players')
+            ->get();
 
         return $this->successResponse(TeamListResource::collection($teams), 'Equipos obtenidos exitosamente');
     }

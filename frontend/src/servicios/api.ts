@@ -80,11 +80,17 @@ clienteApi.interceptors.request.use(
     // ── NUEVO: si el body es FormData, dejar que el navegador/Axios
     // generen el Content-Type con el boundary correcto.
     if (config.data instanceof FormData && config.headers) {
-      if (typeof (config.headers as any).delete === 'function') {
-        (config.headers as any).delete('Content-Type');
-      } else {
-        delete (config.headers as any)['Content-Type'];
-      }
+      const hdrs = config.headers as any;
+      const keysToDelete = ['Content-Type', 'content-type'];
+      keysToDelete.forEach(key => {
+        delete hdrs[key];
+        if (hdrs.common) delete hdrs.common[key];
+        if (hdrs.post) delete hdrs.post[key];
+        if (hdrs.put) delete hdrs.put[key];
+        if (typeof hdrs.delete === 'function') {
+          hdrs.delete(key);
+        }
+      });
     }
 
     const championshipId = localStorage.getItem('campeonato_activo_id');
@@ -298,6 +304,15 @@ export interface Equipo {
   logo?: string | null;
   representative?: string | null;
   registration_status?: 'pendiente' | 'aprobado' | 'rechazado';
+  category?: {
+    id: number;
+    name: string;
+    gender_type?: string | null;
+  } | null;
+  discipline?: {
+    id: number;
+    name: string;
+  } | null;
 }
 
 export interface Jugador {

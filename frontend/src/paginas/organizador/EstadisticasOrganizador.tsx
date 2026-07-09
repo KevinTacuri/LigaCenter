@@ -14,10 +14,9 @@ import {
   type Partido,
   type Sancion
 } from '../../servicios/api';
-import { sileo } from 'sileo';
 
 export const EstadisticasOrganizador: React.FC = () => {
-  const { usuario, cargando, tieneRol } = useAutenticacion();
+  const { usuario, cargando } = useAutenticacion();
   const { campeonatoActivo } = useCampeonato();
   const navegar = useNavigate();
 

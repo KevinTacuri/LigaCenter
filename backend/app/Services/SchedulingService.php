@@ -10,6 +10,8 @@ class SchedulingService
 {
     public function scheduleMatchesForRound($championshipId, $categoryId, $round, $availableHours, $venueIds)
     {
+        $venueIds = array_values($venueIds);
+        $availableHours = array_values($availableHours);
         $matches = GameMatch::where('championship_id', $championshipId)
             ->where('category_id', $categoryId)
             ->where('round', $round)

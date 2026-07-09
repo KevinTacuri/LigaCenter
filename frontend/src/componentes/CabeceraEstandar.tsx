@@ -76,24 +76,50 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
           </button>
         )}
 
-        {!esAdministrador && !panelCampeonatosAbierto && (
-          campeonatoActivo ? (
-            <button
-              onClick={() => setPanelCampeonatosAbierto(true)}
-              className="flex items-center gap-1.5 bg-[#171a26] hover:bg-[#1c1f2e] border border-slate-800 text-slate-355 rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all shadow-xs"
-            >
-              <span className="material-symbols-outlined text-sm">swap_horiz</span>
-              <span className="hidden sm:inline">Cambiar Torneo</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => setPanelCampeonatosAbierto(true)}
-              className="flex items-center gap-1.5 bg-indigo-650 hover:bg-indigo-600 text-white rounded-lg px-3.5 py-1.5 text-xs font-bold cursor-pointer transition-all shadow-xs"
-            >
-              <span className="material-symbols-outlined text-sm">sports_soccer</span>
-              <span>Seleccionar Campeonato</span>
-            </button>
-          )
+        {!esAdministrador && (
+          <div className="flex items-center gap-2">
+            {campeonatoActivo ? (
+              <a
+                href={`/publico?campeonato=${campeonatoActivo.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all shadow-xs"
+              >
+                <span className="material-symbols-outlined text-sm">visibility</span>
+                <span className="hidden sm:inline">Vista Pública</span>
+              </a>
+            ) : (
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all shadow-xs"
+              >
+                <span className="material-symbols-outlined text-sm">visibility</span>
+                <span className="hidden sm:inline">Portal Público</span>
+              </a>
+            )}
+
+            {!panelCampeonatosAbierto && (
+              campeonatoActivo ? (
+                <button
+                  onClick={() => setPanelCampeonatosAbierto(true)}
+                  className="flex items-center gap-1.5 bg-[#800f2f] hover:bg-[#991238] text-white border border-[#800f2f] rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all shadow-xs active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-sm">swap_horiz</span>
+                  <span className="hidden sm:inline">Cambiar Torneo</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setPanelCampeonatosAbierto(true)}
+                  className="flex items-center gap-1.5 bg-indigo-650 hover:bg-indigo-600 text-white rounded-lg px-3.5 py-1.5 text-xs font-bold cursor-pointer transition-all shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-sm">sports_soccer</span>
+                  <span>Seleccionar Campeonato</span>
+                </button>
+              )
+            )}
+          </div>
         )}
       </div>
     </header>

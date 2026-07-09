@@ -23,6 +23,7 @@ class FixtureService
 
     public function generateFixture($championshipId, $categoryId, $startDate, $venueIds)
     {
+        $venueIds = array_values($venueIds);
         $category = Category::find($categoryId);
 
         if (!$category) {
@@ -158,7 +159,7 @@ class FixtureService
                 }
             }
             $rounds[] = $roundMatches;
-            array_splice($teamIds, 1, 0, array_pop($teamIds));
+            array_splice($teamIds, 1, 0, [array_pop($teamIds)]);
         }
 
         $secondRound = [];

@@ -10,11 +10,8 @@ import type {
 import { publicApi } from '../../servicios/apiPublic';
 import { Inicio } from '../landing/Inicio';
 
-interface Props {
-  esVistaAnonima?: boolean;
-}
 
-export const TablaPosiciones: React.FC<Props> = ({ esVistaAnonima = true }) => {
+export const TablaPosiciones: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const campeonatoParam = searchParams.get('campeonato');
@@ -22,7 +19,6 @@ export const TablaPosiciones: React.FC<Props> = ({ esVistaAnonima = true }) => {
 
   const [matches, setMatches] = useState<PublicMatch[]>([]);
   const [standings, setStandings] = useState<PublicStanding[]>([]);
-  const [championship, setChampionship] = useState<PublicChampionship | null>(null);
   const [disciplines, setDisciplines] = useState<PublicDiscipline[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -173,6 +173,9 @@ export const EquipoDetalle: React.FC = () => {
                       </div>
                     </Link>
                   ))}
+                </div>
+              )}
+            </div>
 
             {/* Últimos partidos */}
             <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">
