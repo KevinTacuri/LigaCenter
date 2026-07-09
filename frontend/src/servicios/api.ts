@@ -3,6 +3,17 @@ import axios, { type AxiosResponse } from 'axios';
 // URL base para la API del backend
 const URL_BASE_API = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 
+// URL base del storage público de Laravel (sin el sufijo /api)
+const URL_STORAGE_BASE = URL_BASE_API.replace(/\/api\/?$/, '');
+
+// Convierte un path relativo del storage de Laravel (ej. "teams/logos/x.png")
+// en una URL completa y usable en <img src>. Si ya es una URL absoluta (http/https), la deja igual.
+export const resolverUrlImagen = (path?: string | null): string | null => {
+  if (!path) return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return `${URL_STORAGE_BASE}/storage/${path}`;
+};
+
 // Interfaz para respuestas estándar de la API
 export interface RespuestaApi<T = any> {
   success: boolean;
@@ -297,6 +308,7 @@ export interface Jugador {
   team_id: number;
   number?: number | null;
   position?: string | null;
+  photo?: string | null;
   team?: Equipo;
 }
 
@@ -551,10 +563,16 @@ export const serviciosParticipantes = {
     id: number,
     datos: any
   ): Promise<RespuestaApi<Jugador>> => {
+    if (datos instanceof FormData) {
+      if (!datos.has('_method')) {
+        datos.append('_method', 'PUT');
+      }
+      const res = await clienteApi.post(`/players/${id}`, datos);
+      return res.data;
+    }
     const res = await clienteApi.put(`/players/${id}`, datos);
     return res.data;
   },
-    
 };
 
 /**

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { sileo } from 'sileo';
 import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
-import { serviciosParticipantes, serviciosCampeonatos } from '../../servicios/api';
+import { serviciosParticipantes, serviciosCampeonatos, resolverUrlImagen } from '../../servicios/api';
 import { BarraLateral } from '../../componentes/BarraLateral';
 import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
 import { useConfirm } from '@omit/react-confirm-dialog';
@@ -176,7 +176,7 @@ const LogoInput: React.FC<LogoInputProps> = ({
 
   const previewSrc = logoFile
     ? URL.createObjectURL(logoFile)
-    : (modo === 'url' && logoUrlTexto ? logoUrlTexto : logoActualUrl || null);
+    : (modo === 'url' && logoUrlTexto ? logoUrlTexto : resolverUrlImagen(logoActualUrl || null));
 
   return (
     <div className="space-y-2">
@@ -232,10 +232,11 @@ interface LogoCircularProps {
 }
 
 const LogoCircular: React.FC<LogoCircularProps> = ({ nombre, logo }) => {
-  if (logo) {
+  const urlResuelta = resolverUrlImagen(logo);
+  if (urlResuelta) {
     return (
       <img
-        src={logo}
+        src={urlResuelta}
         alt={nombre}
         className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
       />
@@ -396,6 +397,14 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
   // Logo: modal editar equipo
   const [logoEditFile, setLogoEditFile] = useState<File | null>(null);
   const [logoEditUrl, setLogoEditUrl] = useState('');
+
+  // Foto: form manual "jugadores"
+  const [fotoJugFile, setFotoJugFile] = useState<File | null>(null);
+  const [fotoJugUrl, setFotoJugUrl] = useState('');
+
+  // Foto: modal editar jugador
+  const [fotoEditJugFile, setFotoEditJugFile] = useState<File | null>(null);
+  const [fotoEditJugUrl, setFotoEditJugUrl] = useState('');
 
   // ── Estado: Tab "registro-equipo" ──────────
   const [reqEq, setReqEq] = useState({
@@ -775,17 +784,20 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       mostrarMensaje('El nombre, el equipo y la edad son obligatorios.', true); return;
     }
     try {
-      const res = await serviciosParticipantes.crearJugador({
-        full_name: nuevoJug.name,
-        team_id: parseInt(nuevoJug.team_id),
-        dni: nuevoJug.dni || null,
-        age: parseInt(nuevoJug.age),
-        number: nuevoJug.number ? parseInt(nuevoJug.number) : null,
-        position: nuevoJug.position
-      });
+      const formData = new FormData();
+      formData.append('full_name', nuevoJug.name);
+      formData.append('team_id', nuevoJug.team_id);
+      formData.append('age', nuevoJug.age);
+      if (nuevoJug.dni) formData.append('dni', nuevoJug.dni);
+      if (nuevoJug.number) formData.append('number', nuevoJug.number);
+      if (fotoJugFile) formData.append('photo', fotoJugFile);
+      else if (fotoJugUrl.trim()) formData.append('photo', fotoJugUrl.trim());
+
+      const res = await serviciosParticipantes.crearJugador(formData);
       if (res.success) {
         mostrarMensaje('Jugador inscrito exitosamente.');
         setNuevoJug({ name: '', dni: '', age: '', phone: '', team_id: delegadoTeamId !== null ? String(delegadoTeamId) : '', number: '', position: 'Delantero' });
+        setFotoJugFile(null); setFotoJugUrl('');
         setJugadores(prev => [...prev, res.data]);
       }
     } catch (err: any) {
@@ -987,6 +999,8 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
   const abrirModalEditarJugador = (j: Jugador) => {
     // Fallback: si team_id no viene en el objeto, lo tomamos de team.id
     const idEquipo = j.team_id ?? j.team?.id;
+    setFotoEditJugFile(null);
+    setFotoEditJugUrl('');
     setModalEditarJug({
       abierto: true,
       jug: j,
@@ -1009,25 +1023,17 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     }
     setModalEditarJug(prev => ({ ...prev, guardando: true }));
     try {
-      const res = await serviciosParticipantes.actualizarJugador(modalEditarJug.jug.id, {
-        full_name: modalEditarJug.nombre.trim(),
-        dni: modalEditarJug.dni.trim() || null,
-        number: modalEditarJug.numero.trim() ? parseInt(modalEditarJug.numero) : null,
-        team_id: parseInt(modalEditarJug.teamId),
-      });
+      const formData = new FormData();
+      formData.append('full_name', modalEditarJug.nombre.trim());
+      if (modalEditarJug.dni.trim()) formData.append('dni', modalEditarJug.dni.trim());
+      if (modalEditarJug.numero.trim()) formData.append('number', modalEditarJug.numero.trim());
+      formData.append('team_id', modalEditarJug.teamId);
+      if (fotoEditJugFile) formData.append('photo', fotoEditJugFile);
+      else if (fotoEditJugUrl.trim()) formData.append('photo', fotoEditJugUrl.trim());
+
+      const res = await serviciosParticipantes.actualizarJugador(modalEditarJug.jug.id, formData);
       if (res.success) {
-        setJugadores(prev => prev.map(j =>
-          j.id === modalEditarJug.jug!.id
-            ? {
-                ...j,
-                name: modalEditarJug.nombre.trim(),
-                dni: modalEditarJug.dni.trim() || null,
-                number: modalEditarJug.numero.trim() ? parseInt(modalEditarJug.numero) : null,
-                team_id: parseInt(modalEditarJug.teamId),
-                team: equipos.find(eq => eq.id === parseInt(modalEditarJug.teamId)) || j.team,
-              }
-            : j
-        ));
+        setJugadores(prev => prev.map(j => j.id === modalEditarJug.jug!.id ? res.data : j));
         mostrarMensaje('Jugador actualizado correctamente.');
         setModalEditarJug({ abierto: false, jug: null, nombre: '', dni: '', numero: '', teamId: '', guardando: false });
       }
@@ -1680,6 +1686,12 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                           {equipos.map((eq) => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
                         </select>
                       </div>
+                      <LogoInput
+                        logoFile={fotoJugFile}
+                        logoUrlTexto={fotoJugUrl}
+                        onFileChange={setFotoJugFile}
+                        onUrlChange={setFotoJugUrl}
+                      />
                       <button
                         type="submit"
                         disabled={isDeadlineExpired}
@@ -1954,7 +1966,8 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                           </>
                        ) : tabActiva === 'jugadores' ? (
                           <>
-                            <th className="p-3 pl-4">Nombre Completo</th>
+                            <th className="p-3 pl-4 w-12"></th>
+                            <th className="p-3">Nombre Completo</th>
                             <th className="p-3">DNI</th>
                             <th className="p-3">Dorsal</th>
                             <th className="p-3">Equipo</th>
@@ -2047,6 +2060,9 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                       {tabActiva === 'jugadores' && jugadoresFiltrados.map((j) => (
                         <tr key={j.id} className="hover:bg-slate-50/40">
                           <td className="p-3 pl-4">
+                            <LogoCircular nombre={j.name} logo={j.photo} />
+                          </td>
+                          <td className="p-3 pl-4">
                             <div className="font-bold text-slate-900">{j.name}</div>
                           </td>
                           <td className="p-3 text-sm text-slate-700">
@@ -2085,7 +2101,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                         (tabActiva === 'jugadores' && jugadoresFiltrados.length === 0)
                       ) && (
                         <tr>
-                          <td colSpan={tabActiva === 'equipos' ? 5 : 4} className="p-10 text-center text-slate-500 text-xs">No hay registros cargados.</td>
+                          <td colSpan={tabActiva === 'equipos' || tabActiva === 'jugadores' ? 5 : 4} className="p-10 text-center text-slate-500 text-xs">No hay registros cargados.</td>
                         </tr>
                       )}
                     </tbody>
@@ -2596,6 +2612,14 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                   {equipos.map((eq) => <option key={eq.id} value={String(eq.id)}>{eq.name}</option>)}
                 </select>
               </div>
+
+              <LogoInput
+                logoFile={fotoEditJugFile}
+                logoUrlTexto={fotoEditJugUrl}
+                logoActualUrl={modalEditarJug.jug?.photo}
+                onFileChange={setFotoEditJugFile}
+                onUrlChange={setFotoEditJugUrl}
+              />
             </div>
 
             {/* Footer */}
