@@ -109,6 +109,13 @@ class AuthController extends Controller
             'is_active' => $user->is_active,
             'roles' => $user->getRoleNames(),
             'permissions' => $user->getAllPermissions()->pluck('name'),
+            'championship_memberships' => $user->championshipUsers()->get()->map(function($cu) {
+                return [
+                    'championship_id' => $cu->championship_id,
+                    'role' => $cu->role,
+                    'team_id' => $cu->team_id,
+                ];
+            }),
         ]);
     }
 

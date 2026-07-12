@@ -12,6 +12,11 @@ class TeamResource extends JsonResource
         return [
             'id' => $this->id,
             'representative' => $this->representative,
+            'delegate' => ($this->relationLoaded('championshipUser') && $this->championshipUser && $this->championshipUser->user) ? [
+                'id' => $this->championshipUser->user->id,
+                'name' => $this->championshipUser->user->name,
+                'email' => $this->championshipUser->user->email,
+            ] : null,
             'name' => $this->name,
             'logo' => $this->logo,
             'description' => $this->description,

@@ -13,6 +13,11 @@ class TeamListResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'representative' => $this->representative,
+            'delegate' => ($this->relationLoaded('championshipUser') && $this->championshipUser && $this->championshipUser->user) ? [
+                'id' => $this->championshipUser->user->id,
+                'name' => $this->championshipUser->user->name,
+                'email' => $this->championshipUser->user->email,
+            ] : null,
             'logo' => $this->logo,
             'registration_status' => $this->registration_status,
             'players_count' => $this->players_count,

@@ -46,7 +46,7 @@ class TeamController extends Controller
             }
 
             $teams = $category->teams()
-                ->with(['category.championshipDiscipline.discipline'])
+                ->with(['category.championshipDiscipline.discipline', 'championshipUser.user'])
                 ->withCount('players')
                 ->get();
 
@@ -61,7 +61,7 @@ class TeamController extends Controller
         }
 
         $teams = Team::where('championship_id', $championshipId)
-            ->with(['category.championshipDiscipline.discipline'])
+            ->with(['category.championshipDiscipline.discipline', 'championshipUser.user'])
             ->withCount('players')
             ->get();
 
@@ -103,6 +103,10 @@ class TeamController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'registration_status' => 'nullable|string',
+            'enable_delegate' => 'nullable',
+            'delegate_name' => 'required_if:enable_delegate,true|string|max:255',
+            'delegate_email' => 'required_if:enable_delegate,true|email|max:255',
+            'delegate_password' => 'required_if:enable_delegate,true|string|min:8',
         ]);
 
         $category = Category::find($request->category_id);
@@ -117,17 +121,61 @@ class TeamController extends Controller
 
         $logoValue = $this->resolveLogo($request);
 
+        $representative = $request->representative;
+        $enableDelegate = filter_var($request->enable_delegate, FILTER_VALIDATE_BOOLEAN);
+
+        if ($enableDelegate) {
+            $representative = $request->delegate_name;
+        }
+
         $team = Team::create([
             'championship_id' => $request->championship_id,
             'category_id' => $request->category_id,
-            'representative' => $request->representative,
+            'representative' => $representative,
             'name' => $request->name,
             'logo' => $logoValue,
             'description' => $request->description,
             'registration_status' => $request->registration_status ?? 'pendiente',
         ]);
 
-        return $this->successResponse($team, 'Equipo creado exitosamente', 201);
+        if ($enableDelegate) {
+            $user = \App\Models\User::where('email', $request->delegate_email)->first();
+            if (!$user) {
+                $request->validate([
+                    'delegate_email' => 'unique:users,email',
+                ]);
+
+                $user = \App\Models\User::create([
+                    'name' => $request->delegate_name,
+                    'email' => $request->delegate_email,
+                    'password' => \Illuminate\Support\Facades\Hash::make($request->delegate_password),
+                    'is_active' => true,
+                ]);
+
+                $user->assignRole('usuario_publico');
+            } else {
+                $user->name = $request->delegate_name;
+                if ($request->filled('delegate_password')) {
+                    $user->password = \Illuminate\Support\Facades\Hash::make($request->delegate_password);
+                }
+                $user->save();
+            }
+
+            \App\Models\ChampionshipUser::updateOrCreate(
+                [
+                    'championship_id' => $team->championship_id,
+                    'team_id' => $team->id,
+                    'role' => 'team_delegate',
+                ],
+                [
+                    'user_id' => $user->id,
+                ]
+            );
+        }
+
+        $team->load('championshipUser.user');
+
+        return $this->successResponse(new TeamResource($team), 'Equipo creado exitosamente', 201);
     }
 
     #[OA\Get(
@@ -148,6 +196,7 @@ class TeamController extends Controller
     {
         $team = Team::with([
             'category.championshipDiscipline.discipline',
+            'championshipUser.user',
             'players'
         ])->find($id);
 
@@ -199,9 +248,21 @@ class TeamController extends Controller
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
             'registration_status' => 'sometimes|string|in:pendiente,aprobado,rechazado',
+            'enable_delegate' => 'nullable',
+            'delegate_name' => 'required_if:enable_delegate,true|string|max:255',
+            'delegate_email' => 'required_if:enable_delegate,true|email|max:255',
+            'delegate_password' => 'nullable|string|min:8',
         ]);
 
         $datosActualizar = $request->only(['representative', 'name', 'description', 'registration_status']);
+
+        $enableDelegate = $request->has('enable_delegate') ? filter_var($request->enable_delegate, FILTER_VALIDATE_BOOLEAN) : null;
+
+        if ($enableDelegate !== null) {
+            if ($enableDelegate) {
+                $datosActualizar['representative'] = $request->delegate_name;
+            }
+        }
 
         // Solo tocamos el logo si el usuario mandó un archivo nuevo o una URL nueva
         if ($request->hasFile('logo') || $request->filled('logo')) {
@@ -216,7 +277,51 @@ class TeamController extends Controller
 
         $team->update($datosActualizar);
 
-        return $this->successResponse($team, 'Equipo actualizado exitosamente');
+        if ($enableDelegate !== null) {
+            if ($enableDelegate) {
+                $user = \App\Models\User::where('email', $request->delegate_email)->first();
+                if (!$user) {
+                    $request->validate([
+                        'delegate_email' => 'unique:users,email',
+                    ]);
+
+                    $user = \App\Models\User::create([
+                        'name' => $request->delegate_name,
+                        'email' => $request->delegate_email,
+                        'password' => \Illuminate\Support\Facades\Hash::make($request->delegate_password ?? '12345678'),
+                        'is_active' => true,
+                    ]);
+
+                    $user->assignRole('usuario_publico');
+                } else {
+                    $user->name = $request->delegate_name;
+                    if ($request->filled('delegate_password')) {
+                        $user->password = \Illuminate\Support\Facades\Hash::make($request->delegate_password);
+                    }
+                    $user->save();
+                }
+
+                \App\Models\ChampionshipUser::updateOrCreate(
+                    [
+                        'championship_id' => $team->championship_id,
+                        'team_id' => $team->id,
+                        'role' => 'team_delegate',
+                    ],
+                    [
+                        'user_id' => $user->id,
+                    ]
+                );
+            } else {
+                \App\Models\ChampionshipUser::where('championship_id', $team->championship_id)
+                    ->where('team_id', $team->id)
+                    ->where('role', 'team_delegate')
+                    ->delete();
+            }
+        }
+
+        $team->load('championshipUser.user');
+
+        return $this->successResponse(new TeamResource($team), 'Equipo actualizado exitosamente');
     }
 
     #[OA\Delete(

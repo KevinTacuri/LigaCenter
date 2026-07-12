@@ -79,6 +79,12 @@ class Team extends Model
             ->where('championship_id', $this->championship_id);
     }
 
+    public function championshipUser()
+    {
+        return $this->hasOne(ChampionshipUser::class, 'team_id')
+            ->where('role', 'team_delegate');
+    }
+
     public function getChampionshipAttribute()
     {
         return $this->category?->championshipDiscipline?->championship;
