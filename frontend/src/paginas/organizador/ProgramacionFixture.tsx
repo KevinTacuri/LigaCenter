@@ -21,8 +21,8 @@ import type {
 type TabType = 'escenarios' | 'generar' | 'programar' | 'partidos';
 
 export const ProgramacionFixture: React.FC = () => {
-  const { usuario, tienePermiso, tieneRol } = useAutenticacion();
-  const { campeonatoActivo } = useCampeonato();
+  const { usuario, tienePermiso, tieneRol, cargando: cargandoAuth } = useAutenticacion();
+  const { campeonatoActivo, cargandoCampeonato } = useCampeonato();
   const navegar = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const confirm = useConfirm();
@@ -32,10 +32,11 @@ export const ProgramacionFixture: React.FC = () => {
 
   // Redirigir si no hay campeonato activo
   useEffect(() => {
+    if (cargandoAuth || cargandoCampeonato) return;
     if (!campeonatoActivo) {
       navegar('/tablero');
     }
-  }, [campeonatoActivo, navegar]);
+  }, [campeonatoActivo, cargandoAuth, cargandoCampeonato, navegar]);
 
   useEffect(() => {
     if (queryTab && queryTab !== tabActiva) {
@@ -81,12 +82,13 @@ export const ProgramacionFixture: React.FC = () => {
   const [datosReprog, setDatosReprog] = useState({ match_date: '', match_time: '', venue_id: '' });
 
   useEffect(() => {
+    if (cargandoAuth || cargandoCampeonato) return;
     if (!tienePermiso('ver_equipos') || tieneRol('administrador')) {
       navegar('/tablero');
     } else {
       cargarDatos();
     }
-  }, [tabActiva]);
+  }, [tabActiva, cargandoAuth, cargandoCampeonato]);
 
   const cargarDatos = async () => {
     setCargando(true);

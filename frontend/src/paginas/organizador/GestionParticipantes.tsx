@@ -255,12 +255,12 @@ const LogoCircular: React.FC<LogoCircularProps> = ({ nombre, logo }) => {
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────
 export const GestionParticipantes: React.FC = () => {
-  const { usuario, tienePermiso, tieneRol } = useAutenticacion();
+  const { usuario, tienePermiso, tieneRol, cargando: cargandoAuth } = useAutenticacion();
   const navegar = useNavigate();
   const [searchParams] = useSearchParams();
   const confirm = useConfirm();
   const queryTab = searchParams.get('tab');
-  const { campeonatoActivo } = useCampeonato();
+  const { campeonatoActivo, cargandoCampeonato } = useCampeonato();
 
   // Iniciamos en 'categorias' porque es el módulo más utilizado y el de "disciplinas" lo ocultamos por ahora para simplificar, pero se puede cambiar fácilmente si se prefiere otro tab como predeterminado o reactivar "disciplinas"
   // const [tabActiva, setTabActiva] = useState<TabType>('disciplinas');
@@ -467,12 +467,13 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
   // EFECTOS
   // ─────────────────────────────────────────────
   useEffect(() => {
+    if (cargandoAuth || cargandoCampeonato) return;
     if (!tienePermiso('ver_equipos') || tieneRol('administrador')) {
       navegar('/tablero');
     } else {
       cargarDatos();
     }
-  }, [tabActiva]);
+  }, [tabActiva, cargandoAuth, cargandoCampeonato]);
 
   // Al cambiar equipo seleccionado en planilla
   useEffect(() => {
@@ -965,7 +966,8 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     setLogoEditUrl('');
     setModalEditarEq({
       abierto: true, eq, nombre: eq.name, representante: eq.representative || '',
-      estado: eq.registration_status || 'pendiente', guardando: false,
+      estado: (eq.registration_status || 'pendiente').toLowerCase() as 'pendiente' | 'aprobado' | 'rechazado',
+      guardando: false,
     });
   };
 

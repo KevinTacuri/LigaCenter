@@ -7,7 +7,7 @@ import { BarraLateral } from '../../componentes/BarraLateral';
 import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
 
 export const GestionUsuarios: React.FC = () => {
-  const { usuario, tienePermiso } = useAutenticacion();
+  const { usuario, tienePermiso, cargando: cargandoAuth } = useAutenticacion();
   const navegar = useNavigate();
 
   const obtenerNombreRol = (rolesArray: any[]): string => {
@@ -25,12 +25,13 @@ export const GestionUsuarios: React.FC = () => {
   const [totalPaginas, setTotalPaginas] = useState(1);
 
   useEffect(() => {
+    if (cargandoAuth) return;
     if (!tienePermiso('gestionar_usuarios')) {
       navegar('/tablero');
     } else {
       cargarDatos();
     }
-  }, [pagina]);
+  }, [pagina, cargandoAuth]);
 
   const cargarDatos = async () => {
     setCargando(true);

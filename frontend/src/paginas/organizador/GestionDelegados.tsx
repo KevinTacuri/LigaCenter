@@ -21,8 +21,8 @@ const ROLES_DISPONIBLES = [
 ];
 
 export const GestionDelegados: React.FC = () => {
-  const { usuario, tieneRol } = useAutenticacion();
-  const { campeonatoActivo, seleccionarCampeonato } = useCampeonato();
+  const { usuario, tieneRol, cargando: cargandoAuth } = useAutenticacion();
+  const { campeonatoActivo, seleccionarCampeonato, cargandoCampeonato } = useCampeonato();
   const navegar = useNavigate();
 
   const [miembros, setMiembros] = useState<ChampionshipUser[]>([]);
@@ -128,6 +128,7 @@ export const GestionDelegados: React.FC = () => {
   };
 
   useEffect(() => {
+    if (cargandoAuth || cargandoCampeonato) return;
     if (!campeonatoActivo) {
       navegar('/tablero');
       return;
@@ -137,7 +138,7 @@ export const GestionDelegados: React.FC = () => {
       return;
     }
     cargarDatos();
-  }, [campeonatoActivo]);
+  }, [campeonatoActivo, cargandoAuth, cargandoCampeonato]);
 
   const cargarDatos = async () => {
     if (!campeonatoActivo) return;

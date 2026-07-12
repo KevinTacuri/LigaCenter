@@ -17,7 +17,7 @@ import {
 
 export const EstadisticasOrganizador: React.FC = () => {
   const { usuario, cargando } = useAutenticacion();
-  const { campeonatoActivo } = useCampeonato();
+  const { campeonatoActivo, cargandoCampeonato } = useCampeonato();
   const navegar = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -47,10 +47,10 @@ export const EstadisticasOrganizador: React.FC = () => {
   });
 
   useEffect(() => {
-    if (!cargando && !campeonatoActivo) {
+    if (!cargando && !cargandoCampeonato && !campeonatoActivo) {
       navegar('/tablero');
     }
-  }, [campeonatoActivo, cargando, navegar]);
+  }, [campeonatoActivo, cargando, cargandoCampeonato, navegar]);
 
   useEffect(() => {
     if (campeonatoActivo) {

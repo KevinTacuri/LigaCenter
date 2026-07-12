@@ -117,7 +117,7 @@ const NORMAS_DEPORTES: Record<string, SportRules> = {
 };
 
 export const MesaControl: React.FC = () => {
-  const { usuario, tienePermiso, tieneRol } = useAutenticacion();
+  const { usuario, tienePermiso, tieneRol, cargando: cargandoAuth } = useAutenticacion();
   const navegar = useNavigate();
   const confirm = useConfirm();
 
@@ -425,12 +425,13 @@ export const MesaControl: React.FC = () => {
   }, [incidencias, partidoSeleccionado]);
 
   useEffect(() => {
+    if (cargandoAuth) return;
     if ((!tienePermiso('registrar_incidencias') && !tieneRol('organizador')) || tieneRol('administrador')) {
       navegar('/tablero');
     } else {
       cargarPartidos();
     }
-  }, []);
+  }, [cargandoAuth]);
 
   const cargarPartidos = async () => {
     setCargando(true);
