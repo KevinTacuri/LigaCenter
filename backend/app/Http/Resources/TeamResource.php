@@ -22,16 +22,16 @@ class TeamResource extends JsonResource
             'description' => $this->description,
             'registration_status' => $this->registration_status,
 
-            'category' => [
+            'category' => $this->category ? [
                 'id' => $this->category->id,
                 'name' => $this->category->name,
                 'gender_type' => $this->category->gender_type,
-            ],
+            ] : null,
 
-            'discipline' => [
+            'discipline' => ($this->category && $this->category->championshipDiscipline && $this->category->championshipDiscipline->discipline) ? [
                 'id' => $this->category->championshipDiscipline->discipline->id,
                 'name' => $this->category->championshipDiscipline->discipline->name,
-            ],
+            ] : null,
 
             'players' => PlayerResource::collection($this->whenLoaded('players')),
         ];

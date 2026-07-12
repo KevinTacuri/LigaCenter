@@ -180,23 +180,23 @@ const LogoInput: React.FC<LogoInputProps> = ({
     : (modo === 'url' && logoUrlTexto ? logoUrlTexto : resolverUrlImagen(logoActualUrl || null));
 
   return (
-    <div className="space-y-2">
-      <label className="text-xs font-bold text-slate-700 block">{label}</label>
+    <div className="space-y-2 font-sans">
+      <label className="text-xs font-bold text-slate-700 dark:text-slate-350 block">{label}</label>
 
-      <div className="flex rounded-lg border border-slate-200 overflow-hidden text-[10px] font-bold w-fit">
+      <div className="flex rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden text-[10px] font-bold w-fit bg-slate-50 dark:bg-[#151722]/50">
         <button type="button" onClick={() => setModo('archivo')}
-          className={`px-3 py-1.5 transition-all cursor-pointer ${modo === 'archivo' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
+          className={`px-3 py-1.5 transition-all cursor-pointer ${modo === 'archivo' ? 'bg-indigo-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
           Subir Imagen
         </button>
         <button type="button" onClick={() => setModo('url')}
-          className={`px-3 py-1.5 transition-all cursor-pointer ${modo === 'url' ? 'bg-sky-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
+          className={`px-3 py-1.5 transition-all cursor-pointer ${modo === 'url' ? 'bg-sky-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
           Pegar URL
         </button>
       </div>
 
       <div className="flex items-center gap-3">
         {previewSrc && (
-          <img src={previewSrc} alt="Logo preview" className="w-14 h-14 rounded-full object-cover border border-slate-200" />
+          <img src={previewSrc} alt="Logo preview" className="w-14 h-14 rounded-full object-cover border border-slate-200 dark:border-slate-800" />
         )}
 
         {modo === 'archivo' ? (
@@ -206,9 +206,9 @@ const LogoInput: React.FC<LogoInputProps> = ({
               type="file"
               accept=".png,.jpg,.jpeg,.webp"
               onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
-              className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 cursor-pointer"
+              className="w-full text-xs text-slate-500 dark:text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 dark:file:bg-indigo-950/40 file:text-indigo-600 dark:file:text-indigo-400 hover:file:bg-indigo-100 dark:hover:file:bg-indigo-950/60 cursor-pointer"
             />
-            <p className="text-[10px] text-slate-400 mt-1">PNG, JPG o WEBP · Máx. 2MB</p>
+            <p className="text-[10px] text-slate-455 mt-1">PNG, JPG o WEBP · Máx. 2MB</p>
           </div>
         ) : (
           <input
@@ -216,7 +216,7 @@ const LogoInput: React.FC<LogoInputProps> = ({
             placeholder="https://ejemplo.com/logo.png"
             value={logoUrlTexto}
             onChange={(e) => onUrlChange(e.target.value)}
-            className="flex-1 text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+            className="flex-1 text-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
           />
         )}
       </div>
@@ -310,7 +310,16 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     gender: 'Masculino',
     discipline_id: '',
   });
-  const [nuevoEq, setNuevoEq] = useState({ name: '', representative: '', discipline_id: '', category_id: '' });
+  const [nuevoEq, setNuevoEq] = useState({
+    name: '',
+    representative: '',
+    discipline_id: '',
+    category_id: '',
+    enable_delegate: false,
+    delegate_name: '',
+    delegate_email: '',
+    delegate_password: '',
+  });
   const [nuevoJug, setNuevoJug] = useState({ name: '', dni: '', age: '', phone: '', team_id: '', number: '', position: 'Delantero' });
 
   // Agregar estado del modo de registro (Modo manual o Modo carga masiva)
@@ -435,7 +444,22 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     representante: string;
     estado: 'pendiente' | 'aprobado' | 'rechazado';
     guardando: boolean;
-  }>({ abierto: false, eq: null, nombre: '', representante: '', estado: 'pendiente', guardando: false });
+    enable_delegate: boolean;
+    delegate_name: string;
+    delegate_email: string;
+    delegate_password?: string;
+  }>({
+    abierto: false,
+    eq: null,
+    nombre: '',
+    representante: '',
+    estado: 'pendiente',
+    guardando: false,
+    enable_delegate: false,
+    delegate_name: '',
+    delegate_email: '',
+    delegate_password: '',
+  });
 
   // ── Estado: Modal Editar Jugador ───────────
   const [modalEditarJug, setModalEditarJug] = useState<{
@@ -747,15 +771,41 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       formData.append('name', nuevoEq.name);
       formData.append('discipline_id', nuevoEq.discipline_id);
       formData.append('category_id', nuevoEq.category_id);
-      if (nuevoEq.representative) formData.append('representative', nuevoEq.representative);
       formData.append('registration_status', 'aprobado');
+      
+      formData.append('enable_delegate', String(nuevoEq.enable_delegate));
+      if (nuevoEq.enable_delegate) {
+        formData.append('representative', nuevoEq.delegate_name);
+        formData.append('delegate_name', nuevoEq.delegate_name);
+        formData.append('delegate_email', nuevoEq.delegate_email);
+        formData.append('delegate_password', nuevoEq.delegate_password);
+      } else if (nuevoEq.representative) {
+        formData.append('representative', nuevoEq.representative);
+      }
+
       if (logoEqFile) formData.append('logo', logoEqFile);
       else if (logoEqUrl.trim()) formData.append('logo', logoEqUrl.trim());
 
       const res = await serviciosParticipantes.crearEquipo(formData);
       if (res.success) {
-        mostrarMensaje('Equipo registrado y aprobado exitosamente.');
-        setNuevoEq({ name: '', representative: '', discipline_id: '', category_id: '' });
+        if (nuevoEq.enable_delegate) {
+          sileo.success({
+            title: 'Equipo y Delegado Creados',
+            description: `Equipo creado con éxito. Accesos del delegado:\nEmail: ${nuevoEq.delegate_email}\nContraseña: ${nuevoEq.delegate_password}`,
+          });
+        } else {
+          mostrarMensaje('Equipo registrado y aprobado exitosamente.');
+        }
+        setNuevoEq({
+          name: '',
+          representative: '',
+          discipline_id: '',
+          category_id: '',
+          enable_delegate: false,
+          delegate_name: '',
+          delegate_email: '',
+          delegate_password: '',
+        });
         setLogoEqFile(null); setLogoEqUrl('');
         setModalNuevoEqAbierto(false);
         cargarDatos();
@@ -848,8 +898,78 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
   // HANDLERS NUEVOS: Registro Rápido Equipo
   // ─────────────────────────────────────────────
 
+  const abrirModalEditar = (eq: Equipo) => {
+    setLogoEditFile(null);
+    setLogoEditUrl('');
+    const hasDelegate = !!eq.delegate;
+    setModalEditarEq({
+      abierto: true,
+      eq,
+      nombre: eq.name,
+      representante: eq.representative || '',
+      estado: (eq.registration_status || 'pendiente').toLowerCase() as 'pendiente' | 'aprobado' | 'rechazado',
+      guardando: false,
+      enable_delegate: hasDelegate,
+      delegate_name: eq.delegate ? eq.delegate.name : '',
+      delegate_email: eq.delegate ? eq.delegate.email : '',
+      delegate_password: '',
+    });
+  };
 
+  const guardarEdicionEq = async () => {
+    if (!modalEditarEq.eq) return;
+    if (!modalEditarEq.nombre.trim()) {
+      mostrarMensaje('El nombre del equipo es obligatorio.', true); return;
+    }
+    setModalEditarEq(prev => ({ ...prev, guardando: true }));
+    try {
+      const formData = new FormData();
+      formData.append('name', modalEditarEq.nombre.trim());
+      formData.append('registration_status', modalEditarEq.estado);
+      
+      formData.append('enable_delegate', String(modalEditarEq.enable_delegate));
+      if (modalEditarEq.enable_delegate) {
+        formData.append('representative', modalEditarEq.delegate_name);
+        formData.append('delegate_name', modalEditarEq.delegate_name);
+        formData.append('delegate_email', modalEditarEq.delegate_email);
+        if (modalEditarEq.delegate_password) {
+          formData.append('delegate_password', modalEditarEq.delegate_password);
+        }
+      } else {
+        formData.append('representative', modalEditarEq.representante.trim() || '');
+      }
 
+      if (logoEditFile) formData.append('logo', logoEditFile);
+      else if (logoEditUrl.trim()) formData.append('logo', logoEditUrl.trim());
+
+      const res = await serviciosParticipantes.actualizarEquipo(modalEditarEq.eq.id, formData);
+      if (res.success) {
+        setEquipos(prev => prev.map(e => e.id === modalEditarEq.eq!.id ? res.data : e));
+        if (modalEditarEq.enable_delegate && modalEditarEq.delegate_password) {
+          sileo.success({
+            title: 'Equipo y Acceso Actualizados',
+            description: `Equipo actualizado con éxito. Accesos del delegado:\nEmail: ${modalEditarEq.delegate_email}\nNueva Contraseña: ${modalEditarEq.delegate_password}`,
+          });
+        } else {
+          mostrarMensaje('Equipo actualizado correctamente.');
+        }
+        setModalEditarEq({
+          abierto: false,
+          eq: null,
+          nombre: '',
+          representante: '',
+          estado: 'pendiente',
+          guardando: false,
+          enable_delegate: false,
+          delegate_name: '',
+          delegate_email: '',
+          delegate_password: '',
+        });
+      }
+    } catch (err: any) {
+      mostrarMensaje(err.response?.data?.message || 'Error al actualizar equipo.', true);
+    } finally { setModalEditarEq(prev => ({ ...prev, guardando: false })); }
+  };
 
   // Crear categoría inline (requiere disciplina seleccionada)
   const crearCatInline = async (nombre: string): Promise<number | null> => {
@@ -961,48 +1081,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     }
   };
 
-  const abrirModalEditar = (eq: Equipo) => {
-    setLogoEditFile(null);
-    setLogoEditUrl('');
-    setModalEditarEq({
-      abierto: true, eq, nombre: eq.name, representante: eq.representative || '',
-      estado: (eq.registration_status || 'pendiente').toLowerCase() as 'pendiente' | 'aprobado' | 'rechazado',
-      guardando: false,
-    });
-  };
 
-  const guardarEdicionEq = async () => {
-    if (!modalEditarEq.eq) return;
-    if (!modalEditarEq.nombre.trim()) {
-      mostrarMensaje('El nombre del equipo es obligatorio.', true); return;
-    }
-    setModalEditarEq(prev => ({ ...prev, guardando: true }));
-    try {
-      const formData = new FormData();
-      formData.append('name', modalEditarEq.nombre.trim());
-      formData.append('representative', modalEditarEq.representante.trim() || '');
-      formData.append('registration_status', modalEditarEq.estado);
-      if (logoEditFile) formData.append('logo', logoEditFile);
-      else if (logoEditUrl.trim()) formData.append('logo', logoEditUrl.trim());
-
-      const res = await serviciosParticipantes.actualizarEquipo(modalEditarEq.eq.id, formData);
-      if (res.success) {
-        setEquipos(prev => prev.map(e => e.id === modalEditarEq.eq!.id ? res.data : e));
-        mostrarMensaje('Equipo actualizado correctamente.');
-        setModalEditarEq({ abierto: false, eq: null, nombre: '', representante: '', estado: 'pendiente', guardando: false });
-      }
-    } catch (err: any) {
-      if (err.response && err.response.status === 422) {
-        const errors = err.response.data.errors;
-        const msg = errors ? Object.values(errors).flat().join('\n') : (err.response.data.message || 'Datos inválidos.');
-        sileo.error({ title: 'Error de Validación', description: msg });
-      } else {
-        mostrarMensaje(err.response?.data?.message || 'Error al actualizar el equipo.', true);
-      }
-    } finally {
-      setModalEditarEq(prev => ({ ...prev, guardando: false }));
-    }
-  };
 
   const abrirModalEditarJugador = (j: Jugador) => {
     // Fallback: si team_id no viene en el objeto, lo tomamos de team.id
@@ -2409,68 +2488,138 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       {/* ── Modal Añadir Equipo ── */}
       {modalNuevoEqAbierto && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100">
+          <div className="bg-white dark:bg-[#11131c] text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-150 dark:border-slate-800/80 animate-scaleIn">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-855 bg-slate-50 dark:bg-[#151722]/50">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-indigo-650 text-base">group_add</span>
-                <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Añadir Nuevo Equipo</h3>
+                <span className="material-symbols-outlined text-indigo-650 dark:text-indigo-400 text-base">group_add</span>
+                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wide">Añadir Nuevo Equipo</h3>
               </div>
               <button
                 onClick={() => {
                   setModalNuevoEqAbierto(false);
-                  setNuevoEq({ name: '', representative: '', discipline_id: '', category_id: '' });
+                  setNuevoEq({ name: '', representative: '', discipline_id: '', category_id: '', enable_delegate: false, delegate_name: '', delegate_email: '', delegate_password: '' });
                   setLogoEqFile(null); setLogoEqUrl('');
                 }}
-                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all cursor-pointer"
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-455 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-100 transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
             </div>
 
             {/* Body */}
-            <form onSubmit={guardarEquipo} className="p-6 space-y-4">
+            <form onSubmit={guardarEquipo} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto font-sans">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Nombre del Equipo *</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Nombre del Equipo *</label>
                 <input
                   type="text"
                   required
                   placeholder="Ej: Real Arequipa"
                   value={nuevoEq.name}
                   onChange={(e) => setNuevoEq({ ...nuevoEq, name: e.target.value })}
-                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                  className="w-full text-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Delegado/Representante</label>
-                <input
-                  type="text"
-                  placeholder="Representante del equipo"
-                  value={nuevoEq.representative}
-                  onChange={(e) => setNuevoEq({ ...nuevoEq, representative: e.target.value })}
-                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
-                />
+
+              {!nuevoEq.enable_delegate && (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Delegado/Representante (Solo Nombre)</label>
+                  <input
+                    type="text"
+                    placeholder="Representante del equipo"
+                    value={nuevoEq.representative}
+                    onChange={(e) => setNuevoEq({ ...nuevoEq, representative: e.target.value })}
+                    className="w-full text-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                  />
+                </div>
+              )}
+
+              <div className="border border-slate-100 dark:border-slate-800/80 bg-slate-50/55 dark:bg-[#151722]/30 rounded-xl p-3 space-y-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={nuevoEq.enable_delegate}
+                    onChange={(e) => setNuevoEq({ ...nuevoEq, enable_delegate: e.target.checked })}
+                    className="w-4 h-4 text-indigo-650 border-slate-350 dark:border-slate-800 rounded focus:ring-indigo-500"
+                  />
+                  <span className="text-xs font-bold text-slate-855 dark:text-slate-200">Habilitar cuenta de acceso para el Delegado</span>
+                </label>
+                
+                {nuevoEq.enable_delegate && (
+                  <div className="space-y-2.5 pt-1.5 animate-fadeIn">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase block">Nombre del Delegado *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Nombre completo"
+                        value={nuevoEq.delegate_name}
+                        onChange={(e) => setNuevoEq({ ...nuevoEq, delegate_name: e.target.value })}
+                        className="w-full text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase block">Correo Electrónico *</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="correo@ejemplo.com"
+                        value={nuevoEq.delegate_email}
+                        onChange={(e) => setNuevoEq({ ...nuevoEq, delegate_email: e.target.value })}
+                        className="w-full text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase block">Contraseña Temporal *</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          required
+                          placeholder="Clave de 8+ caracteres"
+                          value={nuevoEq.delegate_password}
+                          onChange={(e) => setNuevoEq({ ...nuevoEq, delegate_password: e.target.value })}
+                          className="flex-1 text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2 outline-hidden focus:border-indigo-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+                            let pass = '';
+                            for (let i = 0; i < 10; i++) {
+                              pass += chars.charAt(Math.floor(Math.random() * chars.length));
+                            }
+                            setNuevoEq({ ...nuevoEq, delegate_password: pass });
+                          }}
+                          className="px-2.5 py-2 text-xs font-bold text-indigo-655 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-855 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all cursor-pointer flex items-center gap-1"
+                        >
+                          Generar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Disciplina *</label>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Disciplina *</label>
                   <select
                     required
                     value={nuevoEq.discipline_id}
                     onChange={(e) => setNuevoEq({ ...nuevoEq, discipline_id: e.target.value, category_id: '' })}
-                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                    className="w-full text-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2.5 outline-hidden cursor-pointer"
                   >
                     <option value="">Seleccionar Disciplina</option>
                     {disciplinas.map((d) => <option key={d.id} value={String(d.id)}>{d.name}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Categoría *</label>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Categoría *</label>
                   <select
                     required
                     value={nuevoEq.category_id}
                     onChange={(e) => setNuevoEq({ ...nuevoEq, category_id: e.target.value })}
-                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                    className="w-full text-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2.5 outline-hidden cursor-pointer"
                   >
                     <option value="">Seleccionar Categoría</option>
                     {categorias
@@ -2487,21 +2636,21 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                 onUrlChange={setLogoEqUrl}
               />
 
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-3">
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-855 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     setModalNuevoEqAbierto(false);
-                    setNuevoEq({ name: '', representative: '', discipline_id: '', category_id: '' });
+                    setNuevoEq({ name: '', representative: '', discipline_id: '', category_id: '', enable_delegate: false, delegate_name: '', delegate_email: '', delegate_password: '' });
                     setLogoEqFile(null); setLogoEqUrl('');
                   }}
-                  className="px-4 py-2 text-xs font-bold text-slate-650 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all cursor-pointer"
+                  className="px-4 py-2 text-xs font-bold text-slate-650 dark:text-slate-400 border border-slate-200 dark:border-slate-855 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-indigo-650 hover:bg-indigo-700 rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                  className="px-5 py-2 text-xs font-bold text-white bg-indigo-655 hover:bg-indigo-700 rounded-lg transition-all cursor-pointer flex items-center gap-1"
                 >
                   <span className="material-symbols-outlined text-xs">save</span>
                   Guardar Equipo
@@ -2590,49 +2739,35 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                 <div className="border-t border-slate-100 dark:border-slate-800 pt-4 font-sans">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Jugadores Inscritos ({jugadoresDelEquipo.length})</h4>
                   {jugadoresDelEquipo.length === 0 ? (
-                    <p className="text-xs text-slate-450 dark:text-slate-500 italic py-2">No hay jugadores registrados en este equipo.</p>
+                    <p className="text-xs text-slate-450 dark:text-slate-500 italic py-2">No hay jugadores inscritos en este equipo.</p>
                   ) : (
-                    <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                    <ul className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                       {jugadoresDelEquipo.map(j => (
-                        <div key={j.id} className="flex items-center justify-between text-xs py-2 px-3 bg-slate-50 hover:bg-slate-100/70 border border-slate-100 dark:bg-[#171a26]/40 dark:hover:bg-[#171a26] dark:border-slate-800 rounded-xl transition-all">
-                          <span className="font-extrabold text-slate-700 dark:text-slate-350">{j.name}</span>
-                          <span className="text-[10px] text-indigo-650 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-500/5 px-2 py-0.5 rounded-lg border border-indigo-100 dark:border-indigo-550/10">
-                            #{j.number ?? 'S/N'} - {j.position || 'Jugador'}
-                          </span>
-                        </div>
+                        <li key={j.id} className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-[#11131c] border border-slate-100 dark:border-slate-800 rounded-lg px-2.5 py-1.5">
+                          <span className="material-symbols-outlined text-sm text-slate-400">person</span>
+                          <span className="font-semibold">{j.full_name || j.name}</span>
+                          {j.jersey_number && <span className="ml-auto text-slate-400 dark:text-slate-500 font-mono">#{j.jersey_number}</span>}
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   )}
                 </div>
+
+                {/* Delegado */}
+                {eq.delegate && (
+                  <div className="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-800/30 rounded-xl p-3 text-xs font-sans">
+                    <p className="text-indigo-500 dark:text-indigo-400 font-bold uppercase tracking-wider mb-1">Cuenta de Delegado</p>
+                    <p className="font-semibold text-slate-800 dark:text-slate-200">{eq.delegate.name}</p>
+                    <p className="text-slate-500 dark:text-slate-400">{eq.delegate.email}</p>
+                  </div>
+                )}
               </div>
 
               {/* Footer */}
-              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-[#161822] flex items-center justify-between">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setModalVerEq({ abierto: false, eq: null });
-                      abrirModalEditar(eq);
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wide text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-xs">edit</span>
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => {
-                      setModalVerEq({ abierto: false, eq: null });
-                      eliminarElemento(eq.id);
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wide text-rose-600 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-xs">delete</span>
-                    Eliminar
-                  </button>
-                </div>
+              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2 bg-slate-50 dark:bg-[#151722]/50">
                 <button
                   onClick={() => setModalVerEq({ abierto: false, eq: null })}
-                  className="px-4 py-2 text-xs font-bold text-slate-550 dark:text-slate-400 border border-slate-205 dark:border-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer"
+                  className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
                 >
                   Cerrar
                 </button>
@@ -2645,54 +2780,121 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       {/* ── Modal Editar Equipo ── */}
       {modalEditarEq.abierto && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+          <div className="bg-white dark:bg-[#11131c] text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-150 dark:border-slate-800/80 animate-scaleIn">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-850 bg-slate-50 dark:bg-[#151722]/50">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-indigo-500 text-base">edit</span>
-                <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Editar Equipo</h3>
+                <span className="material-symbols-outlined text-indigo-500 dark:text-indigo-400 text-base">edit</span>
+                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wide">Editar Equipo</h3>
               </div>
               <button
-                onClick={() => setModalEditarEq(prev => ({ ...prev, abierto: false }))}
-                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all cursor-pointer"
+                onClick={() => setModalEditarEq({ abierto: false, eq: null, nombre: '', representante: '', estado: 'pendiente', guardando: false, enable_delegate: false, delegate_name: '', delegate_email: '', delegate_password: '' })}
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-455 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-100 transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
             </div>
 
             {/* Body */}
-            <div className="px-6 py-5 space-y-4">
+            <div className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto font-sans">
               {/* Nombre */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Nombre del Equipo *</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Nombre del Equipo *</label>
                 <input
                   type="text"
                   value={modalEditarEq.nombre}
                   onChange={e => setModalEditarEq(prev => ({ ...prev, nombre: e.target.value }))}
                   placeholder="Nombre del equipo"
-                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                  className="w-full text-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
                 />
               </div>
 
               {/* Representante */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Representante / Delegado</label>
-                <input
-                  type="text"
-                  value={modalEditarEq.representante}
-                  onChange={e => setModalEditarEq(prev => ({ ...prev, representante: e.target.value }))}
-                  placeholder="Nombre del representante"
-                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
-                />
+              {!modalEditarEq.enable_delegate && (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Representante / Delegado (Solo Nombre)</label>
+                  <input
+                    type="text"
+                    value={modalEditarEq.representante}
+                    onChange={e => setModalEditarEq(prev => ({ ...prev, representante: e.target.value }))}
+                    placeholder="Nombre del representante"
+                    className="w-full text-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                  />
+                </div>
+              )}
+
+              <div className="border border-slate-100 dark:border-slate-800/80 bg-slate-50/55 dark:bg-[#151722]/30 rounded-xl p-3 space-y-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={modalEditarEq.enable_delegate}
+                    onChange={(e) => setModalEditarEq(prev => ({ ...prev, enable_delegate: e.target.checked }))}
+                    className="w-4 h-4 text-indigo-650 border-slate-350 dark:border-slate-800 rounded focus:ring-indigo-500"
+                  />
+                  <span className="text-xs font-bold text-slate-855 dark:text-slate-200">Habilitar cuenta de acceso para el Delegado</span>
+                </label>
+
+                {modalEditarEq.enable_delegate && (
+                  <div className="space-y-2.5 pt-1.5 animate-fadeIn">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase block">Nombre del Delegado *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Nombre completo"
+                        value={modalEditarEq.delegate_name}
+                        onChange={(e) => setModalEditarEq(prev => ({ ...prev, delegate_name: e.target.value }))}
+                        className="w-full text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase block">Correo Electrónico *</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="correo@ejemplo.com"
+                        value={modalEditarEq.delegate_email}
+                        onChange={(e) => setModalEditarEq(prev => ({ ...prev, delegate_email: e.target.value }))}
+                        className="w-full text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase block">Contraseña Temporal / Restablecer</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Dejar en blanco para no cambiar"
+                          value={modalEditarEq.delegate_password || ''}
+                          onChange={(e) => setModalEditarEq(prev => ({ ...prev, delegate_password: e.target.value }))}
+                          className="flex-1 text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2 outline-hidden focus:border-indigo-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+                            let pass = '';
+                            for (let i = 0; i < 10; i++) {
+                              pass += chars.charAt(Math.floor(Math.random() * chars.length));
+                            }
+                            setModalEditarEq(prev => ({ ...prev, delegate_password: pass }));
+                          }}
+                          className="px-2.5 py-2 text-xs font-bold text-indigo-650 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-850 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all cursor-pointer flex items-center gap-1"
+                        >
+                          Generar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Estado */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Estado de Registro</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Estado de Registro</label>
                 <select
                   value={modalEditarEq.estado}
                   onChange={e => setModalEditarEq(prev => ({ ...prev, estado: e.target.value as 'pendiente' | 'aprobado' | 'rechazado' }))}
-                  className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                  className="w-full text-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2.5 outline-hidden cursor-pointer"
                 >
                   <option value="pendiente">Pendiente</option>
                   <option value="aprobado">Aprobado</option>
@@ -2710,18 +2912,18 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3">
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-855 flex items-center justify-end gap-3 bg-slate-50 dark:bg-[#171a26]/20">
               <button
-                onClick={() => setModalEditarEq(prev => ({ ...prev, abierto: false }))}
+                onClick={() => setModalEditarEq({ abierto: false, eq: null, nombre: '', representante: '', estado: 'pendiente', guardando: false, enable_delegate: false, delegate_name: '', delegate_email: '', delegate_password: '' })}
                 disabled={modalEditarEq.guardando}
-                className="px-4 py-2 text-xs font-bold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-855 rounded-lg hover:bg-slate-100 hover:text-slate-800 transition-all cursor-pointer disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 onClick={guardarEdicionEq}
                 disabled={modalEditarEq.guardando || !modalEditarEq.nombre.trim()}
-                className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 dark:bg-indigo-650 hover:bg-indigo-700 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {modalEditarEq.guardando
                   ? <><span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />Guardando...</>

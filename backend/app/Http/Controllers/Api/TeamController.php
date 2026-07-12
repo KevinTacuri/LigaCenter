@@ -173,7 +173,7 @@ class TeamController extends Controller
             );
         }
 
-        $team->load('championshipUser.user');
+        $team->load(['championshipUser.user', 'category.championshipDiscipline.discipline']);
 
         return $this->successResponse(new TeamResource($team), 'Equipo creado exitosamente', 201);
     }
@@ -319,7 +319,7 @@ class TeamController extends Controller
             }
         }
 
-        $team->load('championshipUser.user');
+        $team->load(['championshipUser.user', 'category.championshipDiscipline.discipline']);
 
         return $this->successResponse(new TeamResource($team), 'Equipo actualizado exitosamente');
     }
@@ -429,17 +429,53 @@ class TeamController extends Controller
     private function resolveLogo(Request $request): ?string
     {
         if ($request->hasFile('logo')) {
+            $file = $request->file('logo');
+
+            // Validar el archivo
             $request->validate([
                 'logo' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
             ]);
-            return $request->file('logo')->store('teams/logos', 'public');
+
+            // Verificar que el archivo es válido (no falló en la subida)
+            if (!$file->isValid()) {
+                \Illuminate\Support\Facades\Log::error('Logo upload error', [
+                    'error' => $file->getErrorMessage(),
+                    'error_code' => $file->getError(),
+                ]);
+                return null;
+            }
+
+            // Asegurar que el directorio existe
+            $disk = \Illuminate\Support\Facades\Storage::disk('public');
+            if (!$disk->exists('teams/logos')) {
+                $disk->makeDirectory('teams/logos');
+            }
+
+            // Generar nombre único y guardar
+            $extension = $file->getClientOriginalExtension() ?: 'jpg';
+            $filename = 'teams/logos/' . \Illuminate\Support\Str::uuid() . '.' . $extension;
+
+            $stored = $disk->put($filename, file_get_contents($file->getRealPath()));
+
+            if (!$stored) {
+                \Illuminate\Support\Facades\Log::error('Logo could not be stored', [
+                    'filename' => $filename,
+                    'disk_root' => $disk->path(''),
+                ]);
+                return null;
+            }
+
+            \Illuminate\Support\Facades\Log::info('Logo stored', ['path' => $filename]);
+            return $filename;
         }
 
         if ($request->filled('logo')) {
-            $request->validate([
-                'logo' => 'string|max:2048|url',
-            ]);
-            return $request->input('logo');
+            $logoValue = $request->input('logo');
+            // Solo aceptar si es URL válida
+            if (filter_var($logoValue, FILTER_VALIDATE_URL)) {
+                return $logoValue;
+            }
+            return null;
         }
 
         return null;

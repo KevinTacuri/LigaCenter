@@ -93,12 +93,26 @@ export const Tablero: React.FC = () => {
 
   useEffect(() => {
     if (usuario && !tieneRol('administrador') && !campeonatoActivo) {
-      cargarCampeonatos();
+      const memberships = usuario.championship_memberships || [];
+      if (memberships.length === 1) {
+        const singleChampionshipId = memberships[0].championship_id;
+        serviciosCampeonatos.obtenerCampeonato(singleChampionshipId).then((res) => {
+          if (res.success && res.data) {
+            seleccionarCampeonato(res.data);
+          }
+        }).catch((err) => {
+          console.error("Error auto-selecting championship:", err);
+          cargarCampeonatos();
+        });
+      } else {
+        cargarCampeonatos();
+      }
     }
   }, [usuario, campeonatoActivo]);
 
   useEffect(() => {
-    if (usuario && !tieneRol('administrador') && !campeonatoActivo && !cargandoCampeonatos && campeonatos.length > 0) {
+    const memberships = usuario?.championship_memberships || [];
+    if (usuario && !tieneRol('administrador') && !campeonatoActivo && memberships.length !== 1 && !cargandoCampeonatos && campeonatos.length > 0) {
       setPanelCampeonatosAbierto(true);
     }
   }, [usuario, campeonatoActivo, cargandoCampeonatos, campeonatos.length]);
@@ -1068,7 +1082,7 @@ export const Tablero: React.FC = () => {
         </main>
 
         {/* Botón flotante de Ayuda / Guía ? */}
-        {!tieneRol('administrador') && (
+        {tieneRol('organizador') && (
           <>
             <button
               onClick={() => setMostrarGuia(true)}

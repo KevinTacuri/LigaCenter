@@ -31,6 +31,11 @@ export interface Usuario {
   is_active: boolean;
   roles: string[];
   permissions?: string[];
+  championship_memberships?: {
+    championship_id: number;
+    role: 'organizer' | 'referee' | 'team_delegate' | 'score_table';
+    team_id?: number | null;
+  }[];
 }
 
 // Datos de retorno al iniciar sesión o registrarse
@@ -312,6 +317,11 @@ export interface Equipo {
   discipline?: {
     id: number;
     name: string;
+  } | null;
+  delegate?: {
+    id: number;
+    name: string;
+    email: string;
   } | null;
 }
 

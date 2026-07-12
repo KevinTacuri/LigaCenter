@@ -66,6 +66,24 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
   const { campeonatoActivo } = useCampeonato();
   const [colapsado, setColapsado] = useState(false);
 
+  const membresiaActiva = campeonatoActivo && usuario?.championship_memberships?.find(
+    (m: any) => m.championship_id === campeonatoActivo.id
+  );
+  const rolCampeonato = membresiaActiva ? membresiaActiva.role : null;
+
+  const getSubMenus = (itemId: string): SubItemMenu[] => {
+    const items = subMenus[itemId] || [];
+    if (rolCampeonato === 'team_delegate') {
+      if (itemId === 'teams') {
+        return items.filter(sub => sub.id === 'planilla-jugadores');
+      }
+      if (itemId === 'fixture') {
+        return items.filter(sub => sub.id === 'partidos');
+      }
+    }
+    return items;
+  };
+
   // Estados de secciones colapsables (Acordeones)
   const [seccionTorneoAbierta, setSeccionTorneoAbierta] = useState(true);
   const [seccionAdminAbierta, setSeccionAdminAbierta] = useState(true);
@@ -186,7 +204,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
   // Renderizador genérico de ítem de menú (Desktop)
   const renderItemMenu = (item: ItemMenu) => {
     const active = isActive(item.ruta);
-    const subItems = subMenus[item.id];
+    const subItems = getSubMenus(item.id);
 
     return (
       <div key={item.id} className="space-y-0.5">
@@ -231,14 +249,14 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
   // Renderizador genérico de ítem de menú (Móvil)
   const renderMobileItem = (item: ItemMenu) => {
     const active = isActive(item.ruta);
-    const subItems = subMenus[item.id];
+    const subItems = getSubMenus(item.id);
 
     return (
       <div key={item.id} className="space-y-0.5">
         <button
           onClick={() => {
             navigate(item.ruta);
-            if (!subItems) setColapsado(false);
+            if (!subItems || subItems.length === 0) setColapsado(false);
           }}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${
             active ? 'bg-indigo-500/10 text-indigo-400' : 'text-slate-400'
@@ -249,7 +267,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
         </button>
 
         {/* Sub-menú en Móvil */}
-        {active && subItems && (
+        {active && subItems && subItems.length > 0 && (
           <div className="pl-8 pr-2 py-1 space-y-1 border-l border-slate-800 ml-5 mt-1">
             {subItems.map((sub) => {
               const subActive = isSubActive(item, sub);
@@ -377,7 +395,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
             {!colapsado && (
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-white truncate leading-none">{usuario?.name}</p>
-                <p className="text-[9px] text-slate-500 font-bold uppercase truncate mt-1 leading-none">{rol.replace('_', ' ')}</p>
+                <p className="text-[9px] text-slate-500 font-bold uppercase truncate mt-1 leading-none">{rolCampeonato === 'team_delegate' ? 'Delegado de Equipo' : rol.replace('_', ' ')}</p>
               </div>
             )}
           </div>
@@ -469,7 +487,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold text-white truncate leading-none">{usuario?.name}</p>
-              <p className="text-[9px] text-slate-500 font-bold uppercase truncate mt-1 leading-none">{rol.replace('_', ' ')}</p>
+              <p className="text-[9px] text-slate-500 font-bold uppercase truncate mt-1 leading-none">{rolCampeonato === 'team_delegate' ? 'Delegado de Equipo' : rol.replace('_', ' ')}</p>
             </div>
           </div>
 
