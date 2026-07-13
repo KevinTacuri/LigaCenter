@@ -61,6 +61,15 @@ Este archivo documenta las tareas de refactorización y mejoras aplicadas bajo e
     *   **Solución a Inconsistencia en Inputs:** Corregimos la superposición de iconos y placeholders en los 4 archivos. Los estructuramos como elementos flexibles hermanos en lugar de usar posicionamiento absoluto. El input nativo ahora es transparente con borde nulo, y el contenedor es el que recibe el focus visual, logrando una micro-interacción muy fluida y moderna.
 *   **Justificación:** Aumenta la robustez de los formularios ante resoluciones de pantalla diversas, corrige un fallo visual evidente en los placeholders y unifica el tema estético del portal con la consola de administración.
 
+### 7. 🔒 Confirmación Visual en Cierre de Sesión y Acciones Sensibles
+*   **Archivos Modificados:**
+    *   [BarraLateral.tsx](file:///C:/Users/achav/Desktop/PIS-proyecto/proyecto-campeonato/frontend/src/componentes/BarraLateral.tsx)
+    *   [index.css](file:///C:/Users/achav/Desktop/PIS-proyecto/proyecto-campeonato/frontend/src/index.css)
+*   **Detalles:**
+    *   **Confirmación de Logout:** Integramos el hook `useConfirm` en la barra lateral. Al presionar "Cerrar Sesión" (tanto en menú Desktop como en off-canvas Móvil) se despliega un diálogo confirmatorio elegante con descripción de la acción.
+    *   **Rediseño Global de Alert Dialogs (Radix UI):** Sobrescribimos en el CSS global `index.css` las clases de los selectores `[data-slot="alert-dialog-*"]` inyectando estilos de glassmorphism premium: fondo desenfocado semi-transparente (`backdrop-blur(8px)`), bordes sutiles de tarjeta, tipografía Outfit integrada y botones minimalistas coherentes.
+*   **Justificación:** Protege al usuario de salidas accidentales del sistema y eleva de manera inmediata el diseño visual de todas las alertas de confirmación de eliminación (deportes, categorías, equipos, jugadores y actas de partidos) presentes en la app.
+
 ---
 
 ## ⏱️ Justificación de Horas de Desarrollo
@@ -75,4 +84,5 @@ A continuación se detalla la estimación y justificación del tiempo invertido 
 | **Fase 3: Inputs de Planilla** | **2.0 hrs** | Mapeo de `aria-label` dinámicos en los campos de entrada de la planilla interactiva de participantes. |
 | **Fase 4: Depuración de Código (Simulación)** | **1.0 hr** | Identificación de rastros de simulación, depuración del archivo del Tablero, eliminación de dependencias y pruebas de compilación limpia. |
 | **Fase 5: Rediseño Visual de Autenticación** | **3.0 hrs** | Adaptación de layouts de Login, Registro, Recuperación y Restablecimiento a tarjetas glassmorphic, remoción de inputs superpuestos y limpieza de integraciones. |
-| **Total de horas justificadas** | **14.0 hrs** | **Cumplimiento completo de los objetivos de la auditoría, depuración y rediseño visual de acceso.** |
+| **Fase 6: Alertas y Cierre de Sesión** | **1.0 hr** | Integración de `useConfirm` en logout y personalización global de modales de Radix UI con desenfoque y tema cromático oscuro. |
+| **Total de horas justificadas** | **15.0 hrs** | **Cumplimiento completo de los objetivos de la auditoría, depuración, rediseño y control de acciones sensibles.** |
