@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../contexto/ContextoCampeonato';
+import { useConfirm } from '@omit/react-confirm-dialog';
 import logoImg from '../assets/logo.svg';
 
 interface ItemMenu {
@@ -64,12 +65,25 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
   const location = useLocation();
   const { usuario, cerrarSesion } = useAutenticacion();
   const { campeonatoActivo } = useCampeonato();
+  const confirm = useConfirm();
   const [colapsado, setColapsado] = useState(false);
 
   const membresiaActiva = campeonatoActivo && usuario?.championship_memberships?.find(
     (m: any) => m.championship_id === campeonatoActivo.id
   );
   const rolCampeonato = membresiaActiva ? membresiaActiva.role : null;
+
+  const manejarCerrarSesion = async () => {
+    const isConfirmed = await confirm({
+      title: '¿Cerrar Sesión?',
+      description: '¿Estás seguro de que deseas salir de tu cuenta? Tendrás que iniciar sesión nuevamente para acceder.',
+      confirmText: 'Cerrar Sesión',
+      cancelText: 'Cancelar'
+    });
+    if (isConfirmed) {
+      await cerrarSesion();
+    }
+  };
 
   const getSubMenus = (itemId: string): SubItemMenu[] => {
     const items = subMenus[itemId] || [];
@@ -424,7 +438,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
           {/* Botón Logout al fondo */}
           <div className="px-3 pb-3">
             <button
-              onClick={cerrarSesion}
+              onClick={manejarCerrarSesion}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-slate-400 hover:bg-[#1a1d2a] hover:text-slate-200 cursor-pointer ${colapsado ? 'justify-center' : 'justify-start'}`}
               title={colapsado ? 'Cerrar Sesión' : ''}
             >
@@ -499,7 +513,10 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
 
           <div className="px-4 pb-4">
             <button
-              onClick={() => { cerrarSesion(); setColapsado(false); }}
+              onClick={async () => {
+                setColapsado(false);
+                await manejarCerrarSesion();
+              }}
               className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-[#1a1d2a] border border-slate-800 rounded-xl text-slate-400 hover:text-slate-200 text-xs font-extrabold uppercase tracking-wider"
             >
               <span className="material-symbols-outlined text-sm text-slate-400">logout</span>
