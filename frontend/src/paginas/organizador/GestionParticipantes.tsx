@@ -337,43 +337,43 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
 
   // Agregar función de procesamiento CSV (Modo carga masiva)
   const procesarCsvJugadores = async () => {
-    if (!archivoCsv || equipoIdMasiva === null) return;
+    const targetTeamId = delegadoTeamId !== null ? delegadoTeamId : equipoIdMasiva;
+    if (!archivoCsv || targetTeamId === null) return;
     if (isDeadlineExpired) {
       mostrarMensaje('El plazo de inscripción de jugadores ha vencido.', true);
       return;
     }
-    // ahora usa el estado directamente ↑
     setCargandoCsv(true);
     setResultadoCarga(null);
     try {
-    const texto = await archivoCsv.text();
-    const lineas = texto.split('\n').map(l => l.trim()).filter(Boolean);
-    const filas = lineas.slice(1);
-    let ok = 0;
-    const errores: string[] = [];
+      const texto = await archivoCsv.text();
+      const lineas = texto.split('\n').map(l => l.trim()).filter(Boolean);
+      const filas = lineas.slice(1);
+      let ok = 0;
+      const errores: string[] = [];
 
-    for (let i = 0; i < filas.length; i++) {
-      const cols = filas[i].split(/[,;\t]/).map(c => c.trim().replace(/^"|"$/g, ''));
-      const [nombre, dni, edad, dorsal] = cols;
-      if (!nombre || !edad) {
-        errores.push(`Fila ${i + 2}: Faltan campos obligatorios (nombre, edad).`);
-        continue;
+      for (let i = 0; i < filas.length; i++) {
+        const cols = filas[i].split(/[,;\t]/).map(c => c.trim().replace(/^"|"$/g, ''));
+        const [nombre, dni, edad, dorsal] = cols;
+        if (!nombre || !edad) {
+          errores.push(`Fila ${i + 2}: Faltan campos obligatorios (nombre, edad).`);
+          continue;
+        }
+        try {
+          const res = await serviciosParticipantes.crearJugador({
+            full_name: nombre,
+            team_id: targetTeamId,
+            dni: dni || null,
+            age: parseInt(edad),
+            number: dorsal ? parseInt(dorsal) : null,
+            position: null,
+          });
+          if (res.success) ok++;
+          else errores.push(`Fila ${i + 2}: ${res.message || 'Error desconocido.'}`);
+        } catch (err: any) {
+          errores.push(`Fila ${i + 2}: ${err.response?.data?.message || 'Error al guardar.'}`);
+        }
       }
-      try {
-        const res = await serviciosParticipantes.crearJugador({
-          full_name: nombre,
-          team_id: equipoIdMasiva,  // ← lee el estado correctamente
-          dni: dni || null,
-          age: parseInt(edad),
-          number: dorsal ? parseInt(dorsal) : null,
-          position: null,
-        });
-        if (res.success) ok++;
-        else errores.push(`Fila ${i + 2}: ${res.message || 'Error desconocido.'}`);
-      } catch (err: any) {
-        errores.push(`Fila ${i + 2}: ${err.response?.data?.message || 'Error al guardar.'}`);
-      }
-    }
 
     setResultadoCarga({ ok, errores });
     if (ok > 0) {
@@ -880,13 +880,14 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       mostrarMensaje('El plazo de inscripción de jugadores ha vencido.', true);
       return;
     }
-    if (!nuevoJug.name || !nuevoJug.team_id || !nuevoJug.age) {
+    const targetTeamId = delegadoTeamId !== null ? delegadoTeamId : nuevoJug.team_id;
+    if (!nuevoJug.name || !targetTeamId || !nuevoJug.age) {
       mostrarMensaje('El nombre, el equipo y la edad son obligatorios.', true); return;
     }
     try {
       const formData = new FormData();
       formData.append('full_name', nuevoJug.name);
-      formData.append('team_id', nuevoJug.team_id);
+      formData.append('team_id', String(targetTeamId));
       formData.append('age', nuevoJug.age);
       if (nuevoJug.dni) formData.append('dni', nuevoJug.dni);
       if (nuevoJug.number) formData.append('number', nuevoJug.number);
@@ -899,6 +900,9 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
         setNuevoJug({ name: '', dni: '', age: '', phone: '', team_id: delegadoTeamId !== null ? String(delegadoTeamId) : '', number: '', position: 'Delantero' });
         setFotoJugFile(null); setFotoJugUrl('');
         setJugadores(prev => [...prev, res.data]);
+        if (delegadoTeamId !== null) {
+          cargarJugadoresDeEquipo(delegadoTeamId);
+        }
       }
     } catch (err: any) {
       mostrarMensaje(err.response?.data?.message || 'Error al inscribir jugador.', true);
@@ -1111,17 +1115,8 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
         position: null
       });
       if (res.success) {
-        // Congelar fila y agregar nueva fila vacía al final
-        setFilasJugadores(prev => {
-          const nuevas = prev.map((f, i) =>
-            i === idx ? { ...f, id: res.data.id, guardado: true, guardando: false } : f
-          );
-          // Solo agregar fila vacía si la actual era la última
-          const esUltima = idx === prev.length - 1;
-          if (esUltima) nuevas.push({ nombre: '', dni: '', edad: '', dorsal: '', guardado: false });
-          return nuevas;
-        });
         mostrarMensaje('Jugador guardado.');
+        cargarJugadoresDeEquipo(equipoSelId);
       }
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Error al guardar jugador.';
