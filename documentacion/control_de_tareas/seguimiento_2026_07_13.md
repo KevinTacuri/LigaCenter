@@ -49,11 +49,20 @@ Este archivo documenta las tareas de refactorización y mejoras aplicadas bajo e
     *   Borramos del JSX la tarjeta visual condicional de **Herramientas de Desarrollador (Simulación de Datos)** que permitía iniciar este flujo.
 *   **Justificación:** Limpia el código eliminando 328 líneas de código obsoleto que ya no se requerían y previene que usuarios en desarrollo generen registros basura en la base de datos de SQLite.
 
+### 6. 🎨 Reformulación y Rediseño Premium de la Pantalla de Login
+*   **Archivo Modificado:**
+    *   [Login.tsx](file:///C:/Users/achav/Desktop/PIS-proyecto/proyecto-campeonato/frontend/src/paginas/auth/Login.tsx)
+*   **Detalles:**
+    *   **Rediseño Centrado (Glassmorphism):** Eliminamos la pantalla dividida (banner a la izquierda y form a la derecha). Ahora la imagen de fondo deportivo (`deportesFondo`) abarca toda la pantalla con un brillo oscurecido y un degradado radial profundo, situando el formulario de acceso en una tarjeta central elegante con efecto traslúcido de desenfoque (`bg-slate-900/60 backdrop-blur-md border border-slate-800/85 shadow-2xl`).
+    *   **Limpieza de Métodos Sociales:** Removimos el divisor "O accede con" y los botones de Google y Apple de inicio de sesión social.
+    *   **Solución a Inconsistencia en Inputs:** Corregimos la superposición de iconos y placeholders. Los estructuramos como elementos flexibles hermanos en lugar de posicionamiento absoluto. El input nativo ahora es transparente con borde nulo, y el contenedor es el que recibe el focus visual, logrando una micro-interacción muy fluida y moderna.
+*   **Justificación:** Aumenta la robustez de los formularios ante resoluciones de pantalla diversas, corrige un fallo visual evidente en los placeholders y unifica el tema estético del portal con la consola de administración.
+
 ---
 
 ## ⏱️ Justificación de Horas de Desarrollo
 
-A continuación se detalla la estimación y justificación del tiempo invertido hoy en las tareas de auditoría e implementación de a11y/UX junto con la limpieza de código:
+A continuación se detalla la estimación y justificación del tiempo invertido hoy en las tareas de auditoría e implementación de a11y/UX junto con la depuración de código y rediseño:
 
 | Módulo / Tarea | Horas | Justificación Técnica |
 | :--- | :---: | :--- |
@@ -62,4 +71,5 @@ A continuación se detalla la estimación y justificación del tiempo invertido 
 | **Fase 2: Acordeones de Barra Lateral** | **3.5 hrs** | Pruebas de contraste de colores bajo guías WCAG, actualización de estilos Tailwind y asignación dinámica de estados `aria-expanded` y wrappers de submenús. |
 | **Fase 3: Inputs de Planilla** | **2.0 hrs** | Mapeo de `aria-label` dinámicos en los campos de entrada de la planilla interactiva de participantes. |
 | **Fase 4: Depuración de Código (Simulación)** | **1.0 hr** | Identificación de rastros de simulación, depuración del archivo del Tablero, eliminación de dependencias y pruebas de compilación limpia. |
-| **Total de horas justificadas** | **11.0 hrs** | **Cumplimiento completo de los objetivos de la auditoría y depuración del proyecto.** |
+| **Fase 5: Rediseño Visual de Login** | **1.5 hrs** | Adaptación de layouts, remoción de inputs superpuestos, limpieza de integraciones sociales y estructuración de cajas glassmorphic alineadas con el tema oscuro. |
+| **Total de horas justificadas** | **12.5 hrs** | **Cumplimiento completo de los objetivos de la auditoría, depuración y rediseño visual.** |
