@@ -29,6 +29,7 @@ interface FilaJugador {
   guardado: boolean;  // true = inmóvil
   guardando?: boolean;
   error?: string;
+  foto?: string | null; // ruta o url de la foto de perfil
 }
 
 // ─────────────────────────────────────────────
@@ -643,6 +644,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
           edad: calcularEdad(j.birth_date),
           dorsal: j.number != null ? String(j.number) : '',
           guardado: true,
+          foto: j.photo || null,
         }));
         
         // Cargar también al estado jugadoresDePlanilla local
@@ -2398,6 +2400,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-100">
                           <th className="p-3 pl-5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider w-8">#</th>
+                          <th className="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-12 text-center">Foto</th>
                           <th className="p-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nombre Completo *</th>
                           <th className="p-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider w-32">DNI</th>
                           <th className="p-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider w-24">Edad *</th>
@@ -2415,6 +2418,30 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                           >
                             {/* Número de fila */}
                             <td className="p-3 pl-5 text-slate-400 text-xs font-bold">{idx + 1}</td>
+
+                            {/* Foto */}
+                            <td className="p-2 w-12 text-center">
+                              {fila.guardado ? (
+                                fila.foto ? (
+                                  <img
+                                    src={fila.foto}
+                                    alt={fila.nombre}
+                                    className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-2xs mx-auto"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150';
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200 shadow-2xs mx-auto">
+                                    <span className="material-symbols-outlined text-sm">person</span>
+                                  </div>
+                                )
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-indigo-50/50 flex items-center justify-center text-indigo-400 border border-indigo-100 border-dashed mx-auto">
+                                  <span className="material-symbols-outlined text-sm">add_a_photo</span>
+                                </div>
+                              )}
+                            </td>
 
                             {/* Nombre */}
                             <td className="p-2">
@@ -3102,9 +3129,10 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 block">Equipo *</label>
                 <select
-                  value={modalEditarJug.teamId}
+                  value={delegadoTeamId !== null ? String(delegadoTeamId) : modalEditarJug.teamId}
+                  disabled={delegadoTeamId !== null}
                   onChange={e => setModalEditarJug(prev => ({ ...prev, teamId: e.target.value }))}
-                  className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                  className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer disabled:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-500"
                 >
                   <option value="">Seleccionar Equipo</option>
                   {equipos.map((eq) => <option key={eq.id} value={String(eq.id)}>{eq.name}</option>)}
