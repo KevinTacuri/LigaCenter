@@ -318,7 +318,9 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
               {!colapsado ? (
                 <button
                   onClick={() => setSeccionTorneoAbierta(!seccionTorneoAbierta)}
-                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-350 cursor-pointer"
+                  aria-expanded={seccionTorneoAbierta}
+                  aria-controls="menu-torneo"
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-black text-slate-350 hover:text-white uppercase tracking-widest transition-colors cursor-pointer"
                 >
                   <span>Torneo Activo</span>
                   <span className="material-symbols-outlined text-xs">
@@ -329,7 +331,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
                 <div className="border-b border-slate-850 my-2" />
               )}
               {(seccionTorneoAbierta || colapsado) && (
-                <div className="space-y-1">
+                <div id="menu-torneo" className="space-y-1">
                   {visibleTorneo.map(renderItemMenu)}
                 </div>
               )}
@@ -342,7 +344,9 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
               {!colapsado ? (
                 <button
                   onClick={() => setSeccionAdminAbierta(!seccionAdminAbierta)}
-                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-350 cursor-pointer"
+                  aria-expanded={seccionAdminAbierta}
+                  aria-controls="menu-admin"
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-black text-slate-350 hover:text-white uppercase tracking-widest transition-colors cursor-pointer"
                 >
                   <span>Administración</span>
                   <span className="material-symbols-outlined text-xs">
@@ -353,7 +357,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
                 <div className="border-b border-slate-850 my-2" />
               )}
               {(seccionAdminAbierta || colapsado) && (
-                <div className="space-y-1">
+                <div id="menu-admin" className="space-y-1">
                   {visibleAdmin.map(renderItemMenu)}
                 </div>
               )}
@@ -366,7 +370,9 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
               {!colapsado ? (
                 <button
                   onClick={() => setSeccionAjustesAbierta(!seccionAjustesAbierta)}
-                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-350 cursor-pointer"
+                  aria-expanded={seccionAjustesAbierta}
+                  aria-controls="menu-ajustes"
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-black text-slate-350 hover:text-white uppercase tracking-widest transition-colors cursor-pointer"
                 >
                   <span>Ajustes</span>
                   <span className="material-symbols-outlined text-xs">
@@ -377,7 +383,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
                 <div className="border-b border-slate-850 my-2" />
               )}
               {(seccionAjustesAbierta || colapsado) && (
-                <div className="space-y-1">
+                <div id="menu-ajustes" className="space-y-1">
                   {visibleAjustes.map(renderItemMenu)}
                 </div>
               )}

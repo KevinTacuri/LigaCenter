@@ -489,6 +489,30 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     }
   }, [delegadoTeamId, tabActiva]);
 
+  // Cierre de modales con la tecla Escape (a11y)
+  useEffect(() => {
+    const manejarEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (modalEditarJug.abierto) {
+          setModalEditarJug(prev => ({ ...prev, abierto: false }));
+        }
+        if (modalNuevoEqAbierto) {
+          setModalNuevoEqAbierto(false);
+          setNuevoEq({ name: '', representative: '', discipline_id: '', category_id: '', enable_delegate: false, delegate_name: '', delegate_email: '', delegate_password: '' });
+          setLogoEqFile(null); setLogoEqUrl('');
+        }
+        if (modalEditarEq.abierto) {
+          setModalEditarEq(prev => ({ ...prev, abierto: false }));
+        }
+        if (mostrarAyuda) {
+          setMostrarAyuda(false);
+        }
+      }
+    };
+    document.addEventListener('keydown', manejarEscape);
+    return () => document.removeEventListener('keydown', manejarEscape);
+  }, [modalEditarJug.abierto, modalNuevoEqAbierto, modalEditarEq.abierto, mostrarAyuda]);
+
   // ─────────────────────────────────────────────
   // EFECTOS
   // ─────────────────────────────────────────────
@@ -2489,6 +2513,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                                 disabled={fila.guardado || isDeadlineExpired}
                                 onChange={e => actualizarFila(idx, 'nombre', e.target.value)}
                                 placeholder="Nombre completo"
+                                aria-label={`Nombre completo del jugador de la fila ${idx + 1}`}
                                 className={`w-full text-sm rounded-lg px-3 py-2 outline-hidden transition-all ${
                                   fila.guardado
                                     ? 'bg-transparent text-slate-800 font-semibold cursor-default border-transparent'
@@ -2505,6 +2530,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                                 disabled={fila.guardado || isDeadlineExpired}
                                 onChange={e => actualizarFila(idx, 'dni', e.target.value)}
                                 placeholder="DNI"
+                                aria-label={`DNI del jugador de la fila ${idx + 1}`}
                                 className={`w-full text-sm rounded-lg px-3 py-2 outline-hidden transition-all ${
                                   fila.guardado
                                     ? 'bg-transparent text-slate-700 cursor-default border-transparent'
@@ -2521,6 +2547,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                                 disabled={fila.guardado || isDeadlineExpired}
                                 onChange={e => actualizarFila(idx, 'edad', e.target.value)}
                                 placeholder="Edad"
+                                aria-label={`Edad del jugador de la fila ${idx + 1}`}
                                 min="1"
                                 className={`w-full text-sm rounded-lg px-3 py-2 outline-hidden transition-all ${
                                   fila.guardado
@@ -2538,6 +2565,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                                 disabled={fila.guardado || isDeadlineExpired}
                                 onChange={e => actualizarFila(idx, 'dorsal', e.target.value)}
                                 placeholder="#"
+                                aria-label={`Dorsal del jugador de la fila ${idx + 1}`}
                                 min="1"
                                 className={`w-full text-sm rounded-lg px-3 py-2 outline-hidden transition-all ${
                                   fila.guardado
@@ -2634,13 +2662,18 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
 
       {/* ── Modal Añadir Equipo ── */}
       {modalNuevoEqAbierto && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+        <div
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-nuevo-equipo-title"
+        >
           <div className="bg-white dark:bg-[#11131c] text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-150 dark:border-slate-800/80 animate-scaleIn">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-855 bg-slate-50 dark:bg-[#151722]/50">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-indigo-650 dark:text-indigo-400 text-base">group_add</span>
-                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wide">Añadir Nuevo Equipo</h3>
+                <h3 id="modal-nuevo-equipo-title" className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wide">Añadir Nuevo Equipo</h3>
               </div>
               <button
                 onClick={() => {
@@ -2813,13 +2846,18 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
         const eq = modalVerEq.eq;
         const jugadoresDelEquipo = jugadores.filter(j => (j.team_id ?? j.team?.id) === eq.id);
         return (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-ver-equipo-title"
+          >
             <div className="bg-white dark:bg-[#11131c] border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-[#151722]/50">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-indigo-500 dark:text-indigo-400 text-base">info</span>
-                  <h3 className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wide">Detalle del Equipo</h3>
+                  <h3 id="modal-ver-equipo-title" className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wide">Detalle del Equipo</h3>
                 </div>
                 <button
                   onClick={() => setModalVerEq({ abierto: false, eq: null })}
@@ -2950,13 +2988,18 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
 
       {/* ── Modal Editar Equipo ── */}
       {modalEditarEq.abierto && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+        <div
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-editar-equipo-title"
+        >
           <div className="bg-white dark:bg-[#11131c] text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-150 dark:border-slate-800/80 animate-scaleIn">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-850 bg-slate-50 dark:bg-[#151722]/50">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-indigo-500 dark:text-indigo-400 text-base">edit</span>
-                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wide">Editar Equipo</h3>
+                <h3 id="modal-editar-equipo-title" className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wide">Editar Equipo</h3>
               </div>
               <button
                 onClick={() => setModalEditarEq({ abierto: false, eq: null, nombre: '', representante: '', estado: 'pendiente', guardando: false, enable_delegate: false, delegate_name: '', delegate_email: '', delegate_password: '' })}
@@ -3108,13 +3151,18 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
 
       {/* ── Modal Editar Jugador ── */}
       {modalEditarJug.abierto && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+        <div
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-editar-jugador-title"
+        >
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-indigo-500 text-base">edit</span>
-                <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Editar Jugador</h3>
+                <h3 id="modal-editar-jugador-title" className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Editar Jugador</h3>
               </div>
               <button
                 onClick={() => setModalEditarJug(prev => ({ ...prev, abierto: false }))}
@@ -3222,12 +3270,17 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
 
       {/* Drawer de Ayuda */}
       {mostrarAyuda && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex justify-end animate-fadeIn">
+        <div
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex justify-end animate-fadeIn"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="drawer-ayuda-title"
+        >
           <div className="w-full max-w-sm bg-white h-full shadow-2xl flex flex-col animate-slideLeft">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-base">help</span>
-                <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Ayuda: Equipos y Jugadores</h3>
+                <h3 id="drawer-ayuda-title" className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Ayuda: Equipos y Jugadores</h3>
               </div>
               <button
                 onClick={() => setMostrarAyuda(false)}
