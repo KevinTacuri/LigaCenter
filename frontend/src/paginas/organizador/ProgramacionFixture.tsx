@@ -28,7 +28,25 @@ export const ProgramacionFixture: React.FC = () => {
   const confirm = useConfirm();
   const queryTab = searchParams.get('tab');
 
-  const [tabActiva, setTabActiva] = useState<TabType>('escenarios');
+  const membresiaActiva = campeonatoActivo && usuario?.championship_memberships?.find(
+    (m: any) => m.championship_id === campeonatoActivo.id
+  );
+  const esDelegado = membresiaActiva && membresiaActiva.role === 'team_delegate';
+
+  const [tabActiva, setTabActiva] = useState<TabType>(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['escenarios', 'generar', 'programar', 'partidos'].includes(tab)) {
+      return tab as TabType;
+    }
+    return 'escenarios';
+  });
+
+  useEffect(() => {
+    if (esDelegado && tabActiva !== 'partidos') {
+      setTabActiva('partidos');
+      setSearchParams({ tab: 'partidos' });
+    }
+  }, [esDelegado, tabActiva]);
 
   // Redirigir si no hay campeonato activo
   useEffect(() => {
@@ -442,7 +460,7 @@ export const ProgramacionFixture: React.FC = () => {
 
       {/* Tabs (visibles solo en móvil ya que en desktop se navega por la barra lateral) */}
       <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2 lg:hidden">
-        {(['escenarios', 'generar', 'programar', 'partidos'] as TabType[]).map((tab) => (
+        {(!esDelegado ? (['escenarios', 'generar', 'programar', 'partidos'] as TabType[]) : (['partidos'] as TabType[])).map((tab) => (
           <button
             key={tab}
             onClick={() => setSearchParams({ tab })}
@@ -822,7 +840,7 @@ export const ProgramacionFixture: React.FC = () => {
                     <th className="p-3">Día y Hora</th>
                     <th className="p-3">Cancha / Escenario</th>
                     <th className="p-3">Estado</th>
-                    <th className="p-3 pr-4 text-right">Acciones</th>
+                    {!esDelegado && <th className="p-3 pr-4 text-right">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
@@ -847,18 +865,20 @@ export const ProgramacionFixture: React.FC = () => {
                           {part.status}
                         </span>
                       </td>
-                      <td className="p-3 pr-4 text-right">
-                        {part.status !== 'finalizado' && (
-                          <button onClick={() => iniciarReprogramacion(part)} className="text-xs font-bold text-primary hover:underline cursor-pointer">
-                            Reprogramar
-                          </button>
-                        )}
-                      </td>
+                      {!esDelegado && (
+                        <td className="p-3 pr-4 text-right">
+                          {part.status !== 'finalizado' && (
+                            <button onClick={() => iniciarReprogramacion(part)} className="text-xs font-bold text-primary hover:underline cursor-pointer">
+                              Reprogramar
+                            </button>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                   {partidos.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-10 text-center text-slate-500 text-xs">No hay partidos cargados. Genera el fixture primero.</td>
+                      <td colSpan={esDelegado ? 5 : 6} className="p-10 text-center text-slate-500 text-xs">No hay partidos cargados. Genera el fixture primero.</td>
                     </tr>
                   )}
                 </tbody>

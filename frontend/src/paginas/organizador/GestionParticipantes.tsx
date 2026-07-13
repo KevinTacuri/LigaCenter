@@ -479,6 +479,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
   const [prorrogaMotivo, setProrrogaMotivo] = useState('');
   const [enviandoProrroga, setEnviandoProrroga] = useState(false);
   const [mostrarFormProrroga, setMostrarFormProrroga] = useState(false);
+  const [jugadoresDePlanilla, setJugadoresDePlanilla] = useState<Jugador[]>([]);
 
   // Redirigir al delegado a la planilla de jugadores si está en una pestaña no permitida
   useEffect(() => {
@@ -612,25 +613,49 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     }
   };
 
+  const calcularEdad = (birthDateStr: string | null | undefined): string => {
+    if (!birthDateStr) return '';
+    const birth = new Date(birthDateStr);
+    if (isNaN(birth.getTime())) return '';
+    const hoy = new Date();
+    let edad = hoy.getFullYear() - birth.getFullYear();
+    const mes = hoy.getMonth() - birth.getMonth();
+    if (mes < 0 || (mes === 0 && hoy.getDate() < birth.getDate())) {
+      edad--;
+    }
+    return String(edad);
+  };
+
   const cargarJugadoresDeEquipo = async (teamId: number) => {
     setCargandoPlanilla(true);
     try {
       const res = await serviciosParticipantes.obtenerJugadores();
       if (res.success) {
-        const jugEquipo = res.data.filter((j: Jugador) => j.team_id === teamId);
-        const filas: FilaJugador[] = jugEquipo.map((j: Jugador) => ({
+        const jugEquipo = res.data.filter((j: any) => {
+          const tId = j.team_id ?? j.team?.id;
+          return tId === teamId;
+        });
+        
+        const filas: FilaJugador[] = jugEquipo.map((j: any) => ({
           id: j.id,
-          nombre: j.name || '',
-          dni: j.dni || '',
-          edad: '', // la API no devuelve age en el listado
+          nombre: j.name || (j.names ? `${j.names} ${j.last_names || ''}`.trim() : ''),
+          dni: j.dni || j.document_number || '',
+          edad: calcularEdad(j.birth_date),
           dorsal: j.number != null ? String(j.number) : '',
           guardado: true,
         }));
-        // Agregar fila vacía al final
-        filas.push({ nombre: '', dni: '', edad: '', dorsal: '', guardado: false });
+        
+        // Cargar también al estado jugadoresDePlanilla local
+        setJugadoresDePlanilla(res.data.filter((j: any) => (j.team_id ?? j.team?.id) === teamId));
+
+        // Agregar fila vacía al final si el plazo no ha vencido
+        if (!isDeadlineExpired) {
+          filas.push({ nombre: '', dni: '', edad: '', dorsal: '', guardado: false });
+        }
         setFilasJugadores(filas);
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       mostrarMensaje('Error al cargar jugadores del equipo.', true);
     } finally {
       setCargandoPlanilla(false);
@@ -1146,6 +1171,9 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
         setJugadores(prev => prev.map(j => j.id === modalEditarJug.jug!.id ? res.data : j));
         mostrarMensaje('Jugador actualizado correctamente.');
         setModalEditarJug({ abierto: false, jug: null, nombre: '', dni: '', numero: '', teamId: '', guardando: false });
+        if (equipoSelId !== null) {
+          cargarJugadoresDeEquipo(equipoSelId);
+        }
       }
     } catch (err: any) {
       mostrarMensaje(err.response?.data?.message || 'Error al actualizar el jugador.', true);
@@ -1181,6 +1209,9 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
         if (res.success) {
           setFilasJugadores(prev => prev.filter((_, i) => i !== idx));
           mostrarMensaje('Jugador eliminado.');
+          if (equipoSelId !== null) {
+            cargarJugadoresDeEquipo(equipoSelId);
+          }
         }
       } catch { mostrarMensaje('Error al eliminar jugador.', true); }
     }
@@ -2457,15 +2488,28 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                             </td>
 
                             {/* Acciones */}
-                            <td className="p-2 pr-5 text-right">
+                            <td className="p-2 pr-5 text-right flex justify-end gap-2.5 items-center">
                               {fila.guardado ? (
-                                <button
-                                  onClick={() => { if (!isDeadlineExpired) eliminarFilaJugador(idx); }}
-                                  disabled={isDeadlineExpired}
-                                  className="text-xs font-bold text-rose-500 hover:text-rose-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline hover:underline cursor-pointer transition-colors"
-                                >
-                                  Eliminar
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      const jug = jugadoresDePlanilla.find(j => j.id === fila.id);
+                                      if (jug) abrirModalEditarJugador(jug);
+                                    }}
+                                    disabled={isDeadlineExpired}
+                                    className="text-xs font-bold text-indigo-600 hover:text-indigo-850 disabled:opacity-50 disabled:cursor-not-allowed hover:underline cursor-pointer transition-colors"
+                                  >
+                                    Editar
+                                  </button>
+                                  <span className="text-slate-300">|</span>
+                                  <button
+                                    onClick={() => { if (!isDeadlineExpired) eliminarFilaJugador(idx); }}
+                                    disabled={isDeadlineExpired}
+                                    className="text-xs font-bold text-rose-500 hover:text-rose-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline hover:underline cursor-pointer transition-colors"
+                                  >
+                                    Eliminar
+                                  </button>
+                                </>
                               ) : (
                                 <button
                                   onClick={() => guardarFila(idx)}
