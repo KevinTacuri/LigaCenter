@@ -641,10 +641,19 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
   // UTILIDADES
   // ─────────────────────────────────────────────
   const mostrarMensaje = (msg: string, esError: boolean = false) => {
-    if (esError) {
-      sileo.error({ title: 'Error', description: msg });
-    } else {
-      sileo.success({ title: 'Operación Exitosa', description: msg });
+    try {
+      if (esError) {
+        sileo.error({ title: 'Error', description: msg });
+      } else {
+        sileo.success({ title: 'Operación Exitosa', description: msg });
+      }
+    } catch (e) {
+      console.error("Error al mostrar mensaje con sileo:", e);
+      if (esError) {
+        alert("Error: " + msg);
+      } else {
+        alert("Éxito: " + msg);
+      }
     }
   };
 
@@ -789,10 +798,15 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       const res = await serviciosParticipantes.crearEquipo(formData);
       if (res.success) {
         if (nuevoEq.enable_delegate) {
-          sileo.success({
-            title: 'Equipo y Delegado Creados',
-            description: `Equipo creado con éxito. Accesos del delegado:\nEmail: ${nuevoEq.delegate_email}\nContraseña: ${nuevoEq.delegate_password}`,
-          });
+          try {
+            sileo.success({
+              title: 'Equipo y Delegado Creados',
+              description: `Equipo creado con éxito. Accesos del delegado:\nEmail: ${nuevoEq.delegate_email}\nContraseña: ${nuevoEq.delegate_password}`,
+            });
+          } catch (errSileo) {
+            console.error("Error al notificar con sileo:", errSileo);
+            alert(`Equipo y Delegado Creados\nEquipo creado con éxito. Accesos del delegado:\nEmail: ${nuevoEq.delegate_email}\nContraseña: ${nuevoEq.delegate_password}`);
+          }
         } else {
           mostrarMensaje('Equipo registrado y aprobado exitosamente.');
         }
@@ -814,7 +828,11 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       if (err.response && err.response.status === 422) {
         const errors = err.response.data.errors;
         const msg = errors ? Object.values(errors).flat().join('\n') : (err.response.data.message || 'Datos inválidos.');
-        sileo.error({ title: 'Error de Validación', description: msg });
+        try {
+          sileo.error({ title: 'Error de Validación', description: msg });
+        } catch {
+          alert('Error de Validación:\n' + msg);
+        }
       } else {
         mostrarMensaje(err.response?.data?.message || 'Error al registrar equipo.', true);
       }
@@ -946,10 +964,15 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       if (res.success) {
         setEquipos(prev => prev.map(e => e.id === modalEditarEq.eq!.id ? res.data : e));
         if (modalEditarEq.enable_delegate && modalEditarEq.delegate_password) {
-          sileo.success({
-            title: 'Equipo y Acceso Actualizados',
-            description: `Equipo actualizado con éxito. Accesos del delegado:\nEmail: ${modalEditarEq.delegate_email}\nNueva Contraseña: ${modalEditarEq.delegate_password}`,
-          });
+          try {
+            sileo.success({
+              title: 'Equipo y Acceso Actualizados',
+              description: `Equipo actualizado con éxito. Accesos del delegado:\nEmail: ${modalEditarEq.delegate_email}\nNueva Contraseña: ${modalEditarEq.delegate_password}`,
+            });
+          } catch (errSileo) {
+            console.error("Error al notificar con sileo:", errSileo);
+            alert(`Equipo y Acceso Actualizados\nEquipo actualizado con éxito. Accesos del delegado:\nEmail: ${modalEditarEq.delegate_email}\nNueva Contraseña: ${modalEditarEq.delegate_password}`);
+          }
         } else {
           mostrarMensaje('Equipo actualizado correctamente.');
         }
