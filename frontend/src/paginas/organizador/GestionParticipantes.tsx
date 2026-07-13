@@ -1090,7 +1090,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
   // ─────────────────────────────────────────────
   // HANDLERS NUEVOS: Planilla Jugadores
   // ─────────────────────────────────────────────
-  const actualizarFila = (idx: number, campo: keyof FilaJugador, valor: string) => {
+  const actualizarFila = (idx: number, campo: keyof FilaJugador, valor: any) => {
     setFilasJugadores(prev => prev.map((f, i) => i === idx ? { ...f, [campo]: valor, error: undefined } : f));
   };
 
@@ -1108,14 +1108,17 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     // Marcar como guardando
     setFilasJugadores(prev => prev.map((f, i) => i === idx ? { ...f, guardando: true, error: undefined } : f));
     try {
-      const res = await serviciosParticipantes.crearJugador({
-        full_name: fila.nombre.trim(),
-        team_id: equipoSelId,
-        dni: fila.dni.trim() || null,
-        age: parseInt(fila.edad),
-        number: fila.dorsal.trim() ? parseInt(fila.dorsal) : null,
-        position: null
-      });
+      const formData = new FormData();
+      formData.append('full_name', fila.nombre.trim());
+      formData.append('team_id', String(equipoSelId));
+      formData.append('age', fila.edad);
+      if (fila.dni.trim()) formData.append('dni', fila.dni.trim());
+      if (fila.dorsal.trim()) formData.append('number', fila.dorsal.trim());
+      if (fila.fotoFile) {
+        formData.append('photo', fila.fotoFile);
+      }
+
+      const res = await serviciosParticipantes.crearJugador(formData);
       if (res.success) {
         mostrarMensaje('Jugador guardado.');
         cargarJugadoresDeEquipo(equipoSelId);
@@ -2419,7 +2422,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                             {/* Número de fila */}
                             <td className="p-3 pl-5 text-slate-400 text-xs font-bold">{idx + 1}</td>
 
-                            {/* Foto */}
+                             {/* Foto */}
                             <td className="p-2 w-12 text-center">
                               {fila.guardado ? (
                                 fila.foto ? (
@@ -2437,8 +2440,43 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                                   </div>
                                 )
                               ) : (
-                                <div className="w-8 h-8 rounded-full bg-indigo-50/50 flex items-center justify-center text-indigo-400 border border-indigo-100 border-dashed mx-auto">
-                                  <span className="material-symbols-outlined text-sm">add_a_photo</span>
+                                <div className="relative group w-8 h-8 mx-auto">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    id={`input-foto-${idx}`}
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        actualizarFila(idx, 'fotoFile', file);
+                                        actualizarFila(idx, 'fotoUrlLocal', URL.createObjectURL(file));
+                                      }
+                                    }}
+                                  />
+                                  {fila.fotoUrlLocal ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => document.getElementById(`input-foto-${idx}`)?.click()}
+                                      className="w-8 h-8 rounded-full overflow-hidden border border-indigo-400 shadow-2xs focus:outline-hidden cursor-pointer"
+                                      title="Cambiar Foto"
+                                    >
+                                      <img
+                                        src={fila.fotoUrlLocal}
+                                        alt="Previsualización"
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => document.getElementById(`input-foto-${idx}`)?.click()}
+                                      className="w-8 h-8 rounded-full bg-indigo-50/50 hover:bg-indigo-100/70 flex items-center justify-center text-indigo-500 border border-indigo-200 border-dashed focus:outline-hidden transition-all cursor-pointer"
+                                      title="Subir Foto"
+                                    >
+                                      <span className="material-symbols-outlined text-xs">add_a_photo</span>
+                                    </button>
+                                  )}
                                 </div>
                               )}
                             </td>

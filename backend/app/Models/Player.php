@@ -88,4 +88,17 @@ class Player extends Model
             ->where('player_id', $this->id)
             ->value('jersey_number');
     }
+
+    public function getPhotoAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+
+        if (\Illuminate\Support\Str::startsWith($value, ['http://', 'https://'])) {
+            return $value;
+        }
+
+        return asset('storage/' . $value);
+    }
 }
