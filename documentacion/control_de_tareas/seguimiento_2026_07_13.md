@@ -41,11 +41,19 @@ Este archivo documenta las tareas de refactorización y mejoras aplicadas bajo e
     *   Se introdujeron los atributos `aria-label` descriptivos en los inputs interactivos de la grilla de planilla (Nombre Completo, DNI, Edad y Dorsal) indexados dinámicamente por el número de fila actual.
 *   **Justificación:** Permite que un lector de pantalla pueda narrar claramente al usuario en qué fila y en qué campo de entrada de datos se encuentra ubicado dentro de la planilla interactiva.
 
+### 5. 🧹 Eliminación de la Herramienta de Simulación de Datos (Copa Mundial)
+*   **Archivo Modificado:**
+    *   [Tablero.tsx](file:///C:/Users/achav/Desktop/PIS-proyecto/proyecto-campeonato/frontend/src/paginas/dashboard/Tablero.tsx)
+*   **Detalles:**
+    *   Eliminamos por completo la variable de estado `simulando` y el método `handleSimularMundial` que inyectaba selecciones ficticias, categorías y generaba fixtures mockeados de fútbol.
+    *   Borramos del JSX la tarjeta visual condicional de **Herramientas de Desarrollador (Simulación de Datos)** que permitía iniciar este flujo.
+*   **Justificación:** Limpia el código eliminando 328 líneas de código obsoleto que ya no se requerían y previene que usuarios en desarrollo generen registros basura en la base de datos de SQLite.
+
 ---
 
 ## ⏱️ Justificación de Horas de Desarrollo
 
-A continuación se detalla la estimación y justificación del tiempo invertido hoy en las tareas de auditoría e implementación de a11y/UX:
+A continuación se detalla la estimación y justificación del tiempo invertido hoy en las tareas de auditoría e implementación de a11y/UX junto con la limpieza de código:
 
 | Módulo / Tarea | Horas | Justificación Técnica |
 | :--- | :---: | :--- |
@@ -53,4 +61,5 @@ A continuación se detalla la estimación y justificación del tiempo invertido 
 | **Fase 1: Diálogos Modales** | **4.0 hrs** | Implementación del event listener global de Escape, control de cascada de estados e inyección de propiedades `role` y `aria-labelledby` en los 5 modales principales. |
 | **Fase 2: Acordeones de Barra Lateral** | **3.5 hrs** | Pruebas de contraste de colores bajo guías WCAG, actualización de estilos Tailwind y asignación dinámica de estados `aria-expanded` y wrappers de submenús. |
 | **Fase 3: Inputs de Planilla** | **2.0 hrs** | Mapeo de `aria-label` dinámicos en los campos de entrada de la planilla interactiva de participantes. |
-| **Total de horas justificadas** | **10.0 hrs** | **Cumplimiento completo de los objetivos de la auditoría de accesibilidad.** |
+| **Fase 4: Depuración de Código (Simulación)** | **1.0 hr** | Identificación de rastros de simulación, depuración del archivo del Tablero, eliminación de dependencias y pruebas de compilación limpia. |
+| **Total de horas justificadas** | **11.0 hrs** | **Cumplimiento completo de los objetivos de la auditoría y depuración del proyecto.** |
