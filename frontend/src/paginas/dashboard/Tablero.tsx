@@ -32,6 +32,12 @@ export const Tablero: React.FC = () => {
   const [mostrarGuia, setMostrarGuia] = useState(false);
   const [simulando, setSimulando] = useState(false);
 
+  const membresiaActiva = campeonatoActivo && usuario?.championship_memberships?.find(
+    (m: any) => m.championship_id === campeonatoActivo.id
+  );
+  const esDelegado = membresiaActiva && membresiaActiva.role === 'team_delegate';
+  const equipoNombre = esDelegado ? (membresiaActiva.team_name || 'tu equipo') : null;
+
   useEffect(() => {
     if (sessionStorage.getItem('vista_publica_activa') === 'true') {
       navegar('/publico');
@@ -540,15 +546,30 @@ export const Tablero: React.FC = () => {
             
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
               <div className="space-y-1">
-                <h2 className="text-base md:text-lg font-black text-white tracking-tight leading-none">
+                <h2 className="text-base md:text-lg font-black text-white tracking-tight leading-none flex items-center gap-2">
                   ¡Bienvenido, <span className="text-indigo-400">{usuario.name}</span>!
+                  {esDelegado && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider">
+                      <span className="material-symbols-outlined text-xs">shield</span>
+                      Delegado Oficial
+                    </span>
+                  )}
                 </h2>
                 <p className="text-slate-400 text-xs max-w-2xl font-medium leading-relaxed">
-                  Gestiona campeonatos, partidos, equipos y estadísticas según tu rol asignado.
+                  {esDelegado 
+                    ? `Eres el delegado oficial de ${equipoNombre} en este campeonato. Puedes registrar tus jugadores, dorsales y ver tus partidos.`
+                    : 'Gestiona campeonatos, partidos, equipos y estadísticas según tu rol asignado.'
+                  }
                 </p>
               </div>
 
               <div className="flex flex-wrap gap-2 shrink-0">
+                {esDelegado && (
+                  <span className="px-2.5 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-xs">groups</span>
+                    Equipo: {equipoNombre}
+                  </span>
+                )}
                 {usuario.roles?.map((rol, i) => (
                   <span 
                     key={i} 
@@ -1015,10 +1036,17 @@ export const Tablero: React.FC = () => {
                         <span className="material-symbols-outlined text-[28px]">groups</span>
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Equipos y Jugadores</h4>
-                        <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Consulta los planteles, crea nuevos equipos e inscribe jugadores.</p>
+                        <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">
+                          {esDelegado ? 'Mi Equipo y Jugadores' : 'Equipos y Jugadores'}
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                          {esDelegado 
+                            ? 'Inscribe la plantilla de jugadores de tu equipo, administra dorsales y solicita prórrogas de tiempo.'
+                            : 'Consulta los planteles, crea nuevos equipos e inscribe jugadores.'
+                          }
+                        </p>
                         <button className="mt-4 text-xs text-slate-400 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer">
-                          <span>Ver Equipos</span>
+                          <span>{esDelegado ? 'Gestionar Plantel' : 'Ver Equipos'}</span>
                           <span>→</span>
                         </button>
                       </div>
@@ -1032,17 +1060,24 @@ export const Tablero: React.FC = () => {
                         <span className="material-symbols-outlined text-[28px]">calendar_today</span>
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Fixture y Calendario</h4>
-                        <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Genera emparejamientos y programa canchas y horarios oficiales.</p>
+                        <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">
+                          {esDelegado ? 'Calendario de Partidos' : 'Fixture y Calendario'}
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                          {esDelegado 
+                            ? 'Revisa las fechas programadas, horarios de juego e información de canchas para tus partidos.'
+                            : 'Genera emparejamientos y programa canchas y horarios oficiales.'
+                          }
+                        </p>
                         <button className="mt-4 text-xs text-slate-400 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer">
-                          <span>Gestionar Fixture</span>
+                          <span>{esDelegado ? 'Ver Calendario' : 'Gestionar Fixture'}</span>
                           <span>→</span>
                         </button>
                       </div>
                     </div>
                   )}
 
-                  {/* Módulo: Gestión de Planillas y Partidos (Mesa, Organizador) */}
+                  {/* Módulo: Gestión de Planillas y Partidos (Mesa, Organizador) - Solo Visible para personal autorizado */}
                   {campeonatoActivo && (tienePermiso('registrar_incidencias') || tieneRol('organizador')) && !tieneRol('administrador') && (
                     <div className="p-6 rounded-2xl bg-[#171a26] border border-slate-900/60 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-xs transition-all duration-300 group flex items-start gap-5 cursor-pointer" onClick={() => navegar('/tablero/mesa')}>
                       <div className="w-14 h-14 rounded-xl bg-[#11131c] text-slate-400 border border-slate-800 flex items-center justify-center group-hover:bg-indigo-500/10 group-hover:text-indigo-400 group-hover:border-indigo-500/30 transition-all duration-300 shrink-0">
@@ -1066,10 +1101,17 @@ export const Tablero: React.FC = () => {
                         <span className="material-symbols-outlined text-[28px]">leaderboard</span>
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">Posiciones y Estadísticas</h4>
-                        <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Visualiza los resultados en vivo, anotadores y tablas oficiales.</p>
+                        <h4 className="font-extrabold text-sm text-white group-hover:text-indigo-400 transition-colors uppercase tracking-wide">
+                          {esDelegado ? 'Tablas y Estadísticas' : 'Posiciones y Estadísticas'}
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                          {esDelegado 
+                            ? 'Consulta las posiciones oficiales del campeonato, la tabla de goleadores y el estado de tarjetas.'
+                            : 'Visualiza los resultados en vivo, anotadores y tablas oficiales.'
+                          }
+                        </p>
                         <button className="mt-4 text-xs text-slate-400 group-hover:text-indigo-400 font-bold tracking-wider uppercase flex items-center gap-1.5 transition-all cursor-pointer">
-                          <span>Ver Posiciones</span>
+                          <span>{esDelegado ? 'Ver Tabla' : 'Ver Posiciones'}</span>
                           <span>→</span>
                         </button>
                       </div>

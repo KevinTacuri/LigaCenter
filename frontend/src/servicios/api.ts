@@ -35,6 +35,7 @@ export interface Usuario {
     championship_id: number;
     role: 'organizer' | 'referee' | 'team_delegate' | 'score_table';
     team_id?: number | null;
+    team_name?: string | null;
   }[];
 }
 
