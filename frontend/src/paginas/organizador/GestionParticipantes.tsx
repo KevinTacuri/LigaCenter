@@ -500,7 +500,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     }
   }, [tabActiva, cargandoAuth, cargandoCampeonato]);
 
-  // Al cambiar equipo seleccionado en planilla
+  // Al cambiar equipo seleccionado en planilla o cuando se cargan los equipos
   useEffect(() => {
     if (equipoSelId !== null) {
       cargarJugadoresDeEquipo(equipoSelId);
@@ -510,7 +510,7 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       setFilasJugadores([]);
       setEquipoSel(null);
     }
-  }, [equipoSelId]);
+  }, [equipoSelId, equipos]);
 
   // ─────────────────────────────────────────────
   // CARGA DE DATOS
