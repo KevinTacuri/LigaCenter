@@ -39,9 +39,17 @@ Este documento detalla de forma exclusiva la integración y los cambios realizad
     *   `frontend/src/servicios/echo.ts`: Configuración e inicialización del cliente Laravel Echo + Pusher JS. Extrae dinámicamente el host WebSocket a partir de la URL de API de Vite, garantizando compatibilidad en cualquier red local sin necesidad de variables manuales.
 *   **Archivos Modificados:**
     *   `frontend/package.json` y `pnpm-lock.yaml`: Instalación de dependencias `laravel-echo` y `pusher-js`.
+    *   `frontend/src/componentes/public/TiempoEnVivo.tsx`:
+        *   Rediseño del componente para soportar `timerStatus` ('running', 'paused', 'stopped') y `currentPeriod` (P1, P2, etc.).
+        *   Si el partido se encuentra en pausa o descanso, el segundero dinámico se detiene y la UI renderiza una etiqueta elegante ámbar de `[PAUSADO]` o `[DETENIDO]`.
+    *   `frontend/src/paginas/landing/Inicio.tsx`:
+        *   **Rediseño Premium de la Vista de Partidos:** Separamos el fixture en dos secciones: **"En Vivo Ahora"** (superior) y **"Otros Partidos"** (inferior).
+        *   Los partidos en vivo se dibujan en tarjetas más amplias con bordes en degradado carmesí de fútbol, efecto de desenfoque de fondo, indicador en vivo parpadeante y marcador de gran tamaño para máxima visibilidad.
+        *   Inyección de los datos del cronómetro (`timerStatus`, `currentPeriod`) en los listados del home.
     *   `frontend/src/paginas/public/PartidoDetalle.tsx`:
         *   Integración de un listener al canal `matches.{id}`.
         *   Actualiza el marcador global, avanza el cronómetro en vivo e inserta/remueve de forma reactiva las tarjetas de incidencias al recibir eventos de Reverb.
+        *   Paso de `timerStatus` y `currentPeriod` al componente de cronómetro para evitar la inconsistencia de pausa/descanso.
     *   `frontend/src/paginas/public/TablaPosiciones.tsx`:
         *   Integración de un listener al canal `championship.{id}`.
         *   Fuerza la recarga de fixtures y tabla de clasificación instantáneamente cuando finaliza o cambia algún partido del torneo.
@@ -57,9 +65,9 @@ Para comprobar el correcto funcionamiento del flujo en tiempo real de forma loca
     *   Levantar servidor de WebSockets Reverb: `php artisan reverb:start` (Corre en puerto `8080`).
     *   Levantar servidor frontend Vite: `pnpm run dev` (Corre en puerto `5173`).
 2.  **Visualizar como Espectador:**
-    *   Ingresar al detalle público de un partido en curso en el navegador (`http://localhost:5173/partido/{id}`).
+    *   Ingresar a la Landing Page principal o al detalle del partido (`http://localhost:5173/partido/{id}`).
 3.  **Gestionar en Mesa de Control (como Organizador):**
     *   Iniciar sesión como Organizador y entrar a la Mesa de Control de ese partido.
-    *   Iniciar el cronómetro, registrar un gol o amonestar a un jugador.
+    *   Iniciar, pausar o detener el cronómetro, y registrar o borrar un gol.
 4.  **Confirmación:**
-    *   El marcador, el avance del cronómetro y la cronología del partido en la vista del espectador se actualizarán de forma instantánea sin necesidad de recargar la pestaña del navegador.
+    *   Tanto la Landing Page (con sus nuevos bloques destacados) como el Detalle del Partido reflejarán al segundo los marcadores, estado de pausa (color ámbar y reloj quieto) o juego (color rojo y segundero activo) y las incidencias sin recargar página.
