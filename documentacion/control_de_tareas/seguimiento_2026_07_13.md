@@ -70,6 +70,11 @@ Este archivo documenta las tareas de refactorización y mejoras aplicadas bajo e
     *   **Rediseño Global de Alert Dialogs (Radix UI):** Sobrescribimos en el CSS global `index.css` las clases de los selectores `[data-slot="alert-dialog-*"]` inyectando estilos de glassmorphism premium: fondo desenfocado semi-transparente (`backdrop-blur(8px)`), bordes sutiles de tarjeta, tipografía Outfit integrada y botones minimalistas coherentes.
 *   **Justificación:** Protege al usuario de salidas accidentales del sistema y eleva de manera inmediata el diseño visual de todas las alertas de confirmación de eliminación (deportes, categorías, equipos, jugadores y actas de partidos) presentes en la app.
 
+### 8. 🚀 Publicación y Subida de Cambios a GitLab
+*   **Detalles:**
+    *   Subimos de forma exitosa los 21 commits locales acumulados hoy en la rama `fix/matches` al repositorio remoto en GitLab.
+*   **Justificación:** Facilita que los líderes técnicos y organizadores del proyecto puedan auditar el código, validar los cambios implementados y proceder a su posterior revisión para la aprobación del Merge Request.
+
 ---
 
 ## ⏱️ Justificación de Horas de Desarrollo
@@ -85,4 +90,5 @@ A continuación se detalla la estimación y justificación del tiempo invertido 
 | **Fase 4: Depuración de Código (Simulación)** | **1.0 hr** | Identificación de rastros de simulación, depuración del archivo del Tablero, eliminación de dependencias y pruebas de compilación limpia. |
 | **Fase 5: Rediseño Visual de Autenticación** | **3.0 hrs** | Adaptación de layouts de Login, Registro, Recuperación y Restablecimiento a tarjetas glassmorphic, remoción de inputs superpuestos y limpieza de integraciones. |
 | **Fase 6: Alertas y Cierre de Sesión** | **1.0 hr** | Integración de `useConfirm` en logout y personalización global de modales de Radix UI con desenfoque y tema cromático oscuro. |
-| **Total de horas justificadas** | **15.0 hrs** | **Cumplimiento completo de los objetivos de la auditoría, depuración, rediseño y control de acciones sensibles.** |
+| **Fase 7: Versionamiento y Envío a GitLab** | **0.5 hrs** | Consolidación de la rama `fix/matches` y ejecución de `git push origin fix/matches` para auditoría técnica de los líderes. |
+| **Total de horas justificadas** | **15.5 hrs** | **Cumplimiento completo de los objetivos de la auditoría, depuración, rediseño, control de acciones y publicación.** |
