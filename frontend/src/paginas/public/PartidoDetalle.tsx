@@ -60,6 +60,8 @@ export const PartidoDetalle: React.FC = () => {
             home_score: e.local_team_goals,
             away_score: e.visitor_team_goals,
             status: mapStatus(e.status),
+            timer_status: e.timer_status || prev.match.timer_status,
+            current_period: e.current_period || prev.match.current_period,
           }
         };
       });
@@ -74,7 +76,9 @@ export const PartidoDetalle: React.FC = () => {
           match: {
             ...prev.match,
             elapsed_time: e.current_elapsed_time,
-            status: e.timer_status === 'running' ? 'en_vivo' : mapStatus(prev.match.status),
+            timer_status: e.timer_status,
+            current_period: e.current_period,
+            status: e.timer_status === 'running' || e.timer_status === 'paused' ? 'en_vivo' : mapStatus(prev.match.status),
           }
         };
       });
@@ -222,7 +226,13 @@ export const PartidoDetalle: React.FC = () => {
               </span>
             </div>
             {match.status === 'en_vivo' ? (
-              <TiempoEnVivo elapsedTime={match.elapsed_time} status={match.status} size="lg" />
+              <TiempoEnVivo 
+                elapsedTime={match.elapsed_time} 
+                status={match.status} 
+                timerStatus={match.timer_status}
+                currentPeriod={match.current_period}
+                size="lg" 
+              />
             ) : (
               getStatusBadge(match.status)
             )}
@@ -247,7 +257,13 @@ export const PartidoDetalle: React.FC = () => {
               </div>
               {match.status === 'en_vivo' && match.elapsed_time !== null && (
                 <div className="mt-2">
-                  <TiempoEnVivo elapsedTime={match.elapsed_time} status={match.status} size="md" />
+                  <TiempoEnVivo 
+                    elapsedTime={match.elapsed_time} 
+                    status={match.status} 
+                    timerStatus={match.timer_status}
+                    currentPeriod={match.current_period}
+                    size="md" 
+                  />
                 </div>
               )}
             </div>

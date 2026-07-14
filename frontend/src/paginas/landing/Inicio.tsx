@@ -241,81 +241,161 @@ export const Inicio: React.FC<InicioProps> = ({
           )}
 
           {tabActiva === 'partidos' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {matches && matches.length > 0 ? (
-                matches.map(match => (
-                  <Link
-                    key={match.id}
-                    to={`/partidos/${match.id}`}
-                    className="group bg-[#11131c] rounded-xl border border-slate-800 hover:border-indigo-650/60 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-650/10 transition-all duration-200 overflow-hidden flex flex-col"
-                  >
-                    <div className="flex justify-between items-center px-4 pt-3 pb-2">
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wide truncate max-w-[65%]">
-                        {match.championship?.name || 'Competición'}
-                      </span>
-                      {match.status === 'en_vivo' ? (
-                        <TiempoEnVivo elapsedTime={match.elapsed_time} status={match.status} size="sm" />
-                      ) : (
-                        getStatusBadge(match.status)
-                      )}
-                    </div>
-
-                    <div className="px-4 pb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                      <div className="flex flex-col items-center gap-1.5 min-w-0">
-                        <TeamLogo name={match.home_team?.name} logo={match.home_team?.logo} />
-                        <span className="text-xs font-semibold text-slate-200 text-center truncate w-full">
-                          {match.home_team?.name || '—'}
-                        </span>
-                      </div>
-
-                      <div className="flex flex-col items-center px-1">
-                        {match.status === 'pendiente' || match.status === 'reprogramado' ? (
-                          <span className="text-lg font-black text-slate-500 tracking-wider">VS</span>
-                        ) : match.status === 'en_vivo' ? (
-                          <span className="text-2xl font-black text-white tabular-nums whitespace-nowrap">
-                            {match.home_score ?? 0} <span className="text-slate-600">:</span> {match.away_score ?? 0}
+            <div className="space-y-8">
+              {/* SECCIÓN 1: PARTIDOS EN VIVO (MÁXIMA VISIBILIDAD) */}
+              {matches && matches.filter(m => m.status === 'en_vivo').length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                    <h3 className="text-xs font-extrabold text-red-500 uppercase tracking-widest">En Vivo Ahora</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {matches.filter(m => m.status === 'en_vivo').map(match => (
+                      <Link
+                        key={match.id}
+                        to={`/partidos/${match.id}`}
+                        className="group relative bg-slate-900/60 backdrop-blur-md rounded-2xl border border-red-500/35 hover:border-red-500 hover:shadow-2xl hover:shadow-red-500/10 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col p-5"
+                      >
+                        {/* Indicador superior */}
+                        <div className="flex justify-between items-center mb-4">
+                          <span className="text-[10px] text-red-400 font-extrabold uppercase tracking-widest bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
+                            {match.championship?.name || 'Competición'}
                           </span>
-                        ) : (
-                          <span className="text-2xl font-black text-white tabular-nums whitespace-nowrap">
-                            {match.home_score ?? '-'} <span className="text-slate-600">:</span> {match.away_score ?? '-'}
+                          <TiempoEnVivo 
+                            elapsedTime={match.elapsed_time} 
+                            status={match.status} 
+                            timerStatus={match.timer_status}
+                            currentPeriod={match.current_period}
+                            size="md" 
+                          />
+                        </div>
+
+                        {/* Marcador grande */}
+                        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 py-3">
+                          <div className="flex flex-col items-center gap-2 min-w-0">
+                            <TeamLogo name={match.home_team?.name} logo={match.home_team?.logo} size="md" />
+                            <span className="text-sm font-bold text-white text-center truncate w-full group-hover:text-red-400 transition-colors">
+                              {match.home_team?.name || '—'}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col items-center px-4 bg-slate-950/40 rounded-xl py-2.5 border border-slate-800/80">
+                            <span className="text-3xl font-black text-white tracking-widest tabular-nums">
+                              {match.home_score ?? 0} : {match.away_score ?? 0}
+                            </span>
+                            <span className="text-[9px] text-red-500 font-bold uppercase tracking-wider mt-1 animate-pulse">En Juego</span>
+                          </div>
+
+                          <div className="flex flex-col items-center gap-2 min-w-0">
+                            <TeamLogo name={match.away_team?.name} logo={match.away_team?.logo} size="md" />
+                            <span className="text-sm font-bold text-white text-center truncate w-full group-hover:text-red-400 transition-colors">
+                              {match.away_team?.name || '—'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Información inferior */}
+                        <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
+                          <span className="flex items-center gap-1.5 font-semibold">
+                            <span className="material-symbols-outlined text-xs text-red-500">schedule</span>
+                            {match.match_date
+                              ? new Date(match.match_date + 'T' + (match.match_time || '00:00')).toLocaleString('es-ES', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : '—'}
                           </span>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col items-center gap-1.5 min-w-0">
-                        <TeamLogo name={match.away_team?.name} logo={match.away_team?.logo} />
-                        <span className="text-xs font-semibold text-slate-200 text-center truncate w-full">
-                          {match.away_team?.name || '—'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="mt-auto border-t border-slate-800 px-4 py-2.5 flex items-center justify-between gap-2 text-[10px] text-slate-500">
-                      <span className="flex items-center gap-1 truncate">
-                        <span className="material-symbols-outlined text-xs">schedule</span>
-                        {match.match_date
-                          ? new Date(match.match_date + 'T' + (match.match_time || '00:00')).toLocaleString('es-ES', {
-                              day: '2-digit',
-                              month: 'short',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })
-                          : '—'}
-                      </span>
-                      {match.venue && (
-                        <span className="flex items-center gap-1 truncate max-w-[45%]">
-                          <span className="material-symbols-outlined text-xs">location_on</span>
-                          {match.venue.name}
-                        </span>
-                      )}
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <div className="col-span-full bg-[#11131c] rounded-xl p-8 text-center border border-slate-800">
-                  <p className="text-slate-400 text-sm">No hay partidos disponibles para este campeonato</p>
+                          {match.venue && (
+                            <span className="flex items-center gap-1 max-w-[50%] truncate font-semibold">
+                              <span className="material-symbols-outlined text-xs text-slate-500">location_on</span>
+                              {match.venue.name}
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               )}
+
+              {/* SECCIÓN 2: OTROS PARTIDOS (PRÓXIMOS Y FINALIZADOS) */}
+              <div>
+                {matches && matches.filter(m => m.status === 'en_vivo').length > 0 && (
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Otros Partidos</h3>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {matches && matches.filter(m => m.status !== 'en_vivo').length > 0 ? (
+                    matches.filter(m => m.status !== 'en_vivo').map(match => (
+                      <Link
+                        key={match.id}
+                        to={`/partidos/${match.id}`}
+                        className="group bg-[#11131c] rounded-xl border border-slate-800 hover:border-indigo-650/60 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-650/10 transition-all duration-200 overflow-hidden flex flex-col"
+                      >
+                        <div className="flex justify-between items-center px-4 pt-3 pb-2">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wide truncate max-w-[65%]">
+                            {match.championship?.name || 'Competición'}
+                          </span>
+                          {getStatusBadge(match.status)}
+                        </div>
+
+                        <div className="px-4 pb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                          <div className="flex flex-col items-center gap-1.5 min-w-0">
+                            <TeamLogo name={match.home_team?.name} logo={match.home_team?.logo} size="sm" />
+                            <span className="text-xs font-semibold text-slate-200 text-center truncate w-full">
+                              {match.home_team?.name || '—'}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col items-center px-1">
+                            {match.status === 'pendiente' || match.status === 'reprogramado' ? (
+                              <span className="text-lg font-black text-slate-500 tracking-wider">VS</span>
+                            ) : (
+                              <span className="text-2xl font-black text-white tabular-nums whitespace-nowrap">
+                                {match.home_score ?? '-'} <span className="text-slate-600">:</span> {match.away_score ?? '-'}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-col items-center gap-1.5 min-w-0">
+                            <TeamLogo name={match.away_team?.name} logo={match.away_team?.logo} size="sm" />
+                            <span className="text-xs font-semibold text-slate-200 text-center truncate w-full">
+                              {match.away_team?.name || '—'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-auto border-t border-slate-800 px-4 py-2.5 flex items-center justify-between gap-2 text-[10px] text-slate-500">
+                          <span className="flex items-center gap-1 truncate">
+                            <span className="material-symbols-outlined text-xs">schedule</span>
+                            {match.match_date
+                              ? new Date(match.match_date + 'T' + (match.match_time || '00:00')).toLocaleString('es-ES', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : '—'}
+                          </span>
+                          {match.venue && (
+                            <span className="flex items-center gap-1 truncate max-w-[45%]">
+                              <span className="material-symbols-outlined text-xs">location_on</span>
+                              {match.venue.name}
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+                    ))
+                  ) : (
+                    matches && matches.filter(m => m.status === 'en_vivo').length === 0 && (
+                      <div className="col-span-full bg-[#11131c] rounded-xl p-8 text-center border border-slate-800">
+                        <p className="text-slate-400 text-sm">No hay partidos disponibles para este campeonato</p>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </>

@@ -47,6 +47,8 @@ class MatchUpdated implements ShouldBroadcastNow
             'local_team_goals' => $this->match->local_team_goals,
             'visitor_team_goals' => $this->match->visitor_team_goals,
             'status' => $this->match->status,
+            'timer_status' => $this->match->timer_status ?? 'stopped',
+            'current_period' => $this->match->current_period ?? 1,
         ];
     }
 }

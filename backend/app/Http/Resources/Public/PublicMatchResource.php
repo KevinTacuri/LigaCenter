@@ -43,6 +43,8 @@ class PublicMatchResource extends JsonResource
                 ? $this->match_date->format('Y-m-d') . 'T' . $this->match_time 
                 : null,
             'elapsed_time' => $elapsedTime, // ← Nuevo campo
+            'timer_status' => $this->timer_status ?? 'stopped',
+            'current_period' => $this->current_period ?? 1,
             'venue' => $this->whenLoaded('venue', function () {
                 return [
                     'id' => $this->venue->id,
