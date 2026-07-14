@@ -61,4 +61,12 @@ class MatchIncidenceCreated implements ShouldBroadcastNow
             ] : null,
         ];
     }
+
+    /**
+     * Get the broadcast name.
+     */
+    public function broadcastAs(): string
+    {
+        return 'MatchIncidenceCreated';
+    }
 }

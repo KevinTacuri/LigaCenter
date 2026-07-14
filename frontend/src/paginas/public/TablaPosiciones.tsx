@@ -54,7 +54,7 @@ export const TablaPosiciones: React.FC = () => {
     if (!selectedChampionship) return;
     const canal = registrarCanalCampeonato(selectedChampionship);
 
-    canal.listen('MatchUpdated', () => {
+    canal.listen('.MatchUpdated', () => {
       console.log('Cambio detectado en partido del campeonato por WebSocket. Recargando posiciones...');
       loadData();
     });

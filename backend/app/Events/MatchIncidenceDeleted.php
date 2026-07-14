@@ -46,4 +46,12 @@ class MatchIncidenceDeleted implements ShouldBroadcastNow
             'incidence_id' => $this->incidenceId,
         ];
     }
+
+    /**
+     * Get the broadcast name.
+     */
+    public function broadcastAs(): string
+    {
+        return 'MatchIncidenceDeleted';
+    }
 }

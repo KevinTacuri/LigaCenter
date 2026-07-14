@@ -55,4 +55,12 @@ class MatchTimerSynced implements ShouldBroadcastNow
             'timer_started_at' => $this->timerStartedAt ? $this->timerStartedAt : null,
         ];
     }
+
+    /**
+     * Get the broadcast name.
+     */
+    public function broadcastAs(): string
+    {
+        return 'MatchTimerSynced';
+    }
 }

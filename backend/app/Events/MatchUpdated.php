@@ -51,4 +51,12 @@ class MatchUpdated implements ShouldBroadcastNow
             'current_period' => $this->match->current_period ?? 1,
         ];
     }
+
+    /**
+     * Get the broadcast name.
+     */
+    public function broadcastAs(): string
+    {
+        return 'MatchUpdated';
+    }
 }
