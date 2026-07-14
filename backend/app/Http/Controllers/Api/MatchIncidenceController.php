@@ -137,6 +137,9 @@ class MatchIncidenceController extends Controller
 
         $incidence->load(['player', 'team']);
 
+        // Disparar evento de WebSocket
+        event(new \App\Events\MatchIncidenceCreated($incidence));
+
         return $this->successResponse(
             $incidence,
             'Incidencia registrada exitosamente',
@@ -293,7 +296,12 @@ class MatchIncidenceController extends Controller
             );
         }
 
+        $matchId = $incidence->match_id;
+        $incidenceId = $incidence->id;
         $incidence->delete();
+
+        // Disparar evento de WebSocket
+        event(new \App\Events\MatchIncidenceDeleted($matchId, $incidenceId));
 
         return $this->successResponse(
             null,

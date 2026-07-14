@@ -9,7 +9,7 @@ import type {
 } from '../../servicios/apiPublic';
 import { publicApi } from '../../servicios/apiPublic';
 import { Inicio } from '../landing/Inicio';
-
+import { registrarCanalCampeonato } from '../../servicios/echo';
 
 export const TablaPosiciones: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -49,6 +49,20 @@ export const TablaPosiciones: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [tabActiva, selectedDiscipline, selectedChampionship]);
+
+  useEffect(() => {
+    if (!selectedChampionship) return;
+    const canal = registrarCanalCampeonato(selectedChampionship);
+
+    canal.listen('MatchUpdated', () => {
+      console.log('Cambio detectado en partido del campeonato por WebSocket. Recargando posiciones...');
+      loadData();
+    });
+
+    return () => {
+      canal.unsubscribe();
+    };
+  }, [selectedChampionship]);
 
   const setTabActiva = (tab: string) => {
     setSearchParams({ tab, campeonato: selectedChampionship?.toString() || '' });

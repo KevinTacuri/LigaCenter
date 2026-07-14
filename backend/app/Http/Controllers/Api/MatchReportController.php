@@ -284,6 +284,9 @@ class MatchReportController extends Controller
         $report->update(['is_locked' => true]);
         $match->update(['status' => 'finalizado']);
 
+        // Disparar evento de WebSocket
+        event(new \App\Events\MatchUpdated($match));
+
         return $this->successResponse([
             'report' => $report,
             'match' => $match,

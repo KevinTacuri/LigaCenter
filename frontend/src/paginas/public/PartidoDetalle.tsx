@@ -4,6 +4,8 @@ import { LayoutPublico } from '../../componentes/public/LayoutPublico';
 import { TiempoEnVivo } from '../../componentes/public/TiempoEnVivo';
 import { publicApi } from '../../servicios/apiPublic';
 
+import { registrarCanalPartido } from '../../servicios/echo';
+
 interface PartidoDetalleData {
   match: any;
   incidences: any;
@@ -15,6 +17,17 @@ export const PartidoDetalle: React.FC = () => {
   const [data, setData] = useState<PartidoDetalleData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const mapStatus = (backendStatus: string) => {
+    const statusMap: Record<string, string> = {
+      'programado': 'pendiente',
+      'en_curso': 'en_vivo',
+      'finalizado': 'finalizado',
+      'cancelado': 'cancelado',
+      'reprogramado': 'reprogramado',
+    };
+    return statusMap[backendStatus] || backendStatus;
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -30,6 +43,95 @@ export const PartidoDetalle: React.FC = () => {
       })
       .catch(() => setError('Error al conectar con el servidor.'))
       .finally(() => setLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    const canal = registrarCanalPartido(Number(id));
+
+    // 1. Escuchar actualización general de estado y marcador de goles
+    canal.listen('MatchUpdated', (e: any) => {
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          match: {
+            ...prev.match,
+            home_score: e.local_team_goals,
+            away_score: e.visitor_team_goals,
+            status: mapStatus(e.status),
+          }
+        };
+      });
+    });
+
+    // 2. Escuchar sincronización del cronómetro en vivo
+    canal.listen('MatchTimerSynced', (e: any) => {
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          match: {
+            ...prev.match,
+            elapsed_time: e.current_elapsed_time,
+            status: e.timer_status === 'running' ? 'en_vivo' : mapStatus(prev.match.status),
+          }
+        };
+      });
+    });
+
+    // 3. Escuchar registro de nuevas incidencias (goles, tarjetas, etc.)
+    canal.listen('MatchIncidenceCreated', (e: any) => {
+      setData((prev) => {
+        if (!prev) return prev;
+        const type = e.type;
+        const nuevaInc = {
+          id: e.id,
+          minute: e.minute,
+          type: e.type,
+          player: e.player ? e.player.name : null,
+          description: e.description,
+        };
+
+        const incidencesPrev = { ...prev.incidences };
+        if (!incidencesPrev[type]) {
+          incidencesPrev[type] = [];
+        }
+        
+        // Evitar duplicados por id
+        if (incidencesPrev[type].some((i: any) => i.id === e.id)) {
+          return prev;
+        }
+
+        incidencesPrev[type] = [...incidencesPrev[type], nuevaInc].sort((a, b) => a.minute - b.minute);
+
+        return {
+          ...prev,
+          incidences: incidencesPrev,
+        };
+      });
+    });
+
+    // 4. Escuchar eliminación de incidencias
+    canal.listen('MatchIncidenceDeleted', (e: any) => {
+      setData((prev) => {
+        if (!prev) return prev;
+        const incidencesPrev = { ...prev.incidences };
+        
+        Object.keys(incidencesPrev).forEach((type) => {
+          incidencesPrev[type] = incidencesPrev[type].filter((i: any) => i.id !== e.incidence_id);
+        });
+
+        return {
+          ...prev,
+          incidences: incidencesPrev,
+        };
+      });
+    });
+
+    return () => {
+      canal.unsubscribe();
+    };
   }, [id]);
 
   const getStatusBadge = (status: string) => {

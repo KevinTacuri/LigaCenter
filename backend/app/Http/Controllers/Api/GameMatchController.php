@@ -153,6 +153,7 @@ class GameMatchController extends Controller
         ]);
 
         $match->update($request->all());
+        event(new \App\Events\MatchUpdated($match));
         return $this->successResponse($match, 'Partido actualizado exitosamente');
     }
 
@@ -203,6 +204,7 @@ class GameMatchController extends Controller
             'venue_id' => $request->venue_id,
             'status' => 'reprogramado',
         ]);
+        event(new \App\Events\MatchUpdated($match));
 
         return $this->successResponse($match, 'Partido reprogramado exitosamente');
     }
@@ -223,6 +225,15 @@ class GameMatchController extends Controller
         $match->timer_status = $request->timer_status;
         $match->timer_started_at = $request->timer_started_at;
         $match->save();
+
+        // Disparar evento de WebSocket
+        event(new \App\Events\MatchTimerSynced(
+            $match->id,
+            $match->current_elapsed_time,
+            $match->current_period,
+            $match->timer_status,
+            $match->timer_started_at
+        ));
 
         return $this->successResponse(
             [
