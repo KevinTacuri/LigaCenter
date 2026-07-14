@@ -75,6 +75,23 @@ Este archivo documenta las tareas de refactorización y mejoras aplicadas bajo e
     *   Subimos de forma exitosa los 21 commits locales acumulados hoy en la rama `fix/matches` al repositorio remoto en GitLab.
 *   **Justificación:** Facilita que los líderes técnicos y organizadores del proyecto puedan auditar el código, validar los cambios implementados y proceder a su posterior revisión para la aprobación del Merge Request.
 
+### 9. 📡 Integración de WebSockets en Tiempo Real para Partidos y Posiciones
+*   **Archivos Modificados:**
+    *   **Backend:** [GameMatchController.php](file:///C:/Users/achav/Desktop/PIS-proyecto/proyecto-campeonato/backend/app/Http/Controllers/Api/GameMatchController.php), [MatchIncidenceController.php](file:///C:/Users/achav/Desktop/PIS-proyecto/proyecto-campeonato/backend/app/Http/Controllers/Api/MatchIncidenceController.php), [MatchReportController.php](file:///C:/Users/achav/Desktop/PIS-proyecto/proyecto-campeonato/backend/app/Http/Controllers/Api/MatchReportController.php), [app.php](file:///C:/Users/achav/Desktop/PIS-proyecto/proyecto-campeonato/backend/bootstrap/app.php).
+    *   **Frontend:** [PartidoDetalle.tsx](file:///C:/Users/achav/Desktop/PIS-proyecto/proyecto-campeonato/frontend/src/paginas/public/PartidoDetalle.tsx), [TablaPosiciones.tsx](file:///C:/Users/achav/Desktop/PIS-proyecto/proyecto-campeonato/frontend/src/paginas/public/TablaPosiciones.tsx), [echo.ts](file:///C:/Users/achav/Desktop/PIS-proyecto/proyecto-campeonato/frontend/src/servicios/echo.ts).
+*   **Detalles:**
+    *   **Servidor WebSocket (Laravel Reverb):** Instalamos y configuramos el servidor de WebSocket nativo de Laravel (Reverb) para transmisión en local (`php artisan reverb:start`).
+    *   **Eventos de Broadcasting PHP:** Creamos e implementamos 4 clases de eventos en tiempo real que transmiten de forma instantánea mediante `ShouldBroadcastNow`:
+        1.  `MatchTimerSynced`: Notifica la sincronización de minutos, periodos y estado del cronómetro.
+        2.  `MatchIncidenceCreated`: Transmite la creación en vivo de incidencias (goles, amonestaciones) con carga dinámica del jugador y el equipo.
+        3.  `MatchIncidenceDeleted`: Transmite la anulación de incidencias para refrescar la cronología.
+        4.  `MatchUpdated`: Transmite los cambios de marcador y finalización del partido en canales individuales y de campeonato.
+    *   **Cliente Echo en React:** Inicializamos Laravel Echo + Pusher JS extrayendo dinámicamente el host de conexión del backend.
+    *   **Suscripciones Reactivas en Vistas:**
+        *   En `PartidoDetalle.tsx` nos suscribimos al canal del partido para actualizar el marcador, cronómetro y lista de incidencias en vivo.
+        *   En `TablaPosiciones.tsx` nos suscribimos al canal del campeonato para recargar de forma automática standings y fixtures al finalizar partidos.
+*   **Justificación:** Elimina por completo la necesidad de consultas redundantes (polling) y recargas de página manuales, ofreciendo una experiencia interactiva instantánea e ininterrumpida de primer nivel deportivo.
+
 ---
 
 ## ⏱️ Justificación de Horas de Desarrollo
@@ -90,5 +107,6 @@ A continuación se detalla la estimación y justificación del tiempo invertido 
 | **Fase 4: Depuración de Código (Simulación)** | **1.0 hr** | Identificación de rastros de simulación, depuración del archivo del Tablero, eliminación de dependencias y pruebas de compilación limpia. |
 | **Fase 5: Rediseño Visual de Autenticación** | **3.0 hrs** | Adaptación de layouts de Login, Registro, Recuperación y Restablecimiento a tarjetas glassmorphic, remoción de inputs superpuestos y limpieza de integraciones. |
 | **Fase 6: Alertas y Cierre de Sesión** | **1.0 hr** | Integración de `useConfirm` en logout y personalización global de modales de Radix UI con desenfoque y tema cromático oscuro. |
-| **Fase 7: Versionamiento y Envío a GitLab** | **0.5 hrs** | Consolidación de la rama `fix/matches` y ejecución de `git push origin fix/matches` para auditoría técnica de los líderes. |
-| **Total de horas justificadas** | **15.5 hrs** | **Cumplimiento completo de los objetivos de la auditoría, depuración, rediseño, control de acciones y publicación.** |
+| **Fase 7: Sincronización en Tiempo Real** | **2.0 hrs** | Instalación de Reverb, creación de eventos en Laravel, configuración de Echo en React, y desarrollo de listeners interactivos para partidos y clasificaciones. |
+| **Fase 8: Versionamiento y Envío a GitLab** | **0.5 hrs** | Consolidación de la rama `fix/matches` y ejecución de `git push` para auditoría técnica final de los líderes. |
+| **Total de horas justificadas** | **17.5 hrs** | **Cumplimiento completo de los objetivos de la auditoría, depuración, rediseño, control de acciones, sincronización real-time y publicación.** |
