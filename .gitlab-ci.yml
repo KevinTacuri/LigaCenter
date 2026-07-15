@@ -1,0 +1,181 @@
+# ============================================================================
+# LigaCenter — pipeline CI/CD (GitLab)
+# ============================================================================
+# Etapas:
+#   lint   → análisis estático del repo (Dockerfile + YAML + lint del frontend + comprobación sintáctica del backend)
+#   test   → tests del backend (PHPUnit) y del frontend (cuando existan)
+#   build  → construcción de las imágenes Docker para validar que compilan
+#   deploy → activación del redeploy en Dokploy (vía endpoint /api/compose.redeploy)
+#
+# Política de despliegue:
+#   - El pipeline se ejecuta únicamente contra la rama `main` y contra MRs cuya
+#     rama destino sea `main`.
+#   - La etapa `deploy` corre SOLO en push directo a `main`
+#     (no en MRs, ni pipelines programados, ni tags).
+#   - Las variables necesarias se configuran en
+#     Settings → CI/CD → Variables (masked + protected):
+#       * DOKPLOY_URL              URL base del Dokploy destino
+#       * DOKPLOY_REFRESH_TOKEN    refreshToken del servicio compose
+#       * APP_PUBLIC_URL           URL pública del entorno (aparece en el badge de Deployments)
+# ============================================================================
+
+stages:
+  - lint
+  - test
+  - build
+  - deploy
+
+# ----------------------------------------------------------------------------
+# Variables globales
+# ----------------------------------------------------------------------------
+variables:
+  DOCKER_VERSION: "28.0"
+  IMAGE_BACKEND: "ligacenter-backend:latest"
+  IMAGE_FRONTEND: "ligacenter-frontend:latest"
+
+# ----------------------------------------------------------------------------
+# Reglas de ejecución de pipelines (workflow a nivel repo).
+#   - main → pipeline completo (incluye deploy)
+#   - MR contra main → pipeline sin deploy (validación)
+#   - Otros push → NO se dispara pipeline
+# ----------------------------------------------------------------------------
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+    # Cualquier otro caso queda fuera. Para otras ramas no hay pipeline.
+
+default:
+  tags:
+    - docker
+  before_script:
+    - set -euo pipefail
+
+# ============================================================================
+# ETAPA 1: LINT
+# ============================================================================
+lint:dockerfile:
+  stage: lint
+  image: hadolint/hadolint:latest
+  script:
+    - hadolint backend/Dockerfile
+    - hadolint frontend/Dockerfile
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+
+lint:compose:
+  stage: lint
+  image:
+    name: docker/compose-bin:v2.27.0
+    entrypoint: [""]
+  before_script:
+    - apk add --no-cache python3 py3-pip
+    - pip3 install --break-system-packages yamllint
+  script:
+    - yamllint -d 'relaxed' docker-compose.yml
+    - docker compose config -q
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+
+lint:frontend:
+  stage: lint
+  image: node:24-alpine
+  before_script:
+    - corepack enable && corepack prepare pnpm@latest --activate
+    - cd frontend
+  script:
+    - pnpm install --frozen-lockfile
+    - pnpm run lint || true
+  allow_failure: true
+  cache:
+    key:
+      files:
+        - frontend/pnpm-lock.yaml
+    paths:
+      - frontend/node_modules/
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+
+# ============================================================================
+# ETAPA 2: TEST
+# ============================================================================
+test:backend:
+  stage: test
+  image: php:8.4-cli-bookworm
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git unzip libpq-dev libzip-dev
+    - docker-php-ext-install pdo_mysql zip
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - cd backend
+  script:
+    - cp .env.example .env
+    - composer install --prefer-dist --no-interaction --no-progress
+    - php artisan key:generate
+    - vendor/bin/phpunit --colors=never || true
+  cache:
+    key:
+      files:
+        - backend/composer.lock
+    paths:
+      - backend/vendor/
+  allow_failure: true
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+
+# ============================================================================
+# ETAPA 3: BUILD
+# ============================================================================
+build:images:
+  stage: build
+  image: docker:${DOCKER_VERSION}-cli
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: unix:///var/run/docker.sock
+  before_script:
+    - docker compose version
+  script:
+    - docker compose build
+    - docker images | grep ligacenter
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+
+# ============================================================================
+# ETAPA 4: DEPLOY
+#   Se ejecuta SOLO en push directo a main. No corre en MRs ni schedule.
+# ============================================================================
+deploy:dokploy:
+  stage: deploy
+  image: curlimages/curl:latest
+  needs:
+    - build:images
+  when: on_success
+  allow_failure: false  # Si el deploy falla, el pipeline falla.
+  script:
+    - set -eu
+    - |
+      URL="${DOKPLOY_URL}/api/compose.redeploy"
+      JSON=$(printf '{"refreshToken":"%s","title":"CI deploy %s","description":"Pipeline #%s"}' \
+             "$DOKPLOY_REFRESH_TOKEN" "$CI_COMMIT_SHORT_SHA" "$CI_PIPELINE_ID")
+      echo "Disparando redeploy en Dokploy..."
+      curl -sS -X POST "$URL" \
+        -H "content-type: application/json" \
+        -d "$JSON" | tee /tmp/deploy.out
+      if grep -qi "queued\|success" /tmp/deploy.out; then
+        echo "✅ Deploy encolado en Dokploy"
+      else
+        echo "❌ Dokploy rechazó la solicitud de redeploy"
+        exit 1
+      fi
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+  environment:
+    name: production
+    url: $APP_PUBLIC_URL

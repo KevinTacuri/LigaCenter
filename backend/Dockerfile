@@ -55,9 +55,12 @@ ENV APP_ENV=${APP_ENV} \
     LOG_LEVEL=info
 
 # Dependencias del sistema + extensiones PHP requeridas por Laravel
+# wget se incluye para soportar el healthcheck del docker-compose.yml
+# (debe instalarse en la misma capa que nginx/supervisor para mantener el orden)
 RUN apt-get update && apt-get install -y --no-install-recommends \
         nginx \
         supervisor \
+        wget \
         libpq-dev \
         libzip-dev \
         libicu-dev \
