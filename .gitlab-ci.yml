@@ -47,8 +47,6 @@ workflow:
     # Cualquier otro caso queda fuera. Para otras ramas no hay pipeline.
 
 default:
-  tags:
-    - docker
   before_script:
     - set -euo pipefail
 
