@@ -1,0 +1,138 @@
+# =============================================================================
+# LigaCenter - Stack completo para Dokploy / Producción
+# =============================================================================
+# Levanta 3 servicios:
+#   - db       : MariaDB 11.8 (datos)
+#   - backend  : Laravel 13 + PHP 8.4 + Nginx (API)
+#   - frontend : React 19 + Vite + Nginx (UI, con proxy /api → backend)
+#
+# Uso local (sin Dokploy):
+#   docker compose up -d --build
+#
+# Uso en Dokploy:
+#   Subir esta carpeta como "Compose" source type.
+#   Configurar las variables de entorno en la UI de Dokploy.
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Base de datos
+  # ---------------------------------------------------------------------------
+  db:
+    image: mariadb:11
+    container_name: ligacenter-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_DATABASE}
+      MARIADB_USER: ${DB_USERNAME}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - ligacenter-net
+    # NO expone puertos al host — la DB solo es accesible desde la red interna
+
+  # ---------------------------------------------------------------------------
+  # Backend Laravel (PHP-FPM + Nginx en un contenedor vía Supervisor)
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_ENV: production
+        APP_DEBUG: "false"
+    image: ligacenter-backend:latest
+    container_name: ligacenter-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL}
+      APP_KEY: ${APP_KEY}
+
+      # DB
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      # Sesiones / cache
+      SESSION_DRIVER: database
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+
+      # Logs (stderr → los recoge Dokploy)
+      LOG_CHANNEL: stderr
+      LOG_LEVEL: info
+    volumes:
+      - backend_storage:/var/www/html/storage
+      - backend_cache:/var/www/html/bootstrap/cache
+    networks:
+      - ligacenter-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  # ---------------------------------------------------------------------------
+  # Frontend React (build estático + Nginx con proxy a /api)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Para Dokploy detrás de un dominio: dejalo en /api y el proxy del nginx lo resuelve
+        VITE_API_URL: /api
+    image: ligacenter-frontend:latest
+    container_name: ligacenter-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      # Para Dokploy: dejar solo "80" (Dokploy gestiona SSL y mapping)
+      # Para local en Mac (donde el puerto 80 lo ocupa Control Center): usar "8080:80"
+      - "${FRONTEND_PORT:-8080}:80"
+    networks:
+      - ligacenter-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+# =============================================================================
+# Volúmenes persistentes
+# =============================================================================
+volumes:
+  db_data:
+    driver: local
+  backend_storage:
+    driver: local
+  backend_cache:
+    driver: local
+
+# =============================================================================
+# Red interna
+# =============================================================================
+networks:
+  ligacenter-net:
+    driver: bridge
