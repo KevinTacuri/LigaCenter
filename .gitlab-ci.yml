@@ -133,8 +133,8 @@ deploy:dokploy:
     - set -eu
     - |
       URL="${DOKPLOY_URL}/api/compose.redeploy"
-      JSON=$(printf '{"refreshToken":"%s","title":"CI deploy %s","description":"Pipeline #%s"}' \
-             "$DOKPLOY_REFRESH_TOKEN" "$CI_COMMIT_SHORT_SHA" "$CI_PIPELINE_ID")
+      JSON=$(printf '{"refreshToken":"%s","composeId":"%s","title":"CI deploy %s","description":"Pipeline #%s"}' \
+             "$DOKPLOY_REFRESH_TOKEN" "$DOKPLOY_COMPOSE_ID" "$CI_COMMIT_SHORT_SHA" "$CI_PIPELINE_ID")
       echo "Disparando redeploy en Dokploy..."
       curl -sS -X POST "$URL" \
         -H "content-type: application/json" \
