@@ -106,10 +106,12 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    ports:
-      # Para Dokploy: dejar solo "80" (Dokploy gestiona SSL y mapping)
-      # Para local en Mac (donde el puerto 80 lo ocupa Control Center): usar "8080:80"
-      - "${FRONTEND_PORT:-8080}:80"
+    # NOTA: NO se publica `ports:` para Dokploy — Traefik ya expone el servicio
+    # en :80/:443 y hacer el bind directo choca con dokploy-traefik (port already allocated).
+    # Si necesitás publicar el puerto (solo para desarrollo local con `docker compose up`
+    # fuera de Dokploy), agregá:
+    #   ports:
+    #     - "8080:80"
     networks:
       - ligacenter-net
     healthcheck:
