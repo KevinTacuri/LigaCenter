@@ -10,32 +10,41 @@ class Standing extends Model
 
     protected $fillable = [
         'team_id',
-        'discipline_id',
         'category_id',
         'championship_id',
         'matches_played',
-        'matches_won',
-        'matches_drawn',
-        'matches_lost',
+        'points',
+        'wins',
+        'draws',
+        'losses',
         'goals_for',
         'goals_against',
         'goal_difference',
-        'total_points',
+        'wins_total',
+        'losses_total',
+        'sets_for',
+        'sets_against',
+        'sets_ratio',
+        'points_for',
+        'points_against',
+        'points_ratio',
+        'win_percentage',
+        'games_behind',
+        'streak',
         'last_updated',
     ];
 
     protected $casts = [
         'last_updated' => 'datetime',
+        'sets_ratio' => 'float',
+        'points_ratio' => 'float',
+        'win_percentage' => 'float',
+        'games_behind' => 'float',
     ];
 
     public function team()
     {
         return $this->belongsTo(Team::class);
-    }
-
-    public function discipline()
-    {
-        return $this->belongsTo(Discipline::class);
     }
 
     public function category()
@@ -46,5 +55,15 @@ class Standing extends Model
     public function championship()
     {
         return $this->belongsTo(Championship::class);
+    }
+
+    public function getDisciplineIdAttribute()
+    {
+        return $this->category?->championshipDiscipline?->discipline_id;
+    }
+
+    public function getDisciplineAttribute()
+    {
+        return $this->category?->championshipDiscipline?->discipline;
     }
 }

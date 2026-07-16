@@ -114,7 +114,12 @@ class MatchReportController extends Controller
             return $this->errorResponse('Ya existe un acta para este partido', 400);
         }
 
-        $report = MatchReport::create($request->all());
+        $data = $request->all();
+        $data['home_score'] = $data['local_score'];
+        $data['away_score'] = $data['visitor_score'];
+        unset($data['local_score'], $data['visitor_score']);
+
+        $report = MatchReport::create($data);
         return $this->successResponse($report, 'Acta registrada exitosamente', 201);
     }
 
@@ -206,7 +211,17 @@ class MatchReportController extends Controller
             'is_locked' => 'boolean',
         ]);
 
-        $report->update($request->all());
+        $data = $request->all();
+        if (isset($data['local_score'])) {
+            $data['home_score'] = $data['local_score'];
+            unset($data['local_score']);
+        }
+        if (isset($data['visitor_score'])) {
+            $data['away_score'] = $data['visitor_score'];
+            unset($data['visitor_score']);
+        }
+
+        $report->update($data);
         return $this->successResponse($report, 'Acta actualizada exitosamente');
     }
 
@@ -250,22 +265,32 @@ class MatchReportController extends Controller
             return $this->errorResponse('Partido no encontrado', 404);
         }
 
-        $tournamentId = $request->input('tournament_id', null);
+        $isWalkover = strpos($report->observations ?? '', 'WALKOVER') !== false || 
+                      strpos($report->observations ?? '', 'W.O.') !== false;
 
+        $tournamentId = $request->input('tournament_id', null);
+        
+        // SIEMPRE actualizar la tabla de posiciones (incluso para Walkover)
         $this->standingService->updateFromMatch($match, $report->local_score, $report->visitor_score);
 
-        $this->playerStatisticService->updateFromMatch($match, $tournamentId);
-
-        $this->sanctionService->generateAutomaticSanctions($match->id);
+        // Solo actualizar estadisticas de jugadores y sanciones si NO es WO
+        if (!$isWalkover) {
+            $this->playerStatisticService->updateFromMatch($match, $tournamentId);
+            $this->sanctionService->generateAutomaticSanctions($match->id);
+        } else {
+            \Log::info('Walkover detectado para el partido ' . $match->id . '. Tabla de posiciones actualizada, estadisticas y sanciones omitidas.');
+        }
 
         $report->update(['is_locked' => true]);
-
         $match->update(['status' => 'finalizado']);
+
+        // Disparar evento de WebSocket
+        event(new \App\Events\MatchUpdated($match));
 
         return $this->successResponse([
             'report' => $report,
             'match' => $match,
-        ], 'Acta bloqueada exitosamente. Tabla de posiciones, estadísticas de jugadores y sanciones actualizadas.');
+        ], 'Acta bloqueada exitosamente.');
     }
 
     #[OA\Delete(

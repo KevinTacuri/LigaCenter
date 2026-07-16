@@ -3,6 +3,17 @@ import axios, { type AxiosResponse } from 'axios';
 // URL base para la API del backend
 const URL_BASE_API = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 
+// URL base del storage público de Laravel (sin el sufijo /api)
+const URL_STORAGE_BASE = URL_BASE_API.replace(/\/api\/?$/, '');
+
+// Convierte un path relativo del storage de Laravel (ej. "teams/logos/x.png")
+// en una URL completa y usable en <img src>. Si ya es una URL absoluta (http/https), la deja igual.
+export const resolverUrlImagen = (path?: string | null): string | null => {
+  if (!path) return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return `${URL_STORAGE_BASE}/storage/${path}`;
+};
+
 // Interfaz para respuestas estándar de la API
 export interface RespuestaApi<T = any> {
   success: boolean;
@@ -20,6 +31,12 @@ export interface Usuario {
   is_active: boolean;
   roles: string[];
   permissions?: string[];
+  championship_memberships?: {
+    championship_id: number;
+    role: 'organizer' | 'referee' | 'team_delegate' | 'score_table';
+    team_id?: number | null;
+    team_name?: string | null;
+  }[];
 }
 
 // Datos de retorno al iniciar sesión o registrarse
@@ -65,6 +82,23 @@ clienteApi.interceptors.request.use(
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // ── NUEVO: si el body es FormData, dejar que el navegador/Axios
+    // generen el Content-Type con el boundary correcto.
+    if (config.data instanceof FormData && config.headers) {
+      const hdrs = config.headers as any;
+      const keysToDelete = ['Content-Type', 'content-type'];
+      keysToDelete.forEach(key => {
+        delete hdrs[key];
+        if (hdrs.common) delete hdrs.common[key];
+        if (hdrs.post) delete hdrs.post[key];
+        if (hdrs.put) delete hdrs.put[key];
+        if (typeof hdrs.delete === 'function') {
+          hdrs.delete(key);
+        }
+      });
+    }
+
     const championshipId = localStorage.getItem('campeonato_activo_id');
     if (championshipId && config.headers) {
       config.headers['X-Championship-ID'] = championshipId;
@@ -103,8 +137,8 @@ clienteApi.interceptors.request.use(
 // Interceptor para normalizar respuestas y capturar errores de autenticación
 clienteApi.interceptors.response.use(
   (response) => {
-    // Normalizar la respuesta si no viene envuelta en { success, data }
-    if (response.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
+    // Normalizar la respuesta si no viene envuelta en { success, data } y no es un Blob
+    if (response.data && typeof response.data === 'object' && !Array.isArray(response.data) && !(response.data instanceof Blob)) {
       const keys = Object.keys(response.data);
       const isWrapped = keys.includes('success') && keys.includes('data');
       if (!isWrapped) {
@@ -128,7 +162,10 @@ clienteApi.interceptors.response.use(
       // Si el token es inválido o expiró, removemos los datos locales
       localStorage.removeItem('token_autenticacion');
       localStorage.removeItem('usuario_actual');
-      // Podríamos redirigir a login, pero dejamos que el Contexto de Autenticación lo maneje
+      localStorage.removeItem('campeonato_activo_id');
+      localStorage.removeItem('campeonato_activo_name');
+      localStorage.removeItem('campeonato_activo_type');
+      localStorage.removeItem('campeonato_activo_status');
     }
     return Promise.reject(error);
   }
@@ -232,6 +269,18 @@ export interface Disciplina {
   status: string;
 }
 
+export interface ChampionshipDiscipline {
+  id: number;
+  championship_id: number;
+  discipline_id: number;
+  specific_rules?: {
+    match_duration?: number;
+    substitutions_limit?: number;
+    [key: string]: any;
+  } | null;
+  discipline?: Disciplina;
+}
+
 export interface Categoria {
   id: number;
   name: string;
@@ -239,9 +288,14 @@ export interface Categoria {
   age_max?: number | null;
   gender: string;
   gender_type?: string;
-  discipline_id: number;
-  championship_id: number;
-  discipline?: Disciplina;
+  championship_discipline_id: number;
+  championship_discipline?: ChampionshipDiscipline;
+  format?: 'liga' | 'grupos' | 'eliminacion_directa';
+  format_settings?: {
+    num_groups?: number;
+    advance_per_group?: number;
+    third_place?: boolean;
+  } | null;
 }
 
 export interface Organizacion {
@@ -253,11 +307,23 @@ export interface Organizacion {
 export interface Equipo {
   id: number;
   name: string;
-  logo_url?: string | null;
+  logo?: string | null;
   representative?: string | null;
-  organization_id: number;
-  organization?: Organizacion;
   registration_status?: 'pendiente' | 'aprobado' | 'rechazado';
+  category?: {
+    id: number;
+    name: string;
+    gender_type?: string | null;
+  } | null;
+  discipline?: {
+    id: number;
+    name: string;
+  } | null;
+  delegate?: {
+    id: number;
+    name: string;
+    email: string;
+  } | null;
 }
 
 export interface Jugador {
@@ -268,6 +334,7 @@ export interface Jugador {
   team_id: number;
   number?: number | null;
   position?: string | null;
+  photo?: string | null;
   team?: Equipo;
 }
 
@@ -285,12 +352,16 @@ export interface Partido {
   venue_id?: number | null;
   discipline_id: number;
   category_id: number;
-  local_team_id: number;
-  visitor_team_id: number;
+  local_team_id: number | null;
+  visitor_team_id: number | null;
   match_date?: string | null;
   match_time?: string | null;
   round: number;
+  phase?: string | null;
+  group_id?: number | null;
   status: string;
+  home_score?: number | null;
+  away_score?: number | null;
   venue?: Escenario;
   discipline?: Disciplina;
   category?: Categoria;
@@ -298,6 +369,14 @@ export interface Partido {
   visitor_team?: Equipo;
   report?: ActaPartido;
   incidences?: Incidencia[];
+  current_elapsed_time?: number;
+  current_period?: number;
+  timer_status?: 'stopped' | 'running' | 'paused' | 'finished';
+  timer_started_at?: string | null;
+  parent_home_match_id?: number | null;
+  parent_away_match_id?: number | null;
+  placeholder_text_home?: string | null;
+  placeholder_text_away?: string | null;
 }
 
 export interface ActaPartido {
@@ -318,6 +397,7 @@ export interface Incidencia {
   team_id: number;
   incidence_type: 'goal' | 'yellow_card' | 'red_card' | 'foul' | 'injury';
   minute: number;
+  second?: number | null;
   description?: string | null;
   player?: Jugador;
 }
@@ -337,19 +417,57 @@ export interface Sancion {
 }
 
 export interface Posicion {
-  id: number;
+  id?: number | null;
   team_id: number;
-  discipline_id: number;
+  discipline_id?: number;
   category_id: number;
   matches_played: number;
-  matches_won: number;
-  matches_drawn: number;
-  matches_lost: number;
+  matches_won?: number;
+  matches_drawn?: number;
+  matches_lost?: number;
+  wins: number;
+  draws: number;
+  losses: number;
   goals_for: number;
   goals_against: number;
   goal_difference: number;
-  total_points: number;
+  total_points?: number;
+  points: number;
   team?: Equipo;
+  championship_id?: number;
+  last_updated?: string | null;
+  wins_total?: number;
+  losses_total?: number;
+  sets_for?: number;
+  sets_against?: number;
+  sets_ratio?: number;
+  points_for?: number;
+  points_against?: number;
+  points_ratio?: number;
+  win_percentage?: number;
+  games_behind?: number;
+  streak?: string | null;
+}
+export interface TipoEstadistica {
+  id: number;
+  order: number;
+  statistic_type: {
+    id: number;
+    slug: string;
+    display_name: string;
+  };
+}
+
+export interface RankingItem {
+  player_id: number;
+  player_name: string;
+  team: string | null;
+  value: number;
+  statistic: {
+    id: number;
+    slug: string;
+    display_name: string;
+  };
 }
 
 export interface EstadisticaJugador {
@@ -380,44 +498,81 @@ export const serviciosParticipantes = {
     return res.data;
   },
 
-  // Categorías
-  obtenerCategorias: async (): Promise<RespuestaApi<Categoria[]>> => {
-    const res = await clienteApi.get('/categories');
+  // Disciplinas de Campeonato (ChampionshipDiscipline)
+  obtenerDisciplinasCampeonato: async (championshipId: number): Promise<RespuestaApi<ChampionshipDiscipline[]>> => {
+    const res = await clienteApi.get(`/championships/${championshipId}/disciplines`);
     return res.data;
   },
-  crearCategoria: async (datos: any): Promise<RespuestaApi<Categoria>> => {
-    const res = await clienteApi.post('/categories', datos);
+  agregarDisciplinaCampeonato: async (championshipId: number, datos: { discipline_id: number; specific_rules?: any }): Promise<RespuestaApi<ChampionshipDiscipline>> => {
+    const res = await clienteApi.post(`/championships/${championshipId}/disciplines`, datos);
+    return res.data;
+  },
+  eliminarDisciplinaCampeonato: async (id: number): Promise<RespuestaApi<null>> => {
+    const res = await clienteApi.delete(`/championship-disciplines/${id}`);
+    return res.data;
+  },
+
+  // Categorías
+  obtenerCategorias: async (championshipDisciplineId: number): Promise<RespuestaApi<Categoria[]>> => {
+    const res = await clienteApi.get(`/championship-disciplines/${championshipDisciplineId}/categories`);
+    return res.data;
+  },
+  obtenerCategoriasPorCampeonato: async (championshipId: number): Promise<RespuestaApi<Categoria[]>> => {
+    const res = await clienteApi.get(`/championships/${championshipId}/categories`);
+    return res.data;
+  },
+  crearCategoria: async (championshipDisciplineId: number, datos: any): Promise<RespuestaApi<Categoria>> => {
+    const res = await clienteApi.post(`/championship-disciplines/${championshipDisciplineId}/categories`, datos);
+    return res.data;
+  },
+  crearCategoriaPorCampeonato: async (championshipId: number, datos: any): Promise<RespuestaApi<Categoria>> => {
+    const res = await clienteApi.post(`/championships/${championshipId}/categories`, datos);
+    return res.data;
+  },
+  actualizarCategoria: async (id: number, datos: any): Promise<RespuestaApi<Categoria>> => {
+    const res = await clienteApi.put(`/categories/${id}`, datos);
     return res.data;
   },
   eliminarCategoria: async (id: number): Promise<RespuestaApi<null>> => {
     const res = await clienteApi.delete(`/categories/${id}`);
     return res.data;
   },
+  obtenerGrupos: async (categoryId: number): Promise<RespuestaApi<any[]>> => {
+    const res = await clienteApi.get(`/groups?category_id=${categoryId}`);
+    return res.data;
+  },
 
-  // Organizaciones
-  obtenerOrganizaciones: async (): Promise<RespuestaApi<Organizacion[]>> => {
-    const res = await clienteApi.get('/organizations');
-    return res.data;
-  },
-  crearOrganizacion: async (datos: any): Promise<RespuestaApi<Organizacion>> => {
-    const res = await clienteApi.post('/organizations', datos);
-    return res.data;
-  },
-  eliminarOrganizacion: async (id: number): Promise<RespuestaApi<null>> => {
-    const res = await clienteApi.delete(`/organizations/${id}`);
-    return res.data;
-  },
+  // Importar categorías y equipos desde un archivo CSV o Excel
+  importarCategoriasYEquipos: async (championshipId: number, datos: FormData) => {
+  const res = await clienteApi.post(`/championships/${championshipId}/import`, datos);
+  return res.data;
+},
 
   // Equipos
   obtenerEquipos: async (): Promise<RespuestaApi<Equipo[]>> => {
     const res = await clienteApi.get('/teams');
     return res.data;
   },
+  obtenerEquiposPorCategoria: async (categoryId: number): Promise<RespuestaApi<Equipo[]>> => {
+    const res = await clienteApi.get(`/categories/${categoryId}/teams`);
+    return res.data;
+  },
   crearEquipo: async (datos: any): Promise<RespuestaApi<Equipo>> => {
+    if (datos instanceof FormData) {
+      const res = await clienteApi.post('/teams', datos); // ← sin headers manuales
+      return res.data;
+    }
     const res = await clienteApi.post('/teams', datos);
     return res.data;
   },
   actualizarEquipo: async (id: number, datos: any): Promise<RespuestaApi<Equipo>> => {
+    if (datos instanceof FormData) {
+      if (!datos.has('_method')) {
+        datos.append('_method', 'PUT');
+      }
+      const res = await clienteApi.post(`/teams/${id}`, datos); // ← sin headers manuales
+      return res.data;
+    }
     const res = await clienteApi.put(`/teams/${id}`, datos);
     return res.data;
   },
@@ -439,6 +594,21 @@ export const serviciosParticipantes = {
     const res = await clienteApi.delete(`/players/${id}`);
     return res.data;
   },
+  // Actualizar datos de un jugador
+  actualizarJugador: async (
+    id: number,
+    datos: any
+  ): Promise<RespuestaApi<Jugador>> => {
+    if (datos instanceof FormData) {
+      if (!datos.has('_method')) {
+        datos.append('_method', 'PUT');
+      }
+      const res = await clienteApi.post(`/players/${id}`, datos);
+      return res.data;
+    }
+    const res = await clienteApi.put(`/players/${id}`, datos);
+    return res.data;
+  },
 };
 
 /**
@@ -452,6 +622,10 @@ export const serviciosFixture = {
   },
   crearEscenario: async (datos: any): Promise<RespuestaApi<Escenario>> => {
     const res = await clienteApi.post('/venues', datos);
+    return res.data;
+  },
+  actualizarEscenario: async (id: number, datos: any): Promise<RespuestaApi<Escenario>> => {
+    const res = await clienteApi.put(`/venues/${id}`, datos);
     return res.data;
   },
   eliminarEscenario: async (id: number): Promise<RespuestaApi<null>> => {
@@ -470,6 +644,16 @@ export const serviciosFixture = {
   },
   reprogramarPartido: async (id: number, datos: { match_date: string; match_time: string; venue_id: number }): Promise<RespuestaApi<Partido>> => {
     const res = await clienteApi.put(`/matches/${id}/reschedule`, datos);
+    return res.data;
+  },
+
+  sincronizarTimer: async (id: number, datos: {
+  current_elapsed_time: number;
+  current_period: number;
+  timer_status: 'stopped' | 'running' | 'paused' | 'finished';
+  timer_started_at: string | null;
+  }): Promise<RespuestaApi<any>> => {
+    const res = await clienteApi.put(`/matches/${id}/sync-timer`, datos);
     return res.data;
   },
 
@@ -557,8 +741,12 @@ export const serviciosResultados = {
   },
 
   // Sanciones
-  obtenerSanciones: async (): Promise<RespuestaApi<Sancion[]>> => {
-    const res = await clienteApi.get('/sanctions');
+  obtenerSanciones: async (teamId?: number): Promise<RespuestaApi<Sancion[]>> => {
+    const res = await clienteApi.get('/sanctions', { params: teamId ? { team_id: teamId } : undefined });
+    return res.data;
+  },
+  obtenerReportePartido: async (matchId: number): Promise<RespuestaApi<any>> => {
+    const res = await clienteApi.get(`/match-reports/by-match/${matchId}`);
     return res.data;
   },
 
@@ -573,17 +761,42 @@ export const serviciosResultados = {
     return res.data;
   },
 
-  // Estadísticas generales
-  obtenerGoleadores: async (): Promise<RespuestaApi<EstadisticaJugador[]>> => {
-    const res = await clienteApi.get('/statistics/top-scorers');
+  // Estadísticas generales y dinámicas
+  obtenerEstadisticasPorDisciplina: async (disciplineId: number): Promise<RespuestaApi<TipoEstadistica[]>> => {
+    const res = await clienteApi.get(`/disciplines/${disciplineId}/statistics`);
     return res.data;
   },
-  obtenerTarjetasAmarillas: async (): Promise<RespuestaApi<EstadisticaJugador[]>> => {
-    const res = await clienteApi.get('/statistics/top-yellow-cards');
+  obtenerRankingEstadisticas: async (params: {
+    discipline_id: number;
+    statistic_type_id: number;
+    championship_id?: number;
+    category_id?: number;
+    limit?: number;
+  }): Promise<RespuestaApi<RankingItem[]>> => {
+    let url = '/statistics/ranking';
+    const parts: string[] = [];
+    parts.push(`discipline_id=${params.discipline_id}`);
+    parts.push(`statistic_type_id=${params.statistic_type_id}`);
+    if (params.championship_id) parts.push(`championship_id=${params.championship_id}`);
+    if (params.category_id) parts.push(`category_id=${params.category_id}`);
+    if (params.limit) parts.push(`limit=${params.limit}`);
+    url += `?${parts.join('&')}`;
+    const res = await clienteApi.get(url);
     return res.data;
   },
-  obtenerTarjetasRojas: async (): Promise<RespuestaApi<EstadisticaJugador[]>> => {
-    const res = await clienteApi.get('/statistics/top-red-cards');
+
+  obtenerPosicionesCompletas: async (params: {
+    championship_id: number;
+    category_id: number;
+    discipline_id?: number;
+  }): Promise<RespuestaApi<any[]>> => {
+    let url = '/standings/complete';
+    const parts: string[] = [];
+    parts.push(`championship_id=${params.championship_id}`);
+    parts.push(`category_id=${params.category_id}`);
+    if (params.discipline_id) parts.push(`discipline_id=${params.discipline_id}`);
+    url += `?${parts.join('&')}`;
+    const res = await clienteApi.get(url);
     return res.data;
   },
 };
@@ -597,6 +810,22 @@ export interface Campeonato {
   type: 'basico' | 'completo';
   status: string;
   user_id?: number;
+  rules_pdf?: string | null;
+  settings?: any;
+  description?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  is_public?: boolean;
+}
+
+export interface ChampionshipUser {
+  id: number;
+  championship_id: number;
+  user_id: number;
+  role: 'team_delegate' | 'score_table' | string;
+  team_id?: number | null;
+  user?: Usuario;
+  team?: Equipo;
 }
 
 export interface TenantInfo {
@@ -611,6 +840,36 @@ export interface TenantInfo {
  * Servicios de SaaS
  */
 export const serviciosCampeonatos = {
+  obtenerCampeonato: async (id: number): Promise<RespuestaApi<Campeonato>> => {
+    try {
+      const res = await clienteApi.get(`/championships/${id}`);
+      return res.data;
+    } catch (err) {
+      const locales = localStorage.getItem('campeonatos_simulados');
+      const lista: Campeonato[] = locales ? JSON.parse(locales) : [];
+      const found = lista.find((c) => c.id === id);
+      if (found) {
+        return { success: true, data: found, message: 'Retornado de fallback local' };
+      }
+      return { success: false, data: null as any, message: 'Campeonato no encontrado' };
+    }
+  },
+  obtenerUsuariosCampeonato: async (championshipId: number): Promise<RespuestaApi<ChampionshipUser[]>> => {
+    const res = await clienteApi.get(`/championships/${championshipId}/users`);
+    return res.data;
+  },
+  agregarUsuarioCampeonato: async (championshipId: number, datos: { user_id: number; role: string; team_id?: number | null }): Promise<RespuestaApi<ChampionshipUser>> => {
+    const res = await clienteApi.post(`/championships/${championshipId}/users`, datos);
+    return res.data;
+  },
+  actualizarRolUsuarioCampeonato: async (id: number, datos: { role: string; team_id?: number | null }): Promise<RespuestaApi<ChampionshipUser>> => {
+    const res = await clienteApi.put(`/championship-users/${id}`, datos);
+    return res.data;
+  },
+  removerUsuarioCampeonato: async (id: number): Promise<RespuestaApi<null>> => {
+    const res = await clienteApi.delete(`/championship-users/${id}`);
+    return res.data;
+  },
   obtenerCampeonatos: async (): Promise<RespuestaApi<Campeonato[]>> => {
     try {
       const res = await clienteApi.get('/championships');
@@ -619,8 +878,8 @@ export const serviciosCampeonatos = {
       // Fallback a localStorage si el backend no ha implementado la ruta
       const locales = localStorage.getItem('campeonatos_simulados');
       const lista: Campeonato[] = locales ? JSON.parse(locales) : [
-        { id: 1, name: 'Liga de Fútbol Intercolegios', type: 'basico', status: 'en_curso' },
-        { id: 2, name: 'Campeonato Colegio de Ingenieros Arequipa', type: 'completo', status: 'creado' }
+        { id: 1, name: 'Liga de Fútbol Intercolegios', type: 'basico', status: 'en_curso', rules_pdf: null },
+        { id: 2, name: 'Campeonato Colegio de Ingenieros Arequipa', type: 'completo', status: 'creado', rules_pdf: null }
       ];
       if (!locales) {
         localStorage.setItem('campeonatos_simulados', JSON.stringify(lista));
@@ -628,7 +887,7 @@ export const serviciosCampeonatos = {
       return { success: true, data: lista, message: 'Retornado de fallback local' };
     }
   },
-  crearCampeonato: async (datos: { name: string; type: 'basico' | 'completo' }): Promise<RespuestaApi<Campeonato>> => {
+  crearCampeonato: async (datos: any): Promise<RespuestaApi<Campeonato>> => {
     try {
       const res = await clienteApi.post('/championships', datos);
       return res.data;
@@ -636,32 +895,71 @@ export const serviciosCampeonatos = {
       // Fallback
       const locales = localStorage.getItem('campeonatos_simulados');
       const lista: Campeonato[] = locales ? JSON.parse(locales) : [];
+      let name = '';
+      let type: 'basico' | 'completo' = 'basico';
+      if (datos instanceof FormData) {
+        name = datos.get('name') as string || '';
+        type = (datos.get('type') as 'basico' | 'completo') || 'basico';
+      } else if (datos) {
+        name = datos.name || '';
+        type = datos.type || 'basico';
+      }
       const nuevo: Campeonato = {
         id: lista.length > 0 ? Math.max(...lista.map((c) => c.id)) + 1 : 1,
-        name: datos.name,
-        type: datos.type,
-        status: 'creado'
+        name: name,
+        type: type,
+        status: 'creado',
+        rules_pdf: null
       };
       lista.push(nuevo);
       localStorage.setItem('campeonatos_simulados', JSON.stringify(lista));
       return { success: true, data: nuevo, message: 'Guardado en fallback local' };
+    }
+  },
+  descargarReglamento: async (id: number): Promise<Blob> => {
+    const res = await clienteApi.get(`/championships/${id}/rules`, {
+      responseType: 'blob'
+    });
+    return res.data;
+  },
+  actualizarCampeonato: async (id: number, datos: any): Promise<RespuestaApi<Campeonato>> => {
+    if (datos instanceof FormData) {
+      if (!datos.has('_method')) {
+        datos.append('_method', 'PUT');
+      }
+      const res = await clienteApi.post(`/championships/${id}`, datos);
+      return res.data;
+    } else {
+      const res = await clienteApi.put(`/championships/${id}`, datos);
+      return res.data;
+    }
+  },
+  eliminarCampeonato: async (id: number): Promise<RespuestaApi<null>> => {
+    try {
+      const res = await clienteApi.delete(`/championships/${id}`);
+      return res.data;
+    } catch (err) {
+      // Fallback a localStorage si el backend falla o no lo implementa
+      const locales = localStorage.getItem('campeonatos_simulados');
+      if (locales) {
+        const lista: Campeonato[] = JSON.parse(locales);
+        const filtrada = lista.filter((c) => c.id !== id);
+        localStorage.setItem('campeonatos_simulados', JSON.stringify(filtrada));
+      }
+      return { success: true, data: null, message: 'Campeonato eliminado (fallback)' };
     }
   }
 };
 
 export const serviciosSuperAdmin = {
   obtenerTenants: async (): Promise<RespuestaApi<TenantInfo[]>> => {
-    try {
-      const res = await clienteApi.get('/admin/tenants');
-      return res.data;
-    } catch (err) {
-      // Fallback
-      const lista: TenantInfo[] = [
-        { id: 1, name: 'Organizador', email: 'organizador@ligacenter.com', championships_count: 2, is_active: true },
-        { id: 2, name: 'Juan Pérez', email: 'juan@ligacenter.com', championships_count: 1, is_active: true },
-        { id: 3, name: 'Mesa Control', email: 'mesa@ligacenter.com', championships_count: 0, is_active: true }
-      ];
-      return { success: true, data: lista, message: 'Retornado de fallback local' };
-    }
+    // Retornar directamente la lista de mock/fallback local sin hacer la petición HTTP
+    // ya que el backend no implementa este endpoint (es una simulación SaaS)
+    const lista: TenantInfo[] = [
+      { id: 1, name: 'Organizador', email: 'organizador@ligacenter.com', championships_count: 2, is_active: true },
+      { id: 2, name: 'Juan Pérez', email: 'juan@ligacenter.com', championships_count: 1, is_active: true },
+      { id: 3, name: 'Mesa Control', email: 'mesa@ligacenter.com', championships_count: 0, is_active: true }
+    ];
+    return { success: true, data: lista, message: 'Retornado de mock local' };
   }
 };

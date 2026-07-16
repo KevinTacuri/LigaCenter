@@ -16,19 +16,19 @@ class SanctionService
         foreach ($incidences as $incidence) {
             if ($incidence->incidence_type === 'red_card' && $incidence->player_id) {
                 $existingSanction = Sanction::where('player_id', $incidence->player_id)
-                    ->where('origin_match_id', $matchId)
+                    ->where('match_id', $matchId)
                     ->where('sanction_type', 'Suspension')
                     ->first();
 
                 if (!$existingSanction) {
                     $sanction = Sanction::create([
                         'player_id' => $incidence->player_id,
-                        'origin_match_id' => $matchId,
+                        'match_id' => $matchId,
                         'sanction_type' => 'Suspension',
                         'reason' => 'Suspensión automática por tarjeta roja',
                         'start_date' => Carbon::now(),
                         'end_date' => Carbon::now()->addDays(1),
-                        'duration' => 1,
+                        'matches_suspended' => 1,
                         'status' => 'activa',
                     ]);
 
@@ -50,12 +50,12 @@ class SanctionService
                     if (!$existingSanction) {
                         $sanction = Sanction::create([
                             'player_id' => $incidence->player_id,
-                            'origin_match_id' => $matchId,
+                            'match_id' => $matchId,
                             'sanction_type' => 'yellow_accumulation',
                             'reason' => 'Acumulación de tarjetas amarillas',
                             'start_date' => Carbon::now(),
                             'end_date' => Carbon::now()->addDays(1),
-                            'duration' => 1,
+                            'matches_suspended' => 1,
                             'status' => 'activa',
                         ]);
 

@@ -29,7 +29,9 @@ class UserController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        $users = User::with('roles')->paginate(15);
+        $users = User::whereHas('roles', function($query) {
+            $query->where('name', '!=', 'usuario_publico');
+        })->with('roles')->paginate(15);
 
         return $this->successResponse([
             'users' => $users->items(),

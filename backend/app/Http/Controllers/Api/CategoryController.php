@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
+use App\Models\ChampionshipDiscipline;
+use App\Models\Championship;
 
 #[OA\Tag(
     name: "Categories",
@@ -14,55 +16,103 @@ use OpenApi\Attributes as OA;
 class CategoryController extends Controller
 {
     #[OA\Get(
-        path: "/api/categories",
+        path: "/api/championship-disciplines/{championshipDiscipline}/categories",
         summary: "Listar categorías",
-        description: "Retorna todas las categorías registradas en el sistema, incluyendo los equipos asociados a cada categoría.",
+        description: "Retorna todas las categorías registradas para una disciplina específica de un campeonato, incluyendo los equipos asociados a cada categoría.",
         tags: ["Categories"],
         parameters: [
-            new OA\Parameter(name: "championship_id", in: "query", required: true, schema: new OA\Schema(type: "integer")),
-            new OA\Parameter(name: "discipline_id", in: "query", required: false, schema: new OA\Schema(type: "integer"))
+            new OA\Parameter(
+                name: "championshipDiscipline",
+                description: "ID de la disciplina asociada al campeonato",
+                in: "path",
+                required: true,
+                schema: new OA\Schema(type: "integer")
+            )
         ],
         responses: [
             new OA\Response(
                 response: 200,
                 description: "Lista de categorías obtenida correctamente"
+            ),
+            new OA\Response(
+                response: 404,
+                description: "La disciplina del campeonato no existe"
             )
         ]
     )]
-    public function index(Request $request)
+    public function index(ChampionshipDiscipline $championshipDiscipline)
     {
-        $request->validate([
-            'championship_id' => 'required|exists:championships,id',
-            'discipline_id' => 'nullable|exists:disciplines,id',
-        ]);
-
-        $query = Category::where('championship_id', $request->championship_id);
-
-        if ($request->has('discipline_id')) {
-            $query->where('discipline_id', $request->discipline_id);
-        }
-
-        return response()->json($query->with(['teams', 'discipline'])->get());
+        return response()->json(
+            Category::where(
+                'championship_discipline_id',
+                $championshipDiscipline->id
+            )
+                ->with(['teams', 'championshipDiscipline.discipline'])
+                ->get()
+        );
     }
 
     #[OA\Post(
-        path: "/api/categories",
+        path: "/api/championship-disciplines/{championshipDiscipline}/categories",
         summary: "Crear categoría",
-        description: "Registra una nueva categoría en el sistema. Las categorías se utilizan para agrupar equipos según rangos de edad.",
+        description: "Registra una nueva categoría para una disciplina específica de un campeonato. Las categorías se utilizan para agrupar equipos según rangos de edad y definir el formato de competición.",
         tags: ["Categories"],
+        parameters: [
+            new OA\Parameter(
+                name: "championshipDiscipline",
+                description: "ID de la disciplina asociada al campeonato",
+                in: "path",
+                required: true,
+                schema: new OA\Schema(type: "integer")
+            )
+        ],
         requestBody: new OA\RequestBody(
             required: true,
             description: "Datos necesarios para crear una categoría",
             content: new OA\JsonContent(
-                required: ["championship_id", "discipline_id", "name"],
+                required: ["name"],
                 properties: [
-                    new OA\Property(property: "championship_id", type: "integer", example: 1),
-                    new OA\Property(property: "discipline_id", type: "integer", example: 1),
-                    new OA\Property(property: "name", type: "string", description: "Nombre de la categoría", example: "Sub-15"),
-                    new OA\Property(property: "description", type: "string", description: "Descripción de la categoría", example: "Categoría para menores de 15 años"),
-                    new OA\Property(property: "gender_type", type: "string", description: "Género de la categoría", example: "Masculino"),
-                    new OA\Property(property: "age_min", type: "integer", example: 10),
-                    new OA\Property(property: "age_max", type: "integer", example: 15)
+                    new OA\Property(
+                        property: "name",
+                        type: "string",
+                        description: "Nombre de la categoría",
+                        example: "Sub-15"
+                    ),
+                    new OA\Property(
+                        property: "format",
+                        type: "string",
+                        description: "Formato de competición",
+                        enum: ["liga", "grupos", "eliminacion_directa"],
+                        example: "grupos"
+                    ),
+                    new OA\Property(
+                        property: "format_settings",
+                        type: "object",
+                        description: "Configuración JSON según el formato elegido",
+                        example: "{\"num_groups\":4,\"advance_per_group\":2,\"third_place\":true}"
+                    ),
+                    new OA\Property(
+                        property: "description",
+                        type: "string",
+                        description: "Descripción de la categoría",
+                        example: "Categoría para menores de 15 años"
+                    ),
+                    new OA\Property(
+                        property: "gender_type",
+                        type: "string",
+                        description: "Género de la categoría",
+                        example: "Masculino"
+                    ),
+                    new OA\Property(
+                        property: "age_min",
+                        type: "integer",
+                        example: 10
+                    ),
+                    new OA\Property(
+                        property: "age_max",
+                        type: "integer",
+                        example: 15
+                    )
                 ]
             )
         ),
@@ -72,22 +122,31 @@ class CategoryController extends Controller
                 description: "Categoría creada exitosamente"
             ),
             new OA\Response(
+                response: 404,
+                description: "La disciplina del campeonato no existe"
+            ),
+            new OA\Response(
                 response: 422,
                 description: "Error de validación en los datos enviados"
             )
         ]
-    )]
-    public function store(Request $request)
+    )] 
+    public function store(Request $request, ChampionshipDiscipline $championshipDiscipline)
     {
         $validated = $request->validate([
-            'championship_id' => 'required|exists:championships,id',
-            'discipline_id' => 'required|exists:disciplines,id',
             'name' => 'required|string|max:255',
+            'format' => 'nullable|string|in:liga,grupos,eliminacion_directa',
+            'format_settings' => 'nullable|array',
+            'format_settings.num_groups' => 'required_if:format,grupos|integer|min:1',
+            'format_settings.advance_per_group' => 'required_if:format,grupos|integer|min:1',
+            'format_settings.third_place' => 'nullable|boolean',
             'description' => 'nullable|string',
             'gender_type' => 'nullable|string|in:Masculino,Femenino,Mixto',
             'age_min' => 'nullable|integer|min:0',
             'age_max' => 'nullable|integer|min:0',
         ]);
+
+        $validated['championship_discipline_id'] = $championshipDiscipline->id;
 
         $category = Category::create($validated);
 
@@ -97,7 +156,7 @@ class CategoryController extends Controller
     #[OA\Get(
         path: "/api/categories/{id}",
         summary: "Obtener categoría por ID",
-        description: "Devuelve la información detallada de una categoría específica junto con sus equipos asociados.",
+        description: "Devuelve la información detallada de una categoría específica junto con los equipos asociados y la disciplina del campeonato a la que pertenece.",
         tags: ["Categories"],
         parameters: [
             new OA\Parameter(
@@ -122,14 +181,17 @@ class CategoryController extends Controller
     public function show($id)
     {
         return response()->json(
-            Category::with(['teams', 'discipline'])->findOrFail($id)
+            Category::with([
+                'teams',
+                'championshipDiscipline.discipline'
+            ])->findOrFail($id)
         );
     }
 
     #[OA\Put(
         path: "/api/categories/{id}",
         summary: "Actualizar categoría",
-        description: "Permite actualizar la información de una categoría existente.",
+        description: "Permite actualizar la información de una categoría existente, incluyendo su formato de competición.",
         tags: ["Categories"],
         parameters: [
             new OA\Parameter(
@@ -145,11 +207,47 @@ class CategoryController extends Controller
             description: "Campos opcionales para actualizar la categoría",
             content: new OA\JsonContent(
                 properties: [
-                    new OA\Property(property: "name", type: "string", description: "Nuevo nombre de la categoría", example: "Sub-15 A"),
-                    new OA\Property(property: "description", type: "string", description: "Nueva descripción", example: "Categoría actualizada"),
-                    new OA\Property(property: "gender_type", type: "string", description: "Nuevo género", example: "Femenino"),
-                    new OA\Property(property: "age_min", type: "integer", example: 12),
-                    new OA\Property(property: "age_max", type: "integer", example: 16)
+                    new OA\Property(
+                        property: "name",
+                        type: "string",
+                        description: "Nuevo nombre de la categoría",
+                        example: "Sub-15 A"
+                    ),
+                    new OA\Property(
+                        property: "format",
+                        type: "string",
+                        description: "Nuevo formato de competición",
+                        enum: ["liga", "grupos", "eliminacion_directa"],
+                        example: "liga"
+                    ),
+                    new OA\Property(
+                        property: "format_settings",
+                        type: "object",
+                        description: "Configuración JSON según el formato elegido",
+                        example: "{\"num_groups\":4,\"advance_per_group\":2,\"third_place\":true}"
+                    ),
+                    new OA\Property(
+                        property: "description",
+                        type: "string",
+                        description: "Nueva descripción",
+                        example: "Categoría actualizada"
+                    ),
+                    new OA\Property(
+                        property: "gender_type",
+                        type: "string",
+                        description: "Nuevo género",
+                        example: "Femenino"
+                    ),
+                    new OA\Property(
+                        property: "age_min",
+                        type: "integer",
+                        example: 12
+                    ),
+                    new OA\Property(
+                        property: "age_max",
+                        type: "integer",
+                        example: 16
+                    )
                 ]
             )
         ),
@@ -161,6 +259,10 @@ class CategoryController extends Controller
             new OA\Response(
                 response: 404,
                 description: "Categoría no encontrada"
+            ),
+            new OA\Response(
+                response: 422,
+                description: "Error de validación"
             )
         ]
     )]
@@ -170,6 +272,11 @@ class CategoryController extends Controller
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
+            'format' => 'sometimes|string|in:liga,grupos,eliminacion_directa',
+            'format_settings' => 'nullable|array',
+            'format_settings.num_groups' => 'required_if:format,grupos|integer|min:1',
+            'format_settings.advance_per_group' => 'required_if:format,grupos|integer|min:1',
+            'format_settings.third_place' => 'nullable|boolean',
             'description' => 'nullable|string',
             'gender_type' => 'nullable|string|in:Masculino,Femenino,Mixto',
             'age_min' => 'nullable|integer|min:0',
@@ -215,5 +322,59 @@ class CategoryController extends Controller
         return response()->json([
             'message' => 'Categoría eliminada correctamente'
         ]);
+    }
+
+    public function indexByChampionship(\App\Models\Championship $championship)
+    {
+        return response()->json(
+            Category::whereHas('championshipDiscipline', function ($query) use ($championship) {
+                $query->where('championship_id', $championship->id);
+            })
+                ->with(['teams', 'championshipDiscipline.discipline'])
+                ->get()
+        );
+    }
+
+    // ==================
+    public function storeByChampionship(Request $request, Championship $championship)
+    {
+        $validated = $request->validate([
+            'discipline_id' => 'required|integer|exists:disciplines,id',
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'gender_type' => 'nullable|string|in:Masculino,Femenino,Mixto',
+            'age_min' => 'nullable|integer|min:0',
+            'age_max' => 'nullable|integer|min:0',
+        ]);
+
+        // 1. Buscar o crear la relación campeonato-disciplina
+        $championshipDiscipline = ChampionshipDiscipline::firstOrCreate([
+            'championship_id' => $championship->id,
+            'discipline_id' => $validated['discipline_id'],
+        ]);
+
+        // 2. Crear categoría usando esa relación
+        $category = Category::create([
+            'championship_discipline_id' => $championshipDiscipline->id,
+            'name' => $validated['name'],
+            //'format' => $validated['format'] ?? null,
+            //'format_settings' => $validated['format_settings'] ?? null,
+            'description' => $validated['description'] ?? null,
+            'gender_type' => $validated['gender_type'] ?? null,
+            'age_min' => $validated['age_min'] ?? null,
+            'age_max' => $validated['age_max'] ?? null,
+            // default values for format and format_settings 
+            'format' => 'liga',
+            'format_settings' => json_encode([
+                'num_groups' => 1,
+                'advance_per_group' => 1,
+                'third_place' => false
+            ]),
+        ]);
+
+        return response()->json([
+            'message' => 'Categoría creada correctamente',
+            'data' => $category->load(['championshipDiscipline.discipline', 'teams'])
+        ], 201);
     }
 }

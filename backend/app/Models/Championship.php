@@ -16,6 +16,7 @@ class Championship extends Model
         'start_date',
         'end_date',
         'is_public',
+        'rules_pdf',
     ];
 
     protected $casts = [
@@ -60,5 +61,16 @@ class Championship extends Model
     public function standings()
     {
         return $this->hasMany(Standing::class);
+    }
+
+    public function championshipDisciplines()
+    {
+        return $this->hasMany(ChampionshipDiscipline::class);
+    }
+
+    public function disciplines()
+    {
+        return $this->belongsToMany(Discipline::class, 'championship_disciplines')
+            ->withTimestamps();
     }
 }

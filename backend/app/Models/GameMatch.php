@@ -14,6 +14,7 @@ class GameMatch extends Model
     protected $appends = [
         'local_team_id',
         'visitor_team_id',
+        'discipline', // ← AGREGAR ESTO
     ];
 
     protected $fillable = [
@@ -25,16 +26,32 @@ class GameMatch extends Model
         'match_date',
         'match_time',
         'round',
+        'phase',
+        'group_id',
         'status',
         'championship_id',
+        'home_score',
+        'away_score',
+        'current_elapsed_time',
+        'current_period',
+        'timer_status',
+        'timer_started_at',
+        'parent_home_match_id',
+        'parent_away_match_id',
+        'placeholder_text_home',
+        'placeholder_text_away',
     ];
 
     protected $casts = [
         'match_date' => 'date',
         'match_time' => 'string',
+        'home_score' => 'integer',
+        'away_score' => 'integer',
+        'current_elapsed_time' => 'integer',
+        'current_period' => 'integer',
+        'timer_started_at' => 'datetime',
     ];
 
-    // Accesores y mutadores para compatibilidad con código que use local_team_id y visitor_team_id
     public function getLocalTeamIdAttribute()
     {
         return $this->attributes['home_team_id'] ?? null;
@@ -53,6 +70,18 @@ class GameMatch extends Model
     public function setVisitorTeamIdAttribute($value)
     {
         $this->attributes['away_team_id'] = $value;
+    }
+
+    // ACCESOR PARA DISCIPLINE
+    public function getDisciplineAttribute()
+    {
+        // Primero intentar con la relacion directa
+        if ($this->relationLoaded('discipline') && $this->discipline) {
+            return $this->discipline;
+        }
+        
+        // Si no, obtener a traves de la categoria
+        return $this->category?->championshipDiscipline?->discipline;
     }
 
     public function venue()
@@ -87,11 +116,27 @@ class GameMatch extends Model
 
     public function incidences()
     {
-        return $this->hasMany(MatchIncidence::class);
+        return $this->hasMany(MatchIncidence::class, 'match_id');
     }
 
     public function championship()
     {
         return $this->belongsTo(Championship::class);
+    }
+
+    public function group()
+    {
+        return $this->belongsTo(Group::class);
+    }
+
+    public function toJson($options = 0)
+    {
+        $data = $this->toArray();
+        $data['current_elapsed_time'] = $this->current_elapsed_time;
+        $data['current_period'] = $this->current_period;
+        $data['timer_status'] = $this->timer_status;
+        $data['timer_started_at'] = $this->timer_started_at;
+        
+        return json_encode($data, $options);
     }
 }

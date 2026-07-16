@@ -12,5 +12,7 @@ Route::middleware(['auth:sanctum', 'championship.access'])->group(function () {
     Route::post('match-reports/{id}/lock', [MatchReportController::class, 'lock']);
     Route::apiResource('match-incidences', MatchIncidenceController::class);
     Route::apiResource('sanctions', SanctionController::class);
+    Route::get('standings/complete', [StandingController::class, 'getCompleteStandings']);
+    Route::get('standings/team/{teamId}', [StandingController::class, 'getByTeam']);
     Route::apiResource('standings', StandingController::class)->only(['index', 'show']);
 });

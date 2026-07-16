@@ -9,22 +9,44 @@ class Sanction extends Model
 {
     use SoftDeletes;
 
+    protected $appends = ['origin_match_id', 'duration'];
+
     protected $fillable = [
         'player_id',
-        'origin_match_id',
+        'match_id',
         'sanction_type',
         'reason',
         'start_date',
         'end_date',
-        'duration',
+        'matches_suspended',
         'status',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
-        'duration' => 'integer',
+        'matches_suspended' => 'integer',
     ];
+
+    public function getOriginMatchIdAttribute()
+    {
+        return $this->match_id;
+    }
+
+    public function setOriginMatchIdAttribute($value)
+    {
+        $this->attributes['match_id'] = $value;
+    }
+
+    public function getDurationAttribute()
+    {
+        return $this->matches_suspended;
+    }
+
+    public function setDurationAttribute($value)
+    {
+        $this->attributes['matches_suspended'] = $value;
+    }
 
     public function player()
     {
@@ -33,6 +55,6 @@ class Sanction extends Model
 
     public function match()
     {
-        return $this->belongsTo(GameMatch::class, 'origin_match_id');
+        return $this->belongsTo(GameMatch::class, 'match_id');
     }
 }

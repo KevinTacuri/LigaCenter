@@ -4,18 +4,27 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Category extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'name',
-        'age_range',
-        'championship_id',
-        'discipline_id',
+        'format',
+        'format_settings',
+        'championship_discipline_id',
         'description',
         'gender_type',
         'age_min',
         'age_max',
+    ];
+
+    protected $casts = [
+        'format_settings' => 'array',
+        'age_min' => 'integer',
+        'age_max' => 'integer',
     ];
 
     public function teams(): HasMany
@@ -23,14 +32,9 @@ class Category extends Model
         return $this->hasMany(Team::class);
     }
 
-    public function championship()
+    public function championshipDiscipline()
     {
-        return $this->belongsTo(Championship::class);
-    }
-
-    public function discipline()
-    {
-        return $this->belongsTo(Discipline::class);
+        return $this->belongsTo(ChampionshipDiscipline::class);
     }
 
     public function matches()
@@ -41,5 +45,10 @@ class Category extends Model
     public function standings()
     {
         return $this->hasMany(Standing::class);
+    }
+
+    public function groups()
+    {
+        return $this->hasMany(Group::class);
     }
 }

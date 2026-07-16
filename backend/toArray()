@@ -1,0 +1,1 @@
+App\Models\Team::all(['id', 'name', 'logo'])-; 
