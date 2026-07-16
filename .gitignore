@@ -1,4 +1,66 @@
+# ============================================================================
+# LigaCenter - .gitignore
+# ============================================================================
+# Notas:
+#   - NO ignorar archivos `.env.example*` (siguen siendo tracked como docs)
+#   - Este gitignore debe revisarse periódicamente porque se omite aquí si
+#     aún quedan secretos en el repo (git filter-repo / BFG necesarios).
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Entorno / secretos
+# ----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.example.production
+
+# Backend Laravel (cache y dependencias, regenerables)
+backend/vendor/
+backend/node_modules/
+backend/public/storage
+backend/storage/*.key
+backend/.phpunit.cache
+backend/.phpunit.result.cache
+backend/storage/framework/cache/data/
+backend/storage/framework/sessions/
+backend/storage/framework/views/
+backend/storage/logs/
+backend/bootstrap/cache/
+backend/.env
+backend/.env.*
+!.backend/.env.example
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.env
+frontend/.env.*
+!.frontend/.env.example
+
+# ----------------------------------------------------------------------------
+# IDE / editores
+# ----------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# ----------------------------------------------------------------------------
+# Logs y archivos generados
+# ----------------------------------------------------------------------------
+*.log
+logs/
+tmp/
+.envrc
+
+# ----------------------------------------------------------------------------
+# Documentación interna (no versionada, manejar aparte)
+# ----------------------------------------------------------------------------
 documentacion/
 recursos/
 avances.md
 solicitudes_backend.md
+.env

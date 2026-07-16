@@ -1,0 +1,152 @@
+# ============================================================================
+# LigaCenter — pipeline CI (GitLab)
+# ============================================================================
+# Etapas:
+#   lint       → análisis estático (frontend: ESLint; backend: sintaxis PHP + composer validate)
+#   test       → tests del backend (PHPUnit) y del frontend (cuando existan)
+#   verify     → chequea que el webhook de Dokploy esté registrado en GitLab
+#                (red de seguridad: si no hay webhook, los push a main no despliegan)
+#
+# Política de pipeline:
+#   - El pipeline se ejecuta únicamente contra la rama `main` y contra MRs cuya
+#     rama destino sea `main`.
+#   - NO hay etapa `deploy` aquí: el deploy lo maneja Dokploy nativamente vía
+#     webhook de GitLab configurado en Settings → Webhooks del repo.
+#     Ver: https://docs.dokploy.com/docs/core/gitlab
+#
+# Variables necesarias (Settings → CI/CD → Variables, masked + protected):
+#   - GITLAB_API_TOKEN          Token de GitLab con scope `api` (para verify)
+# ============================================================================
+
+stages:
+  - lint
+  - test
+  - verify
+
+# ----------------------------------------------------------------------------
+# Variables globales
+# ----------------------------------------------------------------------------
+variables:
+  DOCKER_VERSION: "28.0"
+
+# ----------------------------------------------------------------------------
+# Reglas de ejecución de pipelines (workflow a nivel repo).
+#   - main (push o schedule) → pipeline completo
+#   - MR contra main → pipeline de validación (sin verify)
+#   - Otros push → NO se dispara pipeline
+# ----------------------------------------------------------------------------
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+    # Cualquier otro caso queda fuera. Para otras ramas no hay pipeline.
+
+default:
+  before_script:
+    - set -euo pipefail
+
+# ============================================================================
+# ETAPA 1: LINT
+# ============================================================================
+lint:frontend:
+  stage: lint
+  image: node:24-alpine
+  before_script:
+    - corepack enable && corepack prepare pnpm@latest --activate
+    - cd frontend
+  script:
+    - pnpm install --frozen-lockfile
+    - pnpm run lint
+  cache:
+    key:
+      files:
+        - frontend/pnpm-lock.yaml
+    paths:
+      - frontend/node_modules/
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+
+lint:backend:
+  stage: lint
+  image: php:8.4-cli-bookworm
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git unzip libpq-dev libzip-dev
+    - docker-php-ext-install pdo_mysql zip
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - cd backend
+  script:
+    - cp .env.example .env
+    - composer install --prefer-dist --no-interaction --no-progress
+    # Validar sintaxis PHP en todo el código (rápido, sin ejecutar)
+    - find app config routes database -name '*.php' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
+    # Validar composer.json
+    - composer validate --strict --no-check-publish
+  cache:
+    key:
+      files:
+        - backend/composer.lock
+    paths:
+      - backend/vendor/
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+
+# ============================================================================
+# ETAPA 2: TEST
+# ============================================================================
+test:backend:
+  stage: test
+  image: php:8.4-cli-bookworm
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git unzip libpq-dev libzip-dev
+    - docker-php-ext-install pdo_mysql zip
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - cd backend
+  script:
+    - cp .env.example .env
+    - composer install --prefer-dist --no-interaction --no-progress
+    - php artisan key:generate
+    - vendor/bin/phpunit --colors=never
+  cache:
+    key:
+      files:
+        - backend/composer.lock
+    paths:
+      - backend/vendor/
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+
+# ============================================================================
+# ETAPA 3: VERIFY (red de seguridad del webhook)
+# ============================================================================
+# Si este job falla, el pipeline falla. Razón: sin webhook configurado en
+# GitLab → Dokploy, los push a main NO van a desplegar nada. Este job detecta
+# esa condición antes de que pase desapercibida.
+# ----------------------------------------------------------------------------
+verify:dokploy-webhook:
+  stage: verify
+  image: curlimages/curl:latest
+  script:
+    - |
+      echo "Verificando que existe un webhook configurado hacia Dokploy..."
+      HOOKS=$(curl -sS --header "PRIVATE-TOKEN: ${GITLAB_API_TOKEN}" \
+        "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/hooks")
+      # Filtrar hooks cuyo URL contenga '/api/compose.deploy' (firma de Dokploy)
+      DOKPLOY_HOOKS=$(echo "$HOOKS" | grep -c 'compose.deploy' || true)
+      if [ "$DOKPLOY_HOOKS" -gt 0 ]; then
+        echo "✅ Webhook Dokploy configurado ($DOKPLOY_HOOKS hook(s) hacia /api/compose.deploy)"
+        echo "$HOOKS" | grep -o '"url":"[^"]*compose.deploy[^"]*"' | sed 's/^/    /'
+      else
+        echo "❌ No hay webhook de Dokploy configurado en este repo."
+        echo "   Los push a main NO van a desplegar automáticamente."
+        echo "   Configurar en: ${CI_PROJECT_URL}/-/settings/webhooks"
+        echo "   URL: https://<DOKPLOY_HOST>/api/compose.deploy?composeId=...&refreshToken=..."
+        exit 1
+      fi
+  rules:
+    # Solo en push directo a main o schedule (donde aplica el deploy)
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "schedule"
