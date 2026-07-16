@@ -265,7 +265,7 @@ export const Inicio: React.FC<InicioProps> = ({
                             elapsedTime={match.elapsed_time} 
                             status={match.status} 
                             timerStatus={match.timer_status}
-                            currentPeriod={match.current_period}
+                            currentPeriod={match.current_period ?? undefined}
                             size="md" 
                           />
                         </div>

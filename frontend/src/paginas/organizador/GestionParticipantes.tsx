@@ -30,6 +30,8 @@ interface FilaJugador {
   guardando?: boolean;
   error?: string;
   foto?: string | null; // ruta o url de la foto de perfil
+  fotoFile?: File | null; // archivo de foto para subir
+  fotoUrlLocal?: string | null; // url local para previsualización
 }
 
 // ─────────────────────────────────────────────
@@ -300,6 +302,8 @@ export const GestionParticipantes: React.FC = () => {
   // ── Estado: Filtros y orden de la tabla de Jugadores ──
 const [busquedaJug, setBusquedaJug] = useState('');
 const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_asc' | 'equipo_desc'>('nombre_asc');
+const [filtroCategoriaJug, setFiltroCategoriaJug] = useState<number | null>(null);
+const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
 
   // ── Formularios originales ─────────────────
   const [nuevaDisc, setNuevaDisc] = useState({ name: '', description: '', rules: '', status: 'active' });
@@ -461,6 +465,25 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     delegate_email: '',
     delegate_password: '',
   });
+
+  const [modalEditarCat, setModalEditarCat] = useState<{
+    abierto: boolean;
+    id: number | null;
+    name: string;
+    age_min: string;
+    age_max: string;
+    gender: string;
+    guardando: boolean;
+  }>({
+    abierto: false,
+    id: null,
+    name: '',
+    age_min: '',
+    age_max: '',
+    gender: 'Masculino',
+    guardando: false,
+  });
+
 
   // ── Estado: Modal Editar Jugador ───────────
   const [modalEditarJug, setModalEditarJug] = useState<{
@@ -771,6 +794,40 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
       } else {
         mostrarMensaje('Error al registrar categoría.', true);
       }
+    }
+  };
+
+  const abrirModalEditarCat = (c: Categoria) => {
+    setModalEditarCat({
+      abierto: true,
+      id: c.id,
+      name: c.name,
+      age_min: c.age_min != null ? String(c.age_min) : '',
+      age_max: c.age_max != null ? String(c.age_max) : '',
+      gender: c.gender_type || 'Masculino',
+      guardando: false
+    });
+  };
+
+  const guardarEdicionCat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modalEditarCat.id || !modalEditarCat.name) return;
+    setModalEditarCat(prev => ({ ...prev, guardando: true }));
+    try {
+      const res = await serviciosParticipantes.actualizarCategoria(modalEditarCat.id, {
+        name: modalEditarCat.name,
+        age_min: modalEditarCat.age_min ? parseInt(modalEditarCat.age_min) : null,
+        age_max: modalEditarCat.age_max ? parseInt(modalEditarCat.age_max) : null,
+        gender_type: modalEditarCat.gender,
+      });
+      if (res.success) {
+        mostrarMensaje('Categoría actualizada exitosamente.');
+        setModalEditarCat({ abierto: false, id: null, name: '', age_min: '', age_max: '', gender: 'Masculino', guardando: false });
+        cargarDatos();
+      }
+    } catch (err) {
+      mostrarMensaje('Error al actualizar categoría.', true);
+      setModalEditarCat(prev => ({ ...prev, guardando: false }));
     }
   };
 
@@ -1277,8 +1334,11 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
     .filter(j => {
       const texto = busquedaJug.trim().toLowerCase();
       const coincideTexto = !texto || j.name.toLowerCase().includes(texto);
-      const coincideEquipoDelegado = delegadoTeamId === null || j.team_id === delegadoTeamId;
-      return coincideTexto && coincideEquipoDelegado;
+      const teamIdJugador = j.team_id || j.team?.id;
+      const coincideEquipoDelegado = delegadoTeamId === null || teamIdJugador === delegadoTeamId;
+      const coincideCategoria = !filtroCategoriaJug || j.team?.category?.id === filtroCategoriaJug;
+      const coincideEquipo = !filtroEquipoJug || teamIdJugador === filtroEquipoJug;
+      return coincideTexto && coincideEquipoDelegado && coincideCategoria && coincideEquipo;
     })
     .sort((a, b) => {
       if (ordenJug === 'nombre_asc') return a.name.localeCompare(b.name);
@@ -2065,6 +2125,36 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                     </select>
                   </div>
 
+                  {delegadoTeamId === null && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <select
+                        value={filtroCategoriaJug ?? ''}
+                        onChange={(e) => {
+                          setFiltroCategoriaJug(e.target.value ? Number(e.target.value) : null);
+                          setFiltroEquipoJug(null);
+                        }}
+                        className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                      >
+                        <option value="">Todas las categorías</option>
+                        {categorias.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={filtroEquipoJug ?? ''}
+                        onChange={(e) => setFiltroEquipoJug(e.target.value ? Number(e.target.value) : null)}
+                        className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                      >
+                        <option value="">Todos los equipos</option>
+                        {equipos
+                          .filter((eq) => !filtroCategoriaJug || eq.category?.id === filtroCategoriaJug)
+                          .map((eq) => (
+                            <option key={eq.id} value={eq.id}>{eq.name}</option>
+                          ))}
+                      </select>
+                    </div>
+                  )}
+
                   {/* Contador de resultados */}
                   <p className="text-[11px] text-slate-400 font-semibold">
                     Mostrando {jugadoresFiltrados.length} de {jugadores.length} jugadores
@@ -2164,7 +2254,8 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                               Edades: {c.age_min ?? 'N/A'} - {c.age_max ?? 'N/A'} | Género: {c.gender_type || c.gender || 'N/A'} | Disciplina: {c.championship_discipline?.discipline?.name || 'N/A'}
                             </div>
                           </td>
-                          <td className="p-3 pr-4 text-right">
+                          <td className="p-3 pr-4 text-right space-x-3">
+                            <button onClick={() => abrirModalEditarCat(c)} className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer">Editar</button>
                             <button onClick={() => eliminarElemento(c.id)} className="text-xs font-bold text-rose-600 hover:underline cursor-pointer">Eliminar</button>
                           </td>
                         </tr>
@@ -2930,8 +3021,8 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
                       {jugadoresDelEquipo.map(j => (
                         <li key={j.id} className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-[#11131c] border border-slate-100 dark:border-slate-800 rounded-lg px-2.5 py-1.5">
                           <span className="material-symbols-outlined text-sm text-slate-400">person</span>
-                          <span className="font-semibold">{j.full_name || j.name}</span>
-                          {j.jersey_number && <span className="ml-auto text-slate-400 dark:text-slate-500 font-mono">#{j.jersey_number}</span>}
+                          <span className="font-semibold">{j.name || j.name}</span>
+                          {j.number && <span className="ml-auto text-slate-400 dark:text-slate-500 font-mono">#{j.number}</span>}
                         </li>
                       ))}
                     </ul>
@@ -2985,6 +3076,82 @@ const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_
           </div>
         );
       })()}
+
+      {/* ── Modal Editar Categoría ── */}
+      {modalEditarCat.abierto && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+              <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Editar Categoría</h3>
+              <button
+                onClick={() => setModalEditarCat({ abierto: false, id: null, name: '', age_min: '', age_max: '', gender: 'Masculino', guardando: false })}
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+            <form onSubmit={guardarEdicionCat} className="p-6 space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Nombre Categoría *</label>
+                <input
+                  type="text" required
+                  value={modalEditarCat.name}
+                  onChange={(e) => setModalEditarCat(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Edad Mínima</label>
+                  <input
+                    type="number" min="0"
+                    value={modalEditarCat.age_min}
+                    onChange={(e) => setModalEditarCat(prev => ({ ...prev, age_min: e.target.value }))}
+                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Edad Máxima</label>
+                  <input
+                    type="number" min="0"
+                    value={modalEditarCat.age_max}
+                    onChange={(e) => setModalEditarCat(prev => ({ ...prev, age_max: e.target.value }))}
+                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Género</label>
+                <select
+                  value={modalEditarCat.gender}
+                  onChange={(e) => setModalEditarCat(prev => ({ ...prev, gender: e.target.value }))}
+                  className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                >
+                  <option value="Masculino">Masculino</option>
+                  <option value="Femenino">Femenino</option>
+                  <option value="Mixto">Mixto</option>
+                </select>
+              </div>
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setModalEditarCat({ abierto: false, id: null, name: '', age_min: '', age_max: '', gender: 'Masculino', guardando: false })}
+                  className="px-4 py-2 text-xs font-bold text-slate-650 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={modalEditarCat.guardando}
+                  className="px-5 py-2 text-xs font-bold text-white bg-indigo-650 hover:bg-indigo-700 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {modalEditarCat.guardando ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ── Modal Editar Equipo ── */}
       {modalEditarEq.abierto && (

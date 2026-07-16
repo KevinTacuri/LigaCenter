@@ -614,6 +614,10 @@ export const serviciosFixture = {
     const res = await clienteApi.post('/venues', datos);
     return res.data;
   },
+  actualizarEscenario: async (id: number, datos: any): Promise<RespuestaApi<Escenario>> => {
+    const res = await clienteApi.put(`/venues/${id}`, datos);
+    return res.data;
+  },
   eliminarEscenario: async (id: number): Promise<RespuestaApi<null>> => {
     const res = await clienteApi.delete(`/venues/${id}`);
     return res.data;
@@ -727,8 +731,8 @@ export const serviciosResultados = {
   },
 
   // Sanciones
-  obtenerSanciones: async (): Promise<RespuestaApi<Sancion[]>> => {
-    const res = await clienteApi.get('/sanctions');
+  obtenerSanciones: async (teamId?: number): Promise<RespuestaApi<Sancion[]>> => {
+    const res = await clienteApi.get('/sanctions', { params: teamId ? { team_id: teamId } : undefined });
     return res.data;
   },
   obtenerReportePartido: async (matchId: number): Promise<RespuestaApi<any>> => {

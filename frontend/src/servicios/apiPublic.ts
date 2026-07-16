@@ -113,6 +113,15 @@ export interface PublicMatch {
     match_time: string | null;
     datetime: string | null;
     elapsed_time: number | null;
+    timer_status: 'stopped' | 'running' | 'paused' | 'finished' | null; // 👈 Tipo corregido
+    current_period: number | null;
+    discipline_id: number;
+    category_id: number;
+    category?: {
+        id: number;
+        name: string;
+        discipline_id: number;
+    };
     venue: {
         id: number;
         name: string;
@@ -210,7 +219,7 @@ export const publicApi = {
         `/public/championships/${id}/standings-complete`
     ),
     
-        // Partidos
+    // Partidos
     getMatches: (params?: { discipline_id?: number; status?: string; championship_id?: number; search?: string; page?: number }) =>
         apiPublic.get<{ success: boolean; data: { data: PublicMatch[] }; message: string }>('/public/matches', { 
             params 

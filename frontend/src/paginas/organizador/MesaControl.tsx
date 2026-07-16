@@ -457,9 +457,9 @@ export const MesaControl: React.FC = () => {
     setGolesHome('0');
     setGolesAway('0');
     setFirmaArbitro('');
-    setFirmaDelegadoLocal('');
-    setFirmaDelegadoVisita('');
-    setFirmaDelegadoMesa('');
+    setFirmaDelegadoLocal(partido.local_team?.representative || '');
+    setFirmaDelegadoVisita(partido.visitor_team?.representative || '');
+    setFirmaDelegadoMesa(usuario?.name || '');
     setObservaciones('');
 
     try {
@@ -660,7 +660,9 @@ export const MesaControl: React.FC = () => {
       });
       
       const combinedSignature = `Local: ${firmaDelegadoLocal.trim()} | Visita: ${firmaDelegadoVisita.trim()} | Mesa: ${firmaDelegadoMesa.trim()}`;
-      
+
+      let actaId: number | null = acta?.id ?? null;
+
       if (acta) {
         await serviciosResultados.actualizarActa(acta.id, {
           local_score: parseInt(nuevoGolesLocal),
@@ -680,14 +682,22 @@ export const MesaControl: React.FC = () => {
         });
         if (res.success) {
           setActa(res.data);
+          actaId = res.data.id;
         }
       }
-      
+
+      if (actaId) {
+        const resLock = await serviciosResultados.bloquearActa(actaId);
+        if (resLock.success) {
+          setActa(resLock.data);
+        }
+      }
+
       await cargarPartidos();
-      
+
       sileo.warning({
         title: 'Walkover Declarado',
-        description: `Se ha declarado W.O. para ${equipoPerdedor}. Victoria para ${equipoGanador} por ${scoreGanador}-${scorePerdedor}. El acta se ha guardado automaticamente.`
+        description: `Se ha declarado W.O. para ${equipoPerdedor}. Victoria para ${equipoGanador} por ${scoreGanador}-${scorePerdedor}. El acta quedó cerrada y las posiciones, estadísticas y sanciones ya se actualizaron.`
       });
     } catch (err) {
       console.error('Error al guardar acta con WO:', err);
@@ -1031,7 +1041,7 @@ export const MesaControl: React.FC = () => {
                   <div className="font-extrabold text-sm text-slate-200 truncate">{partidoSeleccionado.visitor_team?.name}</div>
                 </div>
 
-                {!acta?.is_locked && (
+                {!acta?.is_locked && subEstadoPartido === 'programado' && (
                   <div className="bg-[#07080c] border border-slate-900 p-4 rounded-2xl space-y-3 animate-fadeIn">
                     <h4 className="text-[10px] font-bold text-amber-500 uppercase tracking-wider flex items-center gap-1.5 font-sans">
                       <span className="material-symbols-outlined text-xs font-bold">gavel</span>

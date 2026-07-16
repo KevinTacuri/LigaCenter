@@ -1,24 +1,26 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../../contexto/ContextoCampeonato';
 import { BarraLateral } from '../../componentes/BarraLateral';
 import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
-import { 
-  serviciosParticipantes, 
-  serviciosResultados, 
+import {
+  serviciosParticipantes,
+  serviciosResultados,
   serviciosFixture,
   type Disciplina,
   type Categoria,
   type Posicion,
   type Partido,
-  type Sancion
+  type Sancion,
+  type Equipo
 } from '../../servicios/api';
 
 export const EstadisticasOrganizador: React.FC = () => {
   const { usuario, cargando } = useAutenticacion();
   const { campeonatoActivo, cargandoCampeonato } = useCampeonato();
   const navegar = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,10 +31,14 @@ export const EstadisticasOrganizador: React.FC = () => {
   const [partidos, setPartidos] = useState<Partido[]>([]);
   const [sanciones, setSanciones] = useState<Sancion[]>([]);
   const [topScorers, setTopScorers] = useState<any[]>([]);
+  const [equipos, setEquipos] = useState<Equipo[]>([]);
 
   const [selectedDiscipline, setSelectedDiscipline] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('todos');
+  const [selectedTeamSancion, setSelectedTeamSancion] = useState<number | null>(null);
+  const [selectedRound, setSelectedRound] = useState<number | null>(null);
+  const [selectedTeamPartido, setSelectedTeamPartido] = useState<number | null>(null);
 
   const [subTabActiva, setSubTabActiva] = useState<'grupos' | 'knockout'>('grupos');
   const [faseIndexActiva, setFaseIndexActiva] = useState<number>(0);
@@ -46,6 +52,22 @@ export const EstadisticasOrganizador: React.FC = () => {
     avgGoals: 0
   });
 
+  const obtenerNombreEquipo = (nombreCompleto: string | undefined): string => {
+    if (!nombreCompleto) return '—';
+    if (nombreCompleto.includes(' - ')) {
+      return nombreCompleto.split(' - ')[0];
+    }
+    return nombreCompleto;
+  };
+
+  const equiposFiltrados = useMemo(() => {
+    return equipos.filter(eq => {
+      const coincideCategoria = !selectedCategory || eq.category?.id === selectedCategory;
+      const coincideDisciplina = !selectedDiscipline || eq.discipline?.id === selectedDiscipline;
+      return coincideCategoria && coincideDisciplina;
+    });
+  }, [equipos, selectedCategory, selectedDiscipline]);
+
   useEffect(() => {
     if (!cargando && !cargandoCampeonato && !campeonatoActivo) {
       navegar('/tablero');
@@ -53,13 +75,28 @@ export const EstadisticasOrganizador: React.FC = () => {
   }, [campeonatoActivo, cargando, cargandoCampeonato, navegar]);
 
   useEffect(() => {
+    if (loading) return;
+    const tab = searchParams.get('tab');
+    const idPorTab: Record<string, string> = {
+      posiciones: 'seccion-posiciones',
+      goleadores: 'seccion-goleadores',
+      partidos: 'seccion-partidos',
+      sanciones: 'seccion-sanciones',
+    };
+    const idDestino = tab ? idPorTab[tab] : null;
+    if (idDestino) {
+      const elemento = document.getElementById(idDestino);
+      if (elemento) elemento.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [loading, searchParams]);
+
+  useEffect(() => {
     if (campeonatoActivo) {
       loadData();
     }
-  }, [campeonatoActivo, selectedDiscipline, selectedCategory]);
+  }, [campeonatoActivo, selectedDiscipline, selectedCategory, selectedTeamSancion]);
 
   useEffect(() => {
-    // El setTimeout garantiza que el DOM esté completamente pintado antes de medir
     const timer = setTimeout(() => {
       if (scrollContainerRef.current) {
         const container = scrollContainerRef.current;
@@ -174,9 +211,21 @@ export const EstadisticasOrganizador: React.FC = () => {
         setPartidos(matches);
       }
 
-      const sanRes = await serviciosResultados.obtenerSanciones();
+      const sanRes = await serviciosResultados.obtenerSanciones(selectedTeamSancion || undefined);
       if (sanRes.success) {
         setSanciones(sanRes.data || []);
+      }
+
+      const equiposRes = await serviciosParticipantes.obtenerEquipos();
+      if (equiposRes.success) {
+        let equiposData = equiposRes.data || [];
+        if (selectedCategory) {
+          equiposData = equiposData.filter(eq => eq.category?.id === selectedCategory);
+        }
+        if (selectedDiscipline) {
+          equiposData = equiposData.filter(eq => eq.discipline?.id === selectedDiscipline);
+        }
+        setEquipos(equiposData);
       }
 
       if (selectedDiscipline) {
@@ -286,8 +335,7 @@ export const EstadisticasOrganizador: React.FC = () => {
     const grupos: Record<string, Posicion[]> = {};
     
     posiciones.forEach(pos => {
-      // Como modificamos el backend, pos.group_name siempre tendrá el valor correcto del grupo
-      const nombreGrupo = (pos as any).group_name || 'Grupo Único';
+      const nombreGrupo = (pos as any).group_name || 'Grupo Unico';
       
       if (!grupos[nombreGrupo]) {
         grupos[nombreGrupo] = [];
@@ -295,7 +343,6 @@ export const EstadisticasOrganizador: React.FC = () => {
       grupos[nombreGrupo].push(pos);
     });
 
-    // Re-ordenar internamente cada grupo por rendimiento
     Object.keys(grupos).forEach(grupo => {
       grupos[grupo].sort((a, b) => {
         if ((b.points ?? 0) !== (a.points ?? 0)) return (b.points ?? 0) - (a.points ?? 0);
@@ -310,15 +357,22 @@ export const EstadisticasOrganizador: React.FC = () => {
   const categoriaActual = categorias.find(c => c.id === selectedCategory);
   const esFormatoGrupos = categoriaActual?.format === 'grupos';
 
-  // Clasifica y ordena las fases según la data real del backend
+  const rondasDisponibles = Array.from(new Set(partidos.map(p => p.round))).sort((a, b) => a - b);
+
+  const partidosFiltrados = partidos.filter(p => {
+    const coincideEstado = filterStatus === 'todos' || p.status === filterStatus;
+    const coincideRonda = !selectedRound || p.round === selectedRound;
+    const coincideEquipo = !selectedTeamPartido ||
+      p.local_team_id === selectedTeamPartido || p.visitor_team_id === selectedTeamPartido;
+    return coincideEstado && coincideRonda && coincideEquipo;
+  });
+
   const obtenerEstructuraBracket = () => {
     const estructura: Record<string, Partido[]> = {};
 
-    // 1. Agrupar partidos por fase ignorando la liga o grupos
     partidos.forEach((partido) => {
       const fase = partido.phase?.toLowerCase();
       if (fase && fase !== 'grupos' && fase !== 'liga' && fase !== 'fase_regular') {
-        // Agrupamos bajo su nombre de fase original
         if (!estructura[fase]) {
           estructura[fase] = [];
         }
@@ -326,15 +380,12 @@ export const EstadisticasOrganizador: React.FC = () => {
       }
     });
 
-    // 2. Ordenar las fases basándonos en el campo 'round' del backend
-    // Esto garantiza que 'cuartos' (round 1) vaya antes que 'semifinal' (round 2) de forma nativa
     const fasesOrdenadas = Object.keys(estructura).sort((faseA, faseB) => {
       const roundA = estructura[faseA][0]?.round || 0;
       const roundB = estructura[faseB][0]?.round || 0;
       return roundA - roundB;
     });
 
-    // 3. Reconstruir el objeto manteniendo el orden cronológico estricto de las columnas
     return fasesOrdenadas.reduce((acc, fase) => {
       acc[fase] = estructura[fase];
       return acc;
@@ -367,10 +418,10 @@ export const EstadisticasOrganizador: React.FC = () => {
         <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto space-y-6 px-4 md:px-8">
 
           <div className="bg-[#11131c] border border-slate-900 rounded-xl p-5 space-y-4">
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4">
               {disciplinas.length > 0 && (
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Disciplina</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Disciplina</label>
                   <select
                     value={selectedDiscipline || ''}
                     onChange={(e) => {
@@ -390,7 +441,7 @@ export const EstadisticasOrganizador: React.FC = () => {
 
               {categorias.length > 0 && (
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Categoría</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Categoría</label>
                   <select
                     value={selectedCategory || ''}
                     onChange={(e) => {
@@ -411,7 +462,7 @@ export const EstadisticasOrganizador: React.FC = () => {
               )}
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estado</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estado</label>
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
@@ -423,6 +474,38 @@ export const EstadisticasOrganizador: React.FC = () => {
                   <option value="finalizado">Finalizados</option>
                 </select>
               </div>
+
+              {rondasDisponibles.length > 0 && (
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Jornada</label>
+                  <select
+                    value={selectedRound ?? ''}
+                    onChange={(e) => setSelectedRound(e.target.value ? Number(e.target.value) : null)}
+                    className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
+                  >
+                    <option value="">Todas</option>
+                    {rondasDisponibles.map(r => (
+                      <option key={r} value={r}>Fecha {r}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {equiposFiltrados.length > 0 && (
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Equipo</label>
+                  <select
+                    value={selectedTeamPartido ?? ''}
+                    onChange={(e) => setSelectedTeamPartido(e.target.value ? Number(e.target.value) : null)}
+                    className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
+                  >
+                    <option value="">Todos</option>
+                    {equiposFiltrados.map(eq => (
+                      <option key={eq.id} value={eq.id}>{obtenerNombreEquipo(eq.name)}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="ml-auto">
                 <button
@@ -465,15 +548,13 @@ export const EstadisticasOrganizador: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            {/* CONTENEDOR MODIFICADO DE TABLA DE POSICIONES */}
-            <div className="lg:col-span-2 bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden">
+            <div id="seccion-posiciones" className="lg:col-span-2 bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden scroll-mt-4">
               <div className="px-5 py-3 border-b border-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                   <span className="material-symbols-outlined text-indigo-400 text-base">leaderboard</span>
                   {categoriaActual?.format === 'eliminacion_directa' ? 'Llaves de Eliminación Directa' : 'Tabla de Posiciones'}
                 </h3>
                 
-                {/* SUB-PESTAÑAS (Solo si la categoría es de formato 'grupos') */}
                 {esFormatoGrupos && (
                   <div className="flex bg-[#0c0e16] p-1 rounded-lg border border-slate-800">
                     <button
@@ -511,15 +592,11 @@ export const EstadisticasOrganizador: React.FC = () => {
                     No hay posiciones disponibles para la categoría seleccionada
                   </div>
                 ) : categoriaActual?.format === 'eliminacion_directa' || (esFormatoGrupos && subTabActiva === 'knockout') ? (
-                  /* VISTA DEL BRACKET DINÁMICO*/
                   <div className="p-4 select-none space-y-6">
                     {(() => {
                       const backendData = obtenerEstructuraBracket();
-                      
-                      // Obtenemos las fases reales del torneo (Ej: ['cuartos', 'semifinal', 'final', 'tercer_puesto'])
                       const fasesReales = Object.keys(backendData);
 
-                      // Mapeo amigable de nombres para los encabezados de columnas
                       const nombresFases: Record<string, string> = {
                         octavos: 'Octavos de final',
                         cuartos: 'Cuartos de final',
@@ -537,16 +614,11 @@ export const EstadisticasOrganizador: React.FC = () => {
                         );
                       }
 
-                      // Separamos la fase de tercer puesto para pintarla abajo o al lado de la Final
                       const tieneTercerPuesto = fasesReales.includes('tercer_puesto') || fasesReales.includes('tercer_lugar');
-                      
-                      // Columnas de árbol principal (quitando el tercer puesto para que no deforme las líneas conectoras)
                       const columnasPrincipales = fasesReales.filter(f => f !== 'tercer_puesto' && f !== 'tercer_lugar');
 
                       return (
                         <div className="space-y-6">
-                          
-                          {/* CONTROLES SUPERIORES (Navegación Móvil y Sincronización) */}
                           <div className="flex items-center justify-end gap-2 bg-[#0c0e16] p-1.5 rounded-xl border border-slate-800/80 max-w-fit ml-auto">
                             <select
                               value={faseIndexActiva}
@@ -577,7 +649,6 @@ export const EstadisticasOrganizador: React.FC = () => {
                             </button>
                           </div>
 
-                          {/* VISTA ARBOL COMPLETA (Soporta scroll horizontal) */}
                           <div 
                             ref={scrollContainerRef} 
                             className="flex flex-row items-stretch gap-12 py-6 overflow-x-auto w-full scrollbar-thin scroll-smooth relative"
@@ -595,7 +666,6 @@ export const EstadisticasOrganizador: React.FC = () => {
                                     isFaseActiva ? 'opacity-100 scale-100' : 'opacity-40 scale-[0.98]'
                                   }`}
                                 >
-                                  {/* Encabezado dinámico de la fase */}
                                   <div className={`text-center bg-[#171a26] border rounded-lg py-1.5 mb-6 transition-colors ${
                                     isFaseActiva ? 'border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.15)]' : 'border-slate-800/80'
                                   }`}>
@@ -606,7 +676,6 @@ export const EstadisticasOrganizador: React.FC = () => {
                                     </span>
                                   </div>
 
-                                  {/* Caja contenedora usando justify-around para espaciado nativo */}
                                   <div className="flex-1 flex flex-col w-full min-h-[400px] relative">
                                     {partidosAMostrar.map((partido, partIdx) => {
                                       const esPar = partIdx % 2 === 0;
@@ -617,13 +686,9 @@ export const EstadisticasOrganizador: React.FC = () => {
                                       return (
                                         <div key={partido.id} className="relative w-full flex-1 flex flex-col justify-center py-2">
                                           
-                                          {/* LÍNEAS CONECTORAS FLEXIBLES (Basadas en porcentajes relativos al contenedor del partido) */}
                                           {colIdx < columnasPrincipales.length - 1 && (
                                             <>
-                                              {/* 1. Línea horizontal de salida */}
                                               <div className="absolute top-1/2 right-[-24px] w-[24px] h-[2px] bg-slate-700/80 z-0" />
-                                              
-                                              {/* 2. Poste vertical (Sube si es par, baja si es impar) */}
                                               <div 
                                                 className="absolute right-[-24px] w-[2px] bg-slate-700/80 z-0"
                                                 style={{ 
@@ -631,15 +696,12 @@ export const EstadisticasOrganizador: React.FC = () => {
                                                   height: '50%' 
                                                 }}
                                               />
-                                              
-                                              {/* 3. Brazo de conexión hacia la derecha (Solo sale de los pares para unir la rama) */}
                                               {esPar && (
                                                 <div className="absolute right-[-48px] bottom-0 w-[24px] h-[2px] bg-slate-700/80 z-0" />
                                               )}
                                             </>
                                           )}
 
-                                          {/* TARJETA DEL PARTIDO REAL */}
                                           <div className={`relative bg-[#0c0e16] rounded-xl overflow-hidden shadow-xl transition-all w-full z-10 border ${
                                             isFaseActiva ? 'border-slate-700 hover:border-indigo-500/50' : 'border-slate-800/60'
                                           }`}>
@@ -662,14 +724,13 @@ export const EstadisticasOrganizador: React.FC = () => {
                                             </div>
 
                                             <div className="p-2.5 space-y-2">
-                                              {/* Fila Equipo Local */}
                                               <div className="flex items-center justify-between gap-2">
                                                 <div className="flex items-center gap-2 truncate">
                                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                                                   <span className={`text-xs font-bold truncate ${
                                                     partido.local_team ? 'text-white' : 'text-slate-500 font-mono text-[10px]'
                                                   }`}>
-                                                    {partido.local_team?.name || textoPredecidoLocal}
+                                                    {obtenerNombreEquipo(partido.local_team?.name) || textoPredecidoLocal}
                                                   </span>
                                                 </div>
                                                 <span className="text-xs font-black px-2 py-0.5 rounded bg-[#171a26] text-slate-400">
@@ -677,14 +738,13 @@ export const EstadisticasOrganizador: React.FC = () => {
                                                 </span>
                                               </div>
 
-                                              {/* Fila Equipo Visitante */}
                                               <div className="flex items-center justify-between gap-2">
                                                 <div className="flex items-center gap-2 truncate">
                                                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
                                                   <span className={`text-xs font-bold truncate ${
                                                     partido.visitor_team ? 'text-white' : 'text-slate-500 font-mono text-[10px]'
                                                   }`}>
-                                                    {partido.visitor_team?.name || textoPredecidoVisita}
+                                                    {obtenerNombreEquipo(partido.visitor_team?.name) || textoPredecidoVisita}
                                                   </span>
                                                 </div>
                                                 <span className="text-xs font-black px-2 py-0.5 rounded bg-[#171a26] text-slate-400">
@@ -702,10 +762,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                               );
                             })}
 
-                            {/* COLUMNA TERCER PUESTO */}
                             {tieneTercerPuesto && (() => {
-                              // Reutilizamos la lógica del sombreado.
-                              // Si la fase activa es la última del array real, y es el tercer puesto, lo sombrea.
                               const isFaseActivaTercero = faseIndexActiva === fasesReales.length - 1;
                               const faseTercer = fasesReales.find(f => f === 'tercer_puesto' || f == 'tercer_lugar')!;
                               const partidoTercer = backendData[faseTercer][0];
@@ -733,10 +790,9 @@ export const EstadisticasOrganizador: React.FC = () => {
                                     <div className={`bg-[#0c0e16] rounded-xl overflow-hidden shadow-2xl w-full border transition-all ${
                                       isFaseActivaTercero ? 'border-amber-500/40' : 'border-amber-500/10'
                                     }`}>
-                                      {/* ... resto del código del tercer puesto queda igual ... */}
                                       <div className="bg-amber-500/5 px-3 py-1.5 border-b border-slate-900 flex justify-between items-center">
                                         <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wider">
-                                          Definición de Honor
+                                          Definicion de Honor
                                         </span>
                                         <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
                                           partidoTercer.status?.toLowerCase() === 'finalizado' ? 'bg-slate-800 text-slate-400' : 'bg-amber-500/10 text-amber-400'
@@ -746,14 +802,13 @@ export const EstadisticasOrganizador: React.FC = () => {
                                       </div>
 
                                       <div className="p-2.5 space-y-2">
-                                        {/* Local */}
                                         <div className="flex items-center justify-between gap-2">
                                           <div className="flex items-center gap-2 truncate">
                                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                             <span className={`text-xs font-bold truncate ${
                                               partidoTercer.local_team ? 'text-white' : 'text-slate-500 font-mono text-[10px]'
                                             }`}>
-                                              {partidoTercer.local_team?.name || partidoTercer.placeholder_text_home || 'Perdedor Semi 1'}
+                                              {obtenerNombreEquipo(partidoTercer.local_team?.name) || partidoTercer.placeholder_text_home || 'Perdedor Semi 1'}
                                             </span>
                                           </div>
                                           <span className="text-xs font-black px-2 py-0.5 rounded bg-[#171a26] text-slate-400">
@@ -761,14 +816,13 @@ export const EstadisticasOrganizador: React.FC = () => {
                                           </span>
                                         </div>
 
-                                        {/* Visitante */}
                                         <div className="flex items-center justify-between gap-2">
                                           <div className="flex items-center gap-2 truncate">
                                             <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                                             <span className={`text-xs font-bold truncate ${
                                               partidoTercer.visitor_team ? 'text-white' : 'text-slate-500 font-mono text-[10px]'
                                             }`}>
-                                              {partidoTercer.visitor_team?.name || partidoTercer.placeholder_text_away || 'Perdedor Semi 2'}
+                                              {obtenerNombreEquipo(partidoTercer.visitor_team?.name) || partidoTercer.placeholder_text_away || 'Perdedor Semi 2'}
                                             </span>
                                           </div>
                                           <span className="text-xs font-black px-2 py-0.5 rounded bg-[#171a26] text-slate-400">
@@ -788,17 +842,14 @@ export const EstadisticasOrganizador: React.FC = () => {
                     })()}
                   </div>
                 ) : (
-                  /* RENDERING DE TABLAS (LIGA SIMPLE O SEPARADO POR GRUPOS) */
                   <div className="space-y-8 p-2 overflow-x-auto">
                     {(() => {
-                      // Si es formato grupos, usamos nuestra función de agrupación
                       const datosTablas = esFormatoGrupos 
                         ? agruparPosicionesPorGrupo() 
                         : { "Tabla General": posiciones };
 
                       return Object.keys(datosTablas).map((nombreGrupo) => (
                         <div key={nombreGrupo} className="space-y-3">
-                          {/* Título de la tabla (Grupo A, Grupo B, etc.) */}
                           {esFormatoGrupos && (
                             <div className="flex items-center gap-2 px-3 py-1 bg-[#171a26] border border-slate-800 rounded-lg w-fit">
                               <span className="w-2 h-2 rounded-full bg-indigo-500" />
@@ -826,7 +877,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                                 {datosTablas[nombreGrupo].map((pos, index) => (
                                   <tr key={pos.team_id || `pos-${index}`} className="hover:bg-[#171a26]/40 transition-colors">
                                     <td className="p-3 pl-5 text-center font-bold text-slate-400">{index + 1}</td>
-                                    <td className="p-3 font-bold text-white text-sm">{pos.team?.name || '—'}</td>
+                                    <td className="p-3 font-bold text-white text-sm">{obtenerNombreEquipo(pos.team?.name)}</td>
                                     <td className="p-3 text-center text-slate-300">{pos.matches_played || 0}</td>
                                     <td className="p-3 text-center text-emerald-400">{pos.wins ?? 0}</td>
                                     <td className="p-3 text-center text-slate-400">{pos.draws ?? 0}</td>
@@ -850,11 +901,11 @@ export const EstadisticasOrganizador: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden">
+            <div id="seccion-goleadores" className="bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden scroll-mt-4">
               <div className="px-5 py-3 border-b border-slate-900">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                   <span className="material-symbols-outlined text-amber-400 text-base">sports_soccer</span>
-                  Máximos Goleadores
+                  Maximos Goleadores
                 </h3>
               </div>
               <div className="divide-y divide-slate-800">
@@ -888,7 +939,7 @@ export const EstadisticasOrganizador: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden">
+          <div id="seccion-partidos" className="bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden scroll-mt-4">
             <div className="px-5 py-3 border-b border-slate-900 flex justify-between items-center">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 <span className="material-symbols-outlined text-indigo-400 text-base">calendar_today</span>
@@ -896,9 +947,9 @@ export const EstadisticasOrganizador: React.FC = () => {
               </h3>
               <span className="text-[10px] text-slate-400">
                 {partidos.length} encuentros totales
-                {filterStatus !== 'todos' && (
+                {(filterStatus !== 'todos' || selectedRound || selectedTeamPartido) && (
                   <span className="ml-1">
-                    ({partidos.filter(p => p.status === filterStatus).length} con filtro)
+                    ({partidosFiltrados.length} con filtro)
                   </span>
                 )}
               </span>
@@ -909,8 +960,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                   No hay partidos disponibles para los filtros seleccionados
                 </div>
               ) : (
-                partidos
-                  .filter(p => filterStatus === 'todos' || p.status === filterStatus)
+                partidosFiltrados
                   .slice(0, 10)
                   .map(match => (
                     <div key={match.id} className="bg-[#171a26]/40 border border-slate-800 rounded-lg p-3 hover:border-indigo-500/30 transition-all">
@@ -921,7 +971,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <p className="font-bold text-sm text-white truncate">{match.local_team?.name || 'Local'}</p>
+                          <p className="font-bold text-sm text-white truncate">{obtenerNombreEquipo(match.local_team?.name) || 'Local'}</p>
                         </div>
                         <div className="flex items-center gap-2 px-3">
                           <span className="font-bold text-base text-indigo-400">{getLocalScore(match)}</span>
@@ -929,7 +979,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                           <span className="font-bold text-base text-indigo-400">{getVisitorScore(match)}</span>
                         </div>
                         <div className="flex-1 text-right">
-                          <p className="font-bold text-sm text-white truncate">{match.visitor_team?.name || 'Visitante'}</p>
+                          <p className="font-bold text-sm text-white truncate">{obtenerNombreEquipo(match.visitor_team?.name) || 'Visitante'}</p>
                         </div>
                       </div>
                       <div className="mt-2 text-[9px] text-slate-500 flex justify-between">
@@ -939,20 +989,30 @@ export const EstadisticasOrganizador: React.FC = () => {
                     </div>
                   ))
               )}
-              {partidos.filter(p => filterStatus === 'todos' || p.status === filterStatus).length === 0 && partidos.length > 0 && (
+              {partidosFiltrados.length === 0 && partidos.length > 0 && (
                 <div className="col-span-2 p-4 text-center text-slate-500 text-sm">
-                  No hay partidos con estado "{filterStatus}"
+                  No hay partidos con los filtros seleccionados
                 </div>
               )}
             </div>
           </div>
 
-          <div className="bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-slate-900">
+          <div id="seccion-sanciones" className="bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden scroll-mt-4">
+            <div className="px-5 py-3 border-b border-slate-900 flex items-center justify-between gap-3 flex-wrap">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 <span className="material-symbols-outlined text-rose-400 text-base">gavel</span>
                 Sanciones Activas
               </h3>
+              <select
+                value={selectedTeamSancion ?? ''}
+                onChange={(e) => setSelectedTeamSancion(e.target.value ? parseInt(e.target.value) : null)}
+                className="bg-[#171a26] border border-slate-800 text-slate-300 text-[10px] rounded-md px-2 py-1 outline-hidden font-bold cursor-pointer"
+              >
+                <option value="">Todos los equipos</option>
+                {equiposFiltrados.map((eq) => (
+                  <option key={eq.id} value={eq.id}>{obtenerNombreEquipo(eq.name)}</option>
+                ))}
+              </select>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -962,7 +1022,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                     <th className="p-3">Equipo</th>
                     <th className="p-3">Motivo</th>
                     <th className="p-3">Inicio</th>
-                    <th className="p-3">Duración</th>
+                    <th className="p-3">Duracion</th>
                     <th className="p-3 pr-5 text-right">Estado</th>
                   </tr>
                 </thead>
@@ -977,7 +1037,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                     sanciones.map(san => (
                       <tr key={san.id} className="hover:bg-[#171a26]/40 transition-colors">
                         <td className="p-3 pl-5 font-bold text-white text-sm">{san.player?.name || '—'}</td>
-                        <td className="p-3 text-slate-300">{san.player?.team?.name || '—'}</td>
+                        <td className="p-3 text-slate-300">{obtenerNombreEquipo(san.player?.team?.name)}</td>
                         <td className="p-3 text-slate-400 text-xs max-w-[150px] truncate">{san.reason}</td>
                         <td className="p-3 text-slate-400 text-xs">{new Date(san.start_date).toLocaleDateString()}</td>
                         <td className="p-3 text-slate-300">{san.duration || 0} partido{san.duration !== 1 ? 's' : ''}</td>

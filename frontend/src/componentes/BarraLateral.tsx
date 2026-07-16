@@ -51,7 +51,7 @@ const subMenus: Record<string, SubItemMenu[]> = {
     { id: 'escenarios', titulo: 'Escenarios', query: 'tab=escenarios' },
     { id: 'generar', titulo: 'Generar Fixture', query: 'tab=generar' },
     { id: 'programar', titulo: 'Asignar Fechas', query: 'tab=programar' },
-    { id: 'partidos', titulo: 'Calendario y Horarios', query: 'tab=partidos' },
+    { id: 'partidos', titulo: 'Partidos', query: 'tab=partidos' },
   ],
   posiciones: [
     { id: 'posiciones', titulo: 'Tabla Posiciones', query: 'tab=posiciones' },

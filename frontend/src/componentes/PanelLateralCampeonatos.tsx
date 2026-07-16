@@ -17,6 +17,8 @@ export const PanelLateralCampeonatos: React.FC = () => {
   const [cargando, setCargando] = useState(false);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState('');
+  const [filtroFechaDesde, setFiltroFechaDesde] = useState('');
+  const [filtroFechaHasta, setFiltroFechaHasta] = useState('');
 
   // Formulario de creación rápida
   const [mostrarCreador, setMostrarCreador] = useState(false);
@@ -35,6 +37,8 @@ export const PanelLateralCampeonatos: React.FC = () => {
       setNuevoReglamento(null);
       setErrorLocal(null);
       setBusqueda('');
+      setFiltroFechaDesde('');
+      setFiltroFechaHasta('');
       setNuevoEsPublico(false);
     }
   }, [panelCampeonatosAbierto, usuario]);
@@ -111,8 +115,12 @@ export const PanelLateralCampeonatos: React.FC = () => {
     setPanelCampeonatosAbierto(false);
   };
 
-  const filteredChampionships = campeonatos.filter(c => 
-    c.name.toLowerCase().includes(busqueda.toLowerCase())
+  const filteredChampionships = campeonatos.filter(c => {
+    const coincideNombre = c.name.toLowerCase().includes(busqueda.toLowerCase());
+    const coincideDesde = !filtroFechaDesde || (c.start_date && c.start_date >= filtroFechaDesde);
+    const coincideHasta = !filtroFechaHasta || (c.start_date && c.start_date <= filtroFechaHasta);
+    return coincideNombre && coincideDesde && coincideHasta;
+  }
   );
 
   return (
@@ -279,6 +287,28 @@ export const PanelLateralCampeonatos: React.FC = () => {
               />
               <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">search</span>
             </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="date" value={filtroFechaDesde}
+                onChange={(e) => setFiltroFechaDesde(e.target.value)}
+                className="w-full bg-[#11131c] border border-slate-800 text-slate-200 text-[11px] rounded-xl px-3 py-2 outline-none focus:border-indigo-500/50 transition-colors font-semibold"
+              />
+              <input
+                type="date" value={filtroFechaHasta}
+                onChange={(e) => setFiltroFechaHasta(e.target.value)}
+                className="w-full bg-[#11131c] border border-slate-800 text-slate-200 text-[11px] rounded-xl px-3 py-2 outline-none focus:border-indigo-500/50 transition-colors font-semibold"
+              />
+            </div>
+            {(filtroFechaDesde || filtroFechaHasta) && (
+              <button
+                type="button"
+                onClick={() => { setFiltroFechaDesde(''); setFiltroFechaHasta(''); }}
+                className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 cursor-pointer"
+              >
+                Limpiar filtro de fecha
+              </button>
+            )}
 
             <div className="space-y-2">
               {cargando ? (

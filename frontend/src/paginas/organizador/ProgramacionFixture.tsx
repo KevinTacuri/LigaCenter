@@ -68,7 +68,7 @@ export const ProgramacionFixture: React.FC = () => {
   const PASOS_AYUDA_FIXTURE = [
     { paso: '1', titulo: 'Registrar Escenarios', desc: 'Agrega las canchas o recintos deportivos con su ubicación, tipo y capacidad en la pestaña "Escenarios".', icono: 'stadium' },
     { paso: '2', titulo: 'Generar el Fixture', desc: 'Ve a "Generar Fixture", selecciona la disciplina y categoría, define la fecha de inicio del campeonato y marca las canchas utilizables. NOTA: Debes tener al menos 2 equipos aprobados en la categoría.', icono: 'calendar_today' },
-    { paso: '3', titulo: 'Programación de Fechas', desc: 'En "Programar Horarios" puedes asignar automáticamente canchas y horas (separadas por comas, ej: 08:00, 10:00) a los partidos de una fecha en específico.', icono: 'schedule' },
+    { paso: '3', titulo: 'Programación de Fechas', desc: 'En "Asignar Fechas" puedes asignar automáticamente canchas y horas (separadas por comas, ej: 08:00, 10:00) a los partidos de una fecha en específico.', icono: 'schedule' },
     { paso: '4', titulo: 'Ver y Reprogramar Partidos', desc: 'En la pestaña "Partidos" verás el fixture programado. Puedes usar "Reprogramar" para ajustar manualmente la fecha, hora o escenario de un partido.', icono: 'edit' },
   ];
 
@@ -79,8 +79,17 @@ export const ProgramacionFixture: React.FC = () => {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [jugadores, setJugadores] = useState<Jugador[]>([]);
 
+  // Filtros de la lista de Partidos
+  const [filtroRondaPartidos, setFiltroRondaPartidos] = useState<number | null>(null);
+  const [filtroEquipoPartidos, setFiltroEquipoPartidos] = useState<number | null>(null);
+  const [filtroEstadoPartidos, setFiltroEstadoPartidos] = useState<string>('todos');
+  const [filtroCanchaPartidos, setFiltroCanchaPartidos] = useState<number | null>(null);
+
   // Estados de formularios
   const [nuevoEsc, setNuevoEsc] = useState({ name: '', venue_type: 'cancha', location: '', capacity: '', status: 'active' });
+  const [modalEditarEsc, setModalEditarEsc] = useState<{ abierto: boolean; id: number | null; name: string; venue_type: string; location: string; capacity: string; status: string; guardando: boolean }>({
+    abierto: false, id: null, name: '', venue_type: 'cancha', location: '', capacity: '', status: 'active', guardando: false
+  });
   const [datosFixture, setDatosFixture] = useState({ 
     discipline_id: '', 
     category_id: '', 
@@ -127,9 +136,11 @@ export const ProgramacionFixture: React.FC = () => {
         const resDisc = await serviciosParticipantes.obtenerDisciplinas();
         const resCat = await serviciosParticipantes.obtenerCategoriasPorCampeonato(champId);
         const resEsc = await serviciosFixture.obtenerEscenarios();
+        const resPart = await serviciosFixture.obtenerPartidos();
         if (resDisc.success) setDisciplinas(resDisc.data);
         if (resCat.success) setCategorias(resCat.data);
         if (resEsc.success) setEscenarios(resEsc.data);
+        if (resPart.success) setPartidos(resPart.data);
       } else if (tabActiva === 'partidos') {
         const [resPart, resEsc, resJug] = await Promise.all([
           serviciosFixture.obtenerPartidos(),
@@ -174,6 +185,42 @@ export const ProgramacionFixture: React.FC = () => {
       }
     } catch (err) {
       mostrarMensaje('Error al crear escenario.', true);
+    }
+  };
+
+  const abrirModalEditarEsc = (esc: Escenario) => {
+    setModalEditarEsc({
+      abierto: true,
+      id: esc.id,
+      name: esc.name,
+      venue_type: esc.venue_type,
+      location: esc.location,
+      capacity: esc.capacity ? String(esc.capacity) : '',
+      status: esc.is_available ? 'active' : 'inactive',
+      guardando: false
+    });
+  };
+
+  const guardarEdicionEsc = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modalEditarEsc.id || !modalEditarEsc.name || !modalEditarEsc.location) return;
+    setModalEditarEsc(prev => ({ ...prev, guardando: true }));
+    try {
+      const res = await serviciosFixture.actualizarEscenario(modalEditarEsc.id, {
+        name: modalEditarEsc.name,
+        venue_type: modalEditarEsc.venue_type,
+        location: modalEditarEsc.location,
+        capacity: modalEditarEsc.capacity ? parseInt(modalEditarEsc.capacity) : null,
+        is_available: modalEditarEsc.status === 'active'
+      });
+      if (res.success) {
+        mostrarMensaje('Escenario actualizado con éxito.');
+        setModalEditarEsc({ abierto: false, id: null, name: '', venue_type: 'cancha', location: '', capacity: '', status: 'active', guardando: false });
+        cargarDatos();
+      }
+    } catch (err) {
+      mostrarMensaje('Error al actualizar escenario.', true);
+      setModalEditarEsc(prev => ({ ...prev, guardando: false }));
     }
   };
 
@@ -448,6 +495,41 @@ export const ProgramacionFixture: React.FC = () => {
 
   if (!usuario) return null;
 
+  const rondasDisponiblesProg = Array.from(new Set(partidos.map(p => p.round))).sort((a, b) => a - b);
+
+  const partidosDeRondaSeleccionada = partidos.filter(p =>
+    datosFecha.category_id && datosFecha.round &&
+    p.category_id === parseInt(datosFecha.category_id) &&
+    p.round === parseInt(datosFecha.round)
+  );
+
+  const equiposEnPartidos = Array.from(
+    new Map(
+      partidos.flatMap(p => [
+        p.local_team ? [p.local_team_id, p.local_team.name] as [number, string] : null,
+        p.visitor_team ? [p.visitor_team_id, p.visitor_team.name] as [number, string] : null,
+      ].filter((v): v is [number, string] => v !== null))
+    ).entries()
+  ).sort((a, b) => a[1].localeCompare(b[1]));
+
+  const partidosFiltradosProg = partidos.filter(p => {
+    const coincideRonda = !filtroRondaPartidos || p.round === filtroRondaPartidos;
+    const coincideEquipo = !filtroEquipoPartidos ||
+      p.local_team_id === filtroEquipoPartidos || p.visitor_team_id === filtroEquipoPartidos;
+    const coincideEstado = filtroEstadoPartidos === 'todos' || p.status === filtroEstadoPartidos;
+    const coincideCancha = !filtroCanchaPartidos || p.venue_id === filtroCanchaPartidos;
+    return coincideRonda && coincideEquipo && coincideEstado && coincideCancha;
+  });
+
+  const hayFiltrosPartidosActivos = !!(filtroRondaPartidos || filtroEquipoPartidos || filtroEstadoPartidos !== 'todos' || filtroCanchaPartidos);
+
+  const limpiarFiltrosPartidos = () => {
+    setFiltroRondaPartidos(null);
+    setFiltroEquipoPartidos(null);
+    setFiltroEstadoPartidos('todos');
+    setFiltroCanchaPartidos(null);
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans relative overflow-hidden">
 
@@ -470,7 +552,7 @@ export const ProgramacionFixture: React.FC = () => {
                 : 'text-slate-400 hover:bg-[#171a26] hover:text-white'
             }`}
           >
-            {tab === 'escenarios' ? 'Escenarios' : tab === 'generar' ? 'Generar Fixture' : tab === 'programar' ? 'Programar Horarios' : 'Partidos'}
+            {tab === 'escenarios' ? 'Escenarios' : tab === 'generar' ? 'Generar Fixture' : tab === 'programar' ? 'Asignar Fechas' : 'Partidos'}
           </button>
         ))}
       </div>
@@ -619,7 +701,8 @@ export const ProgramacionFixture: React.FC = () => {
                       <tr key={esc.id} className="hover:bg-slate-50/40">
                         <td className="p-3 pl-4 font-bold text-slate-900">{esc.name}</td>
                         <td className="p-3 text-slate-600">{esc.location || 'No especificada'}</td>
-                        <td className="p-3 pr-4 text-right">
+                        <td className="p-3 pr-4 text-right space-x-3">
+                          <button onClick={() => abrirModalEditarEsc(esc)} className="text-xs font-bold text-primary hover:underline cursor-pointer">Editar</button>
                           <button onClick={() => eliminarEscenario(esc.id)} className="text-xs font-bold text-rose-600 hover:underline cursor-pointer">Eliminar</button>
                         </td>
                       </tr>
@@ -788,11 +871,16 @@ export const ProgramacionFixture: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 block">Número de Fecha (Round) *</label>
-                  <input
-                    type="number" required placeholder="Ej: 1" min="1" value={datosFecha.round}
+                  <select
+                    required value={datosFecha.round}
                     onChange={(e) => setDatosFecha({ ...datosFecha, round: e.target.value })}
-                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
-                  />
+                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
+                  >
+                    <option value="">Seleccionar Fecha</option>
+                    {rondasDisponiblesProg.map((r) => (
+                      <option key={r} value={r}>Fecha {r}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 block">Horas Disponibles * (Separadas por comas)</label>
@@ -803,6 +891,26 @@ export const ProgramacionFixture: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {datosFecha.category_id && datosFecha.round && (
+                <div className="space-y-1.5 bg-slate-50 border border-slate-150 rounded-xl p-3">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    Partidos en esta Fecha ({partidosDeRondaSeleccionada.length})
+                  </label>
+                  {partidosDeRondaSeleccionada.length === 0 ? (
+                    <p className="text-xs text-slate-500">No hay partidos con esta categoría y ronda todavía.</p>
+                  ) : (
+                    <ul className="text-xs text-slate-700 space-y-1">
+                      {partidosDeRondaSeleccionada.map((p) => (
+                        <li key={p.id} className="flex justify-between">
+                          <span>{p.local_team?.name} vs {p.visitor_team?.name}</span>
+                          <span className="text-slate-400">{p.match_time || 'sin hora'}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-700 block">Escenarios Disponibles para esta Fecha *</label>
@@ -830,7 +938,83 @@ export const ProgramacionFixture: React.FC = () => {
         {tabActiva === 'partidos' && (
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
             <h2 className="font-extrabold text-base text-slate-900 mb-4 border-b border-slate-100 pb-2">Programación de Partidos</h2>
-            
+
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 mb-4">
+              {rondasDisponiblesProg.length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Jornada</label>
+                  <select
+                    value={filtroRondaPartidos ?? ''}
+                    onChange={(e) => setFiltroRondaPartidos(e.target.value ? Number(e.target.value) : null)}
+                    className="w-full sm:w-auto text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 outline-none focus:border-primary/50 cursor-pointer"
+                  >
+                    <option value="">Todas</option>
+                    {rondasDisponiblesProg.map(r => (
+                      <option key={r} value={r}>Fecha {r}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {equiposEnPartidos.length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Equipo</label>
+                  <select
+                    value={filtroEquipoPartidos ?? ''}
+                    onChange={(e) => setFiltroEquipoPartidos(e.target.value ? Number(e.target.value) : null)}
+                    className="w-full sm:w-auto text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 outline-none focus:border-primary/50 cursor-pointer"
+                  >
+                    <option value="">Todos</option>
+                    {equiposEnPartidos.map(([id, name]) => (
+                      <option key={id} value={id}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Estado</label>
+                <select
+                  value={filtroEstadoPartidos}
+                  onChange={(e) => setFiltroEstadoPartidos(e.target.value)}
+                  className="w-full sm:w-auto text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 outline-none focus:border-primary/50 cursor-pointer"
+                >
+                  <option value="todos">Todos</option>
+                  <option value="programado">Programado</option>
+                  <option value="en_curso">En Curso</option>
+                  <option value="finalizado">Finalizado</option>
+                  <option value="cancelado">Cancelado</option>
+                  <option value="reprogramado">Reprogramado</option>
+                </select>
+              </div>
+
+              {escenarios.length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cancha</label>
+                  <select
+                    value={filtroCanchaPartidos ?? ''}
+                    onChange={(e) => setFiltroCanchaPartidos(e.target.value ? Number(e.target.value) : null)}
+                    className="w-full sm:w-auto text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 outline-none focus:border-primary/50 cursor-pointer"
+                  >
+                    <option value="">Todas</option>
+                    {escenarios.map(esc => (
+                      <option key={esc.id} value={esc.id}>{esc.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {hayFiltrosPartidosActivos && (
+                <button
+                  type="button"
+                  onClick={limpiarFiltrosPartidos}
+                  className="text-xs font-bold text-primary hover:underline cursor-pointer pb-2"
+                >
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -844,7 +1028,7 @@ export const ProgramacionFixture: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
-                  {partidos.map((part) => (
+                  {partidosFiltradosProg.map((part) => (
                     <tr key={part.id} className="hover:bg-slate-50/40">
                       <td className="p-3 pl-4 font-bold text-slate-700">Fecha {part.round}</td>
                       <td className="p-3">
@@ -878,7 +1062,12 @@ export const ProgramacionFixture: React.FC = () => {
                   ))}
                   {partidos.length === 0 && (
                     <tr>
-                      <td colSpan={esDelegado ? 5 : 6} className="p-10 text-center text-slate-500 text-xs">No hay partidos cargados. Genera el fixture primero.</td>
+                      <td colSpan={6} className="p-10 text-center text-slate-500 text-xs">No hay partidos cargados. Genera el fixture primero.</td>
+                    </tr>
+                  )}
+                  {partidos.length > 0 && partidosFiltradosProg.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-10 text-center text-slate-500 text-xs">No hay partidos con los filtros seleccionados.</td>
                     </tr>
                   )}
                 </tbody>
@@ -888,6 +1077,96 @@ export const ProgramacionFixture: React.FC = () => {
         )}
 
       </main>
+
+      {/* Modal Editar Escenario */}
+      {modalEditarEsc.abierto && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+              <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Editar Escenario</h3>
+              <button
+                onClick={() => setModalEditarEsc({ abierto: false, id: null, name: '', venue_type: 'cancha', location: '', capacity: '', status: 'active', guardando: false })}
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+            <form onSubmit={guardarEdicionEsc} className="p-6 space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Nombre del Escenario *</label>
+                <input
+                  type="text" required
+                  value={modalEditarEsc.name}
+                  onChange={(e) => setModalEditarEsc(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Tipo *</label>
+                  <select
+                    required
+                    value={modalEditarEsc.venue_type}
+                    onChange={(e) => setModalEditarEsc(prev => ({ ...prev, venue_type: e.target.value }))}
+                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                  >
+                    <option value="cancha">Cancha</option>
+                    <option value="estadio">Estadio</option>
+                    <option value="coliseo">Coliseo</option>
+                    <option value="gimnasio">Gimnasio</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Capacidad</label>
+                  <input
+                    type="number" min="0"
+                    value={modalEditarEsc.capacity}
+                    onChange={(e) => setModalEditarEsc(prev => ({ ...prev, capacity: e.target.value }))}
+                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Ubicación *</label>
+                <input
+                  type="text" required
+                  value={modalEditarEsc.location}
+                  onChange={(e) => setModalEditarEsc(prev => ({ ...prev, location: e.target.value }))}
+                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Estado *</label>
+                <select
+                  value={modalEditarEsc.status}
+                  onChange={(e) => setModalEditarEsc(prev => ({ ...prev, status: e.target.value }))}
+                  className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                >
+                  <option value="active">Disponible / Activo</option>
+                  <option value="inactive">No Disponible</option>
+                </select>
+              </div>
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setModalEditarEsc({ abierto: false, id: null, name: '', venue_type: 'cancha', location: '', capacity: '', status: 'active', guardando: false })}
+                  className="px-4 py-2 text-xs font-bold text-slate-650 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={modalEditarEsc.guardando}
+                  className="px-5 py-2 text-xs font-bold text-white bg-primary hover:bg-primary-container rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {modalEditarEsc.guardando ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Botón Flotante de Ayuda */}
       <button
