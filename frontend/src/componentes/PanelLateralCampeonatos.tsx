@@ -17,16 +17,16 @@ export const PanelLateralCampeonatos: React.FC = () => {
   const [cargando, setCargando] = useState(false);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState('');
-  const [filtroFechaDesde, setFiltroFechaDesde] = useState('');
-  const [filtroFechaHasta, setFiltroFechaHasta] = useState('');
+  const [filtroAnio, setFiltroAnio] = useState<string>('');
 
-  // Formulario de creación rápida
   const [mostrarCreador, setMostrarCreador] = useState(false);
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevoTipo, setNuevoTipo] = useState<'basico' | 'completo'>('basico');
   const [nuevoReglamento, setNuevoReglamento] = useState<File | null>(null);
   const [creando, setCreando] = useState(false);
   const [nuevoEsPublico, setNuevoEsPublico] = useState(false);
+
+  const currentYear = new Date().getFullYear();
 
   useEffect(() => {
     if (panelCampeonatosAbierto && usuario) {
@@ -37,9 +37,9 @@ export const PanelLateralCampeonatos: React.FC = () => {
       setNuevoReglamento(null);
       setErrorLocal(null);
       setBusqueda('');
-      setFiltroFechaDesde('');
-      setFiltroFechaHasta('');
       setNuevoEsPublico(false);
+      // Establecer año actual como predeterminado
+      setFiltroAnio(currentYear.toString());
     }
   }, [panelCampeonatosAbierto, usuario]);
 
@@ -115,17 +115,40 @@ export const PanelLateralCampeonatos: React.FC = () => {
     setPanelCampeonatosAbierto(false);
   };
 
+  const extractYearFromDate = (dateStr: string | null | undefined): number | null => {
+    if (!dateStr) return null;
+    const year = new Date(dateStr).getFullYear();
+    return isNaN(year) ? null : year;
+  };
+
+  const getAvailableYears = (): number[] => {
+    const years = new Set<number>();
+    // Siempre incluir el año actual
+    years.add(currentYear);
+    campeonatos.forEach(c => {
+      const year = extractYearFromDate(c.start_date);
+      if (year) {
+        years.add(year);
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  };
+
   const filteredChampionships = campeonatos.filter(c => {
     const coincideNombre = c.name.toLowerCase().includes(busqueda.toLowerCase());
-    const coincideDesde = !filtroFechaDesde || (c.start_date && c.start_date >= filtroFechaDesde);
-    const coincideHasta = !filtroFechaHasta || (c.start_date && c.start_date <= filtroFechaHasta);
-    return coincideNombre && coincideDesde && coincideHasta;
-  }
-  );
+    const anioCampeonato = extractYearFromDate(c.start_date);
+    const coincideAnio = filtroAnio === 'todos' || (anioCampeonato && anioCampeonato.toString() === filtroAnio);
+    
+    // LOG PARA DEPURACIÓN
+    console.log('Campeonato:', c.name, 'start_date:', c.start_date, 'año extraído:', anioCampeonato, 'filtro:', filtroAnio, 'coincide:', coincideAnio);
+    
+    return coincideNombre && coincideAnio;
+  });
+
+  const availableYears = getAvailableYears();
 
   return (
     <>
-      {/* Backdrop overlay (Only on mobile/tablet) */}
       <div 
         className={`fixed inset-0 z-45 bg-[#07080c]/60 backdrop-blur-xs transition-opacity duration-300 pointer-events-none lg:hidden ${
           panelCampeonatosAbierto ? 'opacity-100 pointer-events-auto' : 'opacity-0'
@@ -133,13 +156,11 @@ export const PanelLateralCampeonatos: React.FC = () => {
         onClick={() => setPanelCampeonatosAbierto(false)}
       />
 
-      {/* Right Drawer Sidebar - Becomes adaptive side-by-side on desktop */}
       <aside 
         className={`fixed right-0 top-0 bottom-0 z-35 w-full lg:w-[384px] bg-[#0c0e16] border-l border-slate-800 shadow-2xl transition-transform duration-300 ease-out transform flex flex-col ${
           panelCampeonatosAbierto ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-5 h-16 border-b border-slate-800 shrink-0">
           <div>
             <h3 className="font-extrabold text-sm text-white uppercase tracking-wider flex items-center gap-1.5">
@@ -159,7 +180,6 @@ export const PanelLateralCampeonatos: React.FC = () => {
           </button>
         </div>
 
-        {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {errorLocal && (
             <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-450 text-xs flex items-center gap-2">
@@ -168,7 +188,6 @@ export const PanelLateralCampeonatos: React.FC = () => {
             </div>
           )}
 
-          {/* Creador Rápido en Acordeón */}
           <div className="space-y-2">
             {!mostrarCreador ? (
               <button
@@ -277,7 +296,6 @@ export const PanelLateralCampeonatos: React.FC = () => {
             )}
           </div>
 
-          {/* Listado con Buscador */}
           <div className="space-y-3">
             <div className="relative">
               <input
@@ -288,25 +306,32 @@ export const PanelLateralCampeonatos: React.FC = () => {
               <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">search</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="date" value={filtroFechaDesde}
-                onChange={(e) => setFiltroFechaDesde(e.target.value)}
-                className="w-full bg-[#11131c] border border-slate-800 text-slate-200 text-[11px] rounded-xl px-3 py-2 outline-none focus:border-indigo-500/50 transition-colors font-semibold"
-              />
-              <input
-                type="date" value={filtroFechaHasta}
-                onChange={(e) => setFiltroFechaHasta(e.target.value)}
-                className="w-full bg-[#11131c] border border-slate-800 text-slate-200 text-[11px] rounded-xl px-3 py-2 outline-none focus:border-indigo-500/50 transition-colors font-semibold"
-              />
+            <div className="flex items-center gap-3">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0">Temporada:</label>
+              <div className="relative flex-1">
+                <select
+                  value={filtroAnio}
+                  onChange={(e) => setFiltroAnio(e.target.value)}
+                  className="w-full appearance-none bg-[#11131c] border border-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 outline-none focus:border-indigo-500/50 transition-colors font-semibold cursor-pointer"
+                >
+                  <option value="todos">Todos los años</option>
+                  {availableYears.map(year => (
+                    <option key={year} value={year.toString()}>{year}</option>
+                  ))}
+                </select>
+                <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 text-sm pointer-events-none">
+                  expand_more
+                </span>
+              </div>
             </div>
-            {(filtroFechaDesde || filtroFechaHasta) && (
+
+            {filtroAnio !== 'todos' && (
               <button
                 type="button"
-                onClick={() => { setFiltroFechaDesde(''); setFiltroFechaHasta(''); }}
+                onClick={() => setFiltroAnio('todos')}
                 className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 cursor-pointer"
               >
-                Limpiar filtro de fecha
+                Limpiar filtro
               </button>
             )}
 
@@ -323,6 +348,7 @@ export const PanelLateralCampeonatos: React.FC = () => {
               ) : (
                 filteredChampionships.map((c) => {
                   const esActivo = campeonatoActivo?.id === c.id;
+                  const anio = extractYearFromDate(c.start_date);
                   return (
                     <div
                       key={c.id}
@@ -334,14 +360,21 @@ export const PanelLateralCampeonatos: React.FC = () => {
                       }`}
                     >
                       <div className="min-w-0 pr-3 space-y-1">
-                        <h4 className={`font-extrabold text-xs group-hover:text-indigo-400 transition-colors truncate ${esActivo ? 'text-indigo-400' : 'text-white'}`}>{c.name}</h4>
-                        <div className="flex items-center gap-1.5">
+                        <h4 className={`font-extrabold text-xs group-hover:text-indigo-400 transition-colors truncate ${esActivo ? 'text-indigo-400' : 'text-white'}`}>
+                          {c.name}
+                        </h4>
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="px-1.5 py-0.5 rounded-sm bg-[#11131c] border border-slate-850 text-slate-500 text-[10px] font-extrabold uppercase tracking-wide">
                             {c.type === 'completo' ? 'Completo' : 'Básico'}
                           </span>
                           <span className="px-1.5 py-0.5 rounded-sm bg-emerald-500/10 border border-emerald-500/20 text-emerald-450 text-[10px] font-extrabold uppercase tracking-wide">
                             {c.status}
                           </span>
+                          {anio && (
+                            <span className="px-1.5 py-0.5 rounded-sm bg-slate-800/50 border border-slate-700 text-slate-400 text-[10px] font-extrabold">
+                              {anio}
+                            </span>
+                          )}
                         </div>
                       </div>
 

@@ -12,7 +12,6 @@ export const Configuracion: React.FC = () => {
   const { campeonatoActivo, seleccionarCampeonato } = useCampeonato();
   const navegar = useNavigate();
 
-  // Estados del formulario
   const [nombre, setNombre] = useState('');
   const [tipo, setTipo] = useState<'basico' | 'completo'>('basico');
   const [estado, setEstado] = useState('creado');
@@ -20,6 +19,8 @@ export const Configuracion: React.FC = () => {
   const [reglamento, setReglamento] = useState<File | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
     if (!cargando && !usuario) {
@@ -37,6 +38,8 @@ export const Configuracion: React.FC = () => {
       setTipo(campeonatoActivo.type || 'basico');
       setEstado(campeonatoActivo.status || 'creado');
       setIsPublic(campeonatoActivo.is_public || false);
+      setStartDate(campeonatoActivo.start_date || '');
+      setEndDate(campeonatoActivo.end_date || '');
     }
   }, [campeonatoActivo]);
 
@@ -52,6 +55,8 @@ export const Configuracion: React.FC = () => {
       formData.append('type', tipo);
       formData.append('status', estado);
       formData.append('is_public', isPublic ? '1' : '0');
+      if (startDate) formData.append('start_date', startDate);
+      if (endDate) formData.append('end_date', endDate);
       if (reglamento) {
         formData.append('rules_pdf', reglamento);
       }
@@ -100,7 +105,6 @@ export const Configuracion: React.FC = () => {
       <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
       <CabeceraEstandar titulo="Configuración del Campeonato" subtitulo="Parámetros, reglas y estado de competencia" />
 
-      {/* Contenido */}
       <main className="flex-1 p-6 max-w-3xl w-full mx-auto space-y-6">
         {!campeonatoActivo ? (
           <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-12 text-center text-slate-400">
@@ -123,7 +127,6 @@ export const Configuracion: React.FC = () => {
             )}
 
             <form onSubmit={manejarGuardar} className="space-y-5">
-              {/* Nombre */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-350 block">Nombre del Campeonato *</label>
                 <input
@@ -137,7 +140,6 @@ export const Configuracion: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Tipo de Gestión */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-350 block">Tipo / Modo de Gestión *</label>
                   <select
@@ -150,7 +152,6 @@ export const Configuracion: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Estado */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-350 block">Estado del Campeonato *</label>
                   <select
@@ -165,7 +166,30 @@ export const Configuracion: React.FC = () => {
                 </div>
               </div>
 
-              {/* Visibilidad Publica - Toggle Switch */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-350 block">Fecha de Inicio</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full text-sm border border-slate-800 rounded-lg p-2.5 outline-hidden focus:border-indigo-500 bg-[#171a26] text-white"
+                  />
+                  <p className="text-[10px] text-slate-500">Fecha de inicio del campeonato</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-350 block">Fecha de Fin</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full text-sm border border-slate-800 rounded-lg p-2.5 outline-hidden focus:border-indigo-500 bg-[#171a26] text-white"
+                  />
+                  <p className="text-[10px] text-slate-500">Fecha de finalización del campeonato</p>
+                </div>
+              </div>
+
               <div className="space-y-3 pt-2 border-t border-slate-900/50">
                 <div className="flex items-center justify-between">
                   <div>
@@ -177,7 +201,6 @@ export const Configuracion: React.FC = () => {
                     </p>
                   </div>
                   
-                  {/* Toggle Switch */}
                   <button
                     type="button"
                     onClick={() => setIsPublic(!isPublic)}
@@ -229,7 +252,6 @@ export const Configuracion: React.FC = () => {
                 </div>
               </div>
 
-              {/* PDF Reglamento */}
               <div className="space-y-2.5 pt-3 border-t border-slate-900">
                 <div className="flex justify-between items-center">
                   <label className="text-xs font-bold text-slate-350 block">Reglamento Oficial (PDF)</label>
@@ -253,7 +275,6 @@ export const Configuracion: React.FC = () => {
                 <p className="text-[10px] text-slate-500 leading-none">Sube un nuevo archivo PDF para reemplazar o registrar el reglamento del torneo.</p>
               </div>
 
-              {/* Botón */}
               <button
                 type="submit"
                 disabled={guardando}
