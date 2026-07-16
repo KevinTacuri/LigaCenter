@@ -4,6 +4,7 @@ import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../../contexto/ContextoCampeonato';
 import { BarraLateral } from '../../componentes/BarraLateral';
 import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
+import { TablaPosicionesDinamica } from '../../componentes/TablaPosicionesDinamica';
 import {
   serviciosParticipantes,
   serviciosResultados,
@@ -32,6 +33,7 @@ export const EstadisticasOrganizador: React.FC = () => {
   const [sanciones, setSanciones] = useState<Sancion[]>([]);
   const [topScorers, setTopScorers] = useState<any[]>([]);
   const [equipos, setEquipos] = useState<Equipo[]>([]);
+  const [championshipDisciplines, setChampionshipDisciplines] = useState<any[]>([]);
 
   const [selectedDiscipline, setSelectedDiscipline] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
@@ -67,6 +69,11 @@ export const EstadisticasOrganizador: React.FC = () => {
       return coincideCategoria && coincideDisciplina;
     });
   }, [equipos, selectedCategory, selectedDiscipline]);
+
+  const getDisciplinaActual = () => {
+    const cd = championshipDisciplines.find(cd => cd.id === selectedDiscipline);
+    return cd?.discipline;
+  };
 
   useEffect(() => {
     if (!cargando && !cargandoCampeonato && !campeonatoActivo) {
@@ -163,11 +170,12 @@ export const EstadisticasOrganizador: React.FC = () => {
       const discRes = await serviciosParticipantes.obtenerDisciplinasCampeonato(champId);
       if (discRes.success) {
         const discData = discRes.data || [];
+        setChampionshipDisciplines(discData);
         const disciplinesList = discData.map((cd: any) => cd.discipline).filter(Boolean);
         setDisciplinas(disciplinesList);
         
         if (disciplinesList.length > 0 && !selectedDiscipline) {
-          setSelectedDiscipline(disciplinesList[0].id);
+          setSelectedDiscipline(discData[0]?.id || null);
         }
       }
 
@@ -407,6 +415,8 @@ export const EstadisticasOrganizador: React.FC = () => {
   }
 
   if (!usuario) return null;
+
+  const disciplinaActual = getDisciplinaActual();
 
   return (
     <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans">
@@ -842,61 +852,11 @@ export const EstadisticasOrganizador: React.FC = () => {
                     })()}
                   </div>
                 ) : (
-                  <div className="space-y-8 p-2 overflow-x-auto">
-                    {(() => {
-                      const datosTablas = esFormatoGrupos 
-                        ? agruparPosicionesPorGrupo() 
-                        : { "Tabla General": posiciones };
-
-                      return Object.keys(datosTablas).map((nombreGrupo) => (
-                        <div key={nombreGrupo} className="space-y-3">
-                          {esFormatoGrupos && (
-                            <div className="flex items-center gap-2 px-3 py-1 bg-[#171a26] border border-slate-800 rounded-lg w-fit">
-                              <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                              <h4 className="text-xs font-black text-white uppercase tracking-wider">{nombreGrupo}</h4>
-                            </div>
-                          )}
-
-                          <div className="border border-slate-900/60 rounded-xl overflow-hidden bg-[#0c0e16]/20">
-                            <table className="w-full text-left border-collapse">
-                              <thead>
-                                <tr className="bg-[#171a26]/70 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                                  <th className="p-3 pl-5 text-center w-10">#</th>
-                                  <th className="p-3">Equipo</th>
-                                  <th className="p-3 text-center">PJ</th>
-                                  <th className="p-3 text-center">G</th>
-                                  <th className="p-3 text-center">E</th>
-                                  <th className="p-3 text-center">P</th>
-                                  <th className="p-3 text-center">GF</th>
-                                  <th className="p-3 text-center">GC</th>
-                                  <th className="p-3 text-center">DG</th>
-                                  <th className="p-3 pr-5 text-center font-bold">Pts</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-800/60">
-                                {datosTablas[nombreGrupo].map((pos, index) => (
-                                  <tr key={pos.team_id || `pos-${index}`} className="hover:bg-[#171a26]/40 transition-colors">
-                                    <td className="p-3 pl-5 text-center font-bold text-slate-400">{index + 1}</td>
-                                    <td className="p-3 font-bold text-white text-sm">{obtenerNombreEquipo(pos.team?.name)}</td>
-                                    <td className="p-3 text-center text-slate-300">{pos.matches_played || 0}</td>
-                                    <td className="p-3 text-center text-emerald-400">{pos.wins ?? 0}</td>
-                                    <td className="p-3 text-center text-slate-400">{pos.draws ?? 0}</td>
-                                    <td className="p-3 text-center text-rose-400">{pos.losses ?? 0}</td>
-                                    <td className="p-3 text-center text-slate-300">{pos.goals_for || 0}</td>
-                                    <td className="p-3 text-center text-slate-300">{pos.goals_against || 0}</td>
-                                    <td className="p-3 text-center font-bold text-white">
-                                      {pos.goal_difference > 0 ? `+${pos.goal_difference}` : pos.goal_difference || 0}
-                                    </td>
-                                    <td className="p-3 pr-5 text-center font-extrabold text-indigo-400 text-base">{pos.points ?? 0}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      ));
-                    })()}
-                  </div>
+                  <TablaPosicionesDinamica
+                    standings={posiciones}
+                    discipline={disciplinaActual?.name || 'futbol'}
+                    loading={loading}
+                  />
                 )}
               </div>
             </div>

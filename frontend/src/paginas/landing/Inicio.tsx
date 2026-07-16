@@ -1,12 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { TiempoEnVivo } from '../../componentes/public/TiempoEnVivo';
+import { TablaPosicionesDinamica } from '../../componentes/TablaPosicionesDinamica';
 import type { 
   PublicMatch, 
   PublicStanding, 
   PublicChampionship, 
   PublicDiscipline 
 } from '../../servicios/apiPublic';
+import type { Posicion } from '../../servicios/api';
 
 interface InicioProps {
   matches: PublicMatch[];
@@ -48,6 +50,43 @@ export const Inicio: React.FC<InicioProps> = ({
     }
   };
 
+  const obtenerNombreEquipo = (nombreCompleto: string | undefined): string => {
+    if (!nombreCompleto) return '—';
+    const partes = nombreCompleto.split(' - ');
+    return partes[0] || nombreCompleto;
+  };
+
+  const mapStandingToPosicion = (standing: PublicStanding, index: number): Posicion => {
+    return {
+      team_id: standing.team?.id || 0,
+      category_id: 0,
+      matches_played: standing.matches_played || 0,
+      wins: standing.wins || 0,
+      draws: standing.draws || 0,
+      losses: standing.losses || 0,
+      goals_for: standing.goals_for || 0,
+      goals_against: standing.goals_against || 0,
+      goal_difference: standing.goal_difference || 0,
+      points: standing.points || 0,
+      team: standing.team ? {
+        id: standing.team.id,
+        name: standing.team.name,
+        logo: standing.team.logo
+      } : undefined,
+      wins_total: standing.wins_total || 0,
+      losses_total: standing.losses_total || 0,
+      sets_for: standing.sets_for || 0,
+      sets_against: standing.sets_against || 0,
+      sets_ratio: standing.sets_ratio || 0,
+      points_for: standing.points_for || 0,
+      points_against: standing.points_against || 0,
+      points_ratio: standing.points_ratio || 0,
+      win_percentage: standing.win_percentage || 0,
+      games_behind: standing.games_behind || 0,
+      streak: standing.streak || null,
+    };
+  };
+
   const TeamLogo: React.FC<{ name?: string; logo?: string | null; size?: 'sm' | 'md' }> = ({
     name,
     logo,
@@ -75,6 +114,8 @@ export const Inicio: React.FC<InicioProps> = ({
       </div>
     );
   };
+
+  const posicionesMapeadas: Posicion[] = standings.map((s, index) => mapStandingToPosicion(s, index));
 
   return (
     <>
@@ -181,68 +222,15 @@ export const Inicio: React.FC<InicioProps> = ({
       ) : (
         <>
           {tabActiva === 'posiciones' && (
-            <div className="bg-[#11131c] rounded-xl border border-slate-800 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-[#171a26] border-b border-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                      <th className="p-3 pl-4 text-center w-10">Pos</th>
-                      <th className="p-3">Equipo</th>
-                      <th className="p-3 text-center">PJ</th>
-                      <th className="p-3 text-center">G</th>
-                      <th className="p-3 text-center">E</th>
-                      <th className="p-3 text-center">P</th>
-                      <th className="p-3 text-center">GF</th>
-                      <th className="p-3 text-center">GC</th>
-                      <th className="p-3 text-center">DG</th>
-                      <th className="p-3 pr-4 text-center font-bold">Pts</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {standings && standings.length > 0 ? (
-                      standings.map((standing, index) => {
-                        if (!standing || !standing.team) {
-                          return null;
-                        }
-                        return (
-                          <tr key={standing.team?.id || index} className="hover:bg-[#171a26]/40">
-                            <td className="p-3 pl-4 text-center font-bold text-slate-400">{index + 1}</td>
-                            <td className="p-3 font-bold text-white">
-                              <Link to={`/equipos/${standing.team?.id}`} className="hover:text-indigo-400 transition-colors">
-                                {standing.team?.name || '—'}
-                              </Link>
-                            </td>
-                            <td className="p-3 text-center text-slate-300">{standing.matches_played || 0}</td>
-                            <td className="p-3 text-center text-emerald-400">{standing.wins || 0}</td>
-                            <td className="p-3 text-center text-slate-400">{standing.draws || 0}</td>
-                            <td className="p-3 text-center text-rose-400">{standing.losses || 0}</td>
-                            <td className="p-3 text-center text-slate-300">{standing.goals_for || 0}</td>
-                            <td className="p-3 text-center text-slate-300">{standing.goals_against || 0}</td>
-                            <td className="p-3 text-center font-bold text-white">
-                              {standing.goal_difference > 0 ? `+${standing.goal_difference}` : standing.goal_difference || 0}
-                            </td>
-                            <td className="p-3 pr-4 text-center font-extrabold text-indigo-400 text-base">
-                              {standing.points || 0}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td colSpan={10} className="p-10 text-center text-slate-500 text-sm">
-                          No hay posiciones disponibles para este campeonato
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <TablaPosicionesDinamica
+              standings={posicionesMapeadas}
+              discipline={disciplines.find(d => d.id === selectedDiscipline)?.name || 'futbol'}
+              loading={loading}
+            />
           )}
 
           {tabActiva === 'partidos' && (
             <div className="space-y-8">
-              {/* SECCIÓN 1: PARTIDOS EN VIVO (MÁXIMA VISIBILIDAD) */}
               {matches && matches.filter(m => m.status === 'en_vivo').length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-4">
@@ -256,7 +244,6 @@ export const Inicio: React.FC<InicioProps> = ({
                         to={`/partidos/${match.id}`}
                         className="group relative bg-slate-900/60 backdrop-blur-md rounded-2xl border border-red-500/35 hover:border-red-500 hover:shadow-2xl hover:shadow-red-500/10 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col p-5"
                       >
-                        {/* Indicador superior */}
                         <div className="flex justify-between items-center mb-4">
                           <span className="text-[10px] text-red-400 font-extrabold uppercase tracking-widest bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
                             {match.championship?.name || 'Competición'}
@@ -270,12 +257,11 @@ export const Inicio: React.FC<InicioProps> = ({
                           />
                         </div>
 
-                        {/* Marcador grande */}
                         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 py-3">
                           <div className="flex flex-col items-center gap-2 min-w-0">
                             <TeamLogo name={match.home_team?.name} logo={match.home_team?.logo} size="md" />
                             <span className="text-sm font-bold text-white text-center truncate w-full group-hover:text-red-400 transition-colors">
-                              {match.home_team?.name || '—'}
+                              {obtenerNombreEquipo(match.home_team?.name)}
                             </span>
                           </div>
 
@@ -289,12 +275,11 @@ export const Inicio: React.FC<InicioProps> = ({
                           <div className="flex flex-col items-center gap-2 min-w-0">
                             <TeamLogo name={match.away_team?.name} logo={match.away_team?.logo} size="md" />
                             <span className="text-sm font-bold text-white text-center truncate w-full group-hover:text-red-400 transition-colors">
-                              {match.away_team?.name || '—'}
+                              {obtenerNombreEquipo(match.away_team?.name)}
                             </span>
                           </div>
                         </div>
 
-                        {/* Información inferior */}
                         <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
                           <span className="flex items-center gap-1.5 font-semibold">
                             <span className="material-symbols-outlined text-xs text-red-500">schedule</span>
@@ -320,7 +305,6 @@ export const Inicio: React.FC<InicioProps> = ({
                 </div>
               )}
 
-              {/* SECCIÓN 2: OTROS PARTIDOS (PRÓXIMOS Y FINALIZADOS) */}
               <div>
                 {matches && matches.filter(m => m.status === 'en_vivo').length > 0 && (
                   <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Otros Partidos</h3>
@@ -344,7 +328,7 @@ export const Inicio: React.FC<InicioProps> = ({
                           <div className="flex flex-col items-center gap-1.5 min-w-0">
                             <TeamLogo name={match.home_team?.name} logo={match.home_team?.logo} size="sm" />
                             <span className="text-xs font-semibold text-slate-200 text-center truncate w-full">
-                              {match.home_team?.name || '—'}
+                              {obtenerNombreEquipo(match.home_team?.name)}
                             </span>
                           </div>
 
@@ -361,7 +345,7 @@ export const Inicio: React.FC<InicioProps> = ({
                           <div className="flex flex-col items-center gap-1.5 min-w-0">
                             <TeamLogo name={match.away_team?.name} logo={match.away_team?.logo} size="sm" />
                             <span className="text-xs font-semibold text-slate-200 text-center truncate w-full">
-                              {match.away_team?.name || '—'}
+                              {obtenerNombreEquipo(match.away_team?.name)}
                             </span>
                           </div>
                         </div>

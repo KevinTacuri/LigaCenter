@@ -422,22 +422,32 @@ export interface Posicion {
   discipline_id?: number;
   category_id: number;
   matches_played: number;
-  matches_won?: number;    // Opcional para compatibilidad
-  matches_drawn?: number;  // Opcional para compatibilidad
-  matches_lost?: number;   // Opcional para compatibilidad
+  matches_won?: number;
+  matches_drawn?: number;
+  matches_lost?: number;
   wins: number;
   draws: number;
   losses: number;
   goals_for: number;
   goals_against: number;
   goal_difference: number;
-  total_points?: number;   // Opcional para compatibilidad
+  total_points?: number;
   points: number;
   team?: Equipo;
   championship_id?: number;
   last_updated?: string | null;
+  wins_total?: number;
+  losses_total?: number;
+  sets_for?: number;
+  sets_against?: number;
+  sets_ratio?: number;
+  points_for?: number;
+  points_against?: number;
+  points_ratio?: number;
+  win_percentage?: number;
+  games_behind?: number;
+  streak?: string | null;
 }
-
 export interface TipoEstadistica {
   id: number;
   order: number;

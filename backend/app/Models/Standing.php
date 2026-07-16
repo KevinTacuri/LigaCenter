@@ -13,18 +13,33 @@ class Standing extends Model
         'category_id',
         'championship_id',
         'matches_played',
+        'points',
         'wins',
         'draws',
         'losses',
         'goals_for',
         'goals_against',
         'goal_difference',
-        'points',
+        'wins_total',
+        'losses_total',
+        'sets_for',
+        'sets_against',
+        'sets_ratio',
+        'points_for',
+        'points_against',
+        'points_ratio',
+        'win_percentage',
+        'games_behind',
+        'streak',
         'last_updated',
     ];
 
     protected $casts = [
         'last_updated' => 'datetime',
+        'sets_ratio' => 'float',
+        'points_ratio' => 'float',
+        'win_percentage' => 'float',
+        'games_behind' => 'float',
     ];
 
     public function team()

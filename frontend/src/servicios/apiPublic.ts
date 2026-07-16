@@ -11,7 +11,6 @@ const apiPublic = axios.create({
     timeout: 30000,
 });
 
-// Interceptor para normalizar respuestas
 apiPublic.interceptors.response.use(
     (response) => {
         if (response.data && typeof response.data === 'object' && !Array.isArray(response.data) && !(response.data instanceof Blob)) {
@@ -38,10 +37,6 @@ apiPublic.interceptors.response.use(
         return Promise.reject(error);
     }
 );
-
-// ============================================
-// TIPOS DE DATOS PÚBLICOS
-// ============================================
 
 export interface PublicDiscipline {
     id: number;
@@ -113,7 +108,7 @@ export interface PublicMatch {
     match_time: string | null;
     datetime: string | null;
     elapsed_time: number | null;
-    timer_status: 'stopped' | 'running' | 'paused' | 'finished' | null; // 👈 Tipo corregido
+    timer_status: 'stopped' | 'running' | 'paused' | 'finished' | null;
     current_period: number | null;
     discipline_id: number;
     category_id: number;
@@ -151,6 +146,19 @@ export interface PublicStanding {
     goal_difference: number;
     points: number;
     form: string | null;
+    // Campos para vóley
+    wins_total?: number;
+    losses_total?: number;
+    sets_for?: number;
+    sets_against?: number;
+    sets_ratio?: number;
+    points_for?: number;
+    points_against?: number;
+    points_ratio?: number;
+    // Campos para básquet
+    win_percentage?: number;
+    games_behind?: number;
+    streak?: string | null;
 }
 
 export interface SearchResults {
@@ -172,32 +180,25 @@ export interface ChampionshipStats {
     }>;
 }
 
-// ============================================
-// SERVICIOS
-// ============================================
-
 export const publicApi = {
-    // Búsqueda
     search: (query: string) =>
         apiPublic.get<{ success: boolean; data: SearchResults; message: string }>('/public/search', { 
             params: { q: query } 
         }),
 
-    // Disciplinas
     getDisciplines: () =>
         apiPublic.get<{ success: boolean; data: PublicDiscipline[]; message: string }>('/public/disciplines'),
 
-    // Campeonatos
     getChampionships: (params?: { discipline_id?: number; search?: string; page?: number }) =>
         apiPublic.get<{ success: boolean; data: { data: PublicChampionship[] }; message: string }>('/public/championships', { 
             params 
         }),
 
     getChampionship: (id: number, params?: { year?: number }) =>
-    apiPublic.get<{ success: boolean; data: { championship: PublicChampionship; stats: ChampionshipStats }; message: string }>(
-        `/public/championships/${id}`, 
-        { params }
-    ),
+        apiPublic.get<{ success: boolean; data: { championship: PublicChampionship; stats: ChampionshipStats }; message: string }>(
+            `/public/championships/${id}`, 
+            { params }
+        ),
 
     getChampionshipStandings: (id: number) =>
         apiPublic.get<{ success: boolean; data: PublicStanding[]; message: string }>(
@@ -216,11 +217,10 @@ export const publicApi = {
         ),
 
     getChampionshipStandingsComplete: (id: number) =>
-    apiPublic.get<{ success: boolean; data: PublicStanding[]; message: string }>(
-        `/public/championships/${id}/standings-complete`
-    ),
+        apiPublic.get<{ success: boolean; data: PublicStanding[]; message: string }>(
+            `/public/championships/${id}/standings-complete`
+        ),
     
-    // Partidos
     getMatches: (params?: { discipline_id?: number; status?: string; championship_id?: number; search?: string; page?: number }) =>
         apiPublic.get<{ success: boolean; data: { data: PublicMatch[] }; message: string }>('/public/matches', { 
             params 
@@ -235,7 +235,6 @@ export const publicApi = {
     getMatch: (id: number) =>
         apiPublic.get<{ success: boolean; data: any; message: string }>(`/public/matches/${id}`),
 
-    // Equipos
     getTeams: (params?: { championship_id?: number; search?: string; page?: number; year?: number }) =>
         apiPublic.get<{ success: boolean; data: { data: PublicTeam[] }; message: string }>('/public/teams', { 
             params 
@@ -244,7 +243,6 @@ export const publicApi = {
     getTeam: (id: number) =>
         apiPublic.get<{ success: boolean; data: PublicTeamDetail; message: string }>(`/public/teams/${id}`),
     
-    // Jugadores
     getPlayers: (params?: { team_id?: number; championship_id?: number; search?: string; page?: number }) =>
         apiPublic.get<{ success: boolean; data: { data: PublicPlayer[] }; message: string }>('/public/players', { 
             params 

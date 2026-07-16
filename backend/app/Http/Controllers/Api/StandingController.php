@@ -121,13 +121,24 @@ class StandingController extends Controller
                     'category_id' => $categoryId,
                     'championship_id' => $championshipId,
                     'matches_played' => 0,
+                    'points' => 0,
                     'wins' => 0,
                     'draws' => 0,
                     'losses' => 0,
                     'goals_for' => 0,
                     'goals_against' => 0,
                     'goal_difference' => 0,
-                    'points' => 0,
+                    'wins_total' => 0,
+                    'losses_total' => 0,
+                    'sets_for' => 0,
+                    'sets_against' => 0,
+                    'sets_ratio' => 0,
+                    'points_for' => 0,
+                    'points_against' => 0,
+                    'points_ratio' => 0,
+                    'win_percentage' => 0,
+                    'games_behind' => 0,
+                    'streak' => null,
                     'last_updated' => null,
                     'group_name' => $groupName,
                 ];
@@ -244,6 +255,24 @@ class StandingController extends Controller
         return $this->successResponse(
             $standing,
             'Registro obtenido exitosamente'
+        );
+    }
+
+    public function recalculate(Request $request)
+    {
+        $championshipId = $request->input('championship_id');
+        $categoryId = $request->input('category_id');
+
+        if (!$championshipId || !$categoryId) {
+            return $this->errorResponse('Se requiere championship_id y category_id', 400);
+        }
+
+        $service = new \App\Services\StandingService();
+        $service->recalculateAllForCategory($championshipId, $categoryId);
+
+        return $this->successResponse(
+            null,
+            'Posiciones recalculadas exitosamente'
         );
     }
 }
