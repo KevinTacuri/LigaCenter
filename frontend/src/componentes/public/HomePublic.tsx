@@ -136,17 +136,14 @@ export const HomePublic: React.FC = () => {
       let champData = championshipsRes.data.data?.data || [];
       
       if (selectedDiscipline !== null) {
-        // Obtener los IDs de los campeonatos que tienen partidos de la disciplina seleccionada
         const champIdsConDisciplina = new Set<number>();
         allMatchesData.forEach(match => {
           const champId = match.championship?.id;
           if (!champId) return;
           
-          // Verificar si el partido tiene la disciplina seleccionada (del nombre del equipo)
           const homeInfo = extraerInfoDelNombre(match.home_team?.name || '');
           const awayInfo = extraerInfoDelNombre(match.away_team?.name || '');
           
-          // Buscar la disciplina en el nombre de los equipos
           const disciplinaEncontrada = 
             homeInfo.disciplina === disciplines.find(d => d.id === selectedDiscipline)?.name ||
             awayInfo.disciplina === disciplines.find(d => d.id === selectedDiscipline)?.name;
@@ -156,20 +153,17 @@ export const HomePublic: React.FC = () => {
           }
         });
         
-        // Filtrar campeonatos que tienen la disciplina seleccionada
         champData = champData.filter(champ => champIdsConDisciplina.has(champ.id));
       }
       
       setChampionships(champData);
 
-      // Inicializar estado del acordeón solo con los campeonatos filtrados
       const newExpandedState: ExpandedState = {};
       
       const matchesPorCampeonato: { [champId: number]: PublicMatch[] } = {};
       allMatchesData.forEach(match => {
         const champId = match.championship?.id;
         if (!champId) return;
-        // Solo procesar si el campeonato está en la lista filtrada
         if (!champData.some(c => c.id === champId)) return;
         if (!matchesPorCampeonato[champId]) {
           matchesPorCampeonato[champId] = [];
@@ -395,7 +389,6 @@ export const HomePublic: React.FC = () => {
 
   return (
     <LayoutPublico onSearch={handleSearch}>
-      {/* SECCIÓN 1: PARTIDOS DESTACADOS - CON DISCIPLINA Y CATEGORÍA */}
       <section className="mb-10">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-white">⚡ Destacados</h2>
@@ -429,7 +422,6 @@ export const HomePublic: React.FC = () => {
               }}
             >
               {highlightedMatches.map(match => {
-                // Extraer información del equipo local para obtener disciplina y categoría
                 const homeInfo = extraerInfoDelNombre(match.home_team?.name || '');
                 const disciplina = homeInfo.disciplina !== 'Sin disciplina' ? homeInfo.disciplina : '';
                 const categoria = homeInfo.categoria !== 'Sin categoría' ? homeInfo.categoria : '';
@@ -445,7 +437,6 @@ export const HomePublic: React.FC = () => {
                         <span className="text-[10px] text-slate-500 font-bold truncate">
                           {match.championship?.name || 'Competición'}
                         </span>
-                        {/* Mostrar disciplina y categoría */}
                         <div className="flex items-center gap-1.5 mt-0.5">
                           {disciplina && (
                             <span className="text-[8px] font-bold text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded truncate max-w-[80px]">
@@ -568,7 +559,6 @@ export const HomePublic: React.FC = () => {
         )}
       </section>
 
-      {/* SECCIÓN 2: FILTROS POR DISCIPLINA */}
       <section className="mb-8">
         <div className="flex flex-wrap gap-2">
           <button
@@ -598,7 +588,6 @@ export const HomePublic: React.FC = () => {
         </div>
       </section>
 
-      {/* SECCIÓN 3: NAVEGACIÓN DE TABS */}
       <div className="mb-6 border-b border-slate-800">
         <nav className="flex gap-6">
           <Link
@@ -622,7 +611,6 @@ export const HomePublic: React.FC = () => {
         </nav>
       </div>
 
-      {/* SECCIÓN 4: ACORDEÓN DE COMPETICIONES */}
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-white">🏆 Competiciones</h2>
@@ -662,9 +650,13 @@ export const HomePublic: React.FC = () => {
                         chevron_right
                       </span>
                       <div className="text-left min-w-0">
-                        <span className="font-bold text-white text-sm truncate block">
+                        <Link
+                          to={`/campeonatos/${champ.id}`}
+                          className="font-bold text-white text-sm truncate block hover:text-indigo-400 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           {getShortChampionshipName(champ.name)}
-                        </span>
+                        </Link>
                         {champ.description && (
                           <span className="text-[10px] text-slate-500 truncate block">
                             {champ.description}

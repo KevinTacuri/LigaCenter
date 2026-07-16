@@ -27,15 +27,33 @@ export const CampeonatoDetalle: React.FC = () => {
   const [teamsLoading, setTeamsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+
+  const extractYearFromDate = (dateStr: string | null): number | null => {
+    if (!dateStr) return null;
+    const year = new Date(dateStr).getFullYear();
+    return isNaN(year) ? null : year;
+  };
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
     setError(null);
-    publicApi.getChampionship(Number(id))
+    
+    const yearParam = selectedYear ? { year: selectedYear } : {};
+    
+    publicApi.getChampionship(Number(id), yearParam)
       .then((res) => {
         if (res.data.success) {
           setData(res.data.data);
+          
+          const champYear = extractYearFromDate(res.data.data.championship.start_date);
+          if (champYear) {
+            const years = [champYear];
+            setAvailableYears(years);
+            setSelectedYear(champYear);
+          }
         } else {
           setError('No se pudo cargar el campeonato.');
         }
@@ -44,7 +62,10 @@ export const CampeonatoDetalle: React.FC = () => {
       .finally(() => setLoading(false));
 
     setTeamsLoading(true);
-    publicApi.getTeams({ championship_id: Number(id) })
+    publicApi.getTeams({ 
+      championship_id: Number(id),
+      ...yearParam 
+    })
       .then((res) => {
         if (res.data.success) {
           setTeams(res.data.data.data);
@@ -52,7 +73,7 @@ export const CampeonatoDetalle: React.FC = () => {
       })
       .catch(() => {})
       .finally(() => setTeamsLoading(false));
-  }, [id]);
+  }, [id, selectedYear]);
 
   const handleSearch = (query: string) => {
     window.location.href = `/buscar?q=${encodeURIComponent(query)}`;
@@ -61,13 +82,41 @@ export const CampeonatoDetalle: React.FC = () => {
   return (
     <LayoutPublico onSearch={handleSearch}>
       <div className="max-w-4xl mx-auto">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold tracking-wide transition-colors mb-6"
-        >
-          <span className="material-symbols-outlined text-base">arrow_back</span>
-          <span>Volver</span>
-        </Link>
+        <div className="flex items-center justify-between mb-6">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold tracking-wide transition-colors"
+          >
+            <span className="material-symbols-outlined text-base">arrow_back</span>
+            <span>Volver</span>
+          </Link>
+
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Temporada:</label>
+            <div className="relative">
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="appearance-none bg-[#11131c] border border-slate-800 text-white text-sm font-bold rounded-xl px-4 py-2 pr-10 outline-none focus:border-indigo-500/50 cursor-pointer hover:bg-[#171a26] transition-colors min-w-[100px]"
+              >
+                {availableYears.length > 0 ? (
+                  availableYears.map(year => (
+                    <option key={year} value={year} className="bg-[#11131c]">
+                      {year}
+                    </option>
+                  ))
+                ) : (
+                  <option value={new Date().getFullYear()} className="bg-[#11131c]">
+                    {new Date().getFullYear()}
+                  </option>
+                )}
+              </select>
+              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">
+                expand_more
+              </span>
+            </div>
+          </div>
+        </div>
 
         {loading && (
           <div className="flex items-center justify-center py-20">
@@ -83,7 +132,6 @@ export const CampeonatoDetalle: React.FC = () => {
 
         {!loading && !error && data && (
           <>
-            {/* Cabecera del campeonato */}
             <div className="bg-[#11131c] rounded-xl border border-slate-800 p-6 md:p-8">
               <div className="flex flex-wrap justify-between items-start gap-3 mb-4">
                 <div>
@@ -95,7 +143,6 @@ export const CampeonatoDetalle: React.FC = () => {
                 {getStatusLabel(data.championship.status)}
               </div>
 
-              {/* Disciplinas - con verificacion de existencia */}
               {data.championship.disciplines && data.championship.disciplines.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
                   {data.championship.disciplines.map((d) => (
@@ -109,7 +156,6 @@ export const CampeonatoDetalle: React.FC = () => {
                 </div>
               )}
 
-              {/* Fechas */}
               <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
                 {data.championship.start_date && (
                   <span className="flex items-center gap-1">
@@ -126,7 +172,6 @@ export const CampeonatoDetalle: React.FC = () => {
               </div>
             </div>
 
-            {/* Estadísticas generales */}
             <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Estadísticas Generales</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
@@ -149,7 +194,6 @@ export const CampeonatoDetalle: React.FC = () => {
               </div>
             </div>
 
-            {/* Equipos */}
             <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Equipos</h3>
               {teamsLoading ? (
@@ -180,7 +224,6 @@ export const CampeonatoDetalle: React.FC = () => {
               )}
             </div>
 
-            {/* Máximos Goleadores */}
             <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Máximos Goleadores</h3>
               {!data.stats.top_scorers || data.stats.top_scorers.length === 0 ? (
@@ -205,9 +248,6 @@ export const CampeonatoDetalle: React.FC = () => {
               )}
             </div>
 
-            
-
-            {/* Accesos rápidos */}
             <div className="mt-6 grid grid-cols-2 gap-4">
               <Link
                 to={`/publico?tab=posiciones&campeonato=${data.championship.id}`}

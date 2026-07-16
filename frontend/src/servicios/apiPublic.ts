@@ -193,10 +193,11 @@ export const publicApi = {
             params 
         }),
 
-    getChampionship: (id: number) =>
-        apiPublic.get<{ success: boolean; data: { championship: PublicChampionship; stats: ChampionshipStats }; message: string }>(
-            `/public/championships/${id}`
-        ),
+    getChampionship: (id: number, params?: { year?: number }) =>
+    apiPublic.get<{ success: boolean; data: { championship: PublicChampionship; stats: ChampionshipStats }; message: string }>(
+        `/public/championships/${id}`, 
+        { params }
+    ),
 
     getChampionshipStandings: (id: number) =>
         apiPublic.get<{ success: boolean; data: PublicStanding[]; message: string }>(
@@ -235,7 +236,7 @@ export const publicApi = {
         apiPublic.get<{ success: boolean; data: any; message: string }>(`/public/matches/${id}`),
 
     // Equipos
-    getTeams: (params?: { championship_id?: number; search?: string; page?: number }) =>
+    getTeams: (params?: { championship_id?: number; search?: string; page?: number; year?: number }) =>
         apiPublic.get<{ success: boolean; data: { data: PublicTeam[] }; message: string }>('/public/teams', { 
             params 
         }),
