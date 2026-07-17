@@ -8,7 +8,7 @@ import { BarraLateral } from '../../componentes/BarraLateral';
 import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
 
 export const Configuracion: React.FC = () => {
-  const { usuario, cargando, tieneRol } = useAutenticacion();
+  const { usuario, cargando } = useAutenticacion();
   const { campeonatoActivo, seleccionarCampeonato } = useCampeonato();
   const navegar = useNavigate();
 
@@ -21,27 +21,29 @@ export const Configuracion: React.FC = () => {
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     if (!cargando && !usuario) {
       navegar('/login');
       return;
     }
-    if (usuario && tieneRol('administrador')) {
+    if (usuario && usuario.roles?.includes('administrador')) {
       navegar('/tablero');
     }
   }, [usuario, cargando, navegar]);
 
   useEffect(() => {
-    if (campeonatoActivo) {
+    if (campeonatoActivo && !initialized) {
       setNombre(campeonatoActivo.name || '');
       setTipo(campeonatoActivo.type || 'basico');
       setEstado(campeonatoActivo.status || 'creado');
       setIsPublic(campeonatoActivo.is_public || false);
       setStartDate(campeonatoActivo.start_date || '');
       setEndDate(campeonatoActivo.end_date || '');
+      setInitialized(true);
     }
-  }, [campeonatoActivo]);
+  }, [campeonatoActivo, initialized]);
 
   const manejarGuardar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,8 +72,8 @@ export const Configuracion: React.FC = () => {
           description: 'Los cambios del campeonato han sido aplicados con éxito.'
         });
       }
-    } catch (err: any) {
-      setErrorLocal(err.response?.data?.message || 'Error al guardar los cambios del campeonato.');
+    } catch (_err) {
+      setErrorLocal('Error al guardar los cambios del campeonato.');
     } finally {
       setGuardando(false);
     }
@@ -89,7 +91,7 @@ export const Configuracion: React.FC = () => {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-    } catch (err) {
+    } catch {
       sileo.error({
         title: 'Error de Descarga',
         description: 'No se pudo descargar el reglamento del torneo.'
@@ -144,7 +146,7 @@ export const Configuracion: React.FC = () => {
                   <label className="text-xs font-bold text-slate-350 block">Tipo / Modo de Gestión *</label>
                   <select
                     value={tipo}
-                    onChange={(e) => setTipo(e.target.value as any)}
+                    onChange={(e) => setTipo(e.target.value as 'basico' | 'completo')}
                     className="w-full text-sm border border-slate-800 rounded-lg p-2.5 outline-hidden focus:border-indigo-500 bg-[#171a26] text-white cursor-pointer"
                   >
                     <option value="basico">Básico (Fixture rápido, marcadores)</option>
