@@ -57,6 +57,8 @@ ENV APP_ENV=${APP_ENV} \
 # Dependencias del sistema + extensiones PHP requeridas por Laravel
 # wget se incluye para soportar el healthcheck del docker-compose.yml
 # (debe instalarse en la misma capa que nginx/supervisor para mantener el orden)
+# 2026-07-17: bump cache-buster para forzar rebuild con ext-gd (phpoffice/phpspreadsheet)
+ARG CACHEBUSTER=1
 RUN apt-get update && apt-get install -y --no-install-recommends \
         nginx \
         supervisor \
