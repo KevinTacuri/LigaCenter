@@ -1,0 +1,180 @@
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { serviciosAutenticacion } from '../../servicios/api';
+
+// Importación de recursos
+import logoImg from '../../assets/logo.svg';
+import deportesFondo from '../../assets/deportes_fondo.png';
+
+export const RecuperarContrasenia: React.FC = () => {
+  const [correo, setCorreo] = useState('');
+  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+  const [errorLocal, setErrorLocal] = useState<string | null>(null);
+  const [procesando, setProcesando] = useState(false);
+  const [urlDesarrollo, setUrlDesarrollo] = useState<string | null>(null);
+
+  const manejarEnvio = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!correo) {
+      setErrorLocal('Por favor ingresa tu correo electrónico.');
+      return;
+    }
+
+    setProcesando(true);
+    setErrorLocal(null);
+    setMensajeExito(null);
+    setUrlDesarrollo(null);
+
+    try {
+      const respuesta = await serviciosAutenticacion.solicitarRecuperacion(correo);
+      if (respuesta.success) {
+        setMensajeExito(respuesta.message || 'Enlace de recuperación enviado exitosamente.');
+        setCorreo('');
+        
+        // Si el API retorna la URL de desarrollo, la guardamos
+        if (respuesta.data && respuesta.data.dev_mode && respuesta.data.url) {
+          setUrlDesarrollo(respuesta.data.url);
+        }
+      } else {
+        setErrorLocal(respuesta.message || 'No se pudo enviar el enlace de recuperación.');
+      }
+    } catch (err: any) {
+      setErrorLocal(err.response?.data?.message || 'Error al conectar con el servidor.');
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  return (
+    <main className="font-sans min-h-screen text-slate-100 flex items-center justify-center relative p-4 bg-[#05060b]">
+      {/* Imagen de fondo de pantalla completo */}
+      <img
+        alt="Estadio de fútbol"
+        className="absolute inset-0 w-full h-full object-cover filter brightness-[0.25] pointer-events-none select-none z-0"
+        src={deportesFondo}
+      />
+      {/* Capa de degradado oscuro */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-[#05060b] via-[#090a14]/70 to-[#05060b] z-0" />
+      
+      {/* Toast de Éxito Flotante */}
+      {mensajeExito && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-bounce">
+          <div className="bg-[#11131c] border border-slate-800 px-6 py-3 rounded-full shadow-lg flex items-center gap-2">
+            <span className="material-symbols-outlined text-emerald-500" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+            <span className="text-sm font-semibold text-white">{mensajeExito}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Botón Regresar */}
+      <button
+        type="button"
+        onClick={() => window.history.back()}
+        className="absolute top-6 left-6 flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold tracking-wide transition-colors cursor-pointer z-20"
+      >
+        <span className="material-symbols-outlined text-base">arrow_back</span>
+        <span>Atrás</span>
+      </button>
+
+      {/* Formulario en tarjeta flotante (Glassmorphism) */}
+      <section className="relative z-10 w-full max-w-[380px] bg-slate-900/60 backdrop-blur-md border border-slate-800/85 rounded-2xl shadow-2xl p-6 md:p-8 flex flex-col gap-6 animate-scaleIn">
+        {/* Logo y Encabezado */}
+        <div className="text-center space-y-2">
+          <header className="flex flex-col items-center justify-center gap-2">
+            <img src={logoImg} className="w-16 h-16 object-contain" alt="Logo LigaCenter" />
+            <span className="text-xl font-black text-white tracking-tight">
+              Liga<span className="text-indigo-400">Center</span>
+            </span>
+          </header>
+          <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Recuperar Contraseña</p>
+        </div>
+
+        {errorLocal && (
+          <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-450 text-xs font-semibold flex items-center gap-2 animate-fadeIn">
+            <span className="material-symbols-outlined text-sm shrink-0">error</span>
+            <span>{errorLocal}</span>
+          </div>
+        )}
+
+        <form onSubmit={manejarEnvio} className="space-y-4">
+          {/* Campo: Correo */}
+          <div className="space-y-1.5">
+            <label className="block text-[9px] font-extrabold text-slate-400 uppercase tracking-widest" htmlFor="email">
+              Correo Electrónico
+            </label>
+            <div className="flex items-center gap-2.5 border border-slate-800 rounded-lg px-3 py-2 bg-[#090a10]/50 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500/20 transition-all">
+              <span className="material-symbols-outlined text-slate-400 text-lg select-none">mail</span>
+              <input
+                id="email"
+                type="email"
+                required
+                disabled={procesando}
+                className="flex-1 bg-transparent text-sm text-white placeholder-slate-500 outline-hidden font-medium border-0 p-0 focus:ring-0"
+                placeholder="ejemplo@ligacenter.com"
+                value={correo}
+                onChange={(e) => setCorreo(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Botón Enviar */}
+          <button
+            type="submit"
+            disabled={procesando}
+            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold py-3.5 rounded-lg shadow-md active:scale-[0.98] transition-all duration-200 mt-2 flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-pointer disabled:opacity-50"
+          >
+            {procesando ? (
+              <>
+                <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                <span>Enviando...</span>
+              </>
+            ) : (
+              <span>Enviar Instrucciones</span>
+            )}
+          </button>
+        </form>
+
+        {urlDesarrollo && (
+          <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-300 text-[11px] space-y-2 animate-fadeIn">
+            <p className="font-bold flex items-center gap-1 text-indigo-400">
+              <span className="material-symbols-outlined text-sm">construction</span>
+              <span>Modo Desarrollo:</span>
+            </p>
+            <p className="leading-relaxed font-medium">
+              ¡Estás en modo de desarrollo local! Haz clic abajo para ir directo al formulario de cambio de clave:
+            </p>
+            <a
+              href={urlDesarrollo}
+              className="inline-flex w-full justify-center items-center gap-1.5 bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-2 rounded-lg text-[10px] transition-all text-center shadow-xs cursor-pointer uppercase tracking-wider"
+            >
+              <span>Restablecer Contraseña Directo</span>
+              <span>→</span>
+            </a>
+          </div>
+        )}
+
+        {/* Enlace Volver */}
+        <div className="text-center text-xs pt-3 border-t border-slate-800/80">
+          <Link
+            to="/login"
+            className="inline-flex items-center gap-1 text-indigo-400 font-bold hover:underline transition-all"
+          >
+            <span className="material-symbols-outlined text-sm">arrow_back</span>
+            <span>Volver al inicio de sesión</span>
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="absolute bottom-6 left-0 w-full hidden md:block">
+        <div className="flex justify-center items-center gap-3 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+          <a href="#" className="hover:text-slate-400 transition-colors">Privacidad</a>
+          <span className="w-1.5 h-1.5 bg-slate-800 rounded-full"></span>
+          <a href="#" className="hover:text-slate-400 transition-colors">Soporte</a>
+          <span className="w-1.5 h-1.5 bg-slate-800 rounded-full"></span>
+          <span>© 2026 LigaCenter</span>
+        </div>
+      </footer>
+    </main>
+  );
+};

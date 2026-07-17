@@ -8,6 +8,11 @@ use App\Models\Championship;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
+use App\Http\Resources\TeamResource;
+use App\Models\Category;
+use \App\Http\Resources\TeamListResource;
+use Illuminate\Support\Str;
+
 
 #[OA\Tag(
     name: "Teams",
@@ -18,29 +23,49 @@ class TeamController extends Controller
     use ApiResponse;
 
     #[OA\Get(
-        path: "/api/teams",
+        path: "/categories/{category_id}/teams",
         summary: "Listar equipos",
-        description: "Retorna todos los equipos de un campeonato específico.",
+        description: "Retorna una lista de equipos registrados en una categoría específica.",
         tags: ["Teams"],
         security: [["sanctum" => []]],
         parameters: [
-            new OA\Parameter(name: "championship_id", in: "query", required: true, schema: new OA\Schema(type: "integer"))
+            new OA\Parameter(name: "category_id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
         ],
         responses: [
-            new OA\Response(response: 200, description: "Equipos obtenidos exitosamente")
+            new OA\Response(response: 200, description: "Equipos obtenidos exitosamente"),
+            new OA\Response(response: 404, description: "Categoría no encontrada")
         ]
     )]
-    public function index(Request $request)
+    public function index(Request $request, $categoryId = null)
     {
-        $request->validate([
-            'championship_id' => 'required|exists:championships,id',
-        ]);
+        if ($categoryId) {
+            $category = Category::find($categoryId);
 
-        $teams = Team::where('championship_id', $request->championship_id)
-            ->with(['category.discipline', 'players', 'organization'])
+            if (!$category) {
+                return $this->errorResponse('Categoría no encontrada', 404);
+            }
+
+            $teams = $category->teams()
+                ->with(['category.championshipDiscipline.discipline', 'championshipUser.user'])
+                ->withCount('players')
+                ->get();
+
+            return $this->successResponse(TeamListResource::collection($teams), 'Equipos obtenidos exitosamente');
+        }
+
+        $championshipId = $request->query('championship_id') 
+            ?? $request->header('X-Championship-ID');
+
+        if (!$championshipId) {
+            return $this->errorResponse('Falta el ID del campeonato', 400);
+        }
+
+        $teams = Team::where('championship_id', $championshipId)
+            ->with(['category.championshipDiscipline.discipline', 'championshipUser.user'])
+            ->withCount('players')
             ->get();
 
-        return $this->successResponse($teams, 'Equipos obtenidos exitosamente');
+        return $this->successResponse(TeamListResource::collection($teams), 'Equipos obtenidos exitosamente');
     }
 
     #[OA\Post(
@@ -68,38 +93,89 @@ class TeamController extends Controller
             new OA\Response(response: 422, description: "Error de validación")
         ]
     )]
+
     public function store(Request $request)
     {
         $request->validate([
             'championship_id' => 'required|exists:championships,id',
             'category_id' => 'required|exists:categories,id',
-            'organization_id' => 'nullable|exists:organizations,id',
             'representative' => 'nullable|string|max:255',
             'name' => 'required|string|max:255',
-            'logo' => 'nullable|string',
             'description' => 'nullable|string',
             'registration_status' => 'nullable|string',
+            'enable_delegate' => 'nullable',
+            'delegate_name' => 'required_if:enable_delegate,true|string|max:255',
+            'delegate_email' => 'required_if:enable_delegate,true|email|max:255',
+            'delegate_password' => 'required_if:enable_delegate,true|string|min:8',
         ]);
 
-        $category = \App\Models\Category::findOrFail($request->category_id);
-        if ($category->championship_id != $request->championship_id) {
-            return $this->errorResponse('La categoría no pertenece a este campeonato', 422);
+        $category = Category::find($request->category_id);
+
+        if (!$category) {
+            return $this->errorResponse('Categoría no encontrada', 404);
+        }
+
+        if ($category->championshipDiscipline->championship_id != $request->championship_id) {
+            return $this->errorResponse('La disciplina de la categoría no pertenece a este campeonato', 422);
+        }
+
+        $logoValue = $this->resolveLogo($request);
+
+        $representative = $request->representative;
+        $enableDelegate = filter_var($request->enable_delegate, FILTER_VALIDATE_BOOLEAN);
+
+        if ($enableDelegate) {
+            $representative = $request->delegate_name;
         }
 
         $team = Team::create([
             'championship_id' => $request->championship_id,
             'category_id' => $request->category_id,
-            'organization_id' => $request->organization_id,
-            'representative' => $request->representative,
+            'representative' => $representative,
             'name' => $request->name,
-            'logo' => $request->logo,
+            'logo' => $logoValue,
             'description' => $request->description,
             'registration_status' => $request->registration_status ?? 'pendiente',
         ]);
 
-        $team->load('organization');
+        if ($enableDelegate) {
+            $user = \App\Models\User::where('email', $request->delegate_email)->first();
+            if (!$user) {
+                $request->validate([
+                    'delegate_email' => 'unique:users,email',
+                ]);
 
-        return $this->successResponse($team, 'Equipo creado exitosamente', 201);
+                $user = \App\Models\User::create([
+                    'name' => $request->delegate_name,
+                    'email' => $request->delegate_email,
+                    'password' => \Illuminate\Support\Facades\Hash::make($request->delegate_password),
+                    'is_active' => true,
+                ]);
+
+                $user->assignRole('usuario_publico');
+            } else {
+                $user->name = $request->delegate_name;
+                if ($request->filled('delegate_password')) {
+                    $user->password = \Illuminate\Support\Facades\Hash::make($request->delegate_password);
+                }
+                $user->save();
+            }
+
+            \App\Models\ChampionshipUser::updateOrCreate(
+                [
+                    'championship_id' => $team->championship_id,
+                    'team_id' => $team->id,
+                    'role' => 'team_delegate',
+                ],
+                [
+                    'user_id' => $user->id,
+                ]
+            );
+        }
+
+        $team->load(['championshipUser.user', 'category.championshipDiscipline.discipline']);
+
+        return $this->successResponse(new TeamResource($team), 'Equipo creado exitosamente', 201);
     }
 
     #[OA\Get(
@@ -118,13 +194,20 @@ class TeamController extends Controller
     )]
     public function show($id)
     {
-        $team = Team::with(['category.discipline', 'players', 'organization'])->find($id);
+        $team = Team::with([
+            'category.championshipDiscipline.discipline',
+            'championshipUser.user',
+            'players'
+        ])->find($id);
 
         if (!$team) {
             return $this->errorResponse('Equipo no encontrado', 404);
         }
 
-        return $this->successResponse($team, 'Equipo obtenido exitosamente');
+        return $this->successResponse(
+            new TeamResource($team),
+            'Equipo obtenido exitosamente'
+        );
     }
 
     #[OA\Put(
@@ -161,21 +244,84 @@ class TeamController extends Controller
         }
 
         $request->validate([
-            'organization_id' => 'nullable|exists:organizations,id',
             'representative' => 'nullable|string|max:255',
             'name' => 'sometimes|string|max:255',
-            'logo' => 'nullable|string',
             'description' => 'nullable|string',
             'registration_status' => 'sometimes|string|in:pendiente,aprobado,rechazado',
+            'enable_delegate' => 'nullable',
+            'delegate_name' => 'required_if:enable_delegate,true|string|max:255',
+            'delegate_email' => 'required_if:enable_delegate,true|email|max:255',
+            'delegate_password' => 'nullable|string|min:8',
         ]);
 
-        $team->update($request->only([
-            'organization_id', 'representative', 'name', 'logo', 'description', 'registration_status'
-        ]));
+        $datosActualizar = $request->only(['representative', 'name', 'description', 'registration_status']);
 
-        $team->load('organization');
+        $enableDelegate = $request->has('enable_delegate') ? filter_var($request->enable_delegate, FILTER_VALIDATE_BOOLEAN) : null;
 
-        return $this->successResponse($team, 'Equipo actualizado exitosamente');
+        if ($enableDelegate !== null) {
+            if ($enableDelegate) {
+                $datosActualizar['representative'] = $request->delegate_name;
+            }
+        }
+
+        // Solo tocamos el logo si el usuario mandó un archivo nuevo o una URL nueva
+        if ($request->hasFile('logo') || $request->filled('logo')) {
+            // Borrar el logo físico anterior, solo si era un archivo local (no una URL externa)
+            $logoAnterior = $team->getRawOriginal('logo');
+            if ($logoAnterior && !Str::startsWith($logoAnterior, ['http://', 'https://'])) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($logoAnterior);
+            }
+
+            $datosActualizar['logo'] = $this->resolveLogo($request);
+        }
+
+        $team->update($datosActualizar);
+
+        if ($enableDelegate !== null) {
+            if ($enableDelegate) {
+                $user = \App\Models\User::where('email', $request->delegate_email)->first();
+                if (!$user) {
+                    $request->validate([
+                        'delegate_email' => 'unique:users,email',
+                    ]);
+
+                    $user = \App\Models\User::create([
+                        'name' => $request->delegate_name,
+                        'email' => $request->delegate_email,
+                        'password' => \Illuminate\Support\Facades\Hash::make($request->delegate_password ?? '12345678'),
+                        'is_active' => true,
+                    ]);
+
+                    $user->assignRole('usuario_publico');
+                } else {
+                    $user->name = $request->delegate_name;
+                    if ($request->filled('delegate_password')) {
+                        $user->password = \Illuminate\Support\Facades\Hash::make($request->delegate_password);
+                    }
+                    $user->save();
+                }
+
+                \App\Models\ChampionshipUser::updateOrCreate(
+                    [
+                        'championship_id' => $team->championship_id,
+                        'team_id' => $team->id,
+                        'role' => 'team_delegate',
+                    ],
+                    [
+                        'user_id' => $user->id,
+                    ]
+                );
+            } else {
+                \App\Models\ChampionshipUser::where('championship_id', $team->championship_id)
+                    ->where('team_id', $team->id)
+                    ->where('role', 'team_delegate')
+                    ->delete();
+            }
+        }
+
+        $team->load(['championshipUser.user', 'category.championshipDiscipline.discipline']);
+
+        return $this->successResponse(new TeamResource($team), 'Equipo actualizado exitosamente');
     }
 
     #[OA\Delete(
@@ -275,5 +421,63 @@ class TeamController extends Controller
         $team->players()->detach($playerId);
 
         return $this->successResponse(null, 'Jugador removido del equipo exitosamente');
+    }
+    /**
+     * Resuelve el valor a guardar en 'logo': procesa un archivo subido o
+     * devuelve la URL de texto tal cual fue enviada.
+     */
+    private function resolveLogo(Request $request): ?string
+    {
+        if ($request->hasFile('logo')) {
+            $file = $request->file('logo');
+
+            // Validar el archivo
+            $request->validate([
+                'logo' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+            ]);
+
+            // Verificar que el archivo es válido (no falló en la subida)
+            if (!$file->isValid()) {
+                \Illuminate\Support\Facades\Log::error('Logo upload error', [
+                    'error' => $file->getErrorMessage(),
+                    'error_code' => $file->getError(),
+                ]);
+                return null;
+            }
+
+            // Asegurar que el directorio existe
+            $disk = \Illuminate\Support\Facades\Storage::disk('public');
+            if (!$disk->exists('teams/logos')) {
+                $disk->makeDirectory('teams/logos');
+            }
+
+            // Generar nombre único y guardar
+            $extension = $file->getClientOriginalExtension() ?: 'jpg';
+            $filename = 'teams/logos/' . \Illuminate\Support\Str::uuid() . '.' . $extension;
+
+            $stored = $disk->put($filename, file_get_contents($file->getRealPath()));
+
+            if (!$stored) {
+                \Illuminate\Support\Facades\Log::error('Logo could not be stored', [
+                    'filename' => $filename,
+                    'disk_root' => $disk->path(''),
+                ]);
+                return null;
+            }
+
+            \Illuminate\Support\Facades\Log::info('Logo stored', ['path' => $filename]);
+            return $filename;
+        }
+
+        if ($request->filled('logo')) {
+            $logoValue = $request->input('logo');
+            // Solo aceptar si es URL válida
+            if (filter_var($logoValue, FILTER_VALIDATE_URL)) {
+                return $logoValue;
+            }
+            return null;
+        }
+
+        return null;
     }
 }

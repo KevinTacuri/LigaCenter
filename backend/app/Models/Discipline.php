@@ -9,7 +9,6 @@ class Discipline extends Model
 {
     protected $fillable = [
         'name',
-        'specific_rules',
     ];
 
     public function teams()
@@ -20,5 +19,27 @@ class Discipline extends Model
     public function categories(): HasMany
     {
         return $this->hasMany(Category::class);
+    }
+
+    public function statistics(): HasMany
+    {
+        return $this->hasMany(DisciplineStatistic::class)
+            ->with('statisticType')
+            ->orderBy('order');
+    }
+
+    # define the one-to-many relationship with ChampionshipDiscipline
+    public function championshipDisciplines() 
+    {
+        return $this->hasMany(ChampionshipDiscipline::class);
+    }
+
+    # define the many-to-many relationship with Championship through the pivot table
+    public function championships()
+    {
+        return $this->belongsToMany(
+            Championship::class,
+            'championship_disciplines'
+        );
     }
 }

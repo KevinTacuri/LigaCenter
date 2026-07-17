@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Championship;
+use App\Services\ChampionshipImportService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use OpenApi\Attributes as OA;
 
 #[OA\Tag(
@@ -15,6 +17,13 @@ use OpenApi\Attributes as OA;
 class ChampionshipController extends Controller
 {
     use ApiResponse;
+
+    protected $importService;
+
+    public function __construct(ChampionshipImportService $importService)
+    {
+        $this->importService = $importService;
+    }
 
     #[OA\Get(
         path: "/api/championships",
@@ -43,18 +52,23 @@ class ChampionshipController extends Controller
         security: [["sanctum" => []]],
         requestBody: new OA\RequestBody(
             required: true,
-            content: new OA\JsonContent(
-                required: ["name"],
-                properties: [
-                    new OA\Property(property: "name", type: "string", example: "Liga Empresarial 2026"),
-                    new OA\Property(property: "description", type: "string", example: "Campeonato entre empresas"),
-                    new OA\Property(property: "type", type: "string", example: "basico"),
-                    new OA\Property(property: "start_date", type: "string", format: "date", example: "2026-06-01"),
-                    new OA\Property(property: "end_date", type: "string", format: "date", example: "2026-12-20"),
-                    new OA\Property(property: "is_public", type: "boolean", example: true),
-                    new OA\Property(property: "settings", type: "object")
-                ]
-            )
+            content: new OA\MediaType(
+                mediaType: "multipart/form-data",
+                schema: new OA\Schema(
+                    type: "object",
+                    required: ["name"],
+                    properties: [
+                        new OA\Property(property: "name", type: "string", example: "Liga Empresarial 2026"),
+                        new OA\Property(property: "description", type: "string", example: "Campeonato entre empresas"),
+                        new OA\Property(property: "type", type: "string", example: "basico"),
+                        new OA\Property(property: "start_date", type: "string", format: "date", example: "2026-06-01"),
+                        new OA\Property(property: "end_date", type: "string", format: "date", example: "2026-12-20"),
+                        new OA\Property(property: "is_public", type: "boolean", example: true),
+                        new OA\Property(property: "settings", type: "object"),
+                        new OA\Property(property: "rules_pdf", type: "string", format: "binary", description: "Archivo PDF con el reglamento del campeonato")
+                    ]
+                )
+            ),
         ),
         responses: [
             new OA\Response(response: 201, description: "Campeonato creado exitosamente"),
@@ -71,7 +85,13 @@ class ChampionshipController extends Controller
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'is_public' => 'boolean',
             'settings' => 'nullable|array',
+            'rules_pdf' => 'nullable|file|mimes:pdf|max:10240',
         ]);
+
+        $rulesPdf = null;
+        if ($request->hasFile('rules_pdf')) {
+            $rulesPdf = $request->file('rules_pdf')->store('rules_pdfs', 'public');
+        }
 
         $championship = Championship::create([
             'user_id' => $request->user()->id,
@@ -83,6 +103,7 @@ class ChampionshipController extends Controller
             'end_date' => $request->end_date,
             'is_public' => $request->is_public ?? false,
             'settings' => $request->settings,
+            'rules_pdf' => $rulesPdf,
         ]);
 
         return $this->successResponse($championship, 'Campeonato creado exitosamente', 201);
@@ -129,16 +150,20 @@ class ChampionshipController extends Controller
         ],
         requestBody: new OA\RequestBody(
             required: false,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: "name", type: "string"),
-                    new OA\Property(property: "description", type: "string"),
-                    new OA\Property(property: "status", type: "string", enum: ["creado", "en_curso", "finalizado"]),
-                    new OA\Property(property: "start_date", type: "string", format: "date"),
-                    new OA\Property(property: "end_date", type: "string", format: "date"),
-                    new OA\Property(property: "is_public", type: "boolean"),
-                    new OA\Property(property: "settings", type: "object")
-                ]
+            content: new OA\MediaType(
+                mediaType: "multipart/form-data",
+                schema: new OA\Schema(
+                    properties: [
+                        new OA\Property(property: "name", type: "string"),
+                        new OA\Property(property: "description",type: "string"),
+                        new OA\Property(property: "status",type: "string",enum: ["creado", "en_curso", "finalizado"]),
+                        new OA\Property(property: "start_date",type: "string", format: "date"),
+                        new OA\Property(property: "end_date", type: "string", format: "date"),
+                        new OA\Property(property: "is_public",type: "boolean"),
+                        new OA\Property(property: "settings", type: "object"),
+                        new OA\Property(property: "rules_pdf", type: "string", format: "binary", description: "PDF del reglamento (opcional, reemplaza el anterior)")
+                    ]
+                )
             )
         ),
         responses: [
@@ -164,11 +189,23 @@ class ChampionshipController extends Controller
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'is_public' => 'boolean',
             'settings' => 'nullable|array',
+            'rules_pdf' => 'nullable|file|mimes:pdf|max:10240',
         ]);
 
-        $championship->update($request->only([
+        $data = $request->only([
             'name', 'description', 'status', 'start_date', 'end_date', 'is_public', 'settings'
-        ]));
+        ]);
+
+        if ($request->hasFile('rules_pdf')) {
+            // Eliminar el archivo anterior si existe
+            if ($championship->rules_pdf) {
+                Storage::disk('public')->delete($championship->rules_pdf);
+            }
+            // Subir el nuevo archivo
+            $data['rules_pdf'] = $request->file('rules_pdf')->store('rules_pdfs', 'public');
+        }
+
+        $championship->update($data);
 
         return $this->successResponse($championship, 'Campeonato actualizado exitosamente');
     }
@@ -247,5 +284,73 @@ class ChampionshipController extends Controller
         ]);
 
         return $this->successResponse(null, 'Usuario agregado al campeonato exitosamente');
+    }
+
+    #[OA\Get(
+        path: "/api/championships/{id}/rules",
+        summary: "Descargar reglamento del campeonato (PDF)",
+        tags: ["Championships"],
+        security: [["sanctum" => []]],
+        parameters: [
+            new OA\Parameter(
+                name: "id",
+                in: "path",
+                required: true,
+                schema: new OA\Schema(type: "integer")
+            )
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "PDF descargado exitosamente",
+                content: new OA\MediaType(
+                    mediaType: "application/pdf",
+                    schema: new OA\Schema(
+                        type: "string",
+                        format: "binary"
+                    )
+                )
+            ),
+            new OA\Response(
+                response: 404,
+                description: "Campeonato o archivo no encontrado"
+            )
+        ]
+    )]
+    public function downloadRules($id, Request $request)
+    {
+        $championship = Championship::where('id', $id)
+            ->where(function ($query) use ($request) {
+                $query->where('user_id', $request->user()->id)
+                    ->orWhereHas('users', function ($q) use ($request) {
+                        $q->where('user_id', $request->user()->id);
+                    });
+            })
+            ->first();
+
+        if (!$championship) {
+            return $this->errorResponse('Campeonato no encontrado', 404);
+        }
+
+        if (!$championship->rules_pdf) {
+            return $this->errorResponse('No tiene reglamento PDF', 404);
+        }
+
+        return Storage::disk('public')->download($championship->rules_pdf);
+    }
+
+    // ======================= Excel upload =====================
+    public function import(Request $request, Championship $championship)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls'
+        ]);
+
+        $result = $this->importService->import(
+            $championship,
+            $request->file('file')
+        );
+
+        return response()->json($result);
     }
 }

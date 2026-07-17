@@ -9,4 +9,10 @@ Route::middleware(['auth:sanctum', 'championship.access'])->group(function () {
     Route::get('championships/{championshipId}/users', [ChampionshipUserController::class, 'index']);
     Route::put('championship-users/{id}', [ChampionshipUserController::class, 'update']);
     Route::delete('championship-users/{id}', [ChampionshipUserController::class, 'destroy']);
+    Route::get('/championships/{id}/rules',[ChampionshipController::class, 'downloadRules']);
+    
+    Route::post(
+        '/championships/{championship}/import',
+        [ChampionshipController::class, 'import']
+    );
 });

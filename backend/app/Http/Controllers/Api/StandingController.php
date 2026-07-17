@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Standing;
+use App\Models\Team;
 use App\Traits\ApiResponse;
 use OpenApi\Attributes as OA;
 
@@ -46,26 +47,24 @@ class StandingController extends Controller
     #[OA\Security(name: 'sanctum')]
     public function index(Request $request)
     {
-        $query = Standing::with([
-            'team',
-            'discipline',
-            'category'
-        ]);
+        $query = Standing::with(['team', 'category.championshipDiscipline.discipline']);
 
         if ($request->has('championship_id')) {
             $query->where('championship_id', $request->championship_id);
-        }
-
-        if ($request->has('discipline_id')) {
-            $query->where('discipline_id', $request->discipline_id);
         }
 
         if ($request->has('category_id')) {
             $query->where('category_id', $request->category_id);
         }
 
+        if ($request->has('discipline_id')) {
+            $query->whereHas('category.championshipDiscipline', function ($q) use ($request) {
+                $q->where('discipline_id', $request->discipline_id);
+            });
+        }
+
         $standings = $query
-            ->orderByDesc('total_points')
+            ->orderByDesc('points')
             ->orderByDesc('goal_difference')
             ->orderByDesc('goals_for')
             ->get();
@@ -73,6 +72,95 @@ class StandingController extends Controller
         return $this->successResponse(
             $standings,
             'Tabla de posiciones obtenida exitosamente'
+        );
+    }
+
+    #[OA\Get(
+        path: '/api/standings/complete',
+        operationId: 'getCompleteStandings',
+        summary: 'Tabla de posiciones completa con todos los equipos de la categoria',
+        tags: ['Standings']
+    )]
+    public function getCompleteStandings(Request $request)
+    {
+        $championshipId = $request->input('championship_id');
+        $categoryId = $request->input('category_id');
+        $disciplineId = $request->input('discipline_id');
+
+        if (!$championshipId || !$categoryId) {
+            return $this->errorResponse('Se requiere championship_id y category_id', 400);
+        }
+
+        $teams = Team::where('teams.category_id', $categoryId)
+            ->where('teams.championship_id', $championshipId)
+            ->leftJoin('group_teams', 'teams.id', '=', 'group_teams.team_id')
+            ->leftJoin('groups', 'group_teams.group_id', '=', 'groups.id')
+            ->select('teams.*', 'groups.name as group_name')
+            ->get();
+
+        $standings = Standing::where('championship_id', $championshipId)
+            ->where('category_id', $categoryId)
+            ->get()
+            ->keyBy('team_id');
+
+        $result = [];
+        foreach ($teams as $team) {
+            $groupName = $team->group_name ?? 'Tabla General';
+            unset($team->group_name);
+
+            if ($standings->has($team->id)) {
+                $standing = $standings->get($team->id);
+                $standing->team = $team;
+                $standing->group_name = $groupName;
+                $result[] = $standing;
+            } else {
+                $result[] = (object) [
+                    'id' => null,
+                    'team_id' => $team->id,
+                    'team' => $team,
+                    'category_id' => $categoryId,
+                    'championship_id' => $championshipId,
+                    'matches_played' => 0,
+                    'points' => 0,
+                    'wins' => 0,
+                    'draws' => 0,
+                    'losses' => 0,
+                    'goals_for' => 0,
+                    'goals_against' => 0,
+                    'goal_difference' => 0,
+                    'wins_total' => 0,
+                    'losses_total' => 0,
+                    'sets_for' => 0,
+                    'sets_against' => 0,
+                    'sets_ratio' => 0,
+                    'points_for' => 0,
+                    'points_against' => 0,
+                    'points_ratio' => 0,
+                    'win_percentage' => 0,
+                    'games_behind' => 0,
+                    'streak' => null,
+                    'last_updated' => null,
+                    'group_name' => $groupName,
+                ];
+            }
+        }
+
+        usort($result, function ($a, $b) {
+            if ($a->group_name != $b->group_name) {
+                return strcmp($a->group_name, $b->group_name);
+            }
+            if ($a->points != $b->points) {
+                return $b->points - $a->points;
+            }
+            if ($a->goal_difference != $b->goal_difference) {
+                return $b->goal_difference - $a->goal_difference;
+            }
+            return $b->goals_for - $a->goals_for;
+        });
+
+        return $this->successResponse(
+            $result,
+            'Tabla de posiciones completa obtenida exitosamente'
         );
     }
 
@@ -95,8 +183,7 @@ class StandingController extends Controller
     {
         $standing = Standing::with([
             'team',
-            'discipline',
-            'category'
+            'category.championshipDiscipline.discipline'
         ])->find($id);
 
         if (!$standing) {
@@ -126,13 +213,6 @@ class StandingController extends Controller
         schema: new OA\Schema(type: 'integer')
     )]
     #[OA\Parameter(
-        name: 'discipline_id',
-        description: 'ID de la disciplina (opcional)',
-        in: 'query',
-        required: false,
-        schema: new OA\Schema(type: 'integer')
-    )]
-    #[OA\Parameter(
         name: 'category_id',
         description: 'ID de la categoría (opcional)',
         in: 'query',
@@ -152,16 +232,11 @@ class StandingController extends Controller
     {
         $query = Standing::with([
             'team',
-            'discipline',
-            'category'
+            'category.championshipDiscipline.discipline'
         ])->where('team_id', $teamId);
 
         if ($request->has('championship_id')) {
             $query->where('championship_id', $request->championship_id);
-        }
-
-        if ($request->has('discipline_id')) {
-            $query->where('discipline_id', $request->discipline_id);
         }
 
         if ($request->has('category_id')) {
@@ -180,6 +255,24 @@ class StandingController extends Controller
         return $this->successResponse(
             $standing,
             'Registro obtenido exitosamente'
+        );
+    }
+
+    public function recalculate(Request $request)
+    {
+        $championshipId = $request->input('championship_id');
+        $categoryId = $request->input('category_id');
+
+        if (!$championshipId || !$categoryId) {
+            return $this->errorResponse('Se requiere championship_id y category_id', 400);
+        }
+
+        $service = new \App\Services\StandingService();
+        $service->recalculateAllForCategory($championshipId, $categoryId);
+
+        return $this->successResponse(
+            null,
+            'Posiciones recalculadas exitosamente'
         );
     }
 }

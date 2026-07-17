@@ -1,53 +1,186 @@
 @import "tailwindcss";
+@source "../node_modules/@omit/react-confirm-dialog/dist/index.js";
+
+:root {
+  /* Default: Dark Mode */
+  --primary: #800f2f;                 /* Rojo Carmesí/Vino Premium */
+  --primary-container: #11131c;       /* Fondo de Tarjeta */
+  --on-primary-container: #f1f5f9;    /* Texto Claro Slate */
+  --on-primary: #ffffff;
+  
+  --secondary: #b2224d;               /* Vino/Carmesí Acento */
+  --secondary-container: #171a26;     /* Gris-Vino Oscuro */
+  --on-secondary-container: #ffffff;
+
+  --surface: #0a0b10;                 /* Fondo Oscuro Profundo */
+  --surface-dim: #07080c;             /* Sección Interna */
+  --surface-bright: #171a26;          /* Fondo Inputs */
+  --surface-container-lowest: #11131c; /* Tarjetas Base */
+  --surface-container-low: #07080c;
+  --surface-container-high: #1c1f2e;
+  --surface-container-highest: #2a2e3f;
+
+  --on-surface: #f1f5f9;              /* Texto Principal */
+  --on-surface-variant: #94a3b8;      /* Texto Muted */
+
+  --outline: #1e2235;                 /* Bordes */
+
+  --hover-bg: #171a26;
+  --hover-text: #ffffff;
+
+  /* Redireccionar el color indigo (azul-morado) a la familia del vino/carmesí */
+  --indigo-50: #fff0f3;
+  --indigo-100: #ffccd5;
+  --indigo-200: #ffb3c1;
+  --indigo-300: #ff758f;
+  --indigo-400: #cc3965;
+  --indigo-500: #b2224d;
+  --indigo-600: #800f2f;
+  --indigo-650: #800f2f;
+  --indigo-700: #660c25;
+  --indigo-800: #590d22;
+  --indigo-900: #3f0713;
+  --indigo-950: #1a0208;
+
+  /* Colores de compatibilidad personalizados */
+  --rose-455: #fb7185;                /* Rosa en modo oscuro */
+  --slate-305: #cbd5e1;
+  --slate-350: #cbd5e1;
+  --slate-450: #94a3b8;
+  --slate-455: #94a3b8;
+  --slate-850: #1e293b;
+  --slate-905: #0f172a;
+}
+
+.light {
+  /* Light Mode - Sober, pastel, logo corporate blue synergy */
+  --primary: #193b70;                 /* Azul Corporativo (Logo) */
+  --primary-container: #ffffff;       /* Fondo de Tarjeta Blanco */
+  --on-primary-container: #0f172a;    /* Texto Oscuro Slate */
+  --on-primary: #ffffff;
+  
+  --secondary: #2c9b90;               /* Turquesa Logo (oscurecido para contraste) */
+  --secondary-container: #f1f5f9;     /* Fondo gris claro pastel */
+  --on-secondary-container: #0f172a;
+
+  --surface: #ffffff;                 /* Fondo Claro Minimalista Blanco */
+  --surface-dim: #f8fafc;             /* Sección Interna Clara (Slate 50) */
+  --surface-bright: #ffffff;          /* Fondo Inputs */
+  --surface-container-lowest: #ffffff; /* Tarjetas Base Blancas */
+  --surface-container-low: #ffffff;
+  --surface-container-high: #e2e8f0;
+  --surface-container-highest: #cbd5e1;
+
+  --on-surface: #0f172a;              /* Texto Principal Oscuro */
+  --on-surface-variant: #64748b;      /* Texto Secundario / Muted */
+
+  --outline: #e2e8f0;                 /* Bordes Claros */
+
+  --hover-bg: #e2e8f0;
+  --hover-text: #0f172a;
+
+  /* Redireccionar el color indigo a la familia del azul corporativo en tema claro */
+  --indigo-50: #f0f4fa;
+  --indigo-100: #dbeafe;
+  --indigo-200: #bfdbfe;
+  --indigo-300: #93c5fd;
+  --indigo-400: #40c2b5;              /* Turquesa del logo como acento claro */
+  --indigo-500: #1d4ed8;
+  --indigo-600: #193b70;              /* Azul corporativo */
+  --indigo-650: #193b70;
+  --indigo-700: #14305c;
+  --indigo-800: #0f2547;
+  --indigo-900: #0a1a33;
+  --indigo-950: #050d1a;
+
+  /* Colores de compatibilidad en modo claro - Oscurecidos para legibilidad contrastada */
+  --rose-455: #e11d48;                /* Rosa/Rojo oscuro para alta visibilidad (cerrar sesión) */
+  --slate-305: #475569;               /* Slate 600 */
+  --slate-350: #334155;               /* Slate 700 */
+  --slate-450: #475569;
+  --slate-455: #475569;
+  --slate-850: #e2e8f0;               /* Slate 200 (bordes claros) */
+  --slate-905: #e2e8f0;
+}
 
 @theme {
-  --color-primary: #800f2f;                 /* Rojo Carmesí/Vino Premium */
-  --color-primary-container: #11131c;       /* Fondo de Tarjeta */
-  --color-on-primary-container: #f1f5f9;    /* Texto Claro Slate */
-  --color-on-primary: #ffffff;
+  --color-primary: var(--primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-on-primary: var(--on-primary);
   
-  --color-secondary: #b2224d;               /* Vino/Carmesí Acento */
-  --color-secondary-container: #171a26;     /* Gris-Vino Oscuro */
-  --color-on-secondary-container: #ffffff;
+  --color-secondary: var(--secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary-container: var(--on-secondary-container);
 
-  --color-surface: #0a0b10;                 /* Fondo Oscuro Profundo */
-  --color-surface-dim: #07080c;             /* Sección Interna */
-  --color-surface-bright: #171a26;          /* Fondo Inputs */
-  --color-surface-container-lowest: #11131c; /* Tarjetas Base */
-  --color-surface-container-low: #07080c;
-  --color-surface-container-high: #1c1f2e;
-  --color-surface-container-highest: #2a2e3f;
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
 
-  --color-on-surface: #f1f5f9;              /* Texto Principal */
-  --color-on-surface-variant: #94a3b8;      /* Texto Muted */
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
 
-  --color-outline: #1e2235;                 /* Bordes */
-  --color-outline-variant: #1e2235;
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline);
+
+  --color-indigo-50: var(--indigo-50);
+  --color-indigo-100: var(--indigo-100);
+  --color-indigo-200: var(--indigo-200);
+  --color-indigo-300: var(--indigo-300);
+  --color-indigo-400: var(--indigo-400);
+  --color-indigo-500: var(--indigo-500);
+  --color-indigo-600: var(--indigo-650);
+  --color-indigo-650: var(--indigo-650);
+  --color-indigo-700: var(--indigo-700);
+  --color-indigo-800: var(--indigo-800);
+  --color-indigo-900: var(--indigo-900);
+  --color-indigo-950: var(--indigo-950);
 
   --color-error: #ba1a1a;
   --color-error-container: #ffdad6;
   --color-on-error: #ffffff;
   --color-on-error-container: #93000a;
 
-  /* Redireccionar el color indigo (azul-morado) a la familia del vino/carmesí para uniformizar toda la app */
-  --color-indigo-50: #fff0f3;
-  --color-indigo-100: #ffccd5;
-  --color-indigo-200: #ffb3c1;
-  --color-indigo-300: #ff758f;
-  --color-indigo-400: #cc3965;
-  --color-indigo-500: #b2224d;
-  --color-indigo-600: #800f2f;
-  --color-indigo-650: #800f2f;
-  --color-indigo-700: #660c25;
-  --color-indigo-800: #590d22;
-  --color-indigo-900: #3f0713;
-  --color-indigo-950: #1a0208;
+  /* Mapeo de colores personalizados utilizados en la app */
+  --color-rose-455: var(--rose-455);
+  --color-slate-305: var(--slate-305);
+  --color-slate-350: var(--slate-350);
+  --color-slate-450: var(--slate-450);
+  --color-slate-455: var(--slate-455);
+  --color-slate-850: var(--slate-850);
+  --color-slate-905: var(--slate-905);
+
+  /* Variables requeridas por @omit/react-confirm-dialog */
+  --color-background: var(--surface);
+  --color-foreground: var(--on-surface);
+  --color-border: var(--outline);
+  --color-muted: var(--surface-dim);
+  --color-muted-foreground: var(--on-surface-variant);
+  --color-primary-foreground: var(--on-primary);
+  --color-destructive: var(--rose-455);
+  --color-destructive-foreground: #ffffff;
+
+  /* Animaciones y keyframes para radix alert-dialog */
+  --animate-fade-in: fade-in 150ms ease;
+  --animate-fade-out: fade-out 150ms ease;
+  --animate-scale-in: scale-in 150ms ease;
+  --animate-scale-out: scale-out 150ms ease;
+
+  @keyframes fade-in { from { opacity: 0; } }
+  @keyframes fade-out { to { opacity: 0; } }
+  @keyframes scale-in { from { opacity: 0; scale: 0.95; } }
+  @keyframes scale-out { to { opacity: 0; scale: 0.95; } }
 }
 
 body {
-  background-color: #0a0b10;
-  color: #f1f5f9;
+  background-color: var(--surface);
+  color: var(--on-surface);
   overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Estilo para el diseño de proporción áurea */
@@ -81,165 +214,426 @@ body {
    ========================================================================== */
 
 /* 1. Backgrounds & Containers */
-body, html {
+:root:not(.light) body, :root:not(.light) html {
   background-color: #0a0b10 !important;
   color: #f1f5f9 !important;
 }
 
-.bg-\[\#f4f6f7\], 
-.bg-slate-50, 
-.bg-slate-100 {
+:root:not(.light) .bg-\[\#f4f6f7\], 
+:root:not(.light) .bg-slate-50, 
+:root:not(.light) .bg-slate-100 {
   background-color: #0a0b10 !important;
 }
 
-.bg-white, 
-.bg-white\/90, 
-.bg-surface-container-lowest,
-.bg-surface-bright {
+:root:not(.light) .bg-white, 
+:root:not(.light) .bg-white\/90, 
+:root:not(.light) .bg-surface-container-lowest,
+:root:not(.light) .bg-surface-bright {
   background-color: #11131c !important;
 }
 
-.bg-slate-50\/50,
-.bg-slate-100\/60,
-.bg-\[\#07080c\] {
+:root:not(.light) .bg-slate-50\/50,
+:root:not(.light) .bg-slate-100\/60,
+:root:not(.light) .bg-\[\#07080c\] {
   background-color: #07080c !important;
 }
 
 /* 2. Borders */
-.border-slate-200, 
-.border-slate-200\/80, 
-.border-slate-100, 
-.border-slate-150,
-.border-slate-300,
-.border-outline-variant,
-.border-outline-variant\/60 {
+:root:not(.light) .border-slate-200, 
+:root:not(.light) .border-slate-200\/80, 
+:root:not(.light) .border-slate-100, 
+:root:not(.light) .border-slate-150,
+:root:not(.light) .border-slate-300,
+:root:not(.light) .border-outline-variant,
+:root:not(.light) .border-outline-variant\/60 {
   border-color: #1e2235 !important;
 }
 
 /* 3. Text Colors */
-.text-slate-900, 
-.text-slate-800, 
-.text-slate-950,
-.text-slate-900:hover {
+:root:not(.light) .text-slate-900, 
+:root:not(.light) .text-slate-800, 
+:root:not(.light) .text-slate-950,
+:root:not(.light) .text-slate-900:hover {
   color: #ffffff !important;
 }
 
-.text-slate-700, 
-.text-slate-600 {
+:root:not(.light) .text-slate-700, 
+:root:not(.light) .text-slate-600 {
   color: #cbd5e1 !important;
 }
 
-.text-slate-500,
-.text-slate-400 {
+:root:not(.light) .text-slate-500,
+:root:not(.light) .text-slate-400 {
   color: #94a3b8 !important;
 }
 
 /* 4. Form Controls (Inputs, Selects, Textareas) */
-input, select, textarea {
-  background-color: #171a26 !important;
-  color: #ffffff !important;
-  border-color: #1e2235 !important;
+:root:not(.light) input, :root:not(.light) select, :root:not(.light) textarea {
+  background-color: #0c0e16;
+  color: #ffffff;
+  border-color: #1e293b;
+  border-radius: 10px;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease-in-out;
 }
 
-input:focus, select:focus, textarea:focus {
-  border-color: #4f46e5 !important;
+:root:not(.light) input:focus, :root:not(.light) select:focus, :root:not(.light) textarea:focus {
+  border-color: var(--indigo-500) !important;
+  box-shadow: 0 0 0 2px rgba(178, 34, 77, 0.25) !important;
   outline: none !important;
 }
 
-select option {
+:root:not(.light) select option {
   background-color: #11131c !important;
   color: #ffffff !important;
 }
 
-input::placeholder, textarea::placeholder {
+:root:not(.light) input::placeholder, :root:not(.light) textarea::placeholder {
   color: #475569 !important;
 }
 
 /* 5. Badges & Status Indicators */
-.bg-emerald-50,
-.bg-emerald-500\/10 {
+:root:not(.light) .bg-emerald-50,
+:root:not(.light) .bg-emerald-500\/10 {
   background-color: rgba(16, 185, 129, 0.1) !important;
   color: #34d399 !important;
   border-color: rgba(16, 185, 129, 0.2) !important;
 }
-.text-emerald-600, .text-emerald-700, .text-emerald-800 {
+:root:not(.light) .text-emerald-600, :root:not(.light) .text-emerald-700, :root:not(.light) .text-emerald-800 {
   color: #34d399 !important;
 }
 
-.bg-rose-50,
-.bg-rose-500\/10 {
+:root:not(.light) .bg-rose-50,
+:root:not(.light) .bg-rose-500\/10 {
   background-color: rgba(239, 68, 68, 0.1) !important;
   color: #f87171 !important;
   border-color: rgba(239, 68, 68, 0.2) !important;
 }
-.text-rose-600, .text-rose-700, .text-rose-800 {
+:root:not(.light) .text-rose-600, :root:not(.light) .text-rose-700, :root:not(.light) .text-rose-800 {
   color: #f87171 !important;
 }
 
-.bg-amber-50,
-.bg-amber-500\/10 {
+:root:not(.light) .bg-amber-50,
+:root:not(.light) .bg-amber-500\/10 {
   background-color: rgba(245, 158, 11, 0.1) !important;
   color: #fbbf24 !important;
   border-color: rgba(245, 158, 11, 0.2) !important;
 }
-.text-amber-600, .text-amber-700, .text-amber-800, .text-amber-900 {
+:root:not(.light) .text-amber-600, :root:not(.light) .text-amber-700, :root:not(.light) .text-amber-800, :root:not(.light) .text-amber-900 {
   color: #fbbf24 !important;
 }
 
-.bg-blue-50,
-.bg-blue-500\/10 {
+:root:not(.light) .bg-blue-50,
+:root:not(.light) .bg-blue-500\/10 {
   background-color: rgba(59, 130, 246, 0.1) !important;
   color: #60a5fa !important;
   border-color: rgba(59, 130, 246, 0.2) !important;
 }
-.text-blue-600, .text-blue-700, .text-blue-800 {
+:root:not(.light) .text-blue-600, :root:not(.light) .text-blue-700, :root:not(.light) .text-blue-800 {
   color: #60a5fa !important;
 }
 
 /* 6. Navigation Tabs & Interactive Elements hover */
-.hover\:bg-slate-100:hover,
-.hover\:bg-slate-50:hover {
+:root:not(.light) .hover\:bg-slate-100:hover,
+:root:not(.light) .hover\:bg-slate-50:hover {
   background-color: #171a26 !important;
   color: #ffffff !important;
 }
 
 /* 7. Buttons contrast preservation */
-button.bg-primary, 
-button.bg-secondary,
-.bg-primary-container,
-.bg-indigo-650 {
+:root:not(.light) button.bg-primary, 
+:root:not(.light) button.bg-secondary,
+:root:not(.light) .bg-primary-container,
+:root:not(.light) .bg-indigo-650 {
   color: #ffffff !important;
 }
 
-button.bg-amber-650,
-button.bg-amber-600,
-button.bg-amber-500 {
+:root:not(.light) button.bg-amber-650,
+:root:not(.light) button.bg-amber-600,
+:root:not(.light) button.bg-amber-500 {
   color: #ffffff !important;
 }
 
 /* ==========================================================================
-   INTERACTIVE GRID BACKGROUND (MODERN SUITE DESIGN)
+   GLOBAL LIGHT MODE PREMIUM OVERRIDES
    ========================================================================== */
-.interactive-grid-bg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-size: 50px 50px;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  z-index: 0;
+.light body, .light html {
+  background-color: var(--surface) !important;
+  color: var(--on-surface) !important;
 }
 
-.interactive-grid-bg::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    600px circle at var(--mouse-x, 0px) var(--mouse-y, 0px),
-    rgba(178, 34, 77, 0.09), /* Vino sutil, muy elegante */
-    transparent 80%
-  );
-  z-index: 1;
-  pointer-events: none;
+.light input, .light select, .light textarea {
+  background-color: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+  border-radius: 10px;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease-in-out;
 }
+.light select option {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+.light input::placeholder, .light textarea::placeholder {
+  color: #94a3b8;
+}
+.light input:focus, .light select:focus, .light textarea:focus {
+  border-color: #193b70 !important;
+  box-shadow: 0 0 0 2px rgba(25, 59, 112, 0.15) !important;
+  outline: none !important;
+}
+
+/* Hardcoded bg color overrides for light mode */
+.light .bg-\[\#0a0b10\],
+.light .bg-surface {
+  background-color: var(--surface) !important; /* Clean light slate bg */
+}
+.light .bg-\[\#0c0e16\],
+.light .bg-\[\#090a10\],
+.light .bg-surface-dim {
+  background-color: #f1f5f9 !important; /* Soft light gray/blue sidebar */
+}
+.light .bg-\[\#11131c\],
+.light .bg-\[\#11131c\]\/90,
+.light .bg-\[\#171a26\],
+.light .bg-surface-container-lowest,
+.light .bg-surface-bright,
+.light header {
+  background-color: #ffffff !important; /* White for cards and headers */
+}
+.light .bg-\[\#07080c\],
+.light .bg-slate-50\/50,
+.light .bg-slate-100\/60 {
+  background-color: var(--surface-dim) !important; /* Sub-containers */
+}
+
+.light .border-slate-800,
+.light .border-slate-850,
+.light .border-slate-900,
+.light .border-outline-variant {
+  border-color: #e2e8f0 !important; /* Soft slate border */
+}
+
+/* Text white overrides - Only applied to non-interactive text elements, preserving white text on buttons */
+.light .text-white:not(button):not(a):not(.bg-indigo-650):not(.bg-indigo-600):not(.bg-primary):not(.bg-secondary):not(.bg-emerald-600):not(.bg-rose-600):not(.bg-rose-500):not(.bg-emerald-500) {
+  color: #0f172a !important; /* Dark text */
+}
+
+.light .text-indigo-400 {
+  color: #193b70 !important; /* E.g. active menu items */
+}
+.light .bg-indigo-500\/5 {
+  background-color: rgba(25, 59, 112, 0.08) !important; /* Soft active item bg */
+}
+.light .bg-rose-500\/10 {
+  background-color: rgba(239, 68, 68, 0.08) !important;
+}
+
+/* Force high contrast white text for buttons with dark backgrounds */
+.light button.bg-primary, 
+.light button.bg-secondary,
+.light button.bg-indigo-650,
+.light button.bg-indigo-600,
+.light button.bg-emerald-600,
+.light button.bg-emerald-500,
+.light button.bg-rose-600,
+.light button.bg-rose-500,
+.light .bg-indigo-650,
+.light .bg-indigo-600,
+.light button.text-white {
+  color: #ffffff !important;
+}
+
+/* Gray colors text mapping */
+.light .text-slate-50,
+.light .text-slate-100,
+.light .text-slate-200,
+.light .text-slate-900,
+.light .text-slate-800,
+.light .text-slate-950 {
+  color: #0f172a !important; /* Dark slate 900 */
+}
+
+.light .text-slate-300,
+.light .text-slate-305,
+.light .text-slate-350,
+.light .text-slate-400 {
+  color: #334155 !important; /* Slate 700 */
+}
+
+.light .text-slate-500,
+.light .text-slate-450,
+.light .text-slate-455,
+.light .text-slate-600,
+.light .text-slate-700 {
+  color: #64748b !important; /* Slate 500 */
+}
+
+/* Rediseño SaaS Plano para Modo Claro */
+.light .rounded-2xl {
+  border-radius: 12px !important;
+}
+
+.light .shadow-xs,
+.light .shadow-sm,
+.light .shadow,
+.light .shadow-md,
+.light .shadow-lg,
+.light .shadow-xl,
+.light .shadow-2xl {
+  box-shadow: none !important; /* Remover sombras pesadas */
+}
+
+.light .border-slate-200,
+.light .border-slate-150,
+.light .border {
+  border-color: #e2e8f0 !important; /* Forzar borde muy sutil */
+}
+
+/* Sidebar hovers en modo claro (usar acentos del logo) */
+.light .hover\:bg-\[\#1a1d2a\]:hover {
+  background-color: rgba(25, 59, 112, 0.06) !important;
+}
+.light .hover\:text-slate-200:hover {
+  color: #193b70 !important;
+}
+.light .hover\:bg-\[\#151722\]:hover {
+  background-color: rgba(25, 59, 112, 0.04) !important;
+}
+.light .hover\:text-slate-350:hover {
+  color: #193b70 !important;
+}
+
+/* Evitar que los botones de guardar (bg-secondary) se aclaren en hover a casi blanco */
+.light button.bg-secondary:hover,
+.light .bg-secondary:hover {
+  background-color: #1f7068 !important; /* Verde turquesa corporativo de alto contraste */
+}
+
+/* Asegurar texto blanco de alta visibilidad para elementos hijos de botones con fondos oscuros */
+.light button.bg-primary *,
+.light button.bg-secondary *,
+.light button.bg-indigo-650 *,
+.light button.bg-indigo-600 *,
+.light button.bg-emerald-600 *,
+.light button.bg-emerald-500 *,
+.light button.bg-rose-600 *,
+.light button.bg-rose-500 * {
+  color: #ffffff !important;
+}
+
+/* ==========================================================================
+   GLOBAL TYPOGRAPHY OVERRIDES (Outfit Font Consistency)
+   ========================================================================== */
+body, input, select, textarea, button, table, td, th, h1, h2, h3, h4, h5, h6, span:not(.material-symbols-outlined) {
+  font-family: 'Outfit', sans-serif !important;
+}
+
+/* ==========================================================================
+   COLLAPSIBLE SIDEBAR DYNAMIC GRID LAYOUT (Adaptive right drawer space squeezing)
+   ========================================================================== */
+@media (min-width: 1024px) {
+  /* Main page layout shifts/squeezes left when right sidebar panel is open */
+  .lg\:ml-64 {
+    transition: margin-right 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  
+  body.panel-campeonatos-abierto .lg\:ml-64 {
+    margin-right: 384px !important;
+  }
+}
+
+/* ==========================================================================
+   ALERT DIALOG (useConfirm) PREMIUM GLASSMORPHISM THEME
+   ========================================================================== */
+
+/* Fondo desenfocado del overlay global */
+[data-slot="alert-dialog-overlay"] {
+  background-color: rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: blur(8px) !important;
+  transition: all 150ms ease-in-out !important;
+}
+
+/* Caja de diálogo modal centrado */
+[data-slot="alert-dialog-content"] {
+  background: rgba(12, 14, 23, 0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+  padding: 1.5rem !important;
+  color: #f1f5f9 !important;
+  max-width: 400px !important;
+}
+
+/* Encabezado del diálogo */
+[data-slot="alert-dialog-header"] {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.5rem !important;
+  text-align: left !important;
+}
+
+/* Título */
+[data-slot="alert-dialog-title"] {
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  letter-spacing: -0.025em !important;
+}
+
+/* Descripción */
+[data-slot="alert-dialog-description"] {
+  font-size: 0.78rem !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+  color: #94a3b8 !important;
+}
+
+/* Footer / Botonera */
+[data-slot="alert-dialog-footer"] {
+  background-color: transparent !important;
+  border-top: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  padding-top: 1rem !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 0.75rem !important;
+}
+
+/* Personalización de los botones del diálogo */
+[data-slot="alert-dialog-cancel"] {
+  background-color: rgba(30, 41, 59, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  color: #94a3b8 !important;
+  border-radius: 10px !important;
+  font-size: 0.75rem !important;
+  font-weight: 755 !important;
+  padding: 0.5rem 1rem !important;
+  cursor: pointer !important;
+  transition: all 150ms ease !important;
+}
+[data-slot="alert-dialog-cancel"]:hover {
+  background-color: rgba(30, 41, 59, 0.7) !important;
+  color: #ffffff !important;
+}
+
+[data-slot="alert-dialog-action"] {
+  background-color: #800f2f !important; /* Rojo carmesí del proyecto */
+  color: #ffffff !important;
+  border-radius: 10px !important;
+  font-size: 0.75rem !important;
+  font-weight: 755 !important;
+  padding: 0.5rem 1rem !important;
+  cursor: pointer !important;
+  border: none !important;
+  transition: all 150ms ease !important;
+}
+[data-slot="alert-dialog-action"]:hover {
+  background-color: #99153c !important;
+}
+
+

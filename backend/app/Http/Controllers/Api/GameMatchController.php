@@ -59,9 +59,10 @@ class GameMatchController extends Controller
         response: 200,
         description: 'Partidos obtenidos exitosamente'
     )]
+    
     public function index(Request $request)
     {
-        $query = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'discipline', 'category', 'report']);
+        $query = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'category', 'report']);
 
         if ($request->has('championship_id')) {
             $query->where('championship_id', $request->championship_id);
@@ -152,6 +153,7 @@ class GameMatchController extends Controller
         ]);
 
         $match->update($request->all());
+        event(new \App\Events\MatchUpdated($match));
         return $this->successResponse($match, 'Partido actualizado exitosamente');
     }
 
@@ -202,7 +204,45 @@ class GameMatchController extends Controller
             'venue_id' => $request->venue_id,
             'status' => 'reprogramado',
         ]);
+        event(new \App\Events\MatchUpdated($match));
 
         return $this->successResponse($match, 'Partido reprogramado exitosamente');
+    }
+
+    public function syncTimer(Request $request, $id)
+    {
+        $request->validate([
+            'current_elapsed_time' => 'required|integer|min:0',
+            'current_period' => 'required|integer|min:0',
+            'timer_status' => 'required|in:stopped,running,paused,finished',
+            'timer_started_at' => 'nullable|date',
+        ]);
+
+        $match = GameMatch::findOrFail($id);
+        
+        $match->current_elapsed_time = $request->current_elapsed_time;
+        $match->current_period = $request->current_period;
+        $match->timer_status = $request->timer_status;
+        $match->timer_started_at = $request->timer_started_at;
+        $match->save();
+
+        // Disparar evento de WebSocket
+        event(new \App\Events\MatchTimerSynced(
+            $match->id,
+            $match->current_elapsed_time,
+            $match->current_period,
+            $match->timer_status,
+            $match->timer_started_at
+        ));
+
+        return $this->successResponse(
+            [
+                'current_elapsed_time' => $match->current_elapsed_time,
+                'current_period' => $match->current_period,
+                'timer_status' => $match->timer_status,
+                'timer_started_at' => $match->timer_started_at,
+            ],
+            'Timer sincronizado correctamente'
+        );
     }
 }

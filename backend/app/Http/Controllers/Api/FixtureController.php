@@ -26,7 +26,7 @@ class FixtureController extends Controller
         path: '/api/fixture/generate',
         operationId: 'generateFixture',
         summary: 'Generar fixture',
-        description: 'Genera el fixture completo usando el algoritmo Round Robin (todos contra todos).',
+        description: 'Genera el fixture según el formato de la categoría (liga, grupos, eliminacion_directa).',
         tags: ['Fixture']
     )]
     #[OA\Security(name: 'sanctum')]
@@ -56,14 +56,14 @@ class FixtureController extends Controller
         ]);
 
         try {
-            $matches = $this->fixtureService->generateRoundRobin(
+            $result = $this->fixtureService->generateFixture(
                 $request->championship_id,
                 $request->category_id,
                 $request->start_date,
                 $request->venue_ids
             );
 
-            return $this->successResponse($matches, 'Fixture generado exitosamente', 201);
+            return $this->successResponse($result, 'Fixture generado exitosamente', 201);
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), 400);
         }

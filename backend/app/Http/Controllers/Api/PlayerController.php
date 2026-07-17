@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Player;
 use App\Models\Team;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use OpenApi\Attributes as OA;
 
 #[OA\Tag(
@@ -38,9 +40,7 @@ class PlayerController extends Controller
     public function index(Request $request)
     {
         $query = Player::with([
-            'team.organization',
-            'team.category',
-            'team.discipline'
+            'team.category.championshipDiscipline.discipline'
         ]);
 
         if ($request->has('championship_id')) {
@@ -154,12 +154,15 @@ class PlayerController extends Controller
 
         $birthDate = now()->subYears($validated['age'])->format('Y-m-d');
 
+        $photoValue = $this->resolvePhoto($request);
+
         $player = Player::create([
             'names' => $names,
             'last_names' => $lastNames,
             'document_number' => $validated['dni'] ?? null,
             'birth_date' => $birthDate,
             'gender' => $team->category->gender_type ?? null,
+            'photo' => $photoValue,
         ]);
 
         // Associate player to team via team_players pivot table
@@ -202,9 +205,7 @@ class PlayerController extends Controller
     {
         return response()->json(
             Player::with([
-                'team.organization',
-                'team.category',
-                'team.discipline'
+                'team.category.championshipDiscipline.discipline'
             ])->findOrFail($id)
         );
     }
@@ -275,6 +276,14 @@ class PlayerController extends Controller
             $updateData['birth_date'] = now()->subYears($validated['age'])->format('Y-m-d');
         }
 
+        if ($request->hasFile('photo') || $request->filled('photo')) {
+            $photoAnterior = $player->getRawOriginal('photo');
+            if ($photoAnterior && !Str::startsWith($photoAnterior, ['http://', 'https://'])) {
+                Storage::disk('public')->delete($photoAnterior);
+            }
+            $updateData['photo'] = $this->resolvePhoto($request);
+        }
+
         if (!empty($updateData)) {
             $player->update($updateData);
         }
@@ -327,5 +336,24 @@ class PlayerController extends Controller
         return response()->json([
             'message' => 'Jugador eliminado correctamente'
         ]);
+    }
+
+    private function resolvePhoto(Request $request): ?string
+    {
+        if ($request->hasFile('photo')) {
+            $request->validate([
+                'photo' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+            ]);
+            return $request->file('photo')->store('players/photos', 'public');
+        }
+
+        if ($request->filled('photo')) {
+            $request->validate([
+                'photo' => 'string|max:2048|url',
+            ]);
+            return $request->input('photo');
+        }
+
+        return null;
     }
 }

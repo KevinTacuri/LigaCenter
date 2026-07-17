@@ -4,18 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Team extends Model
 {
     use SoftDeletes;
 
     protected $fillable = [
-        'organization_id',
         'representative',
-        'discipline_id',
         'category_id',
         'name',
         'registration_status',
@@ -24,14 +22,27 @@ class Team extends Model
         'description',
     ];
 
-    public function organization(): BelongsTo
+    // Accessor: transforma el valor crudo de 'logo' en una URL lista para usar,
+    // sin importar si se guardó como ruta local (storage) o como URL externa.
+    public function getLogoAttribute($value)
     {
-        return $this->belongsTo(Organization::class);
+        if (!$value) {
+            return null;
+        }
+
+        // Si ya es una URL completa (http/https), se devuelve tal cual.
+        if (Str::startsWith($value, ['http://', 'https://'])) {
+            return $value;
+        }
+
+        // Si es una ruta relativa (subida por archivo), se arma la URL pública.
+        return asset('storage/' . $value);
     }
 
-    public function discipline(): BelongsTo
+    // Devuelve el valor CRUDO de logo (sin transformar), útil para borrar el archivo viejo.
+    public function getLogoRawAttribute()
     {
-        return $this->belongsTo(Discipline::class);
+        return $this->attributes['logo'] ?? null;
     }
 
     public function category(): BelongsTo
@@ -63,6 +74,19 @@ class Team extends Model
 
     public function standing()
     {
-        return $this->hasOne(Standing::class);
+        return $this->hasOne(Standing::class, 'team_id')
+            ->where('category_id', $this->category_id)
+            ->where('championship_id', $this->championship_id);
+    }
+
+    public function championshipUser()
+    {
+        return $this->hasOne(ChampionshipUser::class, 'team_id')
+            ->where('role', 'team_delegate');
+    }
+
+    public function getChampionshipAttribute()
+    {
+        return $this->category?->championshipDiscipline?->championship;
     }
 }
