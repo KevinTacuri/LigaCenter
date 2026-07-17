@@ -8,17 +8,22 @@
 # Usamos PHP 8.4 CLI e instalamos Composer 2.7 desde la fuente oficial.
 FROM php:8.4-cli-bookworm AS vendor
 
-# Extensiones mínimas que Composer necesita
-# gd se requiere porque phpoffice/phpspreadsheet valida ext-gd en composer install
+# Extensiones PHP necesarias para Composer en el lockfile.
+# phpoffice/phpspreadsheet 5.8.0 requiere ext-gd, ext-zip, ext-xml, ext-mbstring, ext-fileinfo.
+# Como composer install se ejecuta en este stage, TODAS deben estar instaladas antes.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
         unzip \
+        zip \
         ca-certificates \
         libpng-dev \
         libjpeg-dev \
         libfreetype6-dev \
+        libzip-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd \
+    && docker-php-ext-install -j$(nproc) \
+        gd \
+        zip \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar Composer 2.7 desde el instalador oficial
