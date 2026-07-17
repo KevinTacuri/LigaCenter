@@ -23,18 +23,17 @@ interface Props {
   rol: string;
 }
 
-// Helper para obtener colores pastel suaves
 const obtenerPastelColorSidebar = (nombre: string) => {
   if (!nombre) return { bg: 'bg-[#d0ebff]/20 border-[#a5d8ff]/30', text: 'text-[#a5d8ff]' };
   const hash = nombre.split('').reduce((acc, char) => char.charCodeAt(0) + acc, 0);
   const colores = [
-    { bg: 'bg-[#d0ebff]/20 border-[#a5d8ff]/30', text: 'text-[#a5d8ff]' }, // Azul
-    { bg: 'bg-[#e2f9e1]/20 border-[#b2f2bb]/30', text: 'text-[#b2f2bb]' }, // Verde
-    { bg: 'bg-[#ffe3e3]/20 border-[#ffc9c9]/30', text: 'text-[#ffc9c9]' }, // Rojo
-    { bg: 'bg-[#f3e8ff]/20 border-[#e8d2ff]/30', text: 'text-[#e8d2ff]' }, // Púrpura
-    { bg: 'bg-[#fff9db]/20 border-[#ffec99]/30', text: 'text-[#ffec99]' }, // Amarillo
-    { bg: 'bg-[#e3fafc]/20 border-[#99e9f2]/30', text: 'text-[#99e9f2]' }, // Cyan
-    { bg: 'bg-[#fff0f6]/20 border-[#fcc2d7]/30', text: 'text-[#fcc2d7]' }, // Rosa
+    { bg: 'bg-[#d0ebff]/20 border-[#a5d8ff]/30', text: 'text-[#a5d8ff]' },
+    { bg: 'bg-[#e2f9e1]/20 border-[#b2f2bb]/30', text: 'text-[#b2f2bb]' },
+    { bg: 'bg-[#ffe3e3]/20 border-[#ffc9c9]/30', text: 'text-[#ffc9c9]' },
+    { bg: 'bg-[#f3e8ff]/20 border-[#e8d2ff]/30', text: 'text-[#e8d2ff]' },
+    { bg: 'bg-[#fff9db]/20 border-[#ffec99]/30', text: 'text-[#ffec99]' },
+    { bg: 'bg-[#e3fafc]/20 border-[#99e9f2]/30', text: 'text-[#99e9f2]' },
+    { bg: 'bg-[#fff0f6]/20 border-[#fcc2d7]/30', text: 'text-[#fcc2d7]' },
   ];
   return colores[hash % colores.length];
 };
@@ -69,7 +68,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
   const [colapsado, setColapsado] = useState(false);
 
   const membresiaActiva = campeonatoActivo && usuario?.championship_memberships?.find(
-    (m: any) => m.championship_id === campeonatoActivo.id
+    (m) => m.championship_id === campeonatoActivo.id
   );
   const rolCampeonato = membresiaActiva ? membresiaActiva.role : null;
 
@@ -98,12 +97,10 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
     return items;
   };
 
-  // Estados de secciones colapsables (Acordeones)
   const [seccionTorneoAbierta, setSeccionTorneoAbierta] = useState(true);
   const [seccionAdminAbierta, setSeccionAdminAbierta] = useState(true);
   const [seccionAjustesAbierta, setSeccionAjustesAbierta] = useState(true);
 
-  // --- Agrupación de ítems ---
   const itemsTorneo: ItemMenu[] = [
     {
       id: 'dashboard',
@@ -192,8 +189,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
     if (!isActive(item.ruta)) return false;
     const currentQuery = location.search.replace('?', '');
     if (!currentQuery) {
-      // Cambiamos la pestaña por defecto "Disciplinas" por ahora para simplificar, pero se puede reactivar fácilmente si se necesita
-      // if (item.id === 'teams' && sub.id === 'disciplinas') return true; 
       if (item.id === 'teams' && sub.id === 'categorias') return true;
       if (item.id === 'fixture' && sub.id === 'escenarios') return true;
       if (item.id === 'posiciones' && sub.id === 'posiciones') return true;
@@ -206,7 +201,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
     if (itemsTorneo.some(item => item.visible && isActive(item.ruta))) setSeccionTorneoAbierta(true);
     if (itemsAdmin.some(item => item.visible && isActive(item.ruta))) setSeccionAdminAbierta(true);
     if (itemsAjustes.some(item => item.visible && isActive(item.ruta))) setSeccionAjustesAbierta(true);
-  }, [location.pathname]);
+  }, [location.pathname, itemsTorneo, itemsAdmin, itemsAjustes, isActive]);
 
   const visibleTorneo = itemsTorneo.filter(item => item.visible);
   const visibleAdmin = itemsAdmin.filter(item => item.visible);
@@ -215,7 +210,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
   const inicialUsuario = usuario?.name ? usuario.name.charAt(0).toUpperCase() : 'U';
   const colorAvatar = obtenerPastelColorSidebar(usuario?.name || '');
 
-  // Renderizador genérico de ítem de menú (Desktop)
   const renderItemMenu = (item: ItemMenu) => {
     const active = isActive(item.ruta);
     const subItems = getSubMenus(item.id);
@@ -235,8 +229,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
           {!colapsado && <span className="text-sm font-medium">{item.titulo}</span>}
         </button>
 
-        {/* Sub-menú en Desktop */}
-        {!colapsado && active && subItems && (
+        {!colapsado && active && subItems && subItems.length > 0 && (
           <div className="pl-8 pr-2 py-1 space-y-1 border-l border-slate-800 ml-5 mt-1 animate-fadeIn">
             {subItems.map((sub) => {
               const subActive = isSubActive(item, sub);
@@ -260,7 +253,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
     );
   };
 
-  // Renderizador genérico de ítem de menú (Móvil)
   const renderMobileItem = (item: ItemMenu) => {
     const active = isActive(item.ruta);
     const subItems = getSubMenus(item.id);
@@ -280,7 +272,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
           <span className="text-sm font-medium">{item.titulo}</span>
         </button>
 
-        {/* Sub-menú en Móvil */}
         {active && subItems && subItems.length > 0 && (
           <div className="pl-8 pr-2 py-1 space-y-1 border-l border-slate-800 ml-5 mt-1">
             {subItems.map((sub) => {
@@ -310,13 +301,11 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
 
   return (
     <>
-      {/* Sidebar Desktop */}
       <aside
         className={`hidden lg:flex flex-col bg-[#0c0e16] border-r border-slate-800 transition-all duration-300 ease-in-out ${
           colapsado ? 'w-20' : 'w-64'
         } fixed left-0 top-0 h-full z-40 shadow-2xl`}
       >
-        {/* Cabecera Sidebar */}
         <div className={`flex items-center h-16 px-4 border-b border-slate-800 justify-center`}>
           <div className="flex items-center gap-2 overflow-hidden">
             <img src={logoImg} className="w-8 h-8 object-contain" alt="LigaCenter" />
@@ -324,9 +313,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
           </div>
         </div>
 
-        {/* Listado de Navegación con Acordeones */}
         <nav className="flex-1 py-6 px-3 space-y-4 overflow-y-auto">
-          {/* SECCIÓN 1: Torneo Activo */}
           {visibleTorneo.length > 0 && (
             <div className="space-y-1">
               {!colapsado ? (
@@ -352,7 +339,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
             </div>
           )}
 
-          {/* SECCIÓN 2: Administración */}
           {visibleAdmin.length > 0 && (
             <div className="space-y-1">
               {!colapsado ? (
@@ -378,7 +364,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
             </div>
           )}
 
-          {/* SECCIÓN 3: Ajustes */}
           {visibleAjustes.length > 0 && (
             <div className="space-y-1">
               {!colapsado ? (
@@ -405,9 +390,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
           )}
         </nav>
 
-        {/* Sección Usuario y Avatar Pastel */}
         <div className="border-t border-slate-800 bg-[#090a10]">
-          {/* Ficha de identidad */}
           <div className={`p-3.5 flex items-center gap-3 ${colapsado ? 'justify-center' : 'justify-start'}`}>
             <div className={`w-9 h-9 rounded-full border flex items-center justify-center font-black text-xs shrink-0 select-none ${colorAvatar.bg} ${colorAvatar.text}`} title={usuario?.name}>
               {inicialUsuario}
@@ -420,8 +403,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
             )}
           </div>
 
-
-          {/* Botón Contraer/Expandir (Estilo GitLab) */}
           <div className="px-3">
             <button
               onClick={() => setColapsado(!colapsado)}
@@ -435,7 +416,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
             </button>
           </div>
 
-          {/* Botón Logout al fondo */}
           <div className="px-3 pb-3">
             <button
               onClick={manejarCerrarSesion}
@@ -449,7 +429,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
         </div>
       </aside>
 
-      {/* Sidebar Móvil (Off-canvas) */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <button onClick={() => setColapsado(!colapsado)} className="bg-[#11131c] border border-slate-800 p-2 rounded-xl shadow-lg text-white">
           <span className="material-symbols-outlined">menu</span>
@@ -473,7 +452,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
             </button>
           </div>
           <nav className="py-6 px-3 space-y-4 max-h-[70vh] overflow-y-auto">
-            {/* Torneo Activo Móvil */}
             {visibleTorneo.length > 0 && (
               <div className="space-y-1">
                 <p className="px-3 py-1.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">Torneo Activo</p>
@@ -481,7 +459,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
               </div>
             )}
 
-            {/* Admin Móvil */}
             {visibleAdmin.length > 0 && (
               <div className="space-y-1">
                 <p className="px-3 py-1.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">Administración</p>
@@ -489,7 +466,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
               </div>
             )}
 
-            {/* Ajustes Móvil */}
             {visibleAjustes.length > 0 && (
               <div className="space-y-1">
                 <p className="px-3 py-1.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">Ajustes</p>
@@ -499,7 +475,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
           </nav>
         </div>
 
-        {/* Footer Móvil */}
         <div className="border-t border-slate-800 bg-[#090a10]">
           <div className="p-4 flex items-center gap-3">
             <div className={`w-9 h-9 rounded-full border flex items-center justify-center font-black text-xs shrink-0 select-none ${colorAvatar.bg} ${colorAvatar.text}`}>
