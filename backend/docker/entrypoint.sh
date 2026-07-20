@@ -117,7 +117,21 @@ else
 fi
 
 # ============================================================================
-# 5. Storage link (para archivos públicos)
+# 5. Ejecutar seeders (solo si RUN_SEEDERS=true)
+# ============================================================================
+# Idempotencia: los seeders usan firstOrCreate/updateOrCreate, así que es
+# seguro correrlos en cada arranque del contenedor (no falla en redeploys).
+if [ "${RUN_SEEDERS:-true}" = "true" ]; then
+    echo "🌱 Ejecutando seeders..."
+    php artisan db:seed --force --no-interaction || {
+        echo "⚠️  Error en seeders, pero continuando (puede ser por datos existentes)"
+    }
+else
+    echo "⏭️  Seeders omitidos (RUN_SEEDERS=true para habilitarlos)"
+fi
+
+# ============================================================================
+# 6. Storage link (para archivos públicos)
 # ============================================================================
 if [ ! -L /var/www/html/public/storage ]; then
     php artisan storage:link 2>/dev/null || true
