@@ -6,7 +6,7 @@ import Pusher from 'pusher-js';
 
 // Extraer dinámicamente el host del backend para WebSocket a partir de la API
 const obtenerWsHost = (): string => {
-  const urlBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+  const urlBase = __VITE_API_URL__ || 'http://127.0.0.1:8000/api';
   try {
     const url = new URL(urlBase);
     return url.hostname; // Devuelve '127.0.0.1', 'localhost', o la IP local correspondiente
