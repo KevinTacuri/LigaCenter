@@ -21,7 +21,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Variables de entorno para el build
-ARG VITE_API_URL=/api
+ARG VITE_API_URL=https://api.compose-connect-primary-bandwidth-elym5d-9de16a-144-126-134-104.sslip.io/api
 ENV VITE_API_URL=${VITE_API_URL}
 
 # Build de producción
