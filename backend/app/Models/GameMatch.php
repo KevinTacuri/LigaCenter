@@ -14,7 +14,7 @@ class GameMatch extends Model
     protected $appends = [
         'local_team_id',
         'visitor_team_id',
-        'discipline', // ← AGREGAR ESTO
+        'discipline',
     ];
 
     protected $fillable = [
@@ -32,14 +32,24 @@ class GameMatch extends Model
         'championship_id',
         'home_score',
         'away_score',
-        'current_elapsed_time',
+        'elapsed_time',
+        'clock_status',
         'current_period',
-        'timer_status',
-        'timer_started_at',
-        'parent_home_match_id',
-        'parent_away_match_id',
-        'placeholder_text_home',
-        'placeholder_text_away',
+        'clock_last_updated',
+        'sport_type',
+        'set1_home', 'set1_away',
+        'set2_home', 'set2_away',
+        'set3_home', 'set3_away',
+        'set4_home', 'set4_away',
+        'set5_home', 'set5_away',
+        'quarter1_home', 'quarter1_away',
+        'quarter2_home', 'quarter2_away',
+        'quarter3_home', 'quarter3_away',
+        'quarter4_home', 'quarter4_away',
+        'overtime_home', 'overtime_away',
+        'current_period_score_home',
+        'current_period_score_away',
+        'is_period_finished',
     ];
 
     protected $casts = [
@@ -47,10 +57,50 @@ class GameMatch extends Model
         'match_time' => 'string',
         'home_score' => 'integer',
         'away_score' => 'integer',
-        'current_elapsed_time' => 'integer',
+        'elapsed_time' => 'integer',
         'current_period' => 'integer',
-        'timer_started_at' => 'datetime',
+        'clock_last_updated' => 'datetime',
+        'is_period_finished' => 'boolean',
     ];
+
+    // Getters para cada set/cuarto
+    public function getSetsAttribute(): array
+    {
+        return [
+            'set1' => ['home' => $this->set1_home, 'away' => $this->set1_away],
+            'set2' => ['home' => $this->set2_home, 'away' => $this->set2_away],
+            'set3' => ['home' => $this->set3_home, 'away' => $this->set3_away],
+            'set4' => ['home' => $this->set4_home, 'away' => $this->set4_away],
+            'set5' => ['home' => $this->set5_home, 'away' => $this->set5_away],
+        ];
+    }
+
+    public function getQuartersAttribute(): array
+    {
+        return [
+            'quarter1' => ['home' => $this->quarter1_home, 'away' => $this->quarter1_away],
+            'quarter2' => ['home' => $this->quarter2_home, 'away' => $this->quarter2_away],
+            'quarter3' => ['home' => $this->quarter3_home, 'away' => $this->quarter3_away],
+            'quarter4' => ['home' => $this->quarter4_home, 'away' => $this->quarter4_away],
+            'overtime' => ['home' => $this->overtime_home, 'away' => $this->overtime_away],
+        ];
+    }
+
+    public function getTotalHomeScoreAttribute(): int
+    {
+        if ($this->sport_type === 'voley') {
+            return collect($this->sets)->filter(fn($s) => $s['home'] > $s['away'])->count();
+        }
+        return $this->home_score ?? 0;
+    }
+
+    public function getTotalAwayScoreAttribute(): int
+    {
+        if ($this->sport_type === 'voley') {
+            return collect($this->sets)->filter(fn($s) => $s['away'] > $s['home'])->count();
+        }
+        return $this->away_score ?? 0;
+    }
 
     public function getLocalTeamIdAttribute()
     {
@@ -72,15 +122,11 @@ class GameMatch extends Model
         $this->attributes['away_team_id'] = $value;
     }
 
-    // ACCESOR PARA DISCIPLINE
     public function getDisciplineAttribute()
     {
-        // Primero intentar con la relacion directa
         if ($this->relationLoaded('discipline') && $this->discipline) {
             return $this->discipline;
         }
-        
-        // Si no, obtener a traves de la categoria
         return $this->category?->championshipDiscipline?->discipline;
     }
 
@@ -127,16 +173,5 @@ class GameMatch extends Model
     public function group()
     {
         return $this->belongsTo(Group::class);
-    }
-
-    public function toJson($options = 0)
-    {
-        $data = $this->toArray();
-        $data['current_elapsed_time'] = $this->current_elapsed_time;
-        $data['current_period'] = $this->current_period;
-        $data['timer_status'] = $this->timer_status;
-        $data['timer_started_at'] = $this->timer_started_at;
-        
-        return json_encode($data, $options);
     }
 }

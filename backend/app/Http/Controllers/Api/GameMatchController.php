@@ -245,4 +245,156 @@ class GameMatchController extends Controller
             'Timer sincronizado correctamente'
         );
     }
+
+    // En GameMatchController.php
+
+public function updatePeriodScore(Request $request, $id)
+{
+    $match = GameMatch::findOrFail($id);
+    
+    $request->validate([
+        'period_index' => 'required|integer|min:0',
+        'home_score' => 'required|integer|min:0',
+        'away_score' => 'required|integer|min:0',
+        'is_finished' => 'boolean',
+    ]);
+    
+    $periodIndex = $request->period_index;
+    $homeScore = $request->home_score;
+    $awayScore = $request->away_score;
+    
+    if ($match->sport_type === 'voley') {
+        $fields = ['set1', 'set2', 'set3', 'set4', 'set5'];
+        if (isset($fields[$periodIndex])) {
+            $fieldHome = $fields[$periodIndex] . '_home';
+            $fieldAway = $fields[$periodIndex] . '_away';
+            $match->$fieldHome = $homeScore;
+            $match->$fieldAway = $awayScore;
+        }
+    } elseif ($match->sport_type === 'basquet') {
+        $fields = ['quarter1', 'quarter2', 'quarter3', 'quarter4', 'overtime'];
+        if (isset($fields[$periodIndex])) {
+            $fieldHome = $fields[$periodIndex] . '_home';
+            $fieldAway = $fields[$periodIndex] . '_away';
+            $match->$fieldHome = $homeScore;
+            $match->$fieldAway = $awayScore;
+        }
+    }
+    
+    $match->current_period_score_home = $homeScore;
+    $match->current_period_score_away = $awayScore;
+    $match->is_period_finished = $request->is_finished ?? false;
+    
+    // Actualizar totales
+    if ($match->sport_type === 'voley') {
+        $sets = [
+            $match->set1_home > $match->set1_away ? 1 : 0,
+            $match->set2_home > $match->set2_away ? 1 : 0,
+            $match->set3_home > $match->set3_away ? 1 : 0,
+            $match->set4_home > $match->set4_away ? 1 : 0,
+            $match->set5_home > $match->set5_away ? 1 : 0,
+        ];
+        $match->home_score = array_sum($sets);
+        $match->away_score = 5 - array_sum($sets);
+    } else {
+        // Futbol, balonmano, basquet
+        $match->home_score = $homeScore;
+        $match->away_score = $awayScore;
+    }
+    
+    $match->save();
+    
+    return $this->successResponse($match, 'Puntuación de periodo actualizada');
+}
+
+public function getMatchState($id)
+{
+    $match = GameMatch::with(['localTeam', 'visitorTeam', 'category', 'discipline'])->findOrFail($id);
+    
+    $sportType = $match->sport_type ?? 'futbol';
+    $config = $this->getSportConfig($sportType);
+    
+    $response = [
+        'match' => $match,
+        'sport_type' => $sportType,
+        'config' => $config,
+        'sets' => $match->sets,
+        'quarters' => $match->quarters,
+        'current_period' => $match->current_period,
+        'current_period_score_home' => $match->current_period_score_home,
+        'current_period_score_away' => $match->current_period_score_away,
+        'is_period_finished' => $match->is_period_finished,
+        'elapsed_time' => $match->elapsed_time,
+        'clock_status' => $match->clock_status,
+        'total_home' => $match->total_home_score,
+        'total_away' => $match->total_away_score,
+    ];
+    
+    return $this->successResponse($response, 'Estado del partido obtenido');
+}
+
+    private function getSportConfig(string $sportType): array
+    {
+        $configs = [
+            'futbol' => [
+                'has_timer' => true,
+                'timer_countdown' => false,
+                'period_label' => 'Tiempo',
+                'periods' => [
+                    ['name' => '1° Tiempo', 'duration' => 45],
+                    ['name' => '2° Tiempo', 'duration' => 45],
+                    ['name' => '1° Prórroga', 'duration' => 15],
+                    ['name' => '2° Prórroga', 'duration' => 15],
+                ],
+                'score_label' => 'Goles',
+                'max_periods' => 4,
+                'win_score' => 0,
+            ],
+            'voley' => [
+                'has_timer' => false,
+                'timer_countdown' => false,
+                'period_label' => 'Set',
+                'periods' => [
+                    ['name' => 'Set 1', 'duration' => 0],
+                    ['name' => 'Set 2', 'duration' => 0],
+                    ['name' => 'Set 3', 'duration' => 0],
+                    ['name' => 'Set 4', 'duration' => 0],
+                    ['name' => 'Set 5', 'duration' => 0],
+                ],
+                'score_label' => 'Sets',
+                'max_periods' => 5,
+                'win_score' => 3,
+            ],
+            'basquet' => [
+                'has_timer' => true,
+                'timer_countdown' => true,
+                'period_label' => 'Cuarto',
+                'periods' => [
+                    ['name' => '1° Cuarto', 'duration' => 10],
+                    ['name' => '2° Cuarto', 'duration' => 10],
+                    ['name' => '3° Cuarto', 'duration' => 10],
+                    ['name' => '4° Cuarto', 'duration' => 10],
+                    ['name' => 'Prórroga', 'duration' => 5],
+                ],
+                'score_label' => 'Puntos',
+                'max_periods' => 5,
+                'win_score' => 0,
+            ],
+            'balonmano' => [
+                'has_timer' => true,
+                'timer_countdown' => false,
+                'period_label' => 'Tiempo',
+                'periods' => [
+                    ['name' => '1° Tiempo', 'duration' => 30],
+                    ['name' => '2° Tiempo', 'duration' => 30],
+                    ['name' => 'Prórroga', 'duration' => 5],
+                ],
+                'score_label' => 'Goles',
+                'max_periods' => 3,
+                'win_score' => 0,
+            ],
+        ];
+        
+        return $configs[$sportType] ?? $configs['futbol'];
+    }
 }
