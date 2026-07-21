@@ -5,6 +5,7 @@ import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
 import { BarraLateral } from '../../componentes/BarraLateral';
 import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
 import { useConfirm } from '@omit/react-confirm-dialog';
+import { useCampeonato } from '../../contexto/ContextoCampeonato';
 import {
   serviciosFixture,
   serviciosResultados,
@@ -14,7 +15,9 @@ import type {
   Partido,
   ActaPartido,
   Incidencia,
-  Jugador
+  Jugador,
+  Disciplina,
+  Categoria
 } from '../../servicios/api';
 
 interface IncidentTypeConfig {
@@ -118,6 +121,7 @@ const NORMAS_DEPORTES: Record<string, SportRules> = {
 
 export const MesaControl: React.FC = () => {
   const { usuario, tienePermiso, tieneRol, cargando: cargandoAuth } = useAutenticacion();
+  const { campeonatoActivo } = useCampeonato();
   const navegar = useNavigate();
   const confirm = useConfirm();
 
@@ -207,6 +211,12 @@ export const MesaControl: React.FC = () => {
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [mostrarAyuda, setMostrarAyuda] = useState(false);
+
+  const [disciplinas, setDisciplinas] = useState<Disciplina[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [categoriasFiltradas, setCategoriasFiltradas] = useState<Categoria[]>([]);
+  const [selectedDiscipline, setSelectedDiscipline] = useState<number | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
 
   const PASOS_AYUDA_MESA = [
     { paso: '1', titulo: 'Seleccionar Partido', desc: 'Elige un partido de la lista de la izquierda para cargar su acta oficial y planilla de incidencias.', icono: 'ads_click' },
@@ -424,21 +434,83 @@ export const MesaControl: React.FC = () => {
     }
   }, [incidencias, partidoSeleccionado]);
 
+  const cargarFiltros = async () => {
+    try {
+      const champId = campeonatoActivo?.id;
+      if (!champId) return;
+      
+      const [discRes, catRes] = await Promise.all([
+        serviciosParticipantes.obtenerDisciplinasCampeonato(champId),
+        serviciosParticipantes.obtenerCategoriasPorCampeonato(champId)
+      ]);
+      
+      if (discRes.success) {
+        const discList = discRes.data.map((cd: any) => cd.discipline).filter(Boolean);
+        setDisciplinas(discList);
+      }
+      if (catRes.success) {
+        setCategorias(catRes.data);
+        console.log('Categorías cargadas:', catRes.data.map(c => ({ id: c.id, name: c.name, discipline_id: c.championship_discipline_id })));
+      }
+    } catch (err) {
+      console.error('Error cargando filtros:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedDiscipline) {
+      const filtered = categorias.filter(c => c.championship_discipline_id === selectedDiscipline);
+      setCategoriasFiltradas(filtered);
+    } else {
+      setCategoriasFiltradas(categorias);
+    }
+  }, [selectedDiscipline, categorias]);
+
   useEffect(() => {
     if (cargandoAuth) return;
     if ((!tienePermiso('registrar_incidencias') && !tieneRol('organizador')) || tieneRol('administrador')) {
       navegar('/tablero');
     } else {
       cargarPartidos();
+      cargarFiltros();
     }
   }, [cargandoAuth]);
+
+  useEffect(() => {
+    if (!partidoSeleccionado) {
+      cargarPartidos();
+    }
+  }, [selectedDiscipline, selectedCategory]);
 
   const cargarPartidos = async () => {
     setCargando(true);
     try {
       const res = await serviciosFixture.obtenerPartidos();
       if (res.success) {
-        setPartidos(res.data);
+        let partidosData = res.data || [];
+        
+        // Filtrar por disciplina
+        if (selectedDiscipline) {
+          partidosData = partidosData.filter(p => p.discipline_id === selectedDiscipline);
+        }
+        
+        // Filtrar por categoría (usando el nombre)
+        if (selectedCategory) {
+          const categoriaSeleccionada = categorias.find(c => c.id === selectedCategory);
+          if (categoriaSeleccionada) {
+            partidosData = partidosData.filter(p => {
+              // Intentar por ID primero
+              const catId = p.category?.id || p.category_id;
+              if (catId === selectedCategory) return true;
+              
+              // Si no coincide por ID, usar el nombre
+              const catName = p.category?.name || '';
+              return catName === categoriaSeleccionada.name;
+            });
+          }
+        }
+        
+        setPartidos(partidosData);
       }
     } catch (err) {
       setErrorLocal('Error al cargar partidos.');
@@ -790,6 +862,63 @@ export const MesaControl: React.FC = () => {
               </div>
             </div>
 
+            <div className="bg-[#11131c] border border-slate-900 rounded-xl p-4">
+              <div className="flex flex-wrap gap-3 items-center">
+                {disciplinas.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Disciplina</label>
+                    <select
+                      value={selectedDiscipline || ''}
+                      onChange={(e) => {
+                        const value = e.target.value ? Number(e.target.value) : null;
+                        setSelectedDiscipline(value);
+                        setSelectedCategory(null);
+                      }}
+                      className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
+                    >
+                      <option value="">Todas</option>
+                      {disciplinas.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {categoriasFiltradas.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Categoría</label>
+                    <select
+                      value={selectedCategory || ''}
+                      onChange={(e) => setSelectedCategory(e.target.value ? Number(e.target.value) : null)}
+                      className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
+                    >
+                      <option value="">Todas</option>
+                      {categoriasFiltradas.map(c => {
+                        const discName = disciplinas.find(d => d.id === c.championship_discipline_id)?.name || '';
+                        return (
+                          <option key={c.id} value={c.id}>
+                            {c.name} {discName ? `(${discName})` : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                )}
+
+                {(selectedDiscipline || selectedCategory) && (
+                  <button
+                    onClick={() => {
+                      setSelectedDiscipline(null);
+                      setSelectedCategory(null);
+                    }}
+                    className="text-xs text-indigo-400 hover:text-indigo-300 font-bold mt-auto"
+                  >
+                    Limpiar filtros
+                  </button>
+                )}
+              </div>
+            </div>
+
             {cargando ? (
               <div className="py-20 text-center text-sm text-slate-400 font-bold animate-pulse">
                 Cargando partidos de la mesa de control...
@@ -850,7 +979,7 @@ export const MesaControl: React.FC = () => {
                 })}
                 {partidos.length === 0 && (
                   <div className="col-span-full bg-[#11131c] rounded-2xl border border-slate-900 p-12 text-center text-slate-400 italic text-sm">
-                    No hay partidos programados en este momento.
+                    No hay partidos programados para los filtros seleccionados.
                   </div>
                 )}
               </div>
