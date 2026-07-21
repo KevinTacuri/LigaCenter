@@ -1,7 +1,7 @@
 import axios, { type AxiosResponse } from 'axios';
 
 // URL base para la API del backend
-const URL_BASE_API = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+const URL_BASE_API = __VITE_API_URL__ || 'http://127.0.0.1:8000/api';
 
 // URL base del storage público de Laravel (sin el sufijo /api)
 const URL_STORAGE_BASE = URL_BASE_API.replace(/\/api\/?$/, '');
