@@ -229,6 +229,12 @@ export const MesaControl: React.FC = () => {
   const [timerStartedAt, setTimerStartedAt] = useState<Date | null>(null);
   const [baseElapsedTime, setBaseElapsedTime] = useState(0);
   
+  const [filtroTexto, setFiltroTexto] = useState('');
+  const [filtroDisciplina, setFiltroDisciplina] = useState<string>('todas');
+  const [filtroCategoria, setFiltroCategoria] = useState<string>('todas');
+  const [filtroEstado, setFiltroEstado] = useState<string>('todos');
+  const [filtroFecha, setFiltroFecha] = useState<string>('');
+
   const [modalIncidenciaRapida, setModalIncidenciaRapida] = useState<{
     mostrar: boolean;
     teamId: number;
@@ -239,6 +245,76 @@ export const MesaControl: React.FC = () => {
   } | null>(null);
 
   const [filtroJugadorModal, setFiltroJugadorModal] = useState('');
+
+  // Filtrado de partidos
+  const partidosFiltrados = partidos.filter((part) => {
+    if (filtroTexto.trim() !== '') {
+      const query = filtroTexto.toLowerCase();
+      const localName = part.local_team?.name?.toLowerCase() || '';
+      const visitorName = part.visitor_team?.name?.toLowerCase() || '';
+      if (!localName.includes(query) && !visitorName.includes(query)) {
+        return false;
+      }
+    }
+
+    if (filtroDisciplina !== 'todas') {
+      const discId = part.discipline_id?.toString() || part.discipline?.id?.toString() || '';
+      if (discId !== filtroDisciplina) {
+        return false;
+      }
+    }
+
+    if (filtroCategoria !== 'todas') {
+      const catId = part.category_id?.toString() || part.category?.id?.toString() || '';
+      if (catId !== filtroCategoria) {
+        return false;
+      }
+    }
+
+    if (filtroEstado !== 'todos') {
+      if (filtroEstado === 'pendiente' && part.status !== 'programado' && part.status !== 'reprogramado') {
+        return false;
+      }
+      if (filtroEstado === 'en_curso' && part.status !== 'en_curso') {
+        return false;
+      }
+      if (filtroEstado === 'finalizado' && part.status !== 'finalizado') {
+        return false;
+      }
+      if (filtroEstado === 'cancelado' && part.status !== 'cancelado') {
+        return false;
+      }
+    }
+
+    if (filtroFecha !== '') {
+      const partDate = part.match_date ? new Date(part.match_date).toISOString().split('T')[0] : '';
+      if (partDate !== filtroFecha) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  // Obtener disciplinas únicas presentes en los partidos
+  const disciplinasUnicas = Array.from(
+    new Map(
+      partidos
+        .map((p) => p.discipline || (p as any).championship?.disciplines?.[0])
+        .filter((d): d is any => !!d && !!d.id)
+        .map((d) => [d.id, d])
+    ).values()
+  );
+
+  // Obtener categorías únicas presentes en los partidos
+  const categoriasUnicas = Array.from(
+    new Map(
+      partidos
+        .map((p) => p.category)
+        .filter((c): c is any => !!c && !!c.id)
+        .map((c) => [c.id, c])
+    ).values()
+  );
 
   const sincronizarTimerConBackend = async (
     elapsedTime: number,
@@ -790,20 +866,114 @@ export const MesaControl: React.FC = () => {
               </div>
             </div>
 
+            {/* Panel de Filtros Premium */}
+            <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-5 space-y-4 shadow-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                {/* 1. Buscador */}
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-2.5 text-xs text-slate-500">search</span>
+                  <input
+                    type="text"
+                    value={filtroTexto}
+                    onChange={(e) => setFiltroTexto(e.target.value)}
+                    placeholder="Buscar equipo..."
+                    className="w-full bg-[#171a26] border border-slate-850 text-xs text-white pl-9 pr-4 py-2 rounded-xl focus:border-indigo-650 focus:outline-hidden transition-all"
+                  />
+                </div>
+
+                {/* 2. Disciplina */}
+                <div>
+                  <select
+                    value={filtroDisciplina}
+                    onChange={(e) => setFiltroDisciplina(e.target.value)}
+                    className="w-full bg-[#171a26] border border-slate-850 text-xs text-slate-300 px-3 py-2 rounded-xl focus:border-indigo-650 focus:outline-hidden transition-all cursor-pointer"
+                  >
+                    <option value="todas">Todas las Disciplinas</option>
+                    {disciplinasUnicas.map((disc) => (
+                      <option key={disc.id} value={disc.id.toString()}>{disc.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 3. Categoría */}
+                <div>
+                  <select
+                    value={filtroCategoria}
+                    onChange={(e) => setFiltroCategoria(e.target.value)}
+                    className="w-full bg-[#171a26] border border-slate-850 text-xs text-slate-300 px-3 py-2 rounded-xl focus:border-indigo-650 focus:outline-hidden transition-all cursor-pointer"
+                  >
+                    <option value="todas">Todas las Categorías</option>
+                    {categoriasUnicas.map((cat) => (
+                      <option key={cat.id} value={cat.id.toString()}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 4. Estado */}
+                <div>
+                  <select
+                    value={filtroEstado}
+                    onChange={(e) => setFiltroEstado(e.target.value)}
+                    className="w-full bg-[#171a26] border border-slate-850 text-xs text-slate-300 px-3 py-2 rounded-xl focus:border-indigo-650 focus:outline-hidden transition-all cursor-pointer"
+                  >
+                    <option value="todos">Todos los Estados</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en_curso">En Juego</option>
+                    <option value="finalizado">Finalizado</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
+                </div>
+
+                {/* 5. Fecha */}
+                <div>
+                  <input
+                    type="date"
+                    value={filtroFecha}
+                    onChange={(e) => setFiltroFecha(e.target.value)}
+                    className="w-full bg-[#171a26] border border-slate-850 text-xs text-slate-350 px-3 py-2 rounded-xl focus:border-indigo-650 focus:outline-hidden transition-all cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Botón de limpiar filtros */}
+              {(filtroTexto !== '' || filtroDisciplina !== 'todas' || filtroCategoria !== 'todas' || filtroEstado !== 'todos' || filtroFecha !== '') && (
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFiltroTexto('');
+                      setFiltroDisciplina('todas');
+                      setFiltroCategoria('todas');
+                      setFiltroEstado('todos');
+                      setFiltroFecha('');
+                    }}
+                    className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-xs font-bold">filter_alt_off</span>
+                    <span>Limpiar filtros</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
             {cargando ? (
               <div className="py-20 text-center text-sm text-slate-400 font-bold animate-pulse">
                 Cargando partidos de la mesa de control...
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {partidos.map((part) => {
+                {partidosFiltrados.map((part) => {
                   const homeScore = part.report?.local_score ?? 0;
                   const awayScore = part.report?.visitor_score ?? 0;
                   return (
                     <div
                       key={part.id}
                       onClick={() => seleccionarPartido(part)}
-                      className="bg-[#11131c] rounded-2xl border border-slate-900 p-5 shadow-xs hover:shadow-md hover:border-[#800f2f]/60 transition-all cursor-pointer flex flex-col justify-between gap-4 group"
+                      className={`bg-[#11131c] rounded-2xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-4 group border ${
+                        part.status === 'en_curso' 
+                          ? 'border-emerald-500/30 shadow-lg shadow-emerald-500/5 hover:border-emerald-500 animate-pulse' 
+                          : 'border-slate-900 hover:border-[#800f2f]/60'
+                      }`}
                     >
                       <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                         <span>Jornada {part.round}</span>
@@ -848,9 +1018,11 @@ export const MesaControl: React.FC = () => {
                     </div>
                   );
                 })}
-                {partidos.length === 0 && (
+                {partidosFiltrados.length === 0 && (
                   <div className="col-span-full bg-[#11131c] rounded-2xl border border-slate-900 p-12 text-center text-slate-400 italic text-sm">
-                    No hay partidos programados en este momento.
+                    {partidos.length === 0 
+                      ? 'No hay partidos programados en este momento.' 
+                      : 'No se encontraron partidos que coincidan con los filtros seleccionados.'}
                   </div>
                 )}
               </div>
