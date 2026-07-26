@@ -81,6 +81,7 @@ class StandingController extends Controller
         summary: 'Tabla de posiciones completa con todos los equipos de la categoria',
         tags: ['Standings']
     )]
+
     public function getCompleteStandings(Request $request)
     {
         $championshipId = $request->input('championship_id');
@@ -91,8 +92,50 @@ class StandingController extends Controller
             return $this->errorResponse('Se requiere championship_id y category_id', 400);
         }
 
+        // Verificar si hay partidos generados para esta categoría
+        $hasMatches = \App\Models\GameMatch::where('championship_id', $championshipId)
+            ->where('category_id', $categoryId)
+            ->exists();
+
+        // Si no hay partidos, devolver array vacío
+        if (!$hasMatches) {
+            return $this->successResponse(
+                [],
+                'No hay fixture generado para esta categoría'
+            );
+        }
+
+        // Obtener IDs de equipos que tienen partidos en esta categoría
+        $teamIdsWithMatches = \App\Models\GameMatch::where('championship_id', $championshipId)
+            ->where('category_id', $categoryId)
+            ->where(function ($query) {
+                $query->whereNotNull('home_team_id')
+                    ->orWhereNotNull('away_team_id');
+            })
+            ->pluck('home_team_id')
+            ->merge(
+                \App\Models\GameMatch::where('championship_id', $championshipId)
+                    ->where('category_id', $categoryId)
+                    ->whereNotNull('away_team_id')
+                    ->pluck('away_team_id')
+            )
+            ->unique()
+            ->filter()
+            ->values()
+            ->toArray();
+
+        // Si no hay equipos con partidos, devolver array vacío
+        if (empty($teamIdsWithMatches)) {
+            return $this->successResponse(
+                [],
+                'No hay equipos con partidos en esta categoría'
+            );
+        }
+
         $teams = Team::where('teams.category_id', $categoryId)
             ->where('teams.championship_id', $championshipId)
+            ->where('teams.registration_status', 'aprobado')
+            ->whereIn('teams.id', $teamIdsWithMatches) // ← SOLO EQUIPOS CON PARTIDOS
             ->leftJoin('group_teams', 'teams.id', '=', 'group_teams.team_id')
             ->leftJoin('groups', 'group_teams.group_id', '=', 'groups.id')
             ->select('teams.*', 'groups.name as group_name')

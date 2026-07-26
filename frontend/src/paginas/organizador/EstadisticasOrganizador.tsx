@@ -47,6 +47,9 @@ export const EstadisticasOrganizador: React.FC = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [totalEquipos, setTotalEquipos] = useState(0);
 
+  const [paginaPartidos, setPaginaPartidos] = useState(1);
+  const partidosPorPagina = 10;
+
   const [stats, setStats] = useState({
     totalTeams: 0,
     totalMatches: 0,
@@ -164,6 +167,7 @@ export const EstadisticasOrganizador: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     setError(null);
+    setPaginaPartidos(1);
     try {
       const champId = campeonatoActivo!.id;
 
@@ -196,7 +200,6 @@ export const EstadisticasOrganizador: React.FC = () => {
               discipline_id: selectedDiscipline || undefined
           });
           if (posRes.success) {
-              // Filtrar solo equipos aprobados
               posicionesData = (posRes.data || []).filter((pos: any) => 
                   pos.team?.registration_status === 'aprobado'
               );
@@ -213,7 +216,6 @@ export const EstadisticasOrganizador: React.FC = () => {
       let matches: Partido[] = [];
       if (matchRes.success) {
           matches = matchRes.data || [];
-          // Filtrar solo partidos de equipos aprobados
           matches = matches.filter((m: any) => 
               m.local_team?.registration_status === 'aprobado' &&
               m.visitor_team?.registration_status === 'aprobado'
@@ -235,7 +237,6 @@ export const EstadisticasOrganizador: React.FC = () => {
       const equiposRes = await serviciosParticipantes.obtenerEquipos();
       if (equiposRes.success) {
           let equiposData = equiposRes.data || [];
-          // Filtrar solo equipos aprobados
           equiposData = equiposData.filter(eq => eq.registration_status === 'aprobado');
           if (selectedCategory) {
               equiposData = equiposData.filter(eq => eq.category?.id === selectedCategory);
@@ -410,6 +411,12 @@ export const EstadisticasOrganizador: React.FC = () => {
     }, {} as Record<string, Partido[]>);
   };
 
+  const totalPartidosPaginados = partidosFiltrados.length;
+  const totalPaginas = Math.ceil(totalPartidosPaginados / partidosPorPagina);
+  const inicio = (paginaPartidos - 1) * partidosPorPagina;
+  const fin = inicio + partidosPorPagina;
+  const partidosPaginados = partidosFiltrados.slice(inicio, fin);
+
   if (cargando || loading) {
     return (
       <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans">
@@ -449,6 +456,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                       setSelectedDiscipline(newDiscipline);
                       setSelectedCategory(null);
                       setTotalEquipos(0);
+                      setPaginaPartidos(1);
                     }}
                     className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
                   >
@@ -468,6 +476,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                       const newCategory = e.target.value ? Number(e.target.value) : null;
                       setSelectedCategory(newCategory);
                       setTotalEquipos(0);
+                      setPaginaPartidos(1);
                     }}
                     className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
                   >
@@ -485,7 +494,10 @@ export const EstadisticasOrganizador: React.FC = () => {
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estado</label>
                 <select
                   value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
+                  onChange={(e) => {
+                    setFilterStatus(e.target.value);
+                    setPaginaPartidos(1);
+                  }}
                   className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
                 >
                   <option value="todos">Todos</option>
@@ -500,7 +512,10 @@ export const EstadisticasOrganizador: React.FC = () => {
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Jornada</label>
                   <select
                     value={selectedRound ?? ''}
-                    onChange={(e) => setSelectedRound(e.target.value ? Number(e.target.value) : null)}
+                    onChange={(e) => {
+                      setSelectedRound(e.target.value ? Number(e.target.value) : null);
+                      setPaginaPartidos(1);
+                    }}
                     className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
                   >
                     <option value="">Todas</option>
@@ -516,7 +531,10 @@ export const EstadisticasOrganizador: React.FC = () => {
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Equipo</label>
                   <select
                     value={selectedTeamPartido ?? ''}
-                    onChange={(e) => setSelectedTeamPartido(e.target.value ? Number(e.target.value) : null)}
+                    onChange={(e) => {
+                      setSelectedTeamPartido(e.target.value ? Number(e.target.value) : null);
+                      setPaginaPartidos(1);
+                    }}
                     className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
                   >
                     <option value="">Todos</option>
@@ -529,7 +547,10 @@ export const EstadisticasOrganizador: React.FC = () => {
 
               <div className="ml-auto">
                 <button
-                  onClick={() => loadData()}
+                  onClick={() => {
+                    setPaginaPartidos(1);
+                    loadData();
+                  }}
                   disabled={loading}
                   className="text-xs bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 px-3 py-2 rounded-lg transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -578,7 +599,10 @@ export const EstadisticasOrganizador: React.FC = () => {
                 {esFormatoGrupos && (
                   <div className="flex bg-[#0c0e16] p-1 rounded-lg border border-slate-800">
                     <button
-                      onClick={() => setSubTabActiva('grupos')}
+                      onClick={() => {
+                        setSubTabActiva('grupos');
+                        setPaginaPartidos(1);
+                      }}
                       className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
                         subTabActiva === 'grupos' 
                           ? 'bg-indigo-500 text-white shadow-xs' 
@@ -588,7 +612,10 @@ export const EstadisticasOrganizador: React.FC = () => {
                       Grupos
                     </button>
                     <button
-                      onClick={() => setSubTabActiva('knockout')}
+                      onClick={() => {
+                        setSubTabActiva('knockout');
+                        setPaginaPartidos(1);
+                      }}
                       className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
                         subTabActiva === 'knockout' 
                           ? 'bg-indigo-500 text-white shadow-xs' 
@@ -930,41 +957,55 @@ export const EstadisticasOrganizador: React.FC = () => {
                   No hay partidos disponibles para los filtros seleccionados
                 </div>
               ) : (
-                partidosFiltrados
-                  .slice(0, 10)
-                  .map(match => (
-                    <div key={match.id} className="bg-[#171a26]/40 border border-slate-800 rounded-lg p-3 hover:border-indigo-500/30 transition-all">
-                      <div className="flex justify-between items-center text-[10px] text-slate-400 mb-2">
-                        <span>{match.discipline?.name || '—'}</span>
-                        <span>{match.category?.name || '—'}</span>
-                        {getStatusBadge(match.status)}
+                partidosPaginados.map(match => (
+                  <div key={match.id} className="bg-[#171a26]/40 border border-slate-800 rounded-lg p-3 hover:border-indigo-500/30 transition-all">
+                    <div className="flex justify-between items-center text-[10px] text-slate-400 mb-2">
+                      <span>{match.discipline?.name || '—'}</span>
+                      <span>{match.category?.name || '—'}</span>
+                      {getStatusBadge(match.status)}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="font-bold text-sm text-white truncate">{obtenerNombreEquipo(match.local_team?.name) || 'Local'}</p>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="font-bold text-sm text-white truncate">{obtenerNombreEquipo(match.local_team?.name) || 'Local'}</p>
-                        </div>
-                        <div className="flex items-center gap-2 px-3">
-                          <span className="font-bold text-base text-indigo-400">{getLocalScore(match)}</span>
-                          <span className="text-slate-500 text-xs font-bold">VS</span>
-                          <span className="font-bold text-base text-indigo-400">{getVisitorScore(match)}</span>
-                        </div>
-                        <div className="flex-1 text-right">
-                          <p className="font-bold text-sm text-white truncate">{obtenerNombreEquipo(match.visitor_team?.name) || 'Visitante'}</p>
-                        </div>
+                      <div className="flex items-center gap-2 px-3">
+                        <span className="font-bold text-base text-indigo-400">{getLocalScore(match)}</span>
+                        <span className="text-slate-500 text-xs font-bold">VS</span>
+                        <span className="font-bold text-base text-indigo-400">{getVisitorScore(match)}</span>
                       </div>
-                      <div className="mt-2 text-[9px] text-slate-500 flex justify-between">
-                        <span>{match.match_date ? new Date(match.match_date).toLocaleDateString() : '—'}</span>
-                        <span>{match.venue?.name || '—'}</span>
+                      <div className="flex-1 text-right">
+                        <p className="font-bold text-sm text-white truncate">{obtenerNombreEquipo(match.visitor_team?.name) || 'Visitante'}</p>
                       </div>
                     </div>
-                  ))
-              )}
-              {partidosFiltrados.length === 0 && partidos.length > 0 && (
-                <div className="col-span-2 p-4 text-center text-slate-500 text-sm">
-                  No hay partidos con los filtros seleccionados
-                </div>
+                    <div className="mt-2 text-[9px] text-slate-500 flex justify-between">
+                      <span>{match.match_date ? new Date(match.match_date).toLocaleDateString() : '—'}</span>
+                      <span>{match.venue?.name || '—'}</span>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
+            {totalPaginas > 1 && (
+              <div className="flex items-center justify-center gap-3 py-3 border-t border-slate-800">
+                <button
+                  onClick={() => setPaginaPartidos(prev => Math.max(1, prev - 1))}
+                  disabled={paginaPartidos === 1}
+                  className="px-4 py-1.5 rounded-lg bg-[#171a26] border border-slate-800 text-xs font-bold text-slate-400 hover:text-white hover:border-indigo-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  Anterior
+                </button>
+                <span className="text-xs text-slate-500 font-medium">
+                  Página {paginaPartidos} de {totalPaginas}
+                </span>
+                <button
+                  onClick={() => setPaginaPartidos(prev => Math.min(totalPaginas, prev + 1))}
+                  disabled={paginaPartidos === totalPaginas}
+                  className="px-4 py-1.5 rounded-lg bg-[#171a26] border border-slate-800 text-xs font-bold text-slate-400 hover:text-white hover:border-indigo-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
           </div>
 
           <div id="seccion-sanciones" className="bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden scroll-mt-4">

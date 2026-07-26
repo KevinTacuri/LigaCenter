@@ -41,6 +41,9 @@ export const CampeonatoDetalle: React.FC = () => {
     const [selectedRound, setSelectedRound] = useState<number | null>(null);
     const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
 
+    const [paginaPartidos, setPaginaPartidos] = useState(1);
+    const partidosPorPagina = 10;
+
     const [stats, setStats] = useState({
         totalTeams: 0,
         totalMatches: 0,
@@ -113,6 +116,12 @@ export const CampeonatoDetalle: React.FC = () => {
         return teams.filter(t => teamsInMatches.has(t.id));
     }, [teams, allMatches]);
 
+    const totalPartidosPaginados = matchesFiltered.length;
+    const totalPaginas = Math.ceil(totalPartidosPaginados / partidosPorPagina);
+    const inicio = (paginaPartidos - 1) * partidosPorPagina;
+    const fin = inicio + partidosPorPagina;
+    const partidosPaginados = matchesFiltered.slice(inicio, fin);
+
     useEffect(() => {
         if (championshipId) {
             loadData();
@@ -134,6 +143,7 @@ export const CampeonatoDetalle: React.FC = () => {
     const loadData = async () => {
         setLoading(true);
         setError(null);
+        setPaginaPartidos(1);
         try {
             const [champRes, disciplinesRes, teamsRes] = await Promise.all([
                 publicApi.getChampionship(championshipId),
@@ -169,6 +179,7 @@ export const CampeonatoDetalle: React.FC = () => {
     const loadCategoriesAndData = async () => {
         if (!selectedDiscipline) return;
         setLoading(true);
+        setPaginaPartidos(1);
         try {
             const categoriesRes = await publicApi.getChampionshipCategories(championshipId, {
                 discipline_id: selectedDiscipline
@@ -220,6 +231,7 @@ export const CampeonatoDetalle: React.FC = () => {
         });
 
         setLoading(true);
+        setPaginaPartidos(1);
         try {
             const [standingsRes, matchesRes] = await Promise.all([
                 publicApi.getChampionshipStandingsComplete(championshipId, {
@@ -246,10 +258,7 @@ export const CampeonatoDetalle: React.FC = () => {
                 const allMatchData = matchesRes.data.data?.data || [];
                 console.log('Todos los partidos:', allMatchData);
                 
-                // Filtrar partidos por categoría y disciplina
-                // Usamos category_id y discipline_id si existen, si no, usamos el grupo o la relación
                 matchData = allMatchData.filter((m: any) => {
-                    // Intentar obtener category_id de diferentes fuentes
                     const matchCategoryId = m.category_id || m.group?.category_id || m.category?.id;
                     const matchDisciplineId = m.discipline_id || m.discipline?.id || m.championship?.disciplines?.[0]?.id;
                     
@@ -264,7 +273,6 @@ export const CampeonatoDetalle: React.FC = () => {
                 setAllMatches(matchData);
             }
 
-            // Calcular estadísticas
             let totalGoals = 0;
             matchData.forEach((m: any) => {
                 if (m.status === 'finalizado') {
@@ -379,6 +387,7 @@ export const CampeonatoDetalle: React.FC = () => {
                                         const newDiscipline = e.target.value ? Number(e.target.value) : null;
                                         setSelectedDiscipline(newDiscipline);
                                         setSelectedCategory(null);
+                                        setPaginaPartidos(1);
                                     }}
                                     className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
                                 >
@@ -397,6 +406,7 @@ export const CampeonatoDetalle: React.FC = () => {
                                     onChange={(e) => {
                                         const newCategory = e.target.value ? Number(e.target.value) : null;
                                         setSelectedCategory(newCategory);
+                                        setPaginaPartidos(1);
                                     }}
                                     className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
                                 >
@@ -413,7 +423,10 @@ export const CampeonatoDetalle: React.FC = () => {
                                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estado</label>
                                     <select
                                         value={filterStatus}
-                                        onChange={(e) => setFilterStatus(e.target.value)}
+                                        onChange={(e) => {
+                                            setFilterStatus(e.target.value);
+                                            setPaginaPartidos(1);
+                                        }}
                                         className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
                                     >
                                         <option value="todos">Todos</option>
@@ -428,7 +441,10 @@ export const CampeonatoDetalle: React.FC = () => {
                                         <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Jornada</label>
                                         <select
                                             value={selectedRound ?? ''}
-                                            onChange={(e) => setSelectedRound(e.target.value ? Number(e.target.value) : null)}
+                                            onChange={(e) => {
+                                                setSelectedRound(e.target.value ? Number(e.target.value) : null);
+                                                setPaginaPartidos(1);
+                                            }}
                                             className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
                                         >
                                             <option value="">Todas</option>
@@ -444,7 +460,10 @@ export const CampeonatoDetalle: React.FC = () => {
                                         <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Equipo</label>
                                         <select
                                             value={selectedTeam ?? ''}
-                                            onChange={(e) => setSelectedTeam(e.target.value ? Number(e.target.value) : null)}
+                                            onChange={(e) => {
+                                                setSelectedTeam(e.target.value ? Number(e.target.value) : null);
+                                                setPaginaPartidos(1);
+                                            }}
                                             className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
                                         >
                                             <option value="">Todos</option>
@@ -465,6 +484,7 @@ export const CampeonatoDetalle: React.FC = () => {
                                     setFilterStatus('todos');
                                     setSelectedRound(null);
                                     setSelectedTeam(null);
+                                    setPaginaPartidos(1);
                                     setStandings([]);
                                     setAllMatches([]);
                                     setStats({
@@ -550,7 +570,7 @@ export const CampeonatoDetalle: React.FC = () => {
                                 No hay partidos disponibles para los filtros seleccionados
                             </div>
                         ) : (
-                            matchesFiltered.map(match => (
+                            partidosPaginados.map(match => (
                                 <div key={match.id} className="bg-[#171a26]/40 border border-slate-800 rounded-lg p-3 hover:border-indigo-500/30 transition-all">
                                     <div className="flex justify-between items-center text-[10px] text-slate-400 mb-2">
                                         <span>{getDisciplinaActual()?.name || '—'}</span>
@@ -558,9 +578,7 @@ export const CampeonatoDetalle: React.FC = () => {
                                         {getStatusBadge(match.status)}
                                     </div>
                                     
-                                    {/* PARTIDO EN FORMA VERTICAL (más claro) */}
                                     <div className="space-y-1">
-                                        {/* Equipo Local */}
                                         <div className="flex items-center justify-between">
                                             <span className="font-bold text-sm text-white truncate">
                                                 {match.home_team?.name ? obtenerNombreEquipo(match.home_team.name) : 'Local'}
@@ -570,12 +588,10 @@ export const CampeonatoDetalle: React.FC = () => {
                                             </span>
                                         </div>
                                         
-                                        {/* VS */}
                                         <div className="flex items-center justify-center">
                                             <span className="text-[10px] text-slate-500 font-bold">VS</span>
                                         </div>
                                         
-                                        {/* Equipo Visitante */}
                                         <div className="flex items-center justify-between">
                                             <span className="font-bold text-sm text-white truncate">
                                                 {match.away_team?.name ? obtenerNombreEquipo(match.away_team.name) : 'Visitante'}
@@ -594,6 +610,27 @@ export const CampeonatoDetalle: React.FC = () => {
                             ))
                         )}
                     </div>
+                    {totalPaginas > 1 && (
+                        <div className="flex items-center justify-center gap-3 py-3 border-t border-slate-800">
+                            <button
+                                onClick={() => setPaginaPartidos(prev => Math.max(1, prev - 1))}
+                                disabled={paginaPartidos === 1}
+                                className="px-4 py-1.5 rounded-lg bg-[#171a26] border border-slate-800 text-xs font-bold text-slate-400 hover:text-white hover:border-indigo-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                            >
+                                Anterior
+                            </button>
+                            <span className="text-xs text-slate-500 font-medium">
+                                Página {paginaPartidos} de {totalPaginas}
+                            </span>
+                            <button
+                                onClick={() => setPaginaPartidos(prev => Math.min(totalPaginas, prev + 1))}
+                                disabled={paginaPartidos === totalPaginas}
+                                className="px-4 py-1.5 rounded-lg bg-[#171a26] border border-slate-800 text-xs font-bold text-slate-400 hover:text-white hover:border-indigo-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                            >
+                                Siguiente
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </LayoutPublico>
