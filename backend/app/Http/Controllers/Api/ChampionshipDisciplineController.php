@@ -173,15 +173,25 @@ class ChampionshipDisciplineController extends Controller
             )
         ]
     )]
+    
     public function update(Request $request, $id)
     {
         $championshipDiscipline = ChampionshipDiscipline::findOrFail($id);
 
         $validated = $request->validate([
             'specific_rules' => 'nullable|string',
+            'match_duration_minutes' => 'nullable|integer|min:1|max:60',
         ]);
 
-        $championshipDiscipline->update($validated);
+        if ($request->has('specific_rules')) {
+            $championshipDiscipline->specific_rules = $validated['specific_rules'];
+        }
+        
+        if ($request->has('match_duration_minutes')) {
+            $championshipDiscipline->match_duration_minutes = $validated['match_duration_minutes'];
+        }
+
+        $championshipDiscipline->save();
 
         return response()->json($championshipDiscipline);
     }

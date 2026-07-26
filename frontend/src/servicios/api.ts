@@ -279,6 +279,8 @@ export interface ChampionshipDiscipline {
     [key: string]: any;
   } | null;
   discipline?: Disciplina;
+  match_duration_minutes?: number;
+  match_duration_settings?: any;
 }
 
 export interface Categoria {
@@ -377,6 +379,9 @@ export interface Partido {
   parent_away_match_id?: number | null;
   placeholder_text_home?: string | null;
   placeholder_text_away?: string | null;
+  extra_time_minutes?: number;
+  has_extra_time?: boolean;
+  max_extra_time?: number;
 }
 
 export interface ActaPartido {
@@ -546,7 +551,15 @@ export const serviciosParticipantes = {
   importarCategoriasYEquipos: async (championshipId: number, datos: FormData) => {
   const res = await clienteApi.post(`/championships/${championshipId}/import`, datos);
   return res.data;
-},
+  },
+
+  actualizarConfiguracionDisciplina: async (championshipDisciplineId: number, datos: {
+    match_duration_minutes?: number;
+    specific_rules?: any;
+  }): Promise<RespuestaApi<ChampionshipDiscipline>> => {
+    const res = await clienteApi.put(`/championship-disciplines/${championshipDisciplineId}`, datos);
+    return res.data;
+  },
 
   // Equipos
   obtenerEquipos: async (): Promise<RespuestaApi<Equipo[]>> => {
@@ -644,6 +657,14 @@ export const serviciosFixture = {
   },
   reprogramarPartido: async (id: number, datos: { match_date: string; match_time: string; venue_id: number }): Promise<RespuestaApi<Partido>> => {
     const res = await clienteApi.put(`/matches/${id}/reschedule`, datos);
+    return res.data;
+  },
+
+  actualizarTiempoExtra: async (id: number, datos: {
+  extra_time_minutes: number;
+  has_extra_time: boolean;
+  }): Promise<RespuestaApi<Partido>> => {
+    const res = await clienteApi.put(`/matches/${id}/extra-time`, datos);
     return res.data;
   },
 

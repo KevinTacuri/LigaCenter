@@ -245,4 +245,23 @@ class GameMatchController extends Controller
             'Timer sincronizado correctamente'
         );
     }
+
+    public function updateExtraTime(Request $request, $id)
+    {
+        $match = GameMatch::find($id);
+        if (!$match) {
+            return $this->errorResponse('Partido no encontrado', 404);
+        }
+
+        $request->validate([
+            'extra_time_minutes' => 'required|integer|min:0|max:15',
+            'has_extra_time' => 'required|boolean',
+        ]);
+
+        $match->extra_time_minutes = $request->extra_time_minutes;
+        $match->has_extra_time = $request->has_extra_time;
+        $match->save();
+
+        return $this->successResponse($match, 'Tiempo extra actualizado exitosamente');
+    }
 }

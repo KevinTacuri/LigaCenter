@@ -21,6 +21,9 @@ return new class extends Migration
             
             $table->text('specific_rules')->nullable();
 
+            $table->integer('match_duration_minutes')->default(45);
+            $table->json('match_duration_settings')->nullable();
+
             $table->timestamps();
 
             $table->unique([

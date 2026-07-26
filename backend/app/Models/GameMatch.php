@@ -40,6 +40,9 @@ class GameMatch extends Model
         'parent_away_match_id',
         'placeholder_text_home',
         'placeholder_text_away',
+        'extra_time_minutes',
+        'has_extra_time',
+        'max_extra_time',
     ];
 
     protected $casts = [

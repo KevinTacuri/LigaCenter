@@ -64,8 +64,8 @@ interface PeriodConfig {
 interface SportRules {
   hasTimer: boolean;
   periodLabel: string;
-  periods: PeriodConfig[];
   scoreLabel: string;
+  getPeriods: (durationMinutes: number) => PeriodConfig[];
 }
 
 const NORMAS_DEPORTES: Record<string, SportRules> = {
@@ -73,40 +73,40 @@ const NORMAS_DEPORTES: Record<string, SportRules> = {
     hasTimer: true,
     periodLabel: 'Tiempo',
     scoreLabel: 'Goles',
-    periods: [
-      { name: '1° Tiempo', accumulatedMinutes: 0, durationMinutes: 45 },
-      { name: '2° Tiempo', accumulatedMinutes: 45, durationMinutes: 45 },
-      { name: '1° Prórroga', accumulatedMinutes: 90, durationMinutes: 15 },
-      { name: '2° Prórroga', accumulatedMinutes: 105, durationMinutes: 15 },
+    getPeriods: (durationMinutes: number) => [
+      { name: '1° Tiempo', accumulatedMinutes: 0, durationMinutes: durationMinutes },
+      { name: '2° Tiempo', accumulatedMinutes: durationMinutes, durationMinutes: durationMinutes },
+      { name: '1° Prórroga', accumulatedMinutes: durationMinutes * 2, durationMinutes: 15 },
+      { name: '2° Prórroga', accumulatedMinutes: (durationMinutes * 2) + 15, durationMinutes: 15 },
     ]
   },
   basquet: {
     hasTimer: true,
     periodLabel: 'Cuarto',
     scoreLabel: 'Puntos',
-    periods: [
-      { name: '1° Cuarto', accumulatedMinutes: 0, durationMinutes: 10 },
-      { name: '2° Cuarto', accumulatedMinutes: 10, durationMinutes: 10 },
-      { name: '3° Cuarto', accumulatedMinutes: 20, durationMinutes: 10 },
-      { name: '4° Cuarto', accumulatedMinutes: 30, durationMinutes: 10 },
-      { name: 'Prórroga', accumulatedMinutes: 40, durationMinutes: 5 },
+    getPeriods: (durationMinutes: number) => [
+      { name: '1° Cuarto', accumulatedMinutes: 0, durationMinutes: durationMinutes },
+      { name: '2° Cuarto', accumulatedMinutes: durationMinutes, durationMinutes: durationMinutes },
+      { name: '3° Cuarto', accumulatedMinutes: durationMinutes * 2, durationMinutes: durationMinutes },
+      { name: '4° Cuarto', accumulatedMinutes: durationMinutes * 3, durationMinutes: durationMinutes },
+      { name: 'Prórroga', accumulatedMinutes: durationMinutes * 4, durationMinutes: 5 },
     ]
   },
   'balon mano': {
     hasTimer: true,
     periodLabel: 'Tiempo',
     scoreLabel: 'Goles',
-    periods: [
-      { name: '1° Tiempo', accumulatedMinutes: 0, durationMinutes: 30 },
-      { name: '2° Tiempo', accumulatedMinutes: 30, durationMinutes: 30 },
-      { name: 'Prórroga', accumulatedMinutes: 60, durationMinutes: 5 },
+    getPeriods: (durationMinutes: number) => [
+      { name: '1° Tiempo', accumulatedMinutes: 0, durationMinutes: durationMinutes },
+      { name: '2° Tiempo', accumulatedMinutes: durationMinutes, durationMinutes: durationMinutes },
+      { name: 'Prórroga', accumulatedMinutes: durationMinutes * 2, durationMinutes: 5 },
     ]
   },
   voley: {
     hasTimer: false,
     periodLabel: 'Set',
     scoreLabel: 'Sets',
-    periods: [
+    getPeriods: () => [
       { name: 'Set 1', accumulatedMinutes: 0, durationMinutes: 0 },
       { name: 'Set 2', accumulatedMinutes: 1, durationMinutes: 0 },
       { name: 'Set 3', accumulatedMinutes: 2, durationMinutes: 0 },
@@ -120,6 +120,71 @@ export const MesaControl: React.FC = () => {
   const { usuario, tienePermiso, tieneRol, cargando: cargandoAuth } = useAutenticacion();
   const navegar = useNavigate();
   const confirm = useConfirm();
+
+  const [periodoActualIdx, setPeriodoActualIdx] = useState(0);
+  const [partidos, setPartidos] = useState<Partido[]>([]);
+  const [partidoSeleccionado, setPartidoSeleccionado] = useState<Partido | null>(null);
+  const [acta, setActa] = useState<ActaPartido | null>(null);
+  const [incidencias, setIncidencias] = useState<Incidencia[]>([]);
+  const [jugadoresLocal, setJugadoresLocal] = useState<Jugador[]>([]);
+  const [jugadoresVisita, setJugadoresVisita] = useState<Jugador[]>([]);
+
+  const [cargando, setCargando] = useState(false);
+  const [errorLocal, setErrorLocal] = useState<string | null>(null);
+  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+  const [mostrarAyuda, setMostrarAyuda] = useState(false);
+
+  const [extraTimeMinutes, setExtraTimeMinutes] = useState(0);
+  const [hasExtraTime, setHasExtraTime] = useState(false);
+  const [maxExtraTime, setMaxExtraTime] = useState(5);
+  const [minutosPorTiempo, setMinutosPorTiempo] = useState(45);
+
+  const [mostrarConfigModal, setMostrarConfigModal] = useState(false);
+  const [configDisciplinaId, setConfigDisciplinaId] = useState<number | null>(null);
+  const [configCategoriaId, setConfigCategoriaId] = useState<number | null>(null);
+  const [configMinutosTiempo, setConfigMinutosTiempo] = useState(45);
+  const [configGuardando, setConfigGuardando] = useState(false);
+  const [configDisciplinas, setConfigDisciplinas] = useState<any[]>([]);
+  const [configCategorias, setConfigCategorias] = useState<any[]>([]);
+  const [configCargandoDisciplinas, setConfigCargandoDisciplinas] = useState(false);
+
+  const PASOS_AYUDA_MESA = [
+    { paso: '1', titulo: 'Seleccionar Partido', desc: 'Elige un partido de la lista de la izquierda para cargar su acta oficial y planilla de incidencias.', icono: 'ads_click' },
+    { paso: '2', titulo: 'Registrar Incidencias', desc: 'Agrega goles, tarjetas (amarillas/rojas) y lesiones en tiempo real. Selecciona el equipo, jugador y minuto del evento.', icono: 'sports_soccer' },
+    { paso: '3', titulo: 'Guardar Marcador y Firmas', desc: 'Ingresa el nombre del árbitro y delegado de mesa. Puedes ir guardando el progreso en cualquier momento.', icono: 'edit_document' },
+    { paso: '4', titulo: 'Cerrar y Bloquear Acta', desc: 'Al finalizar el encuentro, cierra el acta. Esto recalculará automáticamente la tabla de posiciones y aplicará sanciones.', icono: 'lock' },
+  ];
+
+  const [golesHome, setGolesHome] = useState('0');
+  const [golesAway, setGolesAway] = useState('0');
+  const [firmaArbitro, setFirmaArbitro] = useState('');
+  const [firmaDelegadoLocal, setFirmaDelegadoLocal] = useState('');
+  const [firmaDelegadoVisita, setFirmaDelegadoVisita] = useState('');
+  const [firmaDelegadoMesa, setFirmaDelegadoMesa] = useState('');
+  const [observaciones, setObservaciones] = useState('');
+
+  const [segundosTranscurridos, setSegundosTranscurridos] = useState(0);
+  const [cronometroActivo, setCronometroActivo] = useState(false);
+  const [subEstadoPartido, setSubEstadoPartido] = useState<'programado' | 'jugando' | 'descanso' | 'suspendido' | 'finalizado'>('programado');
+  const [timerStartedAt, setTimerStartedAt] = useState<Date | null>(null);
+  const [baseElapsedTime, setBaseElapsedTime] = useState(0);
+  
+  const [filtroTexto, setFiltroTexto] = useState('');
+  const [filtroDisciplina, setFiltroDisciplina] = useState<string>('todas');
+  const [filtroCategoria, setFiltroCategoria] = useState<string>('todas');
+  const [filtroEstado, setFiltroEstado] = useState<string>('todos');
+  const [filtroFecha, setFiltroFecha] = useState<string>('');
+
+  const [modalIncidenciaRapida, setModalIncidenciaRapida] = useState<{
+    mostrar: boolean;
+    teamId: number;
+    teamName: string;
+    type: 'goal' | 'yellow_card' | 'red_card' | 'foul' | 'injury' | 'exclusion';
+    capturedMinute: number;
+    capturedSecond: number;
+  } | null>(null);
+
+  const [filtroJugadorModal, setFiltroJugadorModal] = useState('');
 
   const obtenerTiposIncidenciaDeporte = (): IncidentTypeConfig[] => {
     if (!partidoSeleccionado) return DEFAULT_INCIDENTS;
@@ -162,91 +227,58 @@ export const MesaControl: React.FC = () => {
     return { label: tipo, icon: 'info', color: 'bg-slate-50 text-slate-650 border-slate-205' };
   };
 
-  const obtenerNormasDeporte = (): SportRules => {
+  const obtenerNormasDeporte = (): SportRules & { periods: PeriodConfig[] } => {
     if (!partidoSeleccionado) {
-      return {
+      const defaultRules = {
         hasTimer: true,
         periodLabel: 'Tiempo',
         scoreLabel: 'Puntos',
-        periods: [{ name: '1° Tiempo', accumulatedMinutes: 0, durationMinutes: 40 }]
+        getPeriods: (durationMinutes: number) => [{ name: '1° Tiempo', accumulatedMinutes: 0, durationMinutes: durationMinutes }]
       };
+      const periods = defaultRules.getPeriods(40);
+      return { ...defaultRules, periods };
     }
     const name = partidoSeleccionado.discipline?.name?.toLowerCase().trim() || '';
+    let rules: SportRules;
+    let duration = minutosPorTiempo;
+    
     if (name.includes('futbol') || name.includes('fútbol') || name.includes('soccer')) {
-      return NORMAS_DEPORTES.futbol;
+      rules = NORMAS_DEPORTES.futbol;
+    } else if (name.includes('basquet') || name.includes('básquet') || name.includes('basketball') || name.includes('baloncesto')) {
+      rules = NORMAS_DEPORTES.basquet;
+      duration = 10;
+    } else if (name.includes('balon mano') || name.includes('balonmano') || name.includes('handball')) {
+      rules = NORMAS_DEPORTES['balon mano'];
+      duration = 30;
+    } else if (name.includes('voley') || name.includes('voleibol') || name.includes('volleyball')) {
+      rules = NORMAS_DEPORTES.voley;
+    } else {
+      rules = {
+        hasTimer: true,
+        periodLabel: 'Tiempo',
+        scoreLabel: 'Puntos',
+        getPeriods: () => [
+          { name: '1° Tiempo', accumulatedMinutes: 0, durationMinutes: 40 },
+          { name: '2° Tiempo', accumulatedMinutes: 40, durationMinutes: 40 },
+        ]
+      };
     }
-    if (name.includes('basquet') || name.includes('básquet') || name.includes('basketball') || name.includes('baloncesto')) {
-      return NORMAS_DEPORTES.basquet;
-    }
-    if (name.includes('balon mano') || name.includes('balonmano') || name.includes('handball')) {
-      return NORMAS_DEPORTES['balon mano'];
-    }
-    if (name.includes('voley') || name.includes('voleibol') || name.includes('volleyball')) {
-      return NORMAS_DEPORTES.voley;
-    }
-    return {
-      hasTimer: true,
-      periodLabel: 'Tiempo',
-      scoreLabel: 'Puntos',
-      periods: [
-        { name: '1° Tiempo', accumulatedMinutes: 0, durationMinutes: 40 },
-        { name: '2° Tiempo', accumulatedMinutes: 40, durationMinutes: 40 },
-      ]
-    };
+    
+    const periods = rules.getPeriods(duration);
+    return { ...rules, periods };
   };
 
-  const [periodoActualIdx, setPeriodoActualIdx] = useState(0);
-  const [partidos, setPartidos] = useState<Partido[]>([]);
-  const [partidoSeleccionado, setPartidoSeleccionado] = useState<Partido | null>(null);
-  const [acta, setActa] = useState<ActaPartido | null>(null);
-  const [incidencias, setIncidencias] = useState<Incidencia[]>([]);
-  const [jugadoresLocal, setJugadoresLocal] = useState<Jugador[]>([]);
-  const [jugadoresVisita, setJugadoresVisita] = useState<Jugador[]>([]);
+  const formatearTiempo = (totalSegundos: number) => {
+    const mins = Math.floor(totalSegundos / 60);
+    const secs = totalSegundos % 60;
+    const tiempoBase = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    
+    if (hasExtraTime && extraTimeMinutes > 0) {
+      return `${tiempoBase} +${extraTimeMinutes}'`;
+    }
+    return tiempoBase;
+  };
 
-  const [cargando, setCargando] = useState(false);
-  const [errorLocal, setErrorLocal] = useState<string | null>(null);
-  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
-  const [mostrarAyuda, setMostrarAyuda] = useState(false);
-
-  const PASOS_AYUDA_MESA = [
-    { paso: '1', titulo: 'Seleccionar Partido', desc: 'Elige un partido de la lista de la izquierda para cargar su acta oficial y planilla de incidencias.', icono: 'ads_click' },
-    { paso: '2', titulo: 'Registrar Incidencias', desc: 'Agrega goles, tarjetas (amarillas/rojas) y lesiones en tiempo real. Selecciona el equipo, jugador y minuto del evento.', icono: 'sports_soccer' },
-    { paso: '3', titulo: 'Guardar Marcador y Firmas', desc: 'Ingresa el nombre del árbitro y delegado de mesa. Puedes ir guardando el progreso en cualquier momento.', icono: 'edit_document' },
-    { paso: '4', titulo: 'Cerrar y Bloquear Acta', desc: 'Al finalizar el encuentro, cierra el acta. Esto recalculará automáticamente la tabla de posiciones y aplicará sanciones.', icono: 'lock' },
-  ];
-
-  const [golesHome, setGolesHome] = useState('0');
-  const [golesAway, setGolesAway] = useState('0');
-  const [firmaArbitro, setFirmaArbitro] = useState('');
-  const [firmaDelegadoLocal, setFirmaDelegadoLocal] = useState('');
-  const [firmaDelegadoVisita, setFirmaDelegadoVisita] = useState('');
-  const [firmaDelegadoMesa, setFirmaDelegadoMesa] = useState('');
-  const [observaciones, setObservaciones] = useState('');
-
-  const [segundosTranscurridos, setSegundosTranscurridos] = useState(0);
-  const [cronometroActivo, setCronometroActivo] = useState(false);
-  const [subEstadoPartido, setSubEstadoPartido] = useState<'programado' | 'jugando' | 'descanso' | 'suspendido' | 'finalizado'>('programado');
-  const [timerStartedAt, setTimerStartedAt] = useState<Date | null>(null);
-  const [baseElapsedTime, setBaseElapsedTime] = useState(0);
-  
-  const [filtroTexto, setFiltroTexto] = useState('');
-  const [filtroDisciplina, setFiltroDisciplina] = useState<string>('todas');
-  const [filtroCategoria, setFiltroCategoria] = useState<string>('todas');
-  const [filtroEstado, setFiltroEstado] = useState<string>('todos');
-  const [filtroFecha, setFiltroFecha] = useState<string>('');
-
-  const [modalIncidenciaRapida, setModalIncidenciaRapida] = useState<{
-    mostrar: boolean;
-    teamId: number;
-    teamName: string;
-    type: 'goal' | 'yellow_card' | 'red_card' | 'foul' | 'injury' | 'exclusion';
-    capturedMinute: number;
-    capturedSecond: number;
-  } | null>(null);
-
-  const [filtroJugadorModal, setFiltroJugadorModal] = useState('');
-
-  // Filtrado de partidos
   const partidosFiltrados = partidos.filter((part) => {
     if (filtroTexto.trim() !== '') {
       const query = filtroTexto.toLowerCase();
@@ -296,7 +328,6 @@ export const MesaControl: React.FC = () => {
     return true;
   });
 
-  // Obtener disciplinas únicas presentes en los partidos
   const disciplinasUnicas = Array.from(
     new Map(
       partidos
@@ -306,7 +337,6 @@ export const MesaControl: React.FC = () => {
     ).values()
   );
 
-  // Obtener categorías únicas presentes en los partidos
   const categoriasUnicas = Array.from(
     new Map(
       partidos
@@ -434,12 +464,6 @@ export const MesaControl: React.FC = () => {
     };
   }, [cronometroActivo, timerStartedAt, baseElapsedTime]);
 
-  const formatearTiempo = (totalSegundos: number) => {
-    const mins = Math.floor(totalSegundos / 60);
-    const secs = totalSegundos % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
   const cambiarEstadoPartidoMesa = async (nuevoSubEstado: 'jugando' | 'descanso' | 'suspendido' | 'finalizado' | 'programado') => {
     if (!partidoSeleccionado) return;
     
@@ -523,6 +547,81 @@ export const MesaControl: React.FC = () => {
     }
   };
 
+  const cargarDisciplinasConfig = async () => {
+    setConfigCargandoDisciplinas(true);
+    try {
+      const res = await serviciosParticipantes.obtenerDisciplinas();
+      if (res.success) {
+        setConfigDisciplinas(res.data);
+      }
+    } catch (err) {
+      console.error('Error cargando disciplinas:', err);
+    } finally {
+      setConfigCargandoDisciplinas(false);
+    }
+  };
+
+  const cargarCategoriasConfig = async (disciplineId: number) => {
+    try {
+      const champId = localStorage.getItem('campeonato_activo_id');
+      if (!champId) return;
+      const res = await serviciosParticipantes.obtenerCategoriasPorCampeonato(parseInt(champId));
+      if (res.success) {
+        const filtered = res.data.filter((c: any) => c.championship_discipline?.discipline_id === disciplineId);
+        setConfigCategorias(filtered);
+      }
+    } catch (err) {
+      console.error('Error cargando categorías:', err);
+    }
+  };
+
+  const guardarConfiguracionTiempo = async () => {
+    if (!configDisciplinaId || !configCategoriaId) {
+      mostrarMensaje('Selecciona disciplina y categoría', true);
+      return;
+    }
+    setConfigGuardando(true);
+    try {
+      const champId = localStorage.getItem('campeonato_activo_id');
+      if (!champId) {
+        mostrarMensaje('No hay campeonato activo', true);
+        setConfigGuardando(false);
+        return;
+      }
+      const discRes = await serviciosParticipantes.obtenerDisciplinasCampeonato(parseInt(champId));
+      if (discRes.success) {
+        const cd = discRes.data.find((d: any) => d.discipline_id === configDisciplinaId);
+        if (cd) {
+          await serviciosParticipantes.actualizarConfiguracionDisciplina(cd.id, {
+            match_duration_minutes: configMinutosTiempo
+          });
+          setMostrarConfigModal(false);
+          const disciplinaNombre = configDisciplinas.find(d => d.id === configDisciplinaId)?.name || '';
+          mostrarMensaje(`Configuración guardada: ${configMinutosTiempo} minutos por tiempo para ${disciplinaNombre}`);
+        } else {
+          mostrarMensaje('No se encontró la configuración de la disciplina', true);
+        }
+      }
+    } catch (err) {
+      mostrarMensaje('Error al guardar configuración', true);
+    } finally {
+      setConfigGuardando(false);
+    }
+  };
+
+  const guardarTiempoExtra = async () => {
+    if (!partidoSeleccionado) return;
+    try {
+      await serviciosFixture.actualizarTiempoExtra(partidoSeleccionado.id, {
+        extra_time_minutes: extraTimeMinutes,
+        has_extra_time: hasExtraTime
+      });
+      mostrarMensaje('Configuración de tiempo extra guardada');
+    } catch {
+      mostrarMensaje('Error al guardar tiempo extra', true);
+    }
+  };
+
   const seleccionarPartido = async (partido: Partido) => {
     setErrorLocal(null);
     setMensajeExito(null);
@@ -537,6 +636,13 @@ export const MesaControl: React.FC = () => {
     setFirmaDelegadoVisita(partido.visitor_team?.representative || '');
     setFirmaDelegadoMesa(usuario?.name || '');
     setObservaciones('');
+
+    const extraTime = (partido as any).extra_time_minutes || 0;
+    const hasExtra = (partido as any).has_extra_time || false;
+    const maxExtra = (partido as any).max_extra_time || 5;
+    setExtraTimeMinutes(extraTime);
+    setHasExtraTime(hasExtra);
+    setMaxExtraTime(maxExtra);
 
     try {
       const resJugadores = await serviciosParticipantes.obtenerJugadores();
@@ -590,6 +696,21 @@ export const MesaControl: React.FC = () => {
       if (partido.incidences) {
         setIncidencias(partido.incidences);
       }
+    }
+
+    try {
+      const champId = (partido as any).championship_id || (partido as any).championship?.id;
+      if (champId && partido.discipline_id) {
+        const discRes = await serviciosParticipantes.obtenerDisciplinasCampeonato(champId);
+        if (discRes.success) {
+          const cd = discRes.data.find((d: any) => d.discipline_id === partido.discipline_id);
+          if (cd?.match_duration_minutes) {
+            setMinutosPorTiempo(cd.match_duration_minutes);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error cargando configuración de tiempo:', e);
     }
 
     const timerData = (partido as any).current_elapsed_time || 0;
@@ -864,12 +985,25 @@ export const MesaControl: React.FC = () => {
                 <h2 className="text-xl font-extrabold text-white">Partidos Programados</h2>
                 <p className="text-xs text-slate-400 font-medium">Seleccione un partido para abrir su mesa de control y comenzar a planillar el encuentro.</p>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfigMinutosTiempo(45);
+                  setConfigDisciplinaId(null);
+                  setConfigCategoriaId(null);
+                  setConfigCategorias([]);
+                  cargarDisciplinasConfig();
+                  setMostrarConfigModal(true);
+                }}
+                className="text-[10px] font-bold bg-[#800f2f]/20 hover:bg-[#800f2f]/30 text-[#c9244b] border border-[#800f2f]/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-all"
+              >
+                <span className="material-symbols-outlined text-xs">settings</span>
+                Configurar Partido
+              </button>
             </div>
 
-            {/* Panel de Filtros Premium */}
             <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-5 space-y-4 shadow-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                {/* 1. Buscador */}
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-2.5 text-xs text-slate-500">search</span>
                   <input
@@ -881,7 +1015,6 @@ export const MesaControl: React.FC = () => {
                   />
                 </div>
 
-                {/* 2. Disciplina */}
                 <div>
                   <select
                     value={filtroDisciplina}
@@ -895,7 +1028,6 @@ export const MesaControl: React.FC = () => {
                   </select>
                 </div>
 
-                {/* 3. Categoría */}
                 <div>
                   <select
                     value={filtroCategoria}
@@ -909,7 +1041,6 @@ export const MesaControl: React.FC = () => {
                   </select>
                 </div>
 
-                {/* 4. Estado */}
                 <div>
                   <select
                     value={filtroEstado}
@@ -924,7 +1055,6 @@ export const MesaControl: React.FC = () => {
                   </select>
                 </div>
 
-                {/* 5. Fecha */}
                 <div>
                   <input
                     type="date"
@@ -935,7 +1065,6 @@ export const MesaControl: React.FC = () => {
                 </div>
               </div>
 
-              {/* Botón de limpiar filtros */}
               {(filtroTexto !== '' || filtroDisciplina !== 'todas' || filtroCategoria !== 'todas' || filtroEstado !== 'todos' || filtroFecha !== '') && (
                 <div className="flex justify-end pt-1">
                   <button
@@ -1083,62 +1212,108 @@ export const MesaControl: React.FC = () => {
                       <div className="text-4xl sm:text-5xl font-mono font-black tracking-widest text-white">
                         {formatearTiempo(segundosTranscurridos)}
                       </div>
-                      
+
                       {!acta?.is_locked && subEstadoPartido !== 'finalizado' && subEstadoPartido !== 'suspendido' && (
-                        <div className="flex gap-2.5 mt-2">
-                          {!cronometroActivo ? (
-                            <button
-                              type="button"
-                              onClick={() => cambiarEstadoPartidoMesa('jugando')}
-                              className="flex items-center gap-1 bg-indigo-650 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shadow-lg hover:shadow-indigo-650/25"
-                            >
-                              <span className="material-symbols-outlined text-sm">play_arrow</span>
-                              Iniciar / Continuar
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setCronometroActivo(false);
-                                const currentTime = segundosTranscurridos;
-                                setBaseElapsedTime(currentTime);
-                                setTimerStartedAt(null);
-                                sincronizarTimerConBackend(currentTime, periodoActualIdx, 'paused');
-                              }}
-                              className="flex items-center gap-1 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shadow-lg"
-                            >
-                              <span className="material-symbols-outlined text-sm">pause</span>
-                              Pausar
-                            </button>
-                          )}
-
-                          {subEstadoPartido === 'jugando' && (
-                            <button
-                              type="button"
-                              onClick={() => cambiarEstadoPartidoMesa('descanso')}
-                              className="flex items-center gap-1 bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer"
-                            >
-                              <span className="material-symbols-outlined text-sm">coffee</span>
-                              Descanso
-                            </button>
-                          )}
-
-                          {(subEstadoPartido === 'jugando' || subEstadoPartido === 'descanso') && (
-                            <button
-                              type="button"
-                              onClick={() => cambiarEstadoPartidoMesa('suspendido')}
-                              className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                            >
-                              <span className="material-symbols-outlined text-sm">block</span>
-                              Suspender
-                            </button>
-                          )}
+                        <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+                          <div className="flex gap-1">
+                            {!cronometroActivo ? (
+                              <button
+                                type="button"
+                                onClick={() => cambiarEstadoPartidoMesa('jugando')}
+                                className="flex items-center gap-1 bg-indigo-650 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-lg hover:shadow-indigo-650/25"
+                              >
+                                <span className="material-symbols-outlined text-sm">play_arrow</span>
+                                Iniciar
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCronometroActivo(false);
+                                  const currentTime = segundosTranscurridos;
+                                  setBaseElapsedTime(currentTime);
+                                  setTimerStartedAt(null);
+                                  sincronizarTimerConBackend(currentTime, periodoActualIdx, 'paused');
+                                }}
+                                className="flex items-center gap-1 bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-lg"
+                              >
+                                <span className="material-symbols-outlined text-sm">pause</span>
+                                Pausar
+                              </button>
+                            )}
+                            {subEstadoPartido === 'jugando' && (
+                              <button
+                                type="button"
+                                onClick={() => cambiarEstadoPartidoMesa('descanso')}
+                                className="flex items-center gap-1 bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer"
+                              >
+                                <span className="material-symbols-outlined text-sm">coffee</span>
+                                Descanso
+                              </button>
+                            )}
+                            {(subEstadoPartido === 'jugando' || subEstadoPartido === 'descanso') && (
+                              <button
+                                type="button"
+                                onClick={() => cambiarEstadoPartidoMesa('suspendido')}
+                                className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                              >
+                                <span className="material-symbols-outlined text-sm">block</span>
+                                Suspender
+                              </button>
+                            )}
+                          </div>
                         </div>
                       )}
-                      
+
                       {subEstadoPartido === 'finalizado' && (
                         <div className="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-lg mt-2">
                           Partido finalizado - No se puede modificar el timer
+                        </div>
+                      )}
+
+                      {!acta?.is_locked && subEstadoPartido !== 'finalizado' && subEstadoPartido !== 'suspendido' && (
+                        <div className="mt-3 border-t border-slate-800 pt-3 w-full">
+                          <div className="flex flex-wrap items-center justify-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Tiempo extra:</span>
+                              <div className="flex items-center gap-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const nuevo = Math.max(0, extraTimeMinutes - 1);
+                                    setExtraTimeMinutes(nuevo);
+                                    setHasExtraTime(nuevo > 0);
+                                  }}
+                                  className="w-6 h-6 rounded-md bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                  disabled={extraTimeMinutes === 0}
+                                >
+                                  -
+                                </button>
+                                <span className="w-8 text-center text-xs font-bold text-white">
+                                  {extraTimeMinutes}'
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const nuevo = Math.min(maxExtraTime, extraTimeMinutes + 1);
+                                    setExtraTimeMinutes(nuevo);
+                                    setHasExtraTime(nuevo > 0);
+                                  }}
+                                  className="w-6 h-6 rounded-md bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                  disabled={extraTimeMinutes >= maxExtraTime}
+                                >
+                                  +
+                                </button>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={guardarTiempoExtra}
+                                className="px-2 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 text-[9px] font-bold transition-colors cursor-pointer"
+                              >
+                                Guardar
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1599,8 +1774,121 @@ export const MesaControl: React.FC = () => {
           </div>
         </div>
       )}
-      </div>
 
+      {mostrarConfigModal && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#11131c] rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-[#222738] animate-scaleIn">
+            <div className="px-5 py-4 border-b border-slate-900 flex items-center justify-between bg-[#07080c]">
+              <h3 className="font-extrabold text-sm text-white uppercase tracking-wide flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#c9244b] text-base">settings</span>
+                Configurar Duración de Partido
+              </h3>
+              <button
+                onClick={() => setMostrarConfigModal(false)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-[#171a26] transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 bg-[#11131c]">
+              <p className="text-[10px] text-slate-400 font-medium">
+                Configura los minutos por tiempo para una disciplina y categoría específica.
+              </p>
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Disciplina</label>
+                  <select
+                    value={configDisciplinaId || ''}
+                    onChange={(e) => {
+                      const id = parseInt(e.target.value);
+                      setConfigDisciplinaId(id);
+                      setConfigCategoriaId(null);
+                      setConfigCategorias([]);
+                      if (id) {
+                        cargarCategoriasConfig(id);
+                      }
+                    }}
+                    className="w-full text-xs border border-slate-800 bg-[#171a26] text-white rounded-lg px-3 py-2.5 focus:border-[#800f2f] focus:outline-hidden"
+                    disabled={configCargandoDisciplinas}
+                  >
+                    <option value="">Seleccionar disciplina</option>
+                    {configDisciplinas.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Categoría</label>
+                  <select
+                    value={configCategoriaId || ''}
+                    onChange={(e) => setConfigCategoriaId(parseInt(e.target.value) || null)}
+                    className="w-full text-xs border border-slate-800 bg-[#171a26] text-white rounded-lg px-3 py-2.5 focus:border-[#800f2f] focus:outline-hidden"
+                    disabled={!configDisciplinaId}
+                  >
+                    <option value="">Seleccionar categoría</option>
+                    {configCategorias.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1 bg-[#07080c] border border-slate-900 p-4 rounded-xl">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Minutos por tiempo</label>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1 bg-[#0c0e16] rounded-lg border border-slate-800 p-1">
+                      <button
+                        type="button"
+                        onClick={() => setConfigMinutosTiempo(Math.max(1, configMinutosTiempo - 5))}
+                        className="w-8 h-8 rounded-md bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm transition-colors cursor-pointer"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        max="60"
+                        value={configMinutosTiempo}
+                        onChange={(e) => setConfigMinutosTiempo(Math.min(60, Math.max(1, parseInt(e.target.value) || 1)))}
+                        className="w-16 text-center text-sm font-bold bg-transparent text-white border-0 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setConfigMinutosTiempo(Math.min(60, configMinutosTiempo + 5))}
+                        className="w-8 h-8 rounded-md bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm transition-colors cursor-pointer"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <span className="text-xs text-slate-400">minutos</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setMostrarConfigModal(false)}
+                  className="flex-1 py-2.5 border border-slate-800 hover:bg-[#171a26] text-slate-300 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={guardarConfiguracionTiempo}
+                  disabled={configGuardando || !configDisciplinaId || !configCategoriaId}
+                  className="flex-1 py-2.5 bg-[#800f2f] hover:bg-[#a4133c] text-white rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {configGuardando ? 'Guardando...' : 'Guardar Configuración'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
     </div>
   );
 };

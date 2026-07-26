@@ -12,6 +12,12 @@ class ChampionshipDiscipline extends Model
         'championship_id',
         'discipline_id',
         'specific_rules',
+        'match_duration_minutes',
+        'match_duration_settings',
+    ];
+
+    protected $casts = [
+        'match_duration_settings' => 'array',
     ];
 
     public function championship(): BelongsTo

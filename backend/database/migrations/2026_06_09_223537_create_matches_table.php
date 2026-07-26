@@ -35,6 +35,12 @@ return new class extends Migration
             $table->integer('current_period')->default(0);
             $table->string('timer_status')->default('stopped');
             $table->timestamp('timer_started_at')->nullable();
+            
+            // ===== NUEVOS CAMPOS PARA TIEMPO EXTRA =====
+            $table->integer('extra_time_minutes')->default(0);
+            $table->boolean('has_extra_time')->default(false);
+            $table->integer('max_extra_time')->default(5);
+            
             $table->timestamps();
             $table->softDeletes();
             

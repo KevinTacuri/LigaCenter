@@ -15,6 +15,8 @@ Route::middleware('auth:sanctum')->group(function () {
         [ChampionshipDisciplineController::class, 'store']
     );
 
+    Route::put('/championship-disciplines/{id}', [ChampionshipDisciplineController::class, 'update']);
+
     Route::get(
         '/championship-disciplines/{championshipDiscipline}',
         [ChampionshipDisciplineController::class, 'show']
