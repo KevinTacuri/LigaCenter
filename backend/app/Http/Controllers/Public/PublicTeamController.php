@@ -19,6 +19,7 @@ class PublicTeamController extends PublicController
         $teams = Team::whereHas('championship', function ($query) {
                 $query->where('is_public', true);
             })
+            ->where('registration_status', 'aprobado')
             ->with(['championship'])
             ->when($championshipId, function ($query) use ($championshipId) {
                 return $query->where('championship_id', $championshipId);

@@ -166,4 +166,52 @@ class PublicMatchController extends PublicController
 
         return $this->successResponse($data, 'Partido obtenido exitosamente');
     }
+
+    public function matches($id, Request $request)
+    {
+        $championship = Championship::where('is_public', true)->find($id);
+
+        if (!$championship) {
+            return $this->errorResponse('Campeonato no encontrado', 404);
+        }
+
+        $status = $request->get('status');
+        $categoryId = $request->get('category_id');
+        $disciplineId = $request->get('discipline_id');
+
+        $matches = GameMatch::where('championship_id', $id)
+            ->with(['localTeam', 'visitorTeam', 'venue', 'group', 'championship'])
+            ->when($status, function ($query) use ($status) {
+                $statusMap = [
+                    'pendiente' => 'programado',
+                    'en_vivo' => 'en_curso',
+                    'finalizado' => 'finalizado',
+                ];
+                if (isset($statusMap[$status])) {
+                    return $query->where('status', $statusMap[$status]);
+                }
+                return $query->where('status', $status);
+            })
+            ->when($categoryId, function ($query) use ($categoryId) {
+                return $query->where('category_id', $categoryId);
+            })
+            ->when($disciplineId, function ($query) use ($disciplineId) {
+                return $query->where('discipline_id', $disciplineId);
+            })
+            // Filtrar solo partidos con equipos aprobados
+            ->whereHas('localTeam', function ($q) {
+                $q->where('registration_status', 'aprobado');
+            })
+            ->whereHas('visitorTeam', function ($q) {
+                $q->where('registration_status', 'aprobado');
+            })
+            ->orderBy('match_date', 'desc')
+            ->orderBy('match_time', 'desc')
+            ->paginate(20);
+
+        return $this->successResponse(
+            PublicMatchResource::collection($matches)->response()->getData(true),
+            'Partidos obtenidos exitosamente'
+        );
+    }
 }

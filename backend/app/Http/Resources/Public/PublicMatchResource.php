@@ -17,11 +17,9 @@ class PublicMatchResource extends JsonResource
             'reprogramado' => 'reprogramado',
         ];
 
-        // Calcular el tiempo transcurrido si esta en vivo
         $elapsedTime = null;
         if ($this->status === 'en_curso' && $this->current_elapsed_time !== null) {
             $elapsedTime = $this->current_elapsed_time;
-            // Si tiene timer_started_at, calcular el tiempo real
             if ($this->timer_started_at && $this->timer_status === 'running') {
                 $start = new \DateTime($this->timer_started_at);
                 $now = new \DateTime();
@@ -42,9 +40,11 @@ class PublicMatchResource extends JsonResource
             'datetime' => $this->match_date && $this->match_time 
                 ? $this->match_date->format('Y-m-d') . 'T' . $this->match_time 
                 : null,
-            'elapsed_time' => $elapsedTime, // ← Nuevo campo
+            'elapsed_time' => $elapsedTime,
             'timer_status' => $this->timer_status ?? 'stopped',
             'current_period' => $this->current_period ?? 1,
+            'category_id' => $this->category_id,
+            'discipline_id' => $this->discipline_id,
             'venue' => $this->whenLoaded('venue', function () {
                 return [
                     'id' => $this->venue->id,

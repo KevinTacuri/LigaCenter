@@ -6,9 +6,11 @@ use App\Models\Championship;
 use App\Models\Standing;
 use App\Models\GameMatch;
 use App\Models\Team;
+use App\Models\Category;
 use App\Http\Resources\Public\PublicChampionshipResource;
 use App\Http\Resources\Public\PublicMatchResource;
 use App\Http\Resources\Public\PublicStandingResource;
+use App\Http\Resources\Public\PublicCategoryResource; 
 use Illuminate\Http\Request;
 
 class PublicChampionshipController extends PublicController
@@ -179,7 +181,7 @@ class PublicChampionshipController extends PublicController
         return $this->successResponse($stats, 'Estadísticas obtenidas exitosamente');
     }
 
-    public function standingsComplete($id)
+    public function disciplines($id)
     {
         $championship = Championship::where('is_public', true)->find($id);
 
@@ -187,64 +189,156 @@ class PublicChampionshipController extends PublicController
             return $this->errorResponse('Campeonato no encontrado', 404);
         }
 
-        $teams = Team::where('championship_id', $id)->get();
-        $standings = Standing::where('championship_id', $id)->get()->keyBy('team_id');
+        $disciplines = $championship->disciplines()
+            ->with(['championshipDisciplines' => function ($query) use ($id) {
+                $query->where('championship_id', $id);
+            }])
+            ->get();
 
-        $result = [];
-        foreach ($teams as $team) {
-            if ($standings->has($team->id)) {
-                $standing = $standings->get($team->id);
-                // Crear un array con los mismos datos que el equipo virtual
-                $result[] = [
-                    'position' => null,
-                    'team' => [
-                        'id' => $team->id,
-                        'name' => $team->name,
-                        'logo' => $team->logo ?? null,
-                    ],
-                    'matches_played' => $standing->matches_played ?? 0,
-                    'wins' => $standing->wins ?? 0,
-                    'draws' => $standing->draws ?? 0,
-                    'losses' => $standing->losses ?? 0,
-                    'goals_for' => $standing->goals_for ?? 0,
-                    'goals_against' => $standing->goals_against ?? 0,
-                    'goal_difference' => $standing->goal_difference ?? 0,
-                    'points' => $standing->points ?? 0,
-                    'form' => null,
+        return $this->successResponse(
+            $disciplines->map(function ($discipline) {
+                return [
+                    'id' => $discipline->id,
+                    'name' => $discipline->name,
+                    'championship_discipline_id' => $discipline->championshipDisciplines->first()?->id,
                 ];
-            } else {
-                $result[] = [
-                    'position' => null,
-                    'team' => [
-                        'id' => $team->id,
-                        'name' => $team->name,
-                        'logo' => $team->logo ?? null,
-                    ],
-                    'matches_played' => 0,
-                    'wins' => 0,
-                    'draws' => 0,
-                    'losses' => 0,
-                    'goals_for' => 0,
-                    'goals_against' => 0,
-                    'goal_difference' => 0,
-                    'points' => 0,
-                    'form' => null,
-                ];
-            }
+            }),
+            'Disciplinas del campeonato obtenidas exitosamente'
+        );
+    }
+
+    public function categories($id, Request $request)
+    {
+        $championship = Championship::where('is_public', true)->find($id);
+
+        if (!$championship) {
+            return $this->errorResponse('Campeonato no encontrado', 404);
         }
 
-        usort($result, function ($a, $b) {
-            if ($a['points'] != $b['points']) {
-                return $b['points'] - $a['points'];
+        $disciplineId = $request->get('discipline_id');
+
+        $query = Category::whereHas('championshipDiscipline', function ($q) use ($id, $disciplineId) {
+            $q->where('championship_id', $id);
+            if ($disciplineId) {
+                $q->where('discipline_id', $disciplineId);
             }
-            if ($a['goal_difference'] != $b['goal_difference']) {
-                return $b['goal_difference'] - $a['goal_difference'];
-            }
-            return $b['goals_for'] - $a['goals_for'];
         });
 
-        foreach ($result as $index => &$item) {
-            $item['position'] = $index + 1;
+        $categories = $query->with(['championshipDiscipline.discipline'])->get();
+
+        return $this->successResponse(
+            PublicCategoryResource::collection($categories),
+            'Categorías del campeonato obtenidas exitosamente'
+        );
+    }
+
+    public function standingsComplete($id, Request $request)
+    {
+        $championship = Championship::where('is_public', true)->find($id);
+
+        if (!$championship) {
+            return $this->errorResponse('Campeonato no encontrado', 404);
+        }
+
+        $categoryId = $request->get('category_id');
+        $disciplineId = $request->get('discipline_id');
+
+        $result = [];
+
+        if ($categoryId) {
+            $teamsQuery = Team::where('championship_id', $id)
+                ->where('category_id', $categoryId)
+                ->where('registration_status', 'aprobado');
+
+            if ($disciplineId) {
+                $teamsQuery->whereHas('category.championshipDiscipline', function ($q) use ($disciplineId) {
+                    $q->where('discipline_id', $disciplineId);
+                });
+            }
+
+            $teams = $teamsQuery->get();
+
+            if ($teams->isNotEmpty()) {
+                $standings = Standing::where('championship_id', $id)
+                    ->where('category_id', $categoryId)
+                    ->get()
+                    ->keyBy('team_id');
+
+                foreach ($teams as $team) {
+                    if ($standings->has($team->id)) {
+                        $standing = $standings->get($team->id);
+                        $result[] = [
+                            'position' => null,
+                            'team' => [
+                                'id' => $team->id,
+                                'name' => $team->name,
+                                'logo' => $team->logo ?? null,
+                            ],
+                            'matches_played' => $standing->matches_played ?? 0,
+                            'wins' => $standing->wins ?? 0,
+                            'draws' => $standing->draws ?? 0,
+                            'losses' => $standing->losses ?? 0,
+                            'goals_for' => $standing->goals_for ?? 0,
+                            'goals_against' => $standing->goals_against ?? 0,
+                            'goal_difference' => $standing->goal_difference ?? 0,
+                            'points' => $standing->points ?? 0,
+                            'form' => null,
+                            'wins_total' => $standing->wins_total ?? $standing->wins ?? 0,
+                            'losses_total' => $standing->losses_total ?? $standing->losses ?? 0,
+                            'sets_for' => $standing->sets_for ?? null,
+                            'sets_against' => $standing->sets_against ?? null,
+                            'sets_ratio' => $standing->sets_ratio ?? null,
+                            'points_for' => $standing->points_for ?? null,
+                            'points_against' => $standing->points_against ?? null,
+                            'points_ratio' => $standing->points_ratio ?? null,
+                            'win_percentage' => $standing->win_percentage ?? null,
+                            'streak' => $standing->streak ?? null,
+                        ];
+                    } else {
+                        $result[] = [
+                            'position' => null,
+                            'team' => [
+                                'id' => $team->id,
+                                'name' => $team->name,
+                                'logo' => $team->logo ?? null,
+                            ],
+                            'matches_played' => 0,
+                            'wins' => 0,
+                            'draws' => 0,
+                            'losses' => 0,
+                            'goals_for' => 0,
+                            'goals_against' => 0,
+                            'goal_difference' => 0,
+                            'points' => 0,
+                            'form' => null,
+                            'wins_total' => 0,
+                            'losses_total' => 0,
+                            'sets_for' => null,
+                            'sets_against' => null,
+                            'sets_ratio' => null,
+                            'points_for' => null,
+                            'points_against' => null,
+                            'points_ratio' => null,
+                            'win_percentage' => null,
+                            'streak' => null,
+                        ];
+                    }
+                }
+
+                usort($result, function ($a, $b) {
+                    if ($a['points'] != $b['points']) {
+                        return $b['points'] - $a['points'];
+                    }
+                    if ($a['goal_difference'] != $b['goal_difference']) {
+                        return $b['goal_difference'] - $a['goal_difference'];
+                    }
+                    return $b['goals_for'] - $a['goals_for'];
+                });
+
+                foreach ($result as $index => &$item) {
+                    $item['position'] = $index + 1;
+                }
+            }
         }
 
         return $this->successResponse($result, 'Tabla de posiciones completa obtenida exitosamente');

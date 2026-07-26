@@ -29,6 +29,8 @@ Route::prefix('public')->group(function () {
     Route::get('/championships/{id}/matches', [PublicChampionshipController::class, 'matches']);
     Route::get('/championships/{id}/statistics', [PublicChampionshipController::class, 'statistics']);
     Route::get('/championships/{id}/standings-complete', [PublicChampionshipController::class, 'standingsComplete']);
+    Route::get('/championships/{id}/disciplines', [PublicChampionshipController::class, 'disciplines']);
+    Route::get('/championships/{id}/categories', [PublicChampionshipController::class, 'categories']);
 
     // Partidos
     Route::get('/matches', [PublicMatchController::class, 'index']);
