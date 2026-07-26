@@ -636,4 +636,14 @@ body, input, select, textarea, button, table, td, th, h1, h2, h3, h4, h5, h6, sp
   background-color: #99153c !important;
 }
 
+/* Animación suave de redistribución de contenido al colapsar/expandir la barra lateral */
+:root {
+  --sidebar-width: 16rem;
+}
 
+@media (min-width: 1024px) {
+  .lg\:ml-64 {
+    margin-left: var(--sidebar-width, 16rem) !important;
+    transition: margin-left 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}

@@ -1098,49 +1098,49 @@ export const MesaControl: React.FC = () => {
                     <div
                       key={part.id}
                       onClick={() => seleccionarPartido(part)}
-                      className={`bg-[#11131c] rounded-2xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-4 group border ${
+                      className={`bg-primary-container rounded-2xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-4 group border text-on-surface ${
                         part.status === 'en_curso' 
-                          ? 'border-emerald-500/30 shadow-lg shadow-emerald-500/5 hover:border-emerald-500 animate-pulse' 
-                          : 'border-slate-900 hover:border-[#800f2f]/60'
+                          ? 'border-emerald-500/50 shadow-lg shadow-emerald-500/10 hover:border-emerald-500 animate-pulse' 
+                          : 'border-outline hover:border-primary/60'
                       }`}
                     >
-                      <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      <div className="flex justify-between items-center text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
                         <span>Jornada {part.round}</span>
                         <span className={`px-2 py-0.5 rounded-md font-extrabold text-[8px] uppercase tracking-wider border ${
                           part.status === 'finalizado' 
-                            ? 'bg-[#1c1f2e] text-slate-350 border-slate-800' 
+                            ? 'bg-surface-dim text-on-surface-variant border-outline' 
                             : part.status === 'en_curso'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 animate-pulse'
-                            : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 animate-pulse'
+                            : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
                         }`}>{part.status}</span>
                       </div>
 
                       <div className="space-y-3 my-2">
                         <div className="flex items-center justify-between">
-                          <span className="font-extrabold text-slate-200 text-sm group-hover:text-primary transition-colors">{part.local_team?.name}</span>
+                          <span className="font-extrabold text-on-surface text-sm group-hover:text-primary transition-colors">{part.local_team?.name}</span>
                           {part.status === 'finalizado' || part.status === 'en_curso' ? (
-                            <span className="font-black text-slate-200 text-xs bg-[#1c1f2e] px-2 py-1 rounded-md">
+                            <span className="font-black text-on-surface text-xs bg-surface px-2.5 py-1 rounded-md border border-outline shadow-2xs">
                               {homeScore}
                             </span>
                           ) : null}
                         </div>
-                        <div className="flex items-center justify-between border-t border-slate-900 pt-2">
-                          <span className="font-extrabold text-slate-200 text-sm group-hover:text-primary transition-colors">{part.visitor_team?.name}</span>
+                        <div className="flex items-center justify-between border-t border-outline pt-2">
+                          <span className="font-extrabold text-on-surface text-sm group-hover:text-primary transition-colors">{part.visitor_team?.name}</span>
                           {part.status === 'finalizado' || part.status === 'en_curso' ? (
-                            <span className="font-black text-slate-200 text-xs bg-[#1c1f2e] px-2 py-1 rounded-md">
+                            <span className="font-black text-on-surface text-xs bg-surface px-2.5 py-1 rounded-md border border-outline shadow-2xs">
                               {awayScore}
                             </span>
                           ) : null}
                         </div>
                       </div>
 
-                      <div className="border-t border-slate-900 pt-3 flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                      <div className="border-t border-outline pt-3 flex items-center justify-between text-[10px] text-on-surface-variant font-medium">
                         <div className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[13px] text-slate-550">calendar_today</span>
+                          <span className="material-symbols-outlined text-[13px] text-on-surface-variant">calendar_today</span>
                           <span>{part.match_date ? new Date(part.match_date).toLocaleDateString() : 'N/A'} - {part.match_time || 'N/A'}</span>
                         </div>
                         <div className="flex items-center gap-1 max-w-[120px] truncate" title={part.venue?.name}>
-                          <span className="material-symbols-outlined text-[13px] text-slate-550">location_on</span>
+                          <span className="material-symbols-outlined text-[13px] text-on-surface-variant">location_on</span>
                           <span className="truncate">{part.venue?.name || 'N/A'}</span>
                         </div>
                       </div>
@@ -1148,7 +1148,7 @@ export const MesaControl: React.FC = () => {
                   );
                 })}
                 {partidosFiltrados.length === 0 && (
-                  <div className="col-span-full bg-[#11131c] rounded-2xl border border-slate-900 p-12 text-center text-slate-400 italic text-sm">
+                  <div className="col-span-full bg-primary-container rounded-2xl border border-outline p-12 text-center text-on-surface-variant italic text-sm">
                     {partidos.length === 0 
                       ? 'No hay partidos programados en este momento.' 
                       : 'No se encontraron partidos que coincidan con los filtros seleccionados.'}
@@ -1160,39 +1160,39 @@ export const MesaControl: React.FC = () => {
         ) : (
           <form onSubmit={guardarProgresoActa} className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-6 shadow-xs space-y-5">
-                <div className="border-b border-slate-900 pb-2 flex justify-between items-center">
-                  <h2 className="font-extrabold text-sm uppercase tracking-wider text-white">Acta de Partido Oficial</h2>
+              <div className="bg-primary-container rounded-2xl border border-outline p-6 shadow-xs space-y-5 text-on-surface">
+                <div className="border-b border-outline pb-2 flex justify-between items-center">
+                  <h2 className="font-extrabold text-sm uppercase tracking-wider text-on-surface">Acta de Partido Oficial</h2>
                   {acta?.is_locked && (
-                    <span className="bg-rose-500/10 border border-rose-500/20 text-rose-450 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wider">Acta Cerrada</span>
+                    <span className="bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wider">Acta Cerrada</span>
                   )}
                 </div>
 
-                <div className="bg-slate-950 border border-slate-900 text-white p-6 rounded-2xl flex flex-col items-center justify-center gap-4 relative overflow-hidden shadow-md">
+                <div className="bg-surface-dim border border-outline text-on-surface p-6 rounded-2xl flex flex-col items-center justify-center gap-4 relative overflow-hidden shadow-md">
                   <div className="absolute top-3 left-3 flex items-center gap-1.5">
                     <span className={`w-2.5 h-2.5 rounded-full ${subEstadoPartido === 'jugando' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-widest">
+                    <span className="text-[9px] uppercase font-bold text-on-surface-variant tracking-widest">
                       {subEstadoPartido === 'jugando' ? 'EN JUEGO' : 
                        subEstadoPartido === 'descanso' ? 'EN DESCANSO' : 
                        subEstadoPartido === 'suspendido' ? 'SUSPENDIDO' : 'PROGRAMADO'}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-slate-900 border border-slate-850 px-4 py-2 rounded-xl mt-4 z-10">
+                  <div className="flex items-center gap-3 bg-surface border border-outline px-4 py-2 rounded-xl mt-4 z-10 text-on-surface">
                     <button
                       type="button"
                       disabled={periodoActualIdx === 0}
                       onClick={() => cambiarPeriodo(periodoActualIdx - 1)}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-800 border border-slate-700 hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold text-xs"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-dim border border-outline hover:bg-surface-bright disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold text-xs text-on-surface"
                       title={`Ver ${obtenerNormasDeporte().periodLabel} anterior`}
                     >
                       ◀
                     </button>
                     <div className="text-center px-2 min-w-[100px]">
-                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">
+                      <span className="text-[9px] text-on-surface-variant font-bold uppercase tracking-wider block mb-0.5">
                         {obtenerNormasDeporte().periodLabel}
                       </span>
-                      <span className="font-extrabold text-sm text-white">
+                      <span className="font-extrabold text-sm text-on-surface">
                         {obtenerNormasDeporte().periods[periodoActualIdx]?.name || `Periodo ${periodoActualIdx + 1}`}
                       </span>
                     </div>
@@ -1200,7 +1200,7 @@ export const MesaControl: React.FC = () => {
                       type="button"
                       disabled={periodoActualIdx === obtenerNormasDeporte().periods.length - 1}
                       onClick={() => cambiarPeriodo(periodoActualIdx + 1)}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-800 border border-slate-700 hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold text-xs"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-dim border border-outline hover:bg-surface-bright disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold text-xs text-on-surface"
                       title={`Ver ${obtenerNormasDeporte().periodLabel} siguiente`}
                     >
                       ▶
@@ -1209,7 +1209,7 @@ export const MesaControl: React.FC = () => {
 
                   {obtenerNormasDeporte().hasTimer ? (
                     <div className="flex flex-col items-center gap-2 z-10">
-                      <div className="text-4xl sm:text-5xl font-mono font-black tracking-widest text-white">
+                      <div className="text-4xl sm:text-5xl font-mono font-black tracking-widest text-on-surface">
                         {formatearTiempo(segundosTranscurridos)}
                       </div>
 
@@ -1361,23 +1361,23 @@ export const MesaControl: React.FC = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 bg-[#07080c] border border-slate-900 p-6 rounded-2xl items-center text-center">
-                  <div className="font-extrabold text-sm text-slate-200 truncate">{partidoSeleccionado.local_team?.name}</div>
+                <div className="grid grid-cols-3 gap-4 bg-surface-dim border border-outline p-6 rounded-2xl items-center text-center text-on-surface">
+                  <div className="font-extrabold text-sm text-on-surface truncate">{partidoSeleccionado.local_team?.name}</div>
                   <div className="flex flex-col items-center justify-center gap-1">
                     <div className="flex items-center justify-center gap-3">
                       <input
                         type="text"
                         readOnly
                         value={golesHome}
-                        className="w-14 text-center text-2xl font-black border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 outline-hidden cursor-not-allowed select-none"
+                        className="w-14 text-center text-2xl font-black border border-outline bg-surface text-on-surface rounded-lg p-2 outline-hidden cursor-not-allowed select-none shadow-xs"
                         title="El marcador se calcula automáticamente a partir de las incidencias registradas"
                       />
-                      <span className="font-black text-slate-600 text-lg">-</span>
+                      <span className="font-black text-on-surface-variant text-lg">-</span>
                       <input
                         type="text"
                         readOnly
                         value={golesAway}
-                        className="w-14 text-center text-2xl font-black border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 outline-hidden cursor-not-allowed select-none"
+                        className="w-14 text-center text-2xl font-black border border-outline bg-surface text-on-surface rounded-lg p-2 outline-hidden cursor-not-allowed select-none shadow-xs"
                         title="El marcador se calcula automáticamente a partir de las incidencias registradas"
                       />
                     </div>

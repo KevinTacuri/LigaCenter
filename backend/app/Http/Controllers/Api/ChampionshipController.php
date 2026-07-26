@@ -174,27 +174,47 @@ class ChampionshipController extends Controller
     public function update(Request $request, $id)
     {
         $championship = Championship::where('id', $id)
-            ->where('user_id', $request->user()->id)
+            ->where(function ($query) use ($request) {
+                $query->where('user_id', $request->user()->id)
+                    ->orWhereHas('users', function ($q) use ($request) {
+                        $q->where('user_id', $request->user()->id);
+                    });
+            })
             ->first();
 
         if (!$championship) {
             return $this->errorResponse('Campeonato no encontrado o no autorizado', 404);
         }
 
+        if ($request->has('is_public')) {
+            $request->merge([
+                'is_public' => filter_var($request->is_public, FILTER_VALIDATE_BOOLEAN)
+            ]);
+        }
+
         $request->validate([
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
-            'status' => 'sometimes|string|in:creado,en_curso,finalizado',
+            'type' => 'nullable|string',
+            'status' => 'sometimes|string|in:creado,activo,en_curso,finalizado,suspendido',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
-            'is_public' => 'boolean',
-            'settings' => 'nullable|array',
+            'is_public' => 'nullable|boolean',
+            'settings' => 'nullable',
             'rules_pdf' => 'nullable|file|mimes:pdf|max:10240',
         ]);
 
         $data = $request->only([
-            'name', 'description', 'status', 'start_date', 'end_date', 'is_public', 'settings'
+            'name', 'description', 'type', 'status', 'start_date', 'end_date', 'is_public'
         ]);
+
+        if ($request->has('settings')) {
+            $settings = $request->settings;
+            if (is_string($settings)) {
+                $settings = json_decode($settings, true);
+            }
+            $data['settings'] = $settings;
+        }
 
         if ($request->hasFile('rules_pdf')) {
             // Eliminar el archivo anterior si existe

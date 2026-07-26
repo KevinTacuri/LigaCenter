@@ -50,14 +50,14 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
   const esAdministrador = tieneRol('administrador');
 
   return (
-    <header className="bg-[#11131c]/90 backdrop-blur-md border-b border-slate-800 px-6 h-16 sticky top-0 z-30 shadow-xs flex items-center justify-between shrink-0">
+    <header className="bg-primary-container/90 backdrop-blur-md border-b border-outline px-6 h-16 sticky top-0 z-30 shadow-xs flex items-center justify-between shrink-0 text-on-surface">
       <div className="flex items-center gap-3">
         {leftElement}
         <div>
-          <h1 className="text-lg font-black text-white leading-none tracking-tight">
+          <h1 className="text-lg font-black text-on-surface leading-none tracking-tight">
             {displayTitle}
           </h1>
-          <span className="text-[10px] text-slate-450 font-semibold tracking-wider uppercase mt-1.5 block leading-none">
+          <span className="text-[10px] text-on-surface-variant font-semibold tracking-wider uppercase mt-1.5 block leading-none">
             {displaySubtitle}
           </span>
         </div>
@@ -83,9 +83,9 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
                 href={`/publico?campeonato=${campeonatoActivo.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all shadow-xs"
+                className="flex items-center gap-1.5 bg-surface hover:bg-surface-bright text-on-surface border border-outline rounded-lg px-3 py-1.5 text-xs font-extrabold cursor-pointer transition-all shadow-xs"
               >
-                <span className="material-symbols-outlined text-sm">visibility</span>
+                <span className="material-symbols-outlined text-sm text-primary">visibility</span>
                 <span className="hidden sm:inline">Vista Pública</span>
               </a>
             ) : (
@@ -93,9 +93,9 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
                 href="/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all shadow-xs"
+                className="flex items-center gap-1.5 bg-surface hover:bg-surface-bright text-on-surface border border-outline rounded-lg px-3 py-1.5 text-xs font-extrabold cursor-pointer transition-all shadow-xs"
               >
-                <span className="material-symbols-outlined text-sm">visibility</span>
+                <span className="material-symbols-outlined text-sm text-primary">visibility</span>
                 <span className="hidden sm:inline">Portal Público</span>
               </a>
             )}
@@ -104,7 +104,7 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
               campeonatoActivo ? (
                 <button
                   onClick={() => setPanelCampeonatosAbierto(true)}
-                  className="flex items-center gap-1.5 bg-[#800f2f] hover:bg-[#991238] text-white border border-[#800f2f] rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all shadow-xs active:scale-95"
+                  className="flex items-center gap-1.5 bg-primary hover:opacity-90 text-white border border-primary rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all shadow-xs active:scale-95"
                 >
                   <span className="material-symbols-outlined text-sm">swap_horiz</span>
                   <span className="hidden sm:inline">Cambiar Torneo</span>
@@ -112,7 +112,7 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
               ) : (
                 <button
                   onClick={() => setPanelCampeonatosAbierto(true)}
-                  className="flex items-center gap-1.5 bg-indigo-650 hover:bg-indigo-600 text-white rounded-lg px-3.5 py-1.5 text-xs font-bold cursor-pointer transition-all shadow-xs"
+                  className="flex items-center gap-1.5 bg-primary hover:opacity-90 text-white rounded-lg px-3.5 py-1.5 text-xs font-bold cursor-pointer transition-all shadow-xs"
                 >
                   <span className="material-symbols-outlined text-sm">sports_soccer</span>
                   <span>Seleccionar Campeonato</span>

@@ -132,10 +132,12 @@ class StandingController extends Controller
             );
         }
 
+        // Recalcular dinámicamente posiciones si hay partidos finalizados
+        $this->recalcularPosicionesSiEsNecesario($championshipId, $categoryId);
+
         $teams = Team::where('teams.category_id', $categoryId)
             ->where('teams.championship_id', $championshipId)
-            ->where('teams.registration_status', 'aprobado')
-            ->whereIn('teams.id', $teamIdsWithMatches) // ← SOLO EQUIPOS CON PARTIDOS
+            ->whereIn('teams.id', $teamIdsWithMatches) // SOLO EQUIPOS CON PARTIDOS
             ->leftJoin('group_teams', 'teams.id', '=', 'group_teams.team_id')
             ->leftJoin('groups', 'group_teams.group_id', '=', 'groups.id')
             ->select('teams.*', 'groups.name as group_name')
@@ -317,5 +319,28 @@ class StandingController extends Controller
             null,
             'Posiciones recalculadas exitosamente'
         );
+    }
+
+    private function recalcularPosicionesSiEsNecesario($championshipId, $categoryId)
+    {
+        $matches = \App\Models\GameMatch::where('championship_id', $championshipId)
+            ->where('category_id', $categoryId)
+            ->where('status', 'finalizado')
+            ->get();
+
+        if ($matches->isEmpty()) {
+            return;
+        }
+
+        $service = new \App\Services\StandingService();
+        Standing::where('championship_id', $championshipId)
+            ->where('category_id', $categoryId)
+            ->delete();
+
+        foreach ($matches as $match) {
+            $homeScore = $match->home_score ?? $match->report?->local_score ?? 0;
+            $awayScore = $match->away_score ?? $match->report?->visitor_score ?? 0;
+            $service->updateFromMatch($match, $homeScore, $awayScore);
+        }
     }
 }

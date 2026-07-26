@@ -24,16 +24,15 @@ interface Props {
 }
 
 const obtenerPastelColorSidebar = (nombre: string) => {
-  if (!nombre) return { bg: 'bg-[#d0ebff]/20 border-[#a5d8ff]/30', text: 'text-[#a5d8ff]' };
+  if (!nombre) return { bg: 'bg-primary/20 border-primary/30', text: 'text-primary' };
   const hash = nombre.split('').reduce((acc, char) => char.charCodeAt(0) + acc, 0);
   const colores = [
-    { bg: 'bg-[#d0ebff]/20 border-[#a5d8ff]/30', text: 'text-[#a5d8ff]' },
-    { bg: 'bg-[#e2f9e1]/20 border-[#b2f2bb]/30', text: 'text-[#b2f2bb]' },
-    { bg: 'bg-[#ffe3e3]/20 border-[#ffc9c9]/30', text: 'text-[#ffc9c9]' },
-    { bg: 'bg-[#f3e8ff]/20 border-[#e8d2ff]/30', text: 'text-[#e8d2ff]' },
-    { bg: 'bg-[#fff9db]/20 border-[#ffec99]/30', text: 'text-[#ffec99]' },
-    { bg: 'bg-[#e3fafc]/20 border-[#99e9f2]/30', text: 'text-[#99e9f2]' },
-    { bg: 'bg-[#fff0f6]/20 border-[#fcc2d7]/30', text: 'text-[#fcc2d7]' },
+    { bg: 'bg-indigo-500/20 border-indigo-500/30', text: 'text-indigo-600 dark:text-indigo-400' },
+    { bg: 'bg-emerald-500/20 border-emerald-500/30', text: 'text-emerald-600 dark:text-emerald-400' },
+    { bg: 'bg-amber-500/20 border-amber-500/30', text: 'text-amber-600 dark:text-amber-400' },
+    { bg: 'bg-purple-500/20 border-purple-500/30', text: 'text-purple-600 dark:text-purple-400' },
+    { bg: 'bg-rose-500/20 border-rose-500/30', text: 'text-rose-600 dark:text-rose-400' },
+    { bg: 'bg-cyan-500/20 border-cyan-500/30', text: 'text-cyan-600 dark:text-cyan-400' },
   ];
   return colores[hash % colores.length];
 };
@@ -72,6 +71,8 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
   );
   const rolCampeonato = membresiaActiva ? membresiaActiva.role : null;
 
+  const esOrganizador = rol === 'organizador' || rol === 'administrador' || rolCampeonato === 'organizer' || rolCampeonato === 'admin' || usuario?.roles?.includes('organizador') || usuario?.roles?.includes('administrador');
+
   const manejarCerrarSesion = async () => {
     const isConfirmed = await confirm({
       title: '¿Cerrar Sesión?',
@@ -86,9 +87,9 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
 
   const getSubMenus = (itemId: string): SubItemMenu[] => {
     const items = subMenus[itemId] || [];
-    if (rolCampeonato === 'team_delegate') {
+    if (rolCampeonato === 'team_delegate' && !esOrganizador) {
       if (itemId === 'teams') {
-        return items.filter(sub => sub.id === 'planilla-jugadores');
+        return items.filter(sub => sub.id === 'planilla-jugadores' || sub.id === 'equipos' || sub.id === 'jugadores');
       }
       if (itemId === 'fixture') {
         return items.filter(sub => sub.id === 'partidos');
@@ -100,6 +101,17 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
   const [seccionTorneoAbierta, setSeccionTorneoAbierta] = useState(true);
   const [seccionAdminAbierta, setSeccionAdminAbierta] = useState(true);
   const [seccionAjustesAbierta, setSeccionAjustesAbierta] = useState(true);
+
+  const [submenusDesplegados, setSubmenusDesplegados] = useState<Record<string, boolean>>({});
+  const [submenusModificadosPorUsuario, setSubmenusModificadosPorUsuario] = useState<Record<string, boolean>>({});
+
+  const toggleSubmenu = (itemId: string) => {
+    setSubmenusModificadosPorUsuario((prev) => ({ ...prev, [itemId]: true }));
+    setSubmenusDesplegados((prev) => ({
+      ...prev,
+      [itemId]: !(prev[itemId] ?? false),
+    }));
+  };
 
   const itemsTorneo: ItemMenu[] = [
     {
@@ -114,35 +126,35 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
       titulo: 'Equipos y Jugadores',
       icono: 'groups',
       ruta: '/tablero/participantes',
-      visible: !!campeonatoActivo && (rol === 'organizador' || rol === 'usuario_publico')
+      visible: !!campeonatoActivo
     },
     {
       id: 'delegados',
       titulo: 'Delegados y Roles',
       icono: 'person_pin',
       ruta: '/tablero/delegados',
-      visible: !!campeonatoActivo && rol === 'organizador'
+      visible: !!campeonatoActivo && esOrganizador
     },
     {
       id: 'fixture',
       titulo: 'Fixture y Calendario',
       icono: 'calendar_today',
       ruta: '/tablero/fixture',
-      visible: !!campeonatoActivo && (rol === 'organizador' || rol === 'usuario_publico')
+      visible: !!campeonatoActivo
     },
     {
       id: 'mesa',
       titulo: 'Mesa de Control',
       icono: 'edit_note',
       ruta: '/tablero/mesa',
-      visible: !!campeonatoActivo && (rol === 'organizador' || rol === 'encargado_mesa')
+      visible: !!campeonatoActivo
     },
     {
       id: 'posiciones',
       titulo: 'Posiciones y Estadísticas',
       icono: 'leaderboard',
       ruta: '/tablero/estadisticas',
-      visible: !!campeonatoActivo && rol !== 'administrador'
+      visible: !!campeonatoActivo
     }
   ];
 
@@ -176,7 +188,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
       titulo: 'Configurar Campeonato',
       icono: 'settings',
       ruta: '/tablero/configuracion',
-      visible: !!campeonatoActivo && rol === 'organizador'
+      visible: !!campeonatoActivo && esOrganizador
     }
   ];
 
@@ -201,7 +213,21 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
     if (itemsTorneo.some(item => item.visible && isActive(item.ruta))) setSeccionTorneoAbierta(true);
     if (itemsAdmin.some(item => item.visible && isActive(item.ruta))) setSeccionAdminAbierta(true);
     if (itemsAjustes.some(item => item.visible && isActive(item.ruta))) setSeccionAjustesAbierta(true);
-  }, [location.pathname, itemsTorneo, itemsAdmin, itemsAjustes, isActive]);
+
+    itemsTorneo.forEach((item) => {
+      // Solo expandir automáticamente si la vista está activa Y el usuario no ha cerrado manualmente la sección
+      if (isActive(item.ruta) && !submenusModificadosPorUsuario[item.id]) {
+        setSubmenusDesplegados((prev) => ({ ...prev, [item.id]: true }));
+      }
+    });
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--sidebar-width',
+      colapsado ? '5rem' : '16rem'
+    );
+  }, [colapsado]);
 
   const visibleTorneo = itemsTorneo.filter(item => item.visible);
   const visibleAdmin = itemsAdmin.filter(item => item.visible);
@@ -213,40 +239,68 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
   const renderItemMenu = (item: ItemMenu) => {
     const active = isActive(item.ruta);
     const subItems = getSubMenus(item.id);
+    const tieneSubItems = subItems && subItems.length > 0;
+    const estaDesplegado = submenusDesplegados[item.id] ?? active;
+
+    const manejarClic = () => {
+      if (tieneSubItems) {
+        toggleSubmenu(item.id);
+      } else {
+        navigate(item.ruta);
+      }
+    };
 
     return (
       <div key={item.id} className="space-y-0.5">
         <button
-          onClick={() => navigate(item.ruta)}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+          type="button"
+          onClick={manejarClic}
+          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
             active
-              ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-              : 'text-slate-400 hover:bg-[#1a1d2a] hover:text-slate-200'
-          } ${colapsado ? 'justify-center' : 'justify-start'}`}
+              ? 'bg-primary/10 text-primary font-bold border border-primary/20 shadow-2xs'
+              : 'text-on-surface-variant hover:bg-surface-bright hover:text-on-surface'
+          } ${colapsado ? 'justify-center' : ''}`}
           title={colapsado ? item.titulo : ''}
         >
-          <span className="material-symbols-outlined text-xl">{item.icono}</span>
-          {!colapsado && <span className="text-sm font-medium">{item.titulo}</span>}
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-xl">{item.icono}</span>
+            {!colapsado && <span className="text-sm font-medium">{item.titulo}</span>}
+          </div>
+          {!colapsado && tieneSubItems && (
+            <span className={`material-symbols-outlined text-sm text-on-surface-variant transition-transform duration-300 ${estaDesplegado ? 'rotate-180' : ''}`}>
+              expand_more
+            </span>
+          )}
         </button>
 
-        {!colapsado && active && subItems && subItems.length > 0 && (
-          <div className="pl-8 pr-2 py-1 space-y-1 border-l border-slate-800 ml-5 mt-1 animate-fadeIn">
-            {subItems.map((sub) => {
-              const subActive = isSubActive(item, sub);
-              return (
-                <button
-                  key={sub.id}
-                  onClick={() => navigate(`${item.ruta}?${sub.query}`)}
-                  className={`w-full text-left px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all block cursor-pointer ${
-                    subActive
-                      ? 'text-indigo-400 bg-indigo-500/5 font-black'
-                      : 'text-slate-500 hover:text-slate-350 hover:bg-[#151722]'
-                  }`}
-                >
-                  {sub.titulo}
-                </button>
-              );
-            })}
+        {/* Submenú desplegable animado */}
+        {!colapsado && tieneSubItems && (
+          <div
+            className={`grid transition-all duration-300 ease-in-out border-l border-outline ml-5 mt-1 pl-3 pr-1 ${
+              estaDesplegado
+                ? 'grid-rows-[1fr] opacity-100 py-1'
+                : 'grid-rows-[0fr] opacity-0 py-0 overflow-hidden pointer-events-none'
+            }`}
+          >
+            <div className="overflow-hidden space-y-1">
+              {subItems.map((sub) => {
+                const subActive = isSubActive(item, sub);
+                return (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    onClick={() => navigate(`${item.ruta}?${sub.query}`)}
+                    className={`w-full text-left px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all block cursor-pointer ${
+                      subActive
+                        ? 'text-primary bg-primary/10 font-black border-l-2 border-primary'
+                        : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-bright'
+                    }`}
+                  >
+                    {sub.titulo}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
@@ -256,43 +310,68 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
   const renderMobileItem = (item: ItemMenu) => {
     const active = isActive(item.ruta);
     const subItems = getSubMenus(item.id);
+    const tieneSubItems = subItems && subItems.length > 0;
+    const estaDesplegado = submenusDesplegados[item.id] ?? active;
+
+    const manejarClicMobile = () => {
+      if (tieneSubItems) {
+        toggleSubmenu(item.id);
+      } else {
+        navigate(item.ruta);
+        setColapsado(false);
+      }
+    };
 
     return (
       <div key={item.id} className="space-y-0.5">
         <button
-          onClick={() => {
-            navigate(item.ruta);
-            if (!subItems || subItems.length === 0) setColapsado(false);
-          }}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${
-            active ? 'bg-indigo-500/10 text-indigo-400' : 'text-slate-400'
+          type="button"
+          onClick={manejarClicMobile}
+          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer ${
+            active ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface-variant'
           }`}
         >
-          <span className="material-symbols-outlined text-xl">{item.icono}</span>
-          <span className="text-sm font-medium">{item.titulo}</span>
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-xl">{item.icono}</span>
+            <span className="text-sm font-medium">{item.titulo}</span>
+          </div>
+          {tieneSubItems && (
+            <span className={`material-symbols-outlined text-sm transition-transform duration-300 ${estaDesplegado ? 'rotate-180' : ''}`}>
+              expand_more
+            </span>
+          )}
         </button>
 
-        {active && subItems && subItems.length > 0 && (
-          <div className="pl-8 pr-2 py-1 space-y-1 border-l border-slate-800 ml-5 mt-1">
-            {subItems.map((sub) => {
-              const subActive = isSubActive(item, sub);
-              return (
-                <button
-                  key={sub.id}
-                  onClick={() => {
-                    navigate(`${item.ruta}?${sub.query}`);
-                    setColapsado(false);
-                  }}
-                  className={`w-full text-left px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all block ${
-                    subActive
-                      ? 'text-indigo-400 bg-indigo-500/5 font-black'
-                      : 'text-slate-500 hover:text-slate-350'
-                  }`}
-                >
-                  {sub.titulo}
-                </button>
-              );
-            })}
+        {tieneSubItems && (
+          <div
+            className={`grid transition-all duration-300 ease-in-out border-l border-outline ml-5 mt-1 pl-3 pr-1 ${
+              estaDesplegado
+                ? 'grid-rows-[1fr] opacity-100 py-1'
+                : 'grid-rows-[0fr] opacity-0 py-0 overflow-hidden pointer-events-none'
+            }`}
+          >
+            <div className="overflow-hidden space-y-1">
+              {subItems.map((sub) => {
+                const subActive = isSubActive(item, sub);
+                return (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    onClick={() => {
+                      navigate(`${item.ruta}?${sub.query}`);
+                      setColapsado(false);
+                    }}
+                    className={`w-full text-left px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all block cursor-pointer ${
+                      subActive
+                        ? 'text-primary bg-primary/10 font-black'
+                        : 'text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    {sub.titulo}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
@@ -301,35 +380,53 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
 
   return (
     <>
+      {/* Sidebar Desktop */}
       <aside
-        className={`hidden lg:flex flex-col bg-[#0c0e16] border-r border-slate-800 transition-all duration-300 ease-in-out ${
+        className={`hidden lg:flex flex-col bg-primary-container border-r border-outline transition-all duration-300 ease-in-out text-on-surface ${
           colapsado ? 'w-20' : 'w-64'
         } fixed left-0 top-0 h-full z-40 shadow-2xl`}
       >
-        <div className={`flex items-center h-16 px-4 border-b border-slate-800 justify-center`}>
-          <div className="flex items-center gap-2 overflow-hidden">
-            <img src={logoImg} className="w-8 h-8 object-contain" alt="LigaCenter" />
-            {!colapsado && <span className="font-black text-white text-sm uppercase font-sans tracking-tight">LigaCenter</span>}
+        {/* Cabecera del Sidebar con botón de contraer en la parte superior (Estilo ChatGPT / IDE) */}
+        <div className="flex items-center justify-between h-16 px-4 border-b border-outline">
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <img src={logoImg} className="w-8 h-8 object-contain shrink-0" alt="LigaCenter" />
+            {!colapsado && (
+              <span className="font-black text-on-surface text-sm uppercase font-sans tracking-tight truncate">
+                LigaCenter
+              </span>
+            )}
           </div>
+          <button
+            type="button"
+            onClick={() => setColapsado(!colapsado)}
+            className="w-8 h-8 rounded-xl bg-surface hover:bg-surface-bright border border-outline flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-all cursor-pointer shadow-2xs hover:scale-105"
+            title={colapsado ? 'Expandir barra lateral' : 'Contraer barra lateral'}
+          >
+            <span className="material-symbols-outlined text-lg transition-transform duration-300">
+              {colapsado ? 'side_navigation' : 'view_sidebar'}
+            </span>
+          </button>
         </div>
 
+        {/* Navegación Principal */}
         <nav className="flex-1 py-6 px-3 space-y-4 overflow-y-auto">
           {visibleTorneo.length > 0 && (
             <div className="space-y-1">
               {!colapsado ? (
                 <button
+                  type="button"
                   onClick={() => setSeccionTorneoAbierta(!seccionTorneoAbierta)}
                   aria-expanded={seccionTorneoAbierta}
                   aria-controls="menu-torneo"
-                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-black text-slate-350 hover:text-white uppercase tracking-widest transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-black text-on-surface-variant hover:text-on-surface uppercase tracking-widest transition-colors cursor-pointer"
                 >
                   <span>Torneo Activo</span>
-                  <span className="material-symbols-outlined text-xs">
-                    {seccionTorneoAbierta ? 'expand_less' : 'expand_more'}
+                  <span className={`material-symbols-outlined text-xs transition-transform duration-300 ${seccionTorneoAbierta ? 'rotate-180' : ''}`}>
+                    expand_more
                   </span>
                 </button>
               ) : (
-                <div className="border-b border-slate-850 my-2" />
+                <div className="border-b border-outline my-2" />
               )}
               {(seccionTorneoAbierta || colapsado) && (
                 <div id="menu-torneo" className="space-y-1">
@@ -343,18 +440,19 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
             <div className="space-y-1">
               {!colapsado ? (
                 <button
+                  type="button"
                   onClick={() => setSeccionAdminAbierta(!seccionAdminAbierta)}
                   aria-expanded={seccionAdminAbierta}
                   aria-controls="menu-admin"
-                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-black text-slate-350 hover:text-white uppercase tracking-widest transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-black text-on-surface-variant hover:text-on-surface uppercase tracking-widest transition-colors cursor-pointer"
                 >
                   <span>Administración</span>
-                  <span className="material-symbols-outlined text-xs">
-                    {seccionAdminAbierta ? 'expand_less' : 'expand_more'}
+                  <span className={`material-symbols-outlined text-xs transition-transform duration-300 ${seccionAdminAbierta ? 'rotate-180' : ''}`}>
+                    expand_more
                   </span>
                 </button>
               ) : (
-                <div className="border-b border-slate-850 my-2" />
+                <div className="border-b border-outline my-2" />
               )}
               {(seccionAdminAbierta || colapsado) && (
                 <div id="menu-admin" className="space-y-1">
@@ -368,18 +466,19 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
             <div className="space-y-1">
               {!colapsado ? (
                 <button
+                  type="button"
                   onClick={() => setSeccionAjustesAbierta(!seccionAjustesAbierta)}
                   aria-expanded={seccionAjustesAbierta}
                   aria-controls="menu-ajustes"
-                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-black text-slate-350 hover:text-white uppercase tracking-widest transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-black text-on-surface-variant hover:text-on-surface uppercase tracking-widest transition-colors cursor-pointer"
                 >
                   <span>Ajustes</span>
-                  <span className="material-symbols-outlined text-xs">
-                    {seccionAjustesAbierta ? 'expand_less' : 'expand_more'}
+                  <span className={`material-symbols-outlined text-xs transition-transform duration-300 ${seccionAjustesAbierta ? 'rotate-180' : ''}`}>
+                    expand_more
                   </span>
                 </button>
               ) : (
-                <div className="border-b border-slate-850 my-2" />
+                <div className="border-b border-outline my-2" />
               )}
               {(seccionAjustesAbierta || colapsado) && (
                 <div id="menu-ajustes" className="space-y-1">
@@ -390,114 +489,112 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
           )}
         </nav>
 
-        <div className="border-t border-slate-800 bg-[#090a10]">
-          <div className={`p-3.5 flex items-center gap-3 ${colapsado ? 'justify-center' : 'justify-start'}`}>
+        {/* Pie de Barra Lateral: Usuario & Cerrar Sesión */}
+        <div className="border-t border-outline bg-surface-dim p-3.5 space-y-2">
+          <div className={`flex items-center gap-3 ${colapsado ? 'justify-center' : 'justify-start'}`}>
             <div className={`w-9 h-9 rounded-full border flex items-center justify-center font-black text-xs shrink-0 select-none ${colorAvatar.bg} ${colorAvatar.text}`} title={usuario?.name}>
               {inicialUsuario}
             </div>
             {!colapsado && (
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-white truncate leading-none">{usuario?.name}</p>
-                <p className="text-[9px] text-slate-500 font-bold uppercase truncate mt-1 leading-none">{rolCampeonato === 'team_delegate' ? 'Delegado de Equipo' : rol.replace('_', ' ')}</p>
+                <p className="text-xs font-bold text-on-surface truncate leading-none">{usuario?.name}</p>
+                <p className="text-[9px] text-on-surface-variant font-bold uppercase truncate mt-1 leading-none">
+                  {rolCampeonato === 'team_delegate' ? 'Delegado de Equipo' : rol.replace('_', ' ')}
+                </p>
               </div>
             )}
           </div>
 
-          <div className="px-3">
-            <button
-              onClick={() => setColapsado(!colapsado)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-slate-400 hover:bg-[#1a1d2a] hover:text-slate-200 cursor-pointer ${colapsado ? 'justify-center' : 'justify-start'}`}
-              title={colapsado ? 'Expandir barra lateral' : ''}
-            >
-              <span className="material-symbols-outlined text-xl text-slate-400">
-                {colapsado ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left'}
-              </span>
-              {!colapsado && <span className="text-xs font-bold uppercase tracking-wider">Contraer barra</span>}
-            </button>
-          </div>
-
-          <div className="px-3 pb-3">
-            <button
-              onClick={manejarCerrarSesion}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-slate-400 hover:bg-[#1a1d2a] hover:text-slate-200 cursor-pointer ${colapsado ? 'justify-center' : 'justify-start'}`}
-              title={colapsado ? 'Cerrar Sesión' : ''}
-            >
-              <span className="material-symbols-outlined text-xl text-slate-400">logout</span>
-              {!colapsado && <span className="text-xs font-bold uppercase tracking-wider">Cerrar Sesión</span>}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={manejarCerrarSesion}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 text-on-surface-variant hover:bg-surface-bright hover:text-on-surface cursor-pointer ${colapsado ? 'justify-center' : 'justify-start'}`}
+            title={colapsado ? 'Cerrar Sesión' : ''}
+          >
+            <span className="material-symbols-outlined text-lg text-rose-500">logout</span>
+            {!colapsado && <span className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">Cerrar Sesión</span>}
+          </button>
         </div>
       </aside>
 
+      {/* Dispositivos Móviles */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
-        <button onClick={() => setColapsado(!colapsado)} className="bg-[#11131c] border border-slate-800 p-2 rounded-xl shadow-lg text-white">
+        <button
+          type="button"
+          onClick={() => setColapsado(!colapsado)}
+          className="bg-primary-container border border-outline p-2 rounded-xl shadow-lg text-on-surface cursor-pointer"
+        >
           <span className="material-symbols-outlined">menu</span>
         </button>
       </div>
 
       {colapsado && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setColapsado(false)} />
+        <div className="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-xs" onClick={() => setColapsado(false)} />
       )}
 
       <div
-        className={`lg:hidden fixed top-0 left-0 h-full w-64 bg-[#0c0e16] border-r border-slate-800 z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`lg:hidden fixed top-0 left-0 h-full w-64 bg-primary-container border-r border-outline z-50 transform transition-transform duration-300 ease-in-out text-on-surface ${
           colapsado ? 'translate-x-0' : '-translate-x-full'
         } flex flex-col justify-between`}
       >
         <div>
-          <div className="flex items-center justify-between h-16 px-4 border-b border-slate-800">
-            <img src={logoImg} className="w-8 h-8 object-contain" alt="LigaCenter" />
-            <button onClick={() => setColapsado(false)} className="text-slate-400">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-outline">
+            <div className="flex items-center gap-2">
+              <img src={logoImg} className="w-8 h-8 object-contain" alt="LigaCenter" />
+              <span className="font-black text-on-surface text-sm uppercase">LigaCenter</span>
+            </div>
+            <button type="button" onClick={() => setColapsado(false)} className="text-on-surface-variant">
               <span className="material-symbols-outlined">close</span>
             </button>
           </div>
           <nav className="py-6 px-3 space-y-4 max-h-[70vh] overflow-y-auto">
             {visibleTorneo.length > 0 && (
               <div className="space-y-1">
-                <p className="px-3 py-1.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">Torneo Activo</p>
+                <p className="px-3 py-1.5 text-[9px] font-black text-on-surface-variant uppercase tracking-widest">Torneo Activo</p>
                 {visibleTorneo.map(renderMobileItem)}
               </div>
             )}
 
             {visibleAdmin.length > 0 && (
               <div className="space-y-1">
-                <p className="px-3 py-1.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">Administración</p>
+                <p className="px-3 py-1.5 text-[9px] font-black text-on-surface-variant uppercase tracking-widest">Administración</p>
                 {visibleAdmin.map(renderMobileItem)}
               </div>
             )}
 
             {visibleAjustes.length > 0 && (
               <div className="space-y-1">
-                <p className="px-3 py-1.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">Ajustes</p>
+                <p className="px-3 py-1.5 text-[9px] font-black text-on-surface-variant uppercase tracking-widest">Ajustes</p>
                 {visibleAjustes.map(renderMobileItem)}
               </div>
             )}
           </nav>
         </div>
 
-        <div className="border-t border-slate-800 bg-[#090a10]">
-          <div className="p-4 flex items-center gap-3">
+        <div className="border-t border-outline bg-surface-dim p-4 space-y-3">
+          <div className="flex items-center gap-3">
             <div className={`w-9 h-9 rounded-full border flex items-center justify-center font-black text-xs shrink-0 select-none ${colorAvatar.bg} ${colorAvatar.text}`}>
               {inicialUsuario}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-white truncate leading-none">{usuario?.name}</p>
-              <p className="text-[9px] text-slate-500 font-bold uppercase truncate mt-1 leading-none">{rolCampeonato === 'team_delegate' ? 'Delegado de Equipo' : rol.replace('_', ' ')}</p>
+              <p className="text-xs font-bold text-on-surface truncate leading-none">{usuario?.name}</p>
+              <p className="text-[9px] text-on-surface-variant font-bold uppercase truncate mt-1 leading-none">
+                {rolCampeonato === 'team_delegate' ? 'Delegado de Equipo' : rol.replace('_', ' ')}
+              </p>
             </div>
           </div>
 
-          <div className="px-4 pb-4">
-            <button
-              onClick={async () => {
-                setColapsado(false);
-                await manejarCerrarSesion();
-              }}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-[#1a1d2a] border border-slate-800 rounded-xl text-slate-400 hover:text-slate-200 text-xs font-extrabold uppercase tracking-wider"
-            >
-              <span className="material-symbols-outlined text-sm text-slate-400">logout</span>
-              Cerrar Sesión
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              setColapsado(false);
+              await manejarCerrarSesion();
+            }}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-surface border border-outline rounded-xl text-rose-600 dark:text-rose-400 hover:bg-surface-bright text-xs font-extrabold uppercase tracking-wider cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-sm">logout</span>
+            Cerrar Sesión
+          </button>
         </div>
       </div>
     </>

@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             DisciplineSeeder::class,
             StatisticTypeSeeder::class,
             DisciplineStatisticSeeder::class,
+            TestDataSeeder::class,
         ]);
     }
 }
