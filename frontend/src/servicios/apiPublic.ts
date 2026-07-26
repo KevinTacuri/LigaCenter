@@ -132,6 +132,8 @@ export interface PublicMatch {
     current_period: number | null;
     discipline_id: number;
     category_id: number;
+    discipline_name?: string | null; // ← AGREGAR
+    category_name?: string | null; // ← AGREGAR
     category?: {
         id: number;
         name: string;
@@ -210,6 +212,9 @@ export const publicApi = {
 
     getDisciplines: () =>
         apiPublic.get<{ success: boolean; data: PublicDiscipline[]; message: string }>('/public/disciplines'),
+
+    getCategories: (params?: { discipline_id?: number }) =>
+        apiPublic.get<{ success: boolean; data: PublicCategory[]; message: string }>('/public/categories', { params }),
 
     getChampionships: (params?: { discipline_id?: number; search?: string; page?: number }) =>
         apiPublic.get<{ success: boolean; data: { data: PublicChampionship[] }; message: string }>('/public/championships', { 

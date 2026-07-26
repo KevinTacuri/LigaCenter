@@ -5,14 +5,15 @@ import { TiempoEnVivo } from '../../componentes/public/TiempoEnVivo';
 import type { 
   PublicMatch, 
   PublicDiscipline, 
-  PublicChampionship 
+  PublicChampionship,
+  PublicCategory
 } from '../../servicios/apiPublic';
 import { publicApi } from '../../servicios/apiPublic';
 
 interface CategoryGroup {
   id: string;
   name: string;
-  discipline_id: string;
+  discipline_id: number;
   matches: PublicMatch[];
   loaded: boolean;
   loading: boolean;
@@ -20,7 +21,7 @@ interface CategoryGroup {
 }
 
 interface DisciplineGroup {
-  id: string;
+  id: number;
   name: string;
   categories: {
     [categoryId: string]: CategoryGroup;
@@ -34,7 +35,7 @@ interface ExpandedState {
   [championshipId: number]: {
     expanded: boolean;
     disciplines: {
-      [disciplineId: string]: DisciplineGroup;
+      [disciplineId: number]: DisciplineGroup;
     }
   }
 }
@@ -44,6 +45,7 @@ export const HomePublic: React.FC = () => {
   const [disciplines, setDisciplines] = useState<PublicDiscipline[]>([]);
   const [championships, setChampionships] = useState<PublicChampionship[]>([]);
   const [allMatches, setAllMatches] = useState<PublicMatch[]>([]);
+  const [categories, setCategories] = useState<PublicCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDiscipline, setSelectedDiscipline] = useState<number | null>(null);
   
@@ -101,59 +103,53 @@ export const HomePublic: React.FC = () => {
   const handleMouseEnter = () => setIsPaused(true);
   const handleMouseLeave = () => setIsPaused(false);
 
-  const extraerInfoDelNombre = (nombreEquipo: string): { equipo: string; disciplina: string; categoria: string } => {
-    const partes = nombreEquipo.split(' - ');
-    if (partes.length >= 3) {
-      return {
-        equipo: partes[0],
-        disciplina: partes[1],
-        categoria: partes[2]
-      };
+  const obtenerNombreEquipo = (nombreCompleto: string | undefined): string => {
+    if (!nombreCompleto) return '—';
+    const partes = nombreCompleto.split(' - ');
+    return partes[0] || nombreCompleto;
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'en_vivo':
+        return <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-500/20 text-red-400 animate-pulse">EN VIVO</span>;
+      case 'finalizado':
+        return <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-700/50 text-slate-400">FINALIZADO</span>;
+      default:
+        return <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-500/20 text-blue-400">PRÓXIMO</span>;
     }
-    return {
-      equipo: nombreEquipo,
-      disciplina: 'Sin disciplina',
-      categoria: 'Sin categoría'
-    };
   };
 
   const loadData = async (mostrarCargando: boolean = true) => {
     if (mostrarCargando) setLoading(true);
     try {
-      const [matchesRes, disciplinesRes, championshipsRes, allMatchesRes] = await Promise.all([
+      const [matchesRes, disciplinesRes, championshipsRes, allMatchesRes, categoriesRes] = await Promise.all([
         publicApi.getHighlightedMatches(),
         publicApi.getDisciplines(),
         publicApi.getChampionships({ discipline_id: selectedDiscipline || undefined }),
-        publicApi.getMatches({ discipline_id: selectedDiscipline || undefined })
+        publicApi.getMatches({ discipline_id: selectedDiscipline || undefined }),
+        publicApi.getCategories()
       ]);
 
       setHighlightedMatches(matchesRes.data.data || []);
       setDisciplines(disciplinesRes.data.data || []);
+      setCategories(categoriesRes.data.data || []);
       
       const allMatchesData = allMatchesRes.data.data?.data || [];
       setAllMatches(allMatchesData);
 
       let champData = championshipsRes.data.data?.data || [];
-      
+
       if (selectedDiscipline !== null) {
         const champIdsConDisciplina = new Set<number>();
-        allMatchesData.forEach(match => {
+        allMatchesData.forEach((match: PublicMatch) => {
           const champId = match.championship?.id;
           if (!champId) return;
-          
-          const homeInfo = extraerInfoDelNombre(match.home_team?.name || '');
-          const awayInfo = extraerInfoDelNombre(match.away_team?.name || '');
-          
-          const disciplinaEncontrada = 
-            homeInfo.disciplina === disciplines.find(d => d.id === selectedDiscipline)?.name ||
-            awayInfo.disciplina === disciplines.find(d => d.id === selectedDiscipline)?.name;
-            
-          if (disciplinaEncontrada) {
+          if (match.discipline_id === selectedDiscipline) {
             champIdsConDisciplina.add(champId);
           }
         });
-        
-        champData = champData.filter(champ => champIdsConDisciplina.has(champ.id));
+        champData = champData.filter((champ: PublicChampionship) => champIdsConDisciplina.has(champ.id));
       }
       
       setChampionships(champData);
@@ -161,17 +157,17 @@ export const HomePublic: React.FC = () => {
       const newExpandedState: ExpandedState = {};
       
       const matchesPorCampeonato: { [champId: number]: PublicMatch[] } = {};
-      allMatchesData.forEach(match => {
+      allMatchesData.forEach((match: PublicMatch) => {
         const champId = match.championship?.id;
         if (!champId) return;
-        if (!champData.some(c => c.id === champId)) return;
+        if (!champData.some((c: PublicChampionship) => c.id === champId)) return;
         if (!matchesPorCampeonato[champId]) {
           matchesPorCampeonato[champId] = [];
         }
         matchesPorCampeonato[champId].push(match);
       });
 
-      Object.keys(matchesPorCampeonato).forEach(champIdStr => {
+      Object.keys(matchesPorCampeonato).forEach((champIdStr: string) => {
         const champId = parseInt(champIdStr);
         const champMatches = matchesPorCampeonato[champId];
         
@@ -180,52 +176,52 @@ export const HomePublic: React.FC = () => {
           disciplines: {}
         };
 
-        const disciplinasUnicas = new Set<string>();
-        champMatches.forEach(match => {
-          const homeInfo = extraerInfoDelNombre(match.home_team?.name || '');
-          const awayInfo = extraerInfoDelNombre(match.away_team?.name || '');
-          if (homeInfo.disciplina !== 'Sin disciplina') {
-            disciplinasUnicas.add(homeInfo.disciplina);
-          }
-          if (awayInfo.disciplina !== 'Sin disciplina') {
-            disciplinasUnicas.add(awayInfo.disciplina);
+        const disciplinasUnicas = new Set<number>();
+        champMatches.forEach((match: PublicMatch) => {
+          if (match.discipline_id) {
+            disciplinasUnicas.add(match.discipline_id);
           }
         });
 
-        disciplinasUnicas.forEach(disciplina => {
-          const categoriasUnicas = new Set<string>();
-          champMatches.forEach(match => {
-            const homeInfo = extraerInfoDelNombre(match.home_team?.name || '');
-            const awayInfo = extraerInfoDelNombre(match.away_team?.name || '');
-            if (homeInfo.disciplina === disciplina) {
-              categoriasUnicas.add(homeInfo.categoria);
-            }
-            if (awayInfo.disciplina === disciplina) {
-              categoriasUnicas.add(awayInfo.categoria);
+        disciplinasUnicas.forEach((disciplineId: number) => {
+          // USAR match.discipline_name DEL PRIMER PARTIDO QUE TENGA ESE discipline_id
+          const firstMatchWithDiscipline = champMatches.find((m: PublicMatch) => m.discipline_id === disciplineId);
+          const disciplineName = firstMatchWithDiscipline?.discipline_name || 
+                                disciplines.find((d: PublicDiscipline) => d.id === disciplineId)?.name || 
+                                `Disciplina ${disciplineId}`;
+          
+          const categoriasUnicas = new Set<number>();
+          champMatches.forEach((match: PublicMatch) => {
+            if (match.discipline_id === disciplineId && match.category_id) {
+              categoriasUnicas.add(match.category_id);
             }
           });
 
-          const categories: { [catId: string]: CategoryGroup } = {};
-          let catIndex = 0;
-          categoriasUnicas.forEach(categoria => {
-            const catId = `cat-${disciplina}-${catIndex}`;
-            categories[catId] = {
+          const categoriesObj: { [catId: string]: CategoryGroup } = {};
+          
+          if (categoriasUnicas.size > 0) {
+            categoriasUnicas.forEach((categoryId: number) => {
+              const firstMatchWithCategory = champMatches.find((m: PublicMatch) => m.category_id === categoryId);
+              const categoryName = firstMatchWithCategory?.category_name || 
+                                  categories.find((c: PublicCategory) => c.id === categoryId)?.name || 
+                                  `Categoría ${categoryId}`;
+              const catId = `cat-${disciplineId}-${categoryId}`;
+              categoriesObj[catId] = {
+                id: catId,
+                name: categoryName,
+                discipline_id: disciplineId,
+                matches: [],
+                loaded: false,
+                loading: false,
+                expanded: false
+              };
+            });
+          } else {
+            const catId = `cat-${disciplineId}-default`;
+            categoriesObj[catId] = {
               id: catId,
-              name: categoria,
-              discipline_id: disciplina,
-              matches: [],
-              loaded: false,
-              loading: false,
-              expanded: false
-            };
-            catIndex++;
-          });
-
-          if (Object.keys(categories).length === 0) {
-            categories[`cat-${disciplina}-default`] = {
-              id: `cat-${disciplina}-default`,
               name: 'Categoría Única',
-              discipline_id: disciplina,
+              discipline_id: disciplineId,
               matches: [],
               loaded: false,
               loading: false,
@@ -233,10 +229,10 @@ export const HomePublic: React.FC = () => {
             };
           }
 
-          newExpandedState[champId].disciplines[disciplina] = {
-            id: disciplina,
-            name: disciplina,
-            categories: categories,
+          newExpandedState[champId].disciplines[disciplineId] = {
+            id: disciplineId,
+            name: disciplineName,
+            categories: categoriesObj,
             expanded: false,
             loaded: false,
             loading: false
@@ -254,7 +250,7 @@ export const HomePublic: React.FC = () => {
   };
 
   const toggleChampionship = (championshipId: number) => {
-    setExpandedState(prev => ({
+    setExpandedState((prev: ExpandedState) => ({
       ...prev,
       [championshipId]: {
         ...prev[championshipId],
@@ -263,22 +259,20 @@ export const HomePublic: React.FC = () => {
     }));
   };
 
-  const toggleDiscipline = (championshipId: number, disciplineId: string) => {
+  const toggleDiscipline = (championshipId: number, disciplineId: number) => {
     const discipline = expandedState[championshipId]?.disciplines[disciplineId];
     if (!discipline) return;
 
     if (!discipline.expanded && !discipline.loaded) {
-      const champMatches = allMatches.filter(m => m.championship?.id === championshipId);
+      const champMatches = allMatches.filter((m: PublicMatch) => m.championship?.id === championshipId);
       
       const updatedCategories: { [catId: string]: CategoryGroup } = {};
       
-      Object.keys(discipline.categories).forEach(catId => {
+      Object.keys(discipline.categories).forEach((catId: string) => {
         const category = discipline.categories[catId];
-        const categoryMatches = champMatches.filter(match => {
-          const homeInfo = extraerInfoDelNombre(match.home_team?.name || '');
-          const awayInfo = extraerInfoDelNombre(match.away_team?.name || '');
-          return (homeInfo.disciplina === disciplineId && homeInfo.categoria === category.name) ||
-                 (awayInfo.disciplina === disciplineId && awayInfo.categoria === category.name);
+        const categoryId = parseInt(catId.split('-')[2]);
+        const categoryMatches = champMatches.filter((match: PublicMatch) => {
+          return match.discipline_id === disciplineId && match.category_id === categoryId;
         });
         
         updatedCategories[catId] = {
@@ -289,7 +283,7 @@ export const HomePublic: React.FC = () => {
         };
       });
 
-      setExpandedState(prev => ({
+      setExpandedState((prev: ExpandedState) => ({
         ...prev,
         [championshipId]: {
           ...prev[championshipId],
@@ -307,7 +301,7 @@ export const HomePublic: React.FC = () => {
       return;
     }
 
-    setExpandedState(prev => ({
+    setExpandedState((prev: ExpandedState) => ({
       ...prev,
       [championshipId]: {
         ...prev[championshipId],
@@ -322,8 +316,8 @@ export const HomePublic: React.FC = () => {
     }));
   };
 
-  const toggleCategory = (championshipId: number, disciplineId: string, categoryId: string) => {
-    setExpandedState(prev => {
+  const toggleCategory = (championshipId: number, disciplineId: number, categoryId: string) => {
+    setExpandedState((prev: ExpandedState) => {
       const discipline = prev[championshipId]?.disciplines[disciplineId];
       if (!discipline) return prev;
       
@@ -352,27 +346,6 @@ export const HomePublic: React.FC = () => {
     });
   };
 
-  const obtenerNombreEquipo = (nombreCompleto: string | undefined): string => {
-    if (!nombreCompleto) return '—';
-    const partes = nombreCompleto.split(' - ');
-    return partes[0] || nombreCompleto;
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'en_vivo':
-        return <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-500/20 text-red-400 animate-pulse">EN VIVO</span>;
-      case 'finalizado':
-        return <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-700/50 text-slate-400">FINALIZADO</span>;
-      default:
-        return <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-500/20 text-blue-400">PRÓXIMO</span>;
-    }
-  };
-
-  const handleSearch = (query: string) => {
-    window.location.href = `/buscar?q=${encodeURIComponent(query)}`;
-  };
-
   const getShortChampionshipName = (name: string): string => {
     if (name.includes(' - ')) {
       return name.split(' - ')[0];
@@ -380,11 +353,8 @@ export const HomePublic: React.FC = () => {
     return name;
   };
 
-  const getShortDisciplineName = (name: string): string => {
-    if (name.includes(' - ')) {
-      return name.split(' - ')[0];
-    }
-    return name;
+  const handleSearch = (query: string) => {
+    window.location.href = `/buscar?q=${encodeURIComponent(query)}`;
   };
 
   return (
@@ -399,7 +369,7 @@ export const HomePublic: React.FC = () => {
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map(i => (
+            {[1, 2, 3, 4].map((i: number) => (
               <div key={i} className="bg-[#11131c] rounded-xl p-4 animate-pulse h-32" />
             ))}
           </div>
@@ -421,10 +391,9 @@ export const HomePublic: React.FC = () => {
                 width: 'max-content',
               }}
             >
-              {highlightedMatches.map(match => {
-                const homeInfo = extraerInfoDelNombre(match.home_team?.name || '');
-                const disciplina = homeInfo.disciplina !== 'Sin disciplina' ? homeInfo.disciplina : '';
-                const categoria = homeInfo.categoria !== 'Sin categoría' ? homeInfo.categoria : '';
+              {highlightedMatches.map((match: PublicMatch) => {
+                const disciplina = disciplines.find((d: PublicDiscipline) => d.id === match.discipline_id)?.name || '';
+                const categoria = categories.find((c: PublicCategory) => c.id === match.category_id)?.name || '';
                 
                 return (
                   <Link
@@ -486,10 +455,9 @@ export const HomePublic: React.FC = () => {
                   </Link>
                 );
               })}
-              {highlightedMatches.map(match => {
-                const homeInfo = extraerInfoDelNombre(match.home_team?.name || '');
-                const disciplina = homeInfo.disciplina !== 'Sin disciplina' ? homeInfo.disciplina : '';
-                const categoria = homeInfo.categoria !== 'Sin categoría' ? homeInfo.categoria : '';
+              {highlightedMatches.map((match: PublicMatch) => {
+                const disciplina = disciplines.find((d: PublicDiscipline) => d.id === match.discipline_id)?.name || '';
+                const categoria = categories.find((c: PublicCategory) => c.id === match.category_id)?.name || '';
                 
                 return (
                   <Link
@@ -572,7 +540,7 @@ export const HomePublic: React.FC = () => {
           >
             Todos
           </button>
-          {disciplines.map(discipline => (
+          {disciplines.map((discipline: PublicDiscipline) => (
             <button
               key={discipline.id}
               onClick={() => setSelectedDiscipline(discipline.id)}
@@ -621,7 +589,7 @@ export const HomePublic: React.FC = () => {
 
         {loading ? (
           <div className="grid grid-cols-1 gap-3">
-            {[1, 2, 3].map(i => (
+            {[1, 2, 3].map((i: number) => (
               <div key={i} className="bg-[#11131c] rounded-xl p-4 animate-pulse h-16" />
             ))}
           </div>
@@ -631,7 +599,7 @@ export const HomePublic: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {championships.map(champ => {
+            {championships.map((champ: PublicChampionship) => {
               const champState = expandedState[champ.id];
               const isExpanded = champState?.expanded || false;
               const disciplinesList = Object.values(champState?.disciplines || {});
@@ -686,7 +654,7 @@ export const HomePublic: React.FC = () => {
                         </div>
                       ) : (
                         <div className="divide-y divide-slate-800/40">
-                          {disciplinesList.map(discipline => {
+                          {disciplinesList.map((discipline: DisciplineGroup) => {
                             const isDiscExpanded = discipline.expanded || false;
                             const categoriesList = Object.values(discipline.categories || {});
 
@@ -701,11 +669,11 @@ export const HomePublic: React.FC = () => {
                                       chevron_right
                                     </span>
                                     <span className="font-bold text-slate-300 text-xs">
-                                      {getShortDisciplineName(discipline.name)}
+                                      {discipline.name}
                                     </span>
                                     {discipline.loaded && (
                                       <span className="text-[9px] text-slate-500 font-medium">
-                                        ({categoriesList.reduce((acc, cat) => acc + cat.matches.length, 0)} partidos)
+                                        ({categoriesList.reduce((acc: number, cat: CategoryGroup) => acc + cat.matches.length, 0)} partidos)
                                       </span>
                                     )}
                                   </div>
@@ -723,7 +691,7 @@ export const HomePublic: React.FC = () => {
                                       </div>
                                     ) : (
                                       <div className="space-y-2">
-                                        {categoriesList.map(category => {
+                                        {categoriesList.map((category: CategoryGroup) => {
                                           const isCatExpanded = category.expanded || false;
                                           const matchesList = category.matches || [];
 
@@ -754,7 +722,7 @@ export const HomePublic: React.FC = () => {
                                                     </div>
                                                   ) : (
                                                     <div className="space-y-1.5">
-                                                      {matchesList.map(match => (
+                                                      {matchesList.map((match: PublicMatch) => (
                                                         <Link
                                                           key={match.id}
                                                           to={`/partidos/${match.id}`}

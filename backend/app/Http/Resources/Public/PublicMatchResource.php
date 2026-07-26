@@ -45,6 +45,8 @@ class PublicMatchResource extends JsonResource
             'current_period' => $this->current_period ?? 1,
             'category_id' => $this->category_id,
             'discipline_id' => $this->discipline_id,
+            'discipline_name' => $this->discipline?->name ?? null,
+            'category_name' => $this->category?->name ?? null,
             'venue' => $this->whenLoaded('venue', function () {
                 return [
                     'id' => $this->venue->id,

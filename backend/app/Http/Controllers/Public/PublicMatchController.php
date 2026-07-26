@@ -48,7 +48,7 @@ class PublicMatchController extends PublicController
             })
             ->orderBy('match_date', 'desc')
             ->orderBy('match_time', 'desc')
-            ->paginate(20);
+            ->get();
 
         return $this->successResponse(
             PublicMatchResource::collection($matches)->response()->getData(true),

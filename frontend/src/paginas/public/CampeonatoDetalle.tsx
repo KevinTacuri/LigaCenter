@@ -240,8 +240,7 @@ export const CampeonatoDetalle: React.FC = () => {
                 }),
                 publicApi.getChampionshipMatches(championshipId, {
                     category_id: selectedCategory,
-                    discipline_id: selectedDiscipline,
-                    page: paginaPartidos
+                    discipline_id: selectedDiscipline
                 })
             ]);
 
@@ -259,8 +258,25 @@ export const CampeonatoDetalle: React.FC = () => {
             }
 
             if (matchesRes.data?.success) {
-                matchData = matchesRes.data.data?.data || [];
-                console.log('Partidos filtrados (desde backend):', matchData);
+                // Obtener TODOS los partidos (todas las páginas)
+                let allMatchData = matchesRes.data.data?.data || [];
+                const total = matchesRes.data.data?.meta?.total || 0;
+                const lastPage = matchesRes.data.data?.meta?.last_page || 1;
+                
+                // Si hay más páginas, obtenerlas
+                for (let page = 2; page <= lastPage; page++) {
+                    const pageRes = await publicApi.getChampionshipMatches(championshipId, {
+                        category_id: selectedCategory,
+                        discipline_id: selectedDiscipline,
+                        page: page
+                    });
+                    if (pageRes.data.success) {
+                        allMatchData = [...allMatchData, ...(pageRes.data.data?.data || [])];
+                    }
+                }
+                
+                console.log('Todos los partidos (todas las páginas):', allMatchData);
+                matchData = allMatchData;
                 setAllMatches(matchData);
             }
 
@@ -271,11 +287,9 @@ export const CampeonatoDetalle: React.FC = () => {
                 }
             });
 
-            const totalMatches = matchesRes.data.data?.meta?.total || matchData.length;
-
             setStats({
                 totalTeams: standingData.length,
-                totalMatches: totalMatches,
+                totalMatches: matchData.length,
                 totalGoals,
                 avgGoals: matchData.length > 0 
                     ? Number((totalGoals / matchData.length).toFixed(2))

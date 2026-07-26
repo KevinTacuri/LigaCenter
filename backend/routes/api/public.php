@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Public\PublicChampionshipController;
 use App\Http\Controllers\Public\PublicDisciplineController;
+use App\Http\Controllers\Public\PublicCategoryController;
 use App\Http\Controllers\Public\PublicMatchController;
 use App\Http\Controllers\Public\PublicPlayerController;
 use App\Http\Controllers\Public\PublicSearchController;
@@ -21,6 +22,9 @@ Route::prefix('public')->group(function () {
 
     // Disciplinas
     Route::get('/disciplines', [PublicDisciplineController::class, 'index']);
+    
+    // Categorías
+    Route::get('/categories', [PublicCategoryController::class, 'index']);
 
     // Campeonatos
     Route::get('/championships', [PublicChampionshipController::class, 'index']);
