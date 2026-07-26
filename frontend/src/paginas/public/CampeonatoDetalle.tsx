@@ -238,7 +238,11 @@ export const CampeonatoDetalle: React.FC = () => {
                     category_id: selectedCategory,
                     discipline_id: selectedDiscipline
                 }),
-                publicApi.getChampionshipMatches(championshipId)
+                publicApi.getChampionshipMatches(championshipId, {
+                    category_id: selectedCategory,
+                    discipline_id: selectedDiscipline,
+                    page: paginaPartidos
+                })
             ]);
 
             console.log('Respuesta standings COMPLETA:', standingsRes);
@@ -255,21 +259,8 @@ export const CampeonatoDetalle: React.FC = () => {
             }
 
             if (matchesRes.data?.success) {
-                const allMatchData = matchesRes.data.data?.data || [];
-                console.log('Todos los partidos:', allMatchData);
-                
-                matchData = allMatchData.filter((m: any) => {
-                    const matchCategoryId = m.category_id || m.group?.category_id || m.category?.id;
-                    const matchDisciplineId = m.discipline_id || m.discipline?.id || m.championship?.disciplines?.[0]?.id;
-                    
-                    const coincide = matchCategoryId === selectedCategory && matchDisciplineId === selectedDiscipline;
-                    
-                    if (!coincide) {
-                        console.log(`Partido ${m.id}: category_id=${matchCategoryId} (buscado ${selectedCategory}), discipline_id=${matchDisciplineId} (buscado ${selectedDiscipline})`);
-                    }
-                    return coincide;
-                });
-                console.log('Partidos filtrados:', matchData);
+                matchData = matchesRes.data.data?.data || [];
+                console.log('Partidos filtrados (desde backend):', matchData);
                 setAllMatches(matchData);
             }
 
@@ -280,9 +271,11 @@ export const CampeonatoDetalle: React.FC = () => {
                 }
             });
 
+            const totalMatches = matchesRes.data.data?.meta?.total || matchData.length;
+
             setStats({
                 totalTeams: standingData.length,
-                totalMatches: matchData.length,
+                totalMatches: totalMatches,
                 totalGoals,
                 avgGoals: matchData.length > 0 
                     ? Number((totalGoals / matchData.length).toFixed(2))

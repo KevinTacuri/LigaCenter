@@ -230,11 +230,11 @@ export const publicApi = {
     getChampionshipMatches: (id: number, params?: { 
         page?: number; 
         status?: string; 
-        category_id?: number;
-        discipline_id?: number;
+        category_id?: number; 
+        discipline_id?: number 
     }) =>
-        apiPublic.get<{ success: boolean; data: { data: PublicMatch[] }; message: string }>(
-            `/public/championships/${id}/matches`, 
+        apiPublic.get<{ success: boolean; data: { data: PublicMatch[]; meta?: any }; message: string }>(
+            `/public/championships/${id}/matches`,
             { params }
         ),
 

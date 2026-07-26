@@ -110,6 +110,9 @@ class PublicChampionshipController extends PublicController
         }
 
         $status = $request->get('status');
+        $categoryId = $request->get('category_id');
+        $disciplineId = $request->get('discipline_id');
+        $page = $request->get('page', 1);
 
         $matches = GameMatch::where('championship_id', $id)
             ->with(['localTeam', 'visitorTeam', 'venue', 'group', 'championship'])
@@ -124,8 +127,20 @@ class PublicChampionshipController extends PublicController
                 }
                 return $query->where('status', $status);
             })
-            ->orderBy('match_date', 'desc')
-            ->orderBy('match_time', 'desc')
+            ->when($categoryId, function ($query) use ($categoryId) {
+                return $query->where('category_id', $categoryId);
+            })
+            ->when($disciplineId, function ($query) use ($disciplineId) {
+                return $query->where('discipline_id', $disciplineId);
+            })
+            ->whereHas('localTeam', function ($q) {
+                $q->where('registration_status', 'aprobado');
+            })
+            ->whereHas('visitorTeam', function ($q) {
+                $q->where('registration_status', 'aprobado');
+            })
+            ->orderBy('match_date', 'asc')
+            ->orderBy('match_time', 'asc')
             ->paginate(20);
 
         return $this->successResponse(
