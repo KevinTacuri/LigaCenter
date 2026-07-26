@@ -97,6 +97,26 @@ export interface PublicChampionship {
     matches_count: number;
 }
 
+export interface PublicCategory {
+    id: number;
+    name: string;
+    format: string;
+    format_settings: any;
+    description: string | null;
+    gender_type: string | null;
+    age_min: number | null;
+    age_max: number | null;
+    championship_discipline_id: number;
+    discipline_id: number;
+    discipline_name: string;
+}
+
+export interface PublicChampionshipDiscipline {
+    id: number;
+    name: string;
+    championship_discipline_id: number;
+}
+
 export interface PublicMatch {
     id: number;
     home_team: PublicTeam;
@@ -137,6 +157,8 @@ export interface PublicMatch {
 export interface PublicStanding {
     position: number | null;
     team: PublicTeam;
+    team_id?: number;
+    category_id?: number; 
     matches_played: number;
     wins: number;
     draws: number;
@@ -205,10 +227,15 @@ export const publicApi = {
             `/public/championships/${id}/standings`
         ),
 
-    getChampionshipMatches: (id: number, page?: number) =>
+    getChampionshipMatches: (id: number, params?: { 
+        page?: number; 
+        status?: string; 
+        category_id?: number;
+        discipline_id?: number;
+    }) =>
         apiPublic.get<{ success: boolean; data: { data: PublicMatch[] }; message: string }>(
             `/public/championships/${id}/matches`, 
-            { params: { page } }
+            { params }
         ),
 
     getChampionshipStatistics: (id: number) =>
@@ -216,9 +243,21 @@ export const publicApi = {
             `/public/championships/${id}/statistics`
         ),
 
-    getChampionshipStandingsComplete: (id: number) =>
+    getChampionshipStandingsComplete: (id: number, params?: { category_id?: number; discipline_id?: number }) =>
         apiPublic.get<{ success: boolean; data: PublicStanding[]; message: string }>(
-            `/public/championships/${id}/standings-complete`
+            `/public/championships/${id}/standings-complete`,
+            { params }
+        ),
+
+    getChampionshipDisciplines: (id: number) =>
+        apiPublic.get<{ success: boolean; data: PublicChampionshipDiscipline[]; message: string }>(
+            `/public/championships/${id}/disciplines`
+        ),
+
+    getChampionshipCategories: (id: number, params?: { discipline_id?: number }) =>
+        apiPublic.get<{ success: boolean; data: PublicCategory[]; message: string }>(
+            `/public/championships/${id}/categories`,
+            { params }
         ),
     
     getMatches: (params?: { discipline_id?: number; status?: string; championship_id?: number; search?: string; page?: number }) =>

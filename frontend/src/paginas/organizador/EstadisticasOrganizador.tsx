@@ -190,33 +190,41 @@ export const EstadisticasOrganizador: React.FC = () => {
 
       let posicionesData: Posicion[] = [];
       if (selectedCategory && campeonatoActivo) {
-        const posRes = await serviciosResultados.obtenerPosicionesCompletas({
-          championship_id: champId,
-          category_id: selectedCategory,
-          discipline_id: selectedDiscipline || undefined
-        });
-        if (posRes.success) {
-          posicionesData = posRes.data || [];
-          setPosiciones(posicionesData);
-          if (totalEquipos === 0 && posicionesData.length > 0) {
-            setTotalEquipos(posicionesData.length);
+          const posRes = await serviciosResultados.obtenerPosicionesCompletas({
+              championship_id: champId,
+              category_id: selectedCategory,
+              discipline_id: selectedDiscipline || undefined
+          });
+          if (posRes.success) {
+              // Filtrar solo equipos aprobados
+              posicionesData = (posRes.data || []).filter((pos: any) => 
+                  pos.team?.registration_status === 'aprobado'
+              );
+              setPosiciones(posicionesData);
+              if (totalEquipos === 0 && posicionesData.length > 0) {
+                  setTotalEquipos(posicionesData.length);
+              }
           }
-        }
       } else {
-        setPosiciones([]);
+          setPosiciones([]);
       }
 
       const matchRes = await serviciosFixture.obtenerPartidos();
       let matches: Partido[] = [];
       if (matchRes.success) {
-        matches = matchRes.data || [];
-        if (selectedDiscipline) {
-          matches = matches.filter((m: any) => m.discipline_id === selectedDiscipline);
-        }
-        if (selectedCategory) {
-          matches = matches.filter((m: any) => m.category_id === selectedCategory);
-        }
-        setPartidos(matches);
+          matches = matchRes.data || [];
+          // Filtrar solo partidos de equipos aprobados
+          matches = matches.filter((m: any) => 
+              m.local_team?.registration_status === 'aprobado' &&
+              m.visitor_team?.registration_status === 'aprobado'
+          );
+          if (selectedDiscipline) {
+              matches = matches.filter((m: any) => m.discipline_id === selectedDiscipline);
+          }
+          if (selectedCategory) {
+              matches = matches.filter((m: any) => m.category_id === selectedCategory);
+          }
+          setPartidos(matches);
       }
 
       const sanRes = await serviciosResultados.obtenerSanciones(selectedTeamSancion || undefined);
@@ -226,14 +234,16 @@ export const EstadisticasOrganizador: React.FC = () => {
 
       const equiposRes = await serviciosParticipantes.obtenerEquipos();
       if (equiposRes.success) {
-        let equiposData = equiposRes.data || [];
-        if (selectedCategory) {
-          equiposData = equiposData.filter(eq => eq.category?.id === selectedCategory);
-        }
-        if (selectedDiscipline) {
-          equiposData = equiposData.filter(eq => eq.discipline?.id === selectedDiscipline);
-        }
-        setEquipos(equiposData);
+          let equiposData = equiposRes.data || [];
+          // Filtrar solo equipos aprobados
+          equiposData = equiposData.filter(eq => eq.registration_status === 'aprobado');
+          if (selectedCategory) {
+              equiposData = equiposData.filter(eq => eq.category?.id === selectedCategory);
+          }
+          if (selectedDiscipline) {
+              equiposData = equiposData.filter(eq => eq.discipline?.id === selectedDiscipline);
+          }
+          setEquipos(equiposData);
       }
 
       if (selectedDiscipline) {
