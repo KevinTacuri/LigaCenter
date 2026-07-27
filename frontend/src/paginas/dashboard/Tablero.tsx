@@ -616,7 +616,7 @@ export const Tablero: React.FC = () => {
 
                     <button
                       type="button"
-                      onClick={() => navegar('/publico')}
+                      onClick={() => navegar(campeonatoActivo ? `/campeonatos/${campeonatoActivo.id}` : '/publico')}
                       className="flex items-center gap-1.5 bg-primary text-white hover:opacity-90 px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs"
                     >
                       <span className="material-symbols-outlined text-sm">visibility</span>
@@ -816,7 +816,7 @@ export const Tablero: React.FC = () => {
                         </h3>
                         <button
                           type="button"
-                          onClick={() => navegar('/publico')}
+                          onClick={() => navegar(`/campeonatos/${campeonatoActivo.id}`)}
                           className="text-primary hover:opacity-75 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors cursor-pointer"
                         >
                           <span>Ver Tabla</span>

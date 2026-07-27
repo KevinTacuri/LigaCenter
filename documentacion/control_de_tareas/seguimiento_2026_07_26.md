@@ -106,6 +106,12 @@ Se eliminó la sección redundante de "Módulos Disponibles" (opciones ya presen
 
 ---
 
+### 9. 🔗 Corrección de Redirección en "Ver Tabla" y "Portal Público" (`Tablero.tsx`)
+* **Inconsistencia Detectada:** El botón "Ver Tabla" del panel *Líderes de la Liga (Top 3)* y *Portal Público* redirigía a la ruta genérica `/publico`.
+* **Solución:** Se actualizó la navegación para dirigir específicamente a la vista pública del torneo activo: `/campeonatos/${campeonatoActivo.id}`.
+
+---
+
 ## 📁 Archivos Creados o Modificados
 
 | Archivo | Descripción del Cambio |
