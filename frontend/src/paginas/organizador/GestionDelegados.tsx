@@ -180,9 +180,8 @@ export const GestionDelegados: React.FC = () => {
     try {
       const res = await clienteApi.get('/users?exclude_privileged=1&per_page=100');
       if (res.data && res.data.data && Array.isArray(res.data.data.users)) {
-        // Filtrado estricto en frontend de respaldo
         const aptos = res.data.data.users.filter((u: Usuario) => 
-          !u.roles?.some(r => r.name === 'administrador' || r.name === 'organizador')
+          !u.roles?.some(r => r === 'administrador' || r === 'organizador')
         );
         setUsuariosDisponibles(aptos);
       }

@@ -74,7 +74,7 @@ export const EstadisticasOrganizador: React.FC = () => {
   }, [equipos, selectedCategory, selectedDiscipline]);
 
   const getDisciplinaActual = () => {
-    const cd = championshipDisciplines.find(cd => cd.id === selectedDiscipline);
+    const cd = championshipDisciplines.find(cd => cd.discipline_id === selectedDiscipline);
     return cd?.discipline;
   };
 

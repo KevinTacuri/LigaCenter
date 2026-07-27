@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sileo } from 'sileo';
 import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
@@ -148,6 +148,12 @@ export const MesaControl: React.FC = () => {
   const [configCategorias, setConfigCategorias] = useState<any[]>([]);
   const [configCargandoDisciplinas, setConfigCargandoDisciplinas] = useState(false);
 
+  const minutosPorTiempoRef = useRef(minutosPorTiempo);
+
+  useEffect(() => {
+    minutosPorTiempoRef.current = minutosPorTiempo;
+  }, [minutosPorTiempo]);
+
   const PASOS_AYUDA_MESA = [
     { paso: '1', titulo: 'Seleccionar Partido', desc: 'Elige un partido de la lista de la izquierda para cargar su acta oficial y planilla de incidencias.', icono: 'ads_click' },
     { paso: '2', titulo: 'Registrar Incidencias', desc: 'Agrega goles, tarjetas (amarillas/rojas) y lesiones en tiempo real. Selecciona el equipo, jugador y minuto del evento.', icono: 'sports_soccer' },
@@ -189,7 +195,7 @@ export const MesaControl: React.FC = () => {
   const obtenerTiposIncidenciaDeporte = (): IncidentTypeConfig[] => {
     if (!partidoSeleccionado) return DEFAULT_INCIDENTS;
     const deporte = partidoSeleccionado.discipline?.name?.toLowerCase().trim() || '';
-    if (deporte.includes('futbol') || deporte.includes('fútbol') || deporte.includes('soccer')) {
+    if (deporte.includes('futbol') || deporte.includes('fútbol') || deporte.includes('soccer') || deporte.includes('fulbito')) {
       return FUTBOL_INCIDENTS;
     }
     if (deporte.includes('basquet') || deporte.includes('básquet') || deporte.includes('basketball') || deporte.includes('baloncesto')) {
@@ -242,7 +248,48 @@ export const MesaControl: React.FC = () => {
     let rules: SportRules;
     let duration = minutosPorTiempo;
     
-    if (name.includes('futbol') || name.includes('fútbol') || name.includes('soccer')) {
+    if (name.includes('futbol') || name.includes('fútbol') || name.includes('soccer') || name.includes('fulbito')) {
+      rules = NORMAS_DEPORTES.futbol;
+    } else if (name.includes('basquet') || name.includes('básquet') || name.includes('basketball') || name.includes('baloncesto')) {
+      rules = NORMAS_DEPORTES.basquet;
+      duration = 10;
+    } else if (name.includes('balon mano') || name.includes('balonmano') || name.includes('handball')) {
+      rules = NORMAS_DEPORTES['balon mano'];
+      duration = 30;
+    } else if (name.includes('voley') || name.includes('voleibol') || name.includes('volleyball')) {
+      rules = NORMAS_DEPORTES.voley;
+    } else {
+      rules = {
+        hasTimer: true,
+        periodLabel: 'Tiempo',
+        scoreLabel: 'Puntos',
+        getPeriods: () => [
+          { name: '1° Tiempo', accumulatedMinutes: 0, durationMinutes: 40 },
+          { name: '2° Tiempo', accumulatedMinutes: 40, durationMinutes: 40 },
+        ]
+      };
+    }
+    
+    const periods = rules.getPeriods(duration);
+    return { ...rules, periods };
+  };
+
+  const obtenerNormasDeporteConDuration = (durationMinutes: number): SportRules & { periods: PeriodConfig[] } => {
+    if (!partidoSeleccionado) {
+      const defaultRules = {
+        hasTimer: true,
+        periodLabel: 'Tiempo',
+        scoreLabel: 'Puntos',
+        getPeriods: (durationMinutes: number) => [{ name: '1° Tiempo', accumulatedMinutes: 0, durationMinutes: durationMinutes }]
+      };
+      const periods = defaultRules.getPeriods(durationMinutes);
+      return { ...defaultRules, periods };
+    }
+    const name = partidoSeleccionado.discipline?.name?.toLowerCase().trim() || '';
+    let rules: SportRules;
+    let duration = durationMinutes;
+    
+    if (name.includes('futbol') || name.includes('fútbol') || name.includes('soccer') || name.includes('fulbito')) {
       rules = NORMAS_DEPORTES.futbol;
     } else if (name.includes('basquet') || name.includes('básquet') || name.includes('basketball') || name.includes('baloncesto')) {
       rules = NORMAS_DEPORTES.basquet;
@@ -451,6 +498,42 @@ export const MesaControl: React.FC = () => {
         const now = new Date();
         const diff = Math.floor((now.getTime() - timerStartedAt.getTime()) / 1000);
         const totalTime = baseElapsedTime + diff;
+        
+        const normas = obtenerNormasDeporteConDuration(minutosPorTiempoRef.current);
+        const periodo = normas.periods[periodoActualIdx];
+        const duracionPeriodo = periodo ? periodo.durationMinutes * 60 : 0;
+        const tiempoExtraEnSegundos = hasExtraTime ? extraTimeMinutes * 60 : 0;
+        const limiteTotal = duracionPeriodo + tiempoExtraEnSegundos;
+        
+        if (duracionPeriodo > 0 && totalTime >= limiteTotal) {
+          setSegundosTranscurridos(limiteTotal);
+          setCronometroActivo(false);
+          setTimerStartedAt(null);
+          sincronizarTimerConBackend(limiteTotal, periodoActualIdx, 'finished');
+          
+          const nextIdx = periodoActualIdx + 1;
+          const nextPeriodo = normas.periods[nextIdx];
+          
+          if (nextPeriodo && nextPeriodo.durationMinutes > 0) {
+            setPeriodoActualIdx(nextIdx);
+            setSegundosTranscurridos(0);
+            setBaseElapsedTime(0);
+            sincronizarTimerConBackend(0, nextIdx, 'stopped');
+            
+            sileo.info({
+              title: 'Tiempo Finalizado',
+              description: `${periodo?.name || 'Periodo'} completado${hasExtraTime && extraTimeMinutes > 0 ? ` (${extraTimeMinutes} min de tiempo extra incluido)` : ''}. Inicia ${nextPeriodo.name} cuando estés listo.`
+            });
+          } else {
+            sileo.info({
+              title: 'Partido Finalizado',
+              description: `Todos los periodos han sido completados.${hasExtraTime && extraTimeMinutes > 0 ? ` (${extraTimeMinutes} min de tiempo extra usado)` : ''}`
+            });
+          }
+          
+          return;
+        }
+        
         setSegundosTranscurridos(totalTime);
         
         if (totalTime % 15 === 0) {
@@ -462,7 +545,7 @@ export const MesaControl: React.FC = () => {
     return () => {
       clearInterval(intervalo);
     };
-  }, [cronometroActivo, timerStartedAt, baseElapsedTime]);
+  }, [cronometroActivo, timerStartedAt, baseElapsedTime, periodoActualIdx, hasExtraTime, extraTimeMinutes, minutosPorTiempo]);
 
   const cambiarEstadoPartidoMesa = async (nuevoSubEstado: 'jugando' | 'descanso' | 'suspendido' | 'finalizado' | 'programado') => {
     if (!partidoSeleccionado) return;
@@ -595,6 +678,16 @@ export const MesaControl: React.FC = () => {
           await serviciosParticipantes.actualizarConfiguracionDisciplina(cd.id, {
             match_duration_minutes: configMinutosTiempo
           });
+          
+          const discResActualizado = await serviciosParticipantes.obtenerDisciplinasCampeonato(parseInt(champId));
+          if (discResActualizado.success) {
+            const cdActualizado = discResActualizado.data.find((d: any) => d.discipline_id === configDisciplinaId);
+            if (cdActualizado?.match_duration_minutes) {
+              setMinutosPorTiempo(cdActualizado.match_duration_minutes);
+              minutosPorTiempoRef.current = cdActualizado.match_duration_minutes;
+            }
+          }
+          
           setMostrarConfigModal(false);
           const disciplinaNombre = configDisciplinas.find(d => d.id === configDisciplinaId)?.name || '';
           mostrarMensaje(`Configuración guardada: ${configMinutosTiempo} minutos por tiempo para ${disciplinaNombre}`);
@@ -931,7 +1024,10 @@ export const MesaControl: React.FC = () => {
   const cambiarPeriodo = (nuevoIdx: number) => {
     const normas = obtenerNormasDeporte();
     if (nuevoIdx < 0 || nuevoIdx >= normas.periods.length) return;
-    
+    if (nuevoIdx < periodoActualIdx && segundosTranscurridos > 0) {
+      mostrarMensaje('No puedes regresar a un periodo ya completado.', true);
+      return;
+    }
     setPeriodoActualIdx(nuevoIdx);
     
     if (normas.hasTimer) {
@@ -1181,7 +1277,7 @@ export const MesaControl: React.FC = () => {
                   <div className="flex items-center gap-3 bg-surface border border-outline px-4 py-2 rounded-xl mt-4 z-10 text-on-surface">
                     <button
                       type="button"
-                      disabled={periodoActualIdx === 0}
+                      disabled={periodoActualIdx === 0 || (periodoActualIdx > 0 && segundosTranscurridos > 0)}
                       onClick={() => cambiarPeriodo(periodoActualIdx - 1)}
                       className="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-dim border border-outline hover:bg-surface-bright disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold text-xs text-on-surface"
                       title={`Ver ${obtenerNormasDeporte().periodLabel} anterior`}
