@@ -14,6 +14,8 @@ class Category extends Model
         'name',
         'format',
         'format_settings',
+        'championship_id',
+        'discipline_id',
         'championship_discipline_id',
         'description',
         'gender_type',
