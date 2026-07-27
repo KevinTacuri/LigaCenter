@@ -47,8 +47,10 @@ export const Tablero: React.FC = () => {
   const membresiaActiva = campeonatoActivo && usuario?.championship_memberships?.find(
     (m: any) => m.championship_id === campeonatoActivo.id
   );
-  const esDelegado = membresiaActiva && membresiaActiva.role === 'team_delegate';
-  const equipoNombre = esDelegado ? (membresiaActiva.team_name || 'tu equipo') : null;
+  const esOrganizador = tieneRol('organizador') || tieneRol('administrador') || membresiaActiva?.role === 'organizer' || membresiaActiva?.role === 'admin';
+  const esDelegado = (membresiaActiva && membresiaActiva.role === 'team_delegate') || tieneRol('delegado') || tieneRol('delegado_equipo');
+  const esDelegadoPuro = esDelegado && !esOrganizador;
+  const equipoNombre = esDelegado ? (membresiaActiva?.team_name || 'tu equipo') : null;
 
   useEffect(() => {
     if (sessionStorage.getItem('vista_publica_activa') === 'true') {
@@ -86,6 +88,15 @@ export const Tablero: React.FC = () => {
   const [alertasOperativas, setAlertasOperativas] = useState<any[]>([]);
   const [topEquipos, setTopEquipos] = useState<any[]>([]);
   const [cargandoMetricasTorneo, setCargandoMetricasTorneo] = useState(false);
+
+  const [bannerBienvenidaCerrado, setBannerBienvenidaCerrado] = useState(() => {
+    return localStorage.getItem('banner_bienvenida_cerrado') === 'true';
+  });
+
+  const cerrarBannerBienvenida = () => {
+    setBannerBienvenidaCerrado(true);
+    localStorage.setItem('banner_bienvenida_cerrado', 'true');
+  };
 
   // Carga de snapshot y estadísticas de administradores
   useEffect(() => {
@@ -349,54 +360,66 @@ export const Tablero: React.FC = () => {
       {/* Barra lateral integrada */}
       <BarraLateral rol={usuario.roles?.[0] || 'usuario_publico'} />
 
-      {/* Contenido principal con margen izquierdo en desktop */}
-      <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
+      {/* Contenido principal con margen adaptativo */}
+      <div className={`${esDelegadoPuro ? 'w-full' : 'lg:ml-64'} flex flex-col min-h-screen relative z-10 transition-all duration-300`}>
         <CabeceraEstandar />
 
         {/* Contenido Principal */}
         <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto space-y-6 px-4 md:px-8">
           
-          {/* Banner de Bienvenida Adaptativo */}
-          <section className="relative rounded-2xl bg-primary-container border border-outline p-5 shadow-xs overflow-hidden group text-on-surface">
-            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-primary via-indigo-500 to-emerald-500"></div>
-            
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-              <div className="space-y-1">
-                <h2 className="text-base md:text-lg font-black tracking-tight leading-none flex items-center gap-2">
-                  ¡Bienvenido, <span className="text-primary">{usuario.name}</span>!
+          {/* Banner de Bienvenida Adaptativo y Descartable */}
+          {!bannerBienvenidaCerrado && (
+            <section className="relative rounded-2xl bg-primary-container border border-outline p-5 shadow-xs overflow-hidden group text-on-surface">
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-primary via-indigo-500 to-emerald-500"></div>
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10 pr-6">
+                <div className="space-y-1">
+                  <h2 className="text-base md:text-lg font-black tracking-tight leading-none flex items-center gap-2">
+                    ¡Bienvenido, <span className="text-primary">{usuario.name}</span>!
+                    {esDelegado && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase tracking-wider">
+                        <span className="material-symbols-outlined text-xs">shield</span>
+                        Delegado Oficial
+                      </span>
+                    )}
+                  </h2>
+                  <p className="text-on-surface-variant text-xs max-w-2xl font-medium leading-relaxed">
+                    {esDelegado 
+                      ? `Eres el delegado oficial de ${equipoNombre} en este campeonato. Inscribe a tus deportistas para participar.`
+                      : 'Panel de control principal del torneo. Monitorea partidos en tiempo real, estadísticas y estado del campeonato.'
+                    }
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
                   {esDelegado && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase tracking-wider">
-                      <span className="material-symbols-outlined text-xs">shield</span>
-                      Delegado Oficial
+                    <span className="px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-xs">groups</span>
+                      Equipo: {equipoNombre}
                     </span>
                   )}
-                </h2>
-                <p className="text-on-surface-variant text-xs max-w-2xl font-medium leading-relaxed">
-                  {esDelegado 
-                    ? `Eres el delegado oficial de ${equipoNombre} en este campeonato. Puedes registrar tus jugadores, dorsales y ver tus partidos.`
-                    : 'Panel de control principal del torneo. Monitorea partidos en tiempo real, estadísticas y estado del campeonato.'
-                  }
-                </p>
+                  {usuario.roles?.map((rol, i) => (
+                    <span 
+                      key={i} 
+                      className="px-2.5 py-1 rounded-md bg-surface border border-outline text-on-surface-variant text-[10px] font-bold uppercase tracking-wider"
+                    >
+                      {rol.replace('_', ' ')}
+                    </span>
+                  ))}
+                </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 shrink-0">
-                {esDelegado && (
-                  <span className="px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-xs">groups</span>
-                    Equipo: {equipoNombre}
-                  </span>
-                )}
-                {usuario.roles?.map((rol, i) => (
-                  <span 
-                    key={i} 
-                    className="px-2.5 py-1 rounded-md bg-surface border border-outline text-on-surface-variant text-[10px] font-bold uppercase tracking-wider"
-                  >
-                    {rol.replace('_', ' ')}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </section>
+              {/* Botón Cerrar Banner */}
+              <button
+                type="button"
+                onClick={cerrarBannerBienvenida}
+                className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full border border-outline flex items-center justify-center text-on-surface-variant hover:bg-surface transition-colors cursor-pointer"
+                title="Descartar este mensaje de bienvenida"
+              >
+                <span className="material-symbols-outlined text-xs">close</span>
+              </button>
+            </section>
+          )}
 
           {/* Vista para Administrador Global / Super Admin */}
           {tieneRol('administrador') ? (
@@ -572,6 +595,123 @@ export const Tablero: React.FC = () => {
                 </button>
               </div>
             )
+          ) : esDelegadoPuro ? (
+            /* ─────────────────────────────────────────────────────────────
+               PANEL ESPECIALIZADO E INTUITIVO PARA EL DELEGADO DE EQUIPO
+               ───────────────────────────────────────────────────────────── */
+            <div className="space-y-6 animate-fadeIn text-on-surface">
+              {/* Hero Banner de Acción Principal: Planilla de Jugadores */}
+              <section className="bg-gradient-to-br from-primary/10 via-primary-container to-surface border border-outline rounded-3xl p-6 md:p-8 shadow-md relative overflow-hidden">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+                  <div className="space-y-2 max-w-xl">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/15 text-primary border border-primary/20 text-xs font-black uppercase tracking-wider">
+                      <span className="material-symbols-outlined text-sm">badge</span>
+                      <span>Panel Oficial de Delegado</span>
+                    </div>
+                    <h2 className="text-xl md:text-2xl font-black tracking-tight leading-tight">
+                      Planilla de Jugadores de <span className="text-primary">{equipoNombre || 'tu Equipo'}</span>
+                    </h2>
+                    <p className="text-xs text-on-surface-variant font-medium leading-relaxed">
+                      Inscribe a los integrantes de tu plantel para habilitarlos en la competencia. Puedes subir la planilla completa en formato Excel / CSV o registrar tus deportistas uno a uno.
+                    </p>
+                  </div>
+
+                  {/* Botón Único Principal del Delegado */}
+                  <div className="shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => navegar('/tablero/participantes?tab=planilla-jugadores')}
+                      className="w-full sm:w-auto flex items-center justify-center gap-3 bg-primary text-white hover:opacity-90 px-8 py-4 rounded-2xl text-xs sm:text-sm font-black uppercase tracking-wider transition-all cursor-pointer shadow-lg active:scale-95 group"
+                    >
+                      <span className="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">person_add</span>
+                      <span>Registrar Jugadores</span>
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              {/* Tarjetas KPI de Estado del Delegado */}
+              <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-primary-container border border-outline rounded-2xl p-5 shadow-xs flex items-center gap-4 text-on-surface">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-2xl">groups</span>
+                  </div>
+                  <div>
+                    <span className="text-on-surface-variant block text-[10px] uppercase font-bold tracking-wider">Plantel Inscrito</span>
+                    <span className="text-xl font-black">{metricasTorneo.totalJugadores} Jugadores</span>
+                    <span className="text-[10px] text-on-surface-variant block font-medium">Registrados en tu planilla</span>
+                  </div>
+                </div>
+
+                <div className="bg-primary-container border border-outline rounded-2xl p-5 shadow-xs flex items-center gap-4 text-on-surface">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-2xl">check_circle</span>
+                  </div>
+                  <div>
+                    <span className="text-on-surface-variant block text-[10px] uppercase font-bold tracking-wider">Estado del Registro</span>
+                    <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block mt-0.5">Habilitado</span>
+                    <span className="text-[10px] text-on-surface-variant block font-medium">Equipo aprobado en el torneo</span>
+                  </div>
+                </div>
+
+                <div className="bg-primary-container border border-outline rounded-2xl p-5 shadow-xs flex items-center gap-4 text-on-surface">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-2xl">event</span>
+                  </div>
+                  <div>
+                    <span className="text-on-surface-variant block text-[10px] uppercase font-bold tracking-wider">Próximo Encuentro</span>
+                    <button
+                      onClick={() => navegar('/tablero/fixture?tab=partidos')}
+                      className="text-xs font-black text-primary uppercase tracking-wider block mt-0.5 hover:underline cursor-pointer"
+                    >
+                      Ver Calendario
+                    </button>
+                    <span className="text-[10px] text-on-surface-variant block font-medium">Fechas de partidos</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* Accesos Rápidos Directos */}
+              <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-primary-container border border-outline rounded-2xl p-6 shadow-xs space-y-4 text-on-surface">
+                  <div className="flex items-center justify-between border-b border-outline pb-3">
+                    <h3 className="font-extrabold text-xs uppercase tracking-wider flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary text-base">format_list_bulleted</span>
+                      Plantel de Jugadores
+                    </h3>
+                    <button
+                      onClick={() => navegar('/tablero/participantes?tab=planilla-jugadores')}
+                      className="text-primary hover:underline text-xs font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Ver Planilla</span>
+                      <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                    </button>
+                  </div>
+                  <p className="text-xs text-on-surface-variant leading-relaxed">
+                    Recuerda verificar los dorsales y nombres completos de tus deportistas antes de la primera fecha del campeonato.
+                  </p>
+                </div>
+
+                <div className="bg-primary-container border border-outline rounded-2xl p-6 shadow-xs space-y-4 text-on-surface">
+                  <div className="flex items-center justify-between border-b border-outline pb-3">
+                    <h3 className="font-extrabold text-xs uppercase tracking-wider flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary text-base">calendar_month</span>
+                      Calendario de Partidos
+                    </h3>
+                    <button
+                      onClick={() => navegar('/tablero/fixture?tab=partidos')}
+                      className="text-primary hover:underline text-xs font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Ver Partidos</span>
+                      <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                    </button>
+                  </div>
+                  <p className="text-xs text-on-surface-variant leading-relaxed">
+                    Consulta la fecha, hora y cancha asignada para cada partido de tu equipo en este campeonato.
+                  </p>
+                </div>
+              </section>
+            </div>
           ) : (
             /* ─────────────────────────────────────────────────────────────
                NUEVO DASHBOARD OPERATIVO DE CONTROL DEL CAMPEONATO ACTIVO

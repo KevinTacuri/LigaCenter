@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../../contexto/ContextoCampeonato';
-import { serviciosCampeonatos, serviciosParticipantes, serviciosUsuarios } from '../../servicios/api';
+import { serviciosCampeonatos, serviciosParticipantes, clienteApi } from '../../servicios/api';
 import type { ChampionshipUser, Usuario, Equipo } from '../../servicios/api';
 import { BarraLateral } from '../../componentes/BarraLateral';
 import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
@@ -14,10 +14,16 @@ interface FormularioAgregar {
   team_id: string;
 }
 
-const ROLES_DISPONIBLES = [
-  { value: 'team_delegate', label: 'Delegado de Equipo' },
-  { value: 'score_table', label: 'Encargado de Mesa' },
-  { value: 'referee', label: 'Árbitro' },
+interface FormularioCrearNuevo {
+  name: string;
+  email: string;
+  password: string;
+  role: string;
+}
+
+const ROLES_OFICIALES = [
+  { value: 'score_table', label: 'Encargado de Mesa de Control' },
+  { value: 'referee', label: 'Árbitro de Encuentros' },
 ];
 
 export const GestionDelegados: React.FC = () => {
@@ -32,14 +38,23 @@ export const GestionDelegados: React.FC = () => {
   const [cargandoUsuarios, setCargandoUsuarios] = useState(false);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
+  const [modoModal, setModoModal] = useState<'asignar' | 'crear'>('crear');
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  
   const [form, setForm] = useState<FormularioAgregar>({
     user_id: '',
-    role: 'team_delegate',
+    role: 'score_table',
     team_id: '',
   });
-  const [guardando, setGuardando] = useState(false);
 
+  const [formNuevo, setFormNuevo] = useState<FormularioCrearNuevo>({
+    name: '',
+    email: '',
+    password: '',
+    role: 'score_table',
+  });
+
+  const [guardando, setGuardando] = useState(false);
   const [settings, setSettings] = useState<any>({});
   const [fechasLimites, setFechasLimites] = useState<Record<string, string>>({});
 
@@ -152,7 +167,7 @@ export const GestionDelegados: React.FC = () => {
       if (resMiembros.success) setMiembros(resMiembros.data);
       if (resEquipos.success) setEquipos(resEquipos.data);
     } catch {
-      setErrorLocal('Error al cargar los datos del campeonato.');
+      setErrorLocal('Error al cargar los oficiales del campeonato.');
     } finally {
       setCargando(false);
     }
@@ -163,18 +178,22 @@ export const GestionDelegados: React.FC = () => {
     setErrorLocal(null);
     setCargandoUsuarios(true);
     try {
-      const res = await serviciosUsuarios.obtenerUsuarios(1);
-      if (res.success) {
-        setUsuariosDisponibles(res.data.users);
+      const res = await clienteApi.get('/users?exclude_privileged=1&per_page=100');
+      if (res.data && res.data.data && Array.isArray(res.data.data.users)) {
+        // Filtrado estricto en frontend de respaldo
+        const aptos = res.data.data.users.filter((u: Usuario) => 
+          !u.roles?.some(r => r.name === 'administrador' || r.name === 'organizador')
+        );
+        setUsuariosDisponibles(aptos);
       }
     } catch {
-      setErrorLocal('Error al cargar usuarios del sistema.');
+      setErrorLocal('Error al cargar usuarios disponibles.');
     } finally {
       setCargandoUsuarios(false);
     }
   };
 
-  const manejarAgregar = async (e: React.FormEvent) => {
+  const manejarAgregarExistente = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!campeonatoActivo || !form.user_id) return;
     setGuardando(true);
@@ -186,15 +205,54 @@ export const GestionDelegados: React.FC = () => {
         team_id: form.team_id ? parseInt(form.team_id) : null,
       });
       if (res.success) {
-        sileo.success({ title: 'Usuario Asignado', description: 'El usuario ha sido agregado al campeonato.' });
+        sileo.success({ title: 'Oficial Asignado', description: 'El oficial ha sido asignado al campeonato.' });
         setMostrarFormulario(false);
-        setForm({ user_id: '', role: 'team_delegate', team_id: '' });
+        setForm({ user_id: '', role: 'score_table', team_id: '' });
         cargarDatos();
       } else {
-        setErrorLocal(res.message || 'Error al asignar usuario.');
+        setErrorLocal(res.message || 'Error al asignar oficial.');
       }
     } catch (err: any) {
       setErrorLocal(err.response?.data?.message || 'Error al conectar con el servidor.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const manejarCrearNuevoOficial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!campeonatoActivo || !formNuevo.name || !formNuevo.email || !formNuevo.password) return;
+    setGuardando(true);
+    setErrorLocal(null);
+    try {
+      // 1. Registrar usuario
+      const resReg = await clienteApi.post('/register', {
+        name: formNuevo.name,
+        email: formNuevo.email,
+        password: formNuevo.password,
+        password_confirmation: formNuevo.password,
+      });
+
+      const nuevoUsuario = resReg.data?.data?.user || resReg.data?.user;
+      if (!nuevoUsuario?.id) {
+        throw new Error('No se pudo obtener el ID del usuario registrado.');
+      }
+
+      // 2. Vincular al campeonato
+      const resVinculo = await serviciosCampeonatos.agregarUsuarioCampeonato(campeonatoActivo.id, {
+        user_id: nuevoUsuario.id,
+        role: formNuevo.role,
+        team_id: null,
+      });
+
+      if (resVinculo.success) {
+        sileo.success({ title: 'Cuenta Creada', description: `Oficial registrado como ${formNuevo.role === 'score_table' ? 'Encargado de Mesa' : 'Árbitro'}.` });
+        setMostrarFormulario(false);
+        setFormNuevo({ name: '', email: '', password: '', role: 'score_table' });
+        cargarDatos();
+      }
+    } catch (err: any) {
+      setErrorLocal(err.response?.data?.message || err.message || 'Error al crear la cuenta del oficial.');
     } finally {
       setGuardando(false);
     }
@@ -204,7 +262,7 @@ export const GestionDelegados: React.FC = () => {
     try {
       const res = await serviciosCampeonatos.actualizarRolUsuarioCampeonato(id, { role });
       if (res.success) {
-        sileo.success({ title: 'Rol Actualizado', description: 'El rol del usuario ha sido actualizado.' });
+        sileo.success({ title: 'Rol Actualizado', description: 'El rol del oficial ha sido actualizado.' });
         cargarDatos();
       }
     } catch {
@@ -220,11 +278,9 @@ export const GestionDelegados: React.FC = () => {
         cargarDatos();
       }
     } catch {
-      sileo.error({ title: 'Error', description: 'No se pudo remover el usuario.' });
+      sileo.error({ title: 'Error', description: 'No se pudo remover el oficial.' });
     }
   };
-
-
 
   const obtenerNombreEquipo = (teamId: number | null | undefined) => {
     if (!teamId) return '—';
@@ -235,240 +291,288 @@ export const GestionDelegados: React.FC = () => {
   if (!usuario) return null;
 
   return (
-    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans">
+    <div className="min-h-screen bg-background text-on-surface font-sans">
       <BarraLateral rol={usuario?.roles?.[0] || 'usuario_publico'} />
       <div className="lg:ml-64 flex flex-col min-h-screen">
-        <CabeceraEstandar titulo="Gestión de Usuarios del Campeonato" subtitulo="Asigna roles a los miembros del torneo" />
+        <CabeceraEstandar titulo="Encargados de Mesa y Oficiales" subtitulo="Gestión de Operadores de Mesa de Control y Árbitros" />
 
         <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto space-y-6 px-4 md:px-8">
           {errorLocal && (
-            <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold flex items-center gap-2">
+            <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2">
               <span className="material-symbols-outlined text-sm">error</span>
               <span>{errorLocal}</span>
             </div>
           )}
 
+          {/* Banner Informativo de Gestión de Delegados por Equipo */}
+          <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-on-surface flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-primary flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-xl">groups</span>
+              </div>
+              <div className="space-y-0.5">
+                <h4 className="text-xs font-black uppercase tracking-wider">¿Deseas administrar los Delegados de tus Equipos?</h4>
+                <p className="text-[11px] text-on-surface-variant leading-tight">
+                  Cada delegado está vinculado directamente a su equipo. Administra y crea sus cuentas en la pestaña de Equipos.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => navegar('/tablero/participantes?tab=equipos')}
+              className="shrink-0 bg-primary text-white hover:opacity-90 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+            >
+              <span>Ir a Gestión de Equipos</span>
+              <span className="material-symbols-outlined text-xs">arrow_forward</span>
+            </button>
+          </div>
+
           {/* Header con botón agregar */}
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-black text-white tracking-tight">Usuarios del Campeonato</h2>
-              <p className="text-xs text-slate-400 mt-1">
-                {campeonatoActivo?.name} — {miembros.length} miembro(s) asignado(s)
+              <h2 className="text-lg font-black text-on-surface tracking-tight">Oficiales del Campeonato</h2>
+              <p className="text-xs text-on-surface-variant mt-1">
+                {campeonatoActivo?.name} — {miembros.length} personal registrado
               </p>
             </div>
             <button
               onClick={abrirFormulario}
-              className="flex items-center gap-1.5 bg-indigo-650 hover:bg-indigo-600 text-white text-xs font-extrabold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all cursor-pointer"
+              className="flex items-center gap-1.5 bg-primary hover:opacity-90 text-white text-xs font-extrabold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs"
             >
               <span className="material-symbols-outlined text-sm">person_add</span>
-              Asignar Usuario
+              Registrar / Asignar Oficial
             </button>
           </div>
 
-          {/* Formulario de asignación */}
+          {/* Formulario Modal Dual */}
           {mostrarFormulario && (
-            <form onSubmit={manejarAgregar} className="bg-[#11131c] border border-slate-800 rounded-2xl p-5 space-y-4">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-2">
-                Nuevo Miembro del Campeonato
-              </h3>
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[999] flex items-center justify-center p-4 animate-fadeIn">
+              <div className="bg-primary-container border border-outline text-on-surface rounded-2xl p-6 space-y-4 shadow-2xl w-full max-w-2xl animate-scaleIn">
+                <div className="flex items-center justify-between border-b border-outline pb-3">
+                  <h3 className="text-sm font-black text-on-surface uppercase tracking-wider flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-base">badge</span>
+                    Alta de Personal de Apoyo Técnico
+                  </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-400 block">Usuario *</label>
-                  <select
-                    required
-                    value={form.user_id}
-                    onChange={(e) => setForm({ ...form, user_id: e.target.value })}
-                    className="w-full text-sm bg-[#0c0e16] border border-slate-800 text-white rounded-xl p-2.5 outline-none focus:border-indigo-500/50 cursor-pointer"
-                  >
-                    <option value="">-- Seleccionar Usuario --</option>
-                    {cargandoUsuarios ? (
-                      <option disabled>Cargando usuarios...</option>
-                    ) : (
-                      usuariosDisponibles.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name} ({u.email})
-                        </option>
-                      ))
-                    )}
-                  </select>
+                  {/* Tabs del Modal */}
+                  <div className="flex bg-surface rounded-xl border border-outline p-1 text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setModoModal('crear')}
+                      className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                        modoModal === 'crear' ? 'bg-primary text-white shadow-2xs' : 'text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      ➕ Registrar Cuenta
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModoModal('asignar')}
+                      className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                        modoModal === 'asignar' ? 'bg-primary text-white shadow-2xs' : 'text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      👤 Asignar Usuario
+                    </button>
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-400 block">Rol *</label>
-                  <select
-                    required
-                    value={form.role}
-                    onChange={(e) => setForm({ ...form, role: e.target.value })}
-                    className="w-full text-sm bg-[#0c0e16] border border-slate-800 text-white rounded-xl p-2.5 outline-none focus:border-indigo-500/50 cursor-pointer"
-                  >
-                    {ROLES_DISPONIBLES.map((r) => (
-                      <option key={r.value} value={r.value}>{r.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-400 block">
-                    Equipo {form.role === 'team_delegate' ? '*' : '(opcional)'}
-                  </label>
-                  <select
-                    value={form.team_id}
-                    onChange={(e) => setForm({ ...form, team_id: e.target.value })}
-                    className="w-full text-sm bg-[#0c0e16] border border-slate-800 text-white rounded-xl p-2.5 outline-none focus:border-indigo-500/50 cursor-pointer"
-                  >
-                    <option value="">-- Sin equipo --</option>
-                    {equipos.map((eq) => (
-                      <option key={eq.id} value={eq.id}>{eq.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  type="submit"
-                  disabled={guardando}
-                  className="bg-indigo-650 hover:bg-indigo-600 disabled:bg-indigo-800 text-white font-extrabold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all cursor-pointer"
-                >
-                  {guardando ? 'Asignando...' : 'Asignar al Campeonato'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMostrarFormulario(false)}
-                  className="text-slate-400 hover:text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer bg-transparent border-0"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Solicitudes de prórroga pendientes */}
-          {settings.extension_requests && settings.extension_requests.filter((r: any) => r.status === 'pendiente').length > 0 && (
-            <div className="bg-[#11131c] border border-amber-500/20 rounded-2xl p-5 space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-                <span className="material-symbols-outlined text-amber-500 text-lg">hourglass_empty</span>
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                  Solicitudes de Prórroga Pendientes
-                </h3>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {settings.extension_requests.filter((r: any) => r.status === 'pendiente').map((req: any) => {
-                  const equipoNombre = obtenerNombreEquipo(req.team_id);
-                  return (
-                    <div key={req.id} className="p-4 rounded-xl bg-[#171a26]/40 border border-slate-850 flex flex-col justify-between space-y-3">
-                      <div>
-                        <p className="text-xs font-bold text-slate-200">Equipo: <span className="text-indigo-400">{equipoNombre}</span></p>
-                        <p className="text-[10px] text-slate-400 mt-1 italic leading-relaxed">
-                          "Motivo: {req.reason}"
-                        </p>
-                        <p className="text-[10px] font-bold text-slate-300 mt-2">
-                          Prórroga sugerida: <span className="text-amber-500">{new Date(req.requested_deadline).toLocaleString('es-ES')}</span>
-                        </p>
+                {modoModal === 'crear' ? (
+                  <form onSubmit={manejarCrearNuevoOficial} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-on-surface-variant block">Nombre Completo *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ej: Carlos Ramírez"
+                          value={formNuevo.name}
+                          onChange={(e) => setFormNuevo({ ...formNuevo, name: e.target.value })}
+                          className="w-full text-xs border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none focus:border-primary"
+                        />
                       </div>
-                      <div className="flex gap-2 pt-2">
-                        <button
-                          onClick={() => manejarResolverProrroga(req.id, true)}
-                          className="px-2.5 py-1.5 rounded-lg bg-emerald-650 hover:bg-emerald-600 text-[10px] font-black uppercase tracking-wider text-white cursor-pointer transition-all border-0"
-                        >
-                          Aprobar
-                        </button>
-                        <button
-                          onClick={() => manejarResolverProrroga(req.id, false)}
-                          className="px-2.5 py-1.5 rounded-lg bg-rose-650 hover:bg-rose-650 text-[10px] font-black uppercase tracking-wider text-white cursor-pointer transition-all border-0"
-                        >
-                          Rechazar
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
-          {/* Tabla de miembros */}
-          {cargando ? (
-            <div className="py-12 flex items-center justify-center">
-              <div className="w-6 h-6 rounded-full border-2 border-slate-800 border-t-indigo-500 animate-spin" />
-            </div>
-          ) : miembros.length === 0 ? (
-            <div className="py-16 text-center">
-              <span className="material-symbols-outlined text-4xl text-slate-700 mb-3">group_off</span>
-              <p className="text-slate-500 text-sm font-semibold">No hay usuarios asignados a este campeonato</p>
-              <p className="text-slate-600 text-xs mt-1">Usa el botón "Asignar Usuario" para agregar miembros.</p>
-            </div>
-          ) : (
-            <div className="bg-[#11131c] border border-slate-800 rounded-2xl overflow-hidden">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-800 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
-                    <th className="px-5 py-3 font-black">Usuario</th>
-                    <th className="px-5 py-3 font-black">Rol</th>
-                    <th className="px-5 py-3 font-black">Equipo</th>
-                    <th className="px-5 py-3 font-black">Fecha Límite (Roster)</th>
-                    <th className="px-5 py-3 font-black">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {miembros.map((m) => (
-                    <tr key={m.id} className="hover:bg-[#171a26]/40 transition-colors">
-                      <td className="px-5 py-3.5">
-                        <div className="font-bold text-white text-xs">{m.user?.name || '—'}</div>
-                        <div className="text-[10px] text-slate-500">{m.user?.email || ''}</div>
-                      </td>
-                      <td className="px-5 py-3.5">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-on-surface-variant block">Correo Electrónico *</label>
+                        <input
+                          type="email"
+                          required
+                          placeholder="mesa@torneo.com"
+                          value={formNuevo.email}
+                          onChange={(e) => setFormNuevo({ ...formNuevo, email: e.target.value })}
+                          className="w-full text-xs border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none focus:border-primary"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-on-surface-variant block">Contraseña de Acceso *</label>
+                        <input
+                          type="password"
+                          required
+                          minLength={8}
+                          placeholder="Mínimo 8 caracteres"
+                          value={formNuevo.password}
+                          onChange={(e) => setFormNuevo({ ...formNuevo, password: e.target.value })}
+                          className="w-full text-xs border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none focus:border-primary"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-on-surface-variant block">Rol de Campo / Mesa *</label>
                         <select
-                          value={m.role}
-                          onChange={(e) => manejarCambiarRol(m.id, e.target.value)}
-                          className="bg-[#0c0e16] border border-slate-800 text-white text-[10px] rounded-lg px-2 py-1.5 outline-none cursor-pointer font-bold"
+                          required
+                          value={formNuevo.role}
+                          onChange={(e) => setFormNuevo({ ...formNuevo, role: e.target.value })}
+                          className="w-full text-xs border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none focus:border-primary cursor-pointer"
                         >
-                          {ROLES_DISPONIBLES.map((r) => (
+                          {ROLES_OFICIALES.map((r) => (
                             <option key={r.value} value={r.value}>{r.label}</option>
                           ))}
                         </select>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="text-xs text-slate-300 font-medium">
-                          {obtenerNombreEquipo(m.team_id)}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        {m.role === 'team_delegate' && m.team_id ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="datetime-local"
-                              value={fechasLimites[`team_${m.team_id}`] || ''}
-                              onChange={(e) => manejarCambiarFechaLimite(m.team_id!, e.target.value)}
-                              className="bg-[#0c0e16] border border-slate-800 text-white text-[10px] rounded-lg px-2.5 py-1.5 outline-none cursor-pointer font-bold"
-                            />
-                            <button
-                              onClick={() => guardarFechaLimite(m.team_id!)}
-                              className="px-2.5 py-1.5 rounded-lg bg-indigo-650 hover:bg-indigo-600 text-[9px] font-black uppercase tracking-wider text-white transition-all cursor-pointer border-0"
-                            >
-                              Guardar
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-[10px] text-slate-500 italic">No aplica</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <button
-                          onClick={() => manejarRemover(m.id, m.user?.name || '')}
-                          className="flex items-center gap-1 text-rose-400 hover:text-rose-300 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer bg-transparent border-0"
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-3 border-t border-outline">
+                      <button
+                        type="button"
+                        onClick={() => setMostrarFormulario(false)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold border border-outline hover:bg-surface-bright text-on-surface-variant cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={guardando}
+                        className="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-primary text-white hover:opacity-90 disabled:opacity-50 cursor-pointer shadow-xs"
+                      >
+                        {guardando ? 'Registrando...' : 'Crear Cuenta de Oficial'}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <form onSubmit={manejarAgregarExistente} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-on-surface-variant block">Usuario Disponible *</label>
+                        <select
+                          required
+                          value={form.user_id}
+                          onChange={(e) => setForm({ ...form, user_id: e.target.value })}
+                          className="w-full text-xs border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none focus:border-primary cursor-pointer"
                         >
-                          <span className="material-symbols-outlined text-sm">remove_circle</span>
-                          Remover
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          <option value="">-- Seleccionar Usuario --</option>
+                          {cargandoUsuarios ? (
+                            <option disabled>Cargando usuarios...</option>
+                          ) : usuariosDisponibles.length === 0 ? (
+                            <option disabled>No hay usuarios disponibles sin rol organizativo</option>
+                          ) : (
+                            usuariosDisponibles.map((u) => (
+                              <option key={u.id} value={u.id}>
+                                {u.name} ({u.email})
+                              </option>
+                            ))
+                          )}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-on-surface-variant block">Rol de Campo / Mesa *</label>
+                        <select
+                          required
+                          value={form.role}
+                          onChange={(e) => setForm({ ...form, role: e.target.value })}
+                          className="w-full text-xs border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none focus:border-primary cursor-pointer"
+                        >
+                          {ROLES_OFICIALES.map((r) => (
+                            <option key={r.value} value={r.value}>{r.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-3 border-t border-outline">
+                      <button
+                        type="button"
+                        onClick={() => setMostrarFormulario(false)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold border border-outline hover:bg-surface-bright text-on-surface-variant cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={guardando}
+                        className="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-primary text-white hover:opacity-90 disabled:opacity-50 cursor-pointer shadow-xs"
+                      >
+                        {guardando ? 'Asignando...' : 'Asignar Oficial'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
             </div>
           )}
+
+          {/* Tabla de Miembros del Campeonato */}
+          <div className="bg-primary-container border border-outline rounded-2xl overflow-hidden shadow-xs">
+            <div className="p-4 border-b border-outline bg-surface-dim">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-on-surface">
+                Personal Técnico y Oficiales Asignados
+              </h3>
+            </div>
+
+            {cargando ? (
+              <div className="p-12 text-center text-on-surface-variant text-xs">Cargando oficialidad...</div>
+            ) : miembros.length === 0 ? (
+              <div className="p-12 text-center text-on-surface-variant text-xs italic">
+                No hay encargados de mesa ni árbitros registrados aún en este torneo.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-surface border-b border-outline text-on-surface-variant text-[10px] uppercase font-bold tracking-wider">
+                      <th className="p-3 pl-4">Usuario</th>
+                      <th className="p-3">Correo</th>
+                      <th className="p-3">Rol Técnico</th>
+                      <th className="p-3">Equipo Asociado</th>
+                      <th className="p-3 pr-4 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline text-on-surface">
+                    {miembros.map((m) => (
+                      <tr key={m.id} className="hover:bg-surface-bright/50 transition-colors">
+                        <td className="p-3 pl-4 font-extrabold">{m.user?.name || 'Usuario Desconocido'}</td>
+                        <td className="p-3 text-on-surface-variant">{m.user?.email || '—'}</td>
+                        <td className="p-3">
+                          <select
+                            value={m.role}
+                            onChange={(e) => manejarCambiarRol(m.id, e.target.value)}
+                            className="bg-surface border border-outline text-on-surface text-[11px] font-bold rounded-lg p-1.5 outline-none cursor-pointer"
+                          >
+                            <option value="score_table">Encargado de Mesa</option>
+                            <option value="referee">Árbitro</option>
+                            <option value="team_delegate">Delegado de Equipo</option>
+                            <option value="organizer">Organizador</option>
+                          </select>
+                        </td>
+                        <td className="p-3 text-on-surface-variant font-medium">
+                          {m.team?.name || obtenerNombreEquipo(m.team_id)}
+                        </td>
+                        <td className="p-3 pr-4 text-right">
+                          <button
+                            onClick={() => manejarRemover(m.id, m.user?.name || 'Usuario')}
+                            className="text-rose-600 dark:text-rose-400 hover:underline font-bold cursor-pointer"
+                          >
+                            Remover
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </main>
       </div>
     </div>

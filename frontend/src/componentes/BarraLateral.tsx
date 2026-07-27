@@ -72,6 +72,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
   const rolCampeonato = membresiaActiva ? membresiaActiva.role : null;
 
   const esOrganizador = rol === 'organizador' || rol === 'administrador' || rolCampeonato === 'organizer' || rolCampeonato === 'admin' || usuario?.roles?.includes('organizador') || usuario?.roles?.includes('administrador');
+  const esDelegadoPuro = (rolCampeonato === 'team_delegate' || usuario?.roles?.includes('delegado') || usuario?.roles?.includes('delegado_equipo')) && !esOrganizador;
 
   const manejarCerrarSesion = async () => {
     const isConfirmed = await confirm({
@@ -87,7 +88,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
 
   const getSubMenus = (itemId: string): SubItemMenu[] => {
     const items = subMenus[itemId] || [];
-    if (rolCampeonato === 'team_delegate' && !esOrganizador) {
+    if (esDelegadoPuro) {
       if (itemId === 'teams') {
         return items.filter(sub => sub.id === 'planilla-jugadores' || sub.id === 'equipos' || sub.id === 'jugadores');
       }
@@ -130,8 +131,8 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
     },
     {
       id: 'delegados',
-      titulo: 'Delegados y Roles',
-      icono: 'person_pin',
+      titulo: 'Encargados de Mesa',
+      icono: 'badge',
       ruta: '/tablero/delegados',
       visible: !!campeonatoActivo && esOrganizador
     },
@@ -147,7 +148,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
       titulo: 'Mesa de Control',
       icono: 'edit_note',
       ruta: '/tablero/mesa',
-      visible: !!campeonatoActivo
+      visible: !!campeonatoActivo && (esOrganizador || rolCampeonato === 'score_table' || rolCampeonato === 'referee')
     },
     {
       id: 'posiciones',
@@ -223,11 +224,19 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
   }, [location.pathname]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty(
-      '--sidebar-width',
-      colapsado ? '5rem' : '16rem'
-    );
-  }, [colapsado]);
+    if (esDelegadoPuro) {
+      document.documentElement.style.setProperty('--sidebar-width', '0px');
+    } else {
+      document.documentElement.style.setProperty(
+        '--sidebar-width',
+        colapsado ? '5rem' : '16rem'
+      );
+    }
+  }, [colapsado, esDelegadoPuro]);
+
+  if (esDelegadoPuro) {
+    return null;
+  }
 
   const visibleTorneo = itemsTorneo.filter(item => item.visible);
   const visibleAdmin = itemsAdmin.filter(item => item.visible);

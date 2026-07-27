@@ -298,9 +298,18 @@ class ChampionshipController extends Controller
             'team_id' => 'nullable|exists:teams,id',
         ]);
 
-        $championship->users()->attach($request->user_id, [
-            'role' => $request->role,
-            'team_id' => $request->team_id,
+        $targetUser = \App\Models\User::find($request->user_id);
+        if ($targetUser && ($targetUser->hasRole('administrador') || $targetUser->hasRole('organizador'))) {
+            if (in_array($request->role, ['team_delegate', 'score_table', 'referee'])) {
+                return $this->errorResponse('No se puede asignar un rol de oficial o delegado a un usuario con perfil de Organizador o Administrador.', 422);
+            }
+        }
+
+        $championship->users()->syncWithoutDetaching([
+            $request->user_id => [
+                'role' => $request->role,
+                'team_id' => $request->team_id,
+            ]
         ]);
 
         return $this->successResponse(null, 'Usuario agregado al campeonato exitosamente');

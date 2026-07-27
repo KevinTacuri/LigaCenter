@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { sileo } from 'sileo';
 import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
@@ -254,6 +255,24 @@ const LogoCircular: React.FC<LogoCircularProps> = ({ nombre, logo }) => {
   );
 };
 
+const PASOS_AYUDA_DELEGADO = [
+  { paso: '1', titulo: 'Seleccionar tu Equipo', desc: 'Verifica los datos y categoría de tu equipo asignado.', icono: 'groups' },
+  { paso: '2', titulo: 'Modalidad de Carga', desc: 'Descarga la plantilla Excel/CSV para carga masiva o usa el formulario uno por uno.', icono: 'upload_file' },
+  { paso: '3', titulo: 'Dorsales y DNI Únicos', desc: 'El número de dorsal no se puede repetir en el mismo equipo y cada deportista debe tener un DNI/cédula único.', icono: 'badge' },
+  { paso: '4', titulo: 'Foto de Perfil', desc: 'Adjunta la foto de cada jugador para su carnet digital oficial.', icono: 'add_a_photo' },
+  { paso: '5', titulo: 'Habilitación de Planilla', desc: 'El organizador del torneo validará tus deportistas para su participación.', icono: 'check_circle' },
+];
+
+const PASOS_AYUDA_PARTICIPANTES = [
+  { paso: '1', titulo: 'Crear Disciplina', desc: 'Registra los deportes a disputar en el torneo (Fútbol, Básquet, Volley...).', icono: 'sports' },
+  { paso: '2', titulo: 'Crear Categorías', desc: 'Define las divisiones por edad o género para cada disciplina (Sub-15, Libres...).', icono: 'category' },
+  { paso: '3', titulo: 'Inscribir Equipos', desc: 'Registra los clubes o representativos asignando su categoría correspondiente.', icono: 'shield' },
+  { paso: '4', titulo: 'Asignar Delegados', desc: 'Vincula al representante oficial responsable de la planilla de cada equipo.', icono: 'badge' },
+  { paso: '5', titulo: 'Cargar Jugadores', desc: 'Inscribe deportistas individualmente o mediante plantilla de carga masiva Excel/CSV.', icono: 'person_add' },
+  { paso: '6', titulo: 'Validación de Dorsales', desc: 'Asegura que no existan dorsales duplicados en el mismo plantel.', icono: 'tag' },
+  { paso: '7', titulo: 'Estado de Planilla', desc: 'Aprueba la nómina del equipo para habilitarlo en el fixture oficial.', icono: 'how_to_reg' },
+];
+
 // ─────────────────────────────────────────────
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────
@@ -266,8 +285,9 @@ export const GestionParticipantes: React.FC = () => {
   const { campeonatoActivo, cargandoCampeonato } = useCampeonato();
 
   // Iniciamos en 'categorias' porque es el módulo más utilizado y el de "disciplinas" lo ocultamos por ahora para simplificar, pero se puede cambiar fácilmente si se prefiere otro tab como predeterminado o reactivar "disciplinas"
-  // const [tabActiva, setTabActiva] = useState<TabType>('disciplinas');
-  const [tabActiva, setTabActiva] = useState<TabType>('categorias');
+  const [tabActiva, setTabActiva] = useState<TabType>(
+    (queryTab as TabType) || 'categorias'
+  );
 
   useEffect(() => {
     if (queryTab && queryTab !== tabActiva) {
@@ -439,7 +459,16 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
   const [equipoIdMasiva, setEquipoIdMasiva] = useState<number | null>(null);
 
   const [modalNuevoEqAbierto, setModalNuevoEqAbierto] = useState(false);
+  const [modalNuevoJugAbierto, setModalNuevoJugAbierto] = useState(false);
+  const [modalCargaMasivaAbierto, setModalCargaMasivaAbierto] = useState(false);
   const [modalVerEq, setModalVerEq] = useState<{ abierto: boolean; eq: Equipo | null }>({ abierto: false, eq: null });
+
+  const cerrarModalNuevoJug = () => {
+    setModalNuevoJugAbierto(false);
+    setNuevoJug({ name: '', dni: '', age: '', phone: '', team_id: delegadoTeamId !== null ? String(delegadoTeamId) : (equipoSelId ? String(equipoSelId) : ''), number: '', position: 'Delantero' });
+    setFotoJugFile(null);
+    setFotoJugUrl('');
+  };
 
   // ── Estado: Modal Editar Equipo ────────────
   const [modalEditarEq, setModalEditarEq] = useState<{
@@ -1525,13 +1554,13 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
   if (!usuario) return null;
 
   return (
-    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-background text-on-surface font-sans relative overflow-hidden">
 
       {/* Barra lateral integrada */}
       <BarraLateral rol={usuario.roles?.[0] || 'usuario_publico'} />
 
-      {/* Contenido principal con margen izquierdo en desktop */}
-      <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
+      {/* Contenido principal con margen adaptativo */}
+      <div className={`${delegadoTeamId !== null ? 'w-full' : 'lg:ml-64'} flex flex-col min-h-screen relative z-10 transition-all duration-300`}>
         <CabeceraEstandar titulo="Gestión de Participantes" subtitulo="Inscripciones y Configuración del Campeonato" />
 
 
@@ -2172,36 +2201,76 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
                   {equiposFiltrados.map((eq) => (
                     <div
                       key={eq.id}
-                      onClick={() => setModalVerEq({ abierto: true, eq })}
-                      className="group flex flex-col items-center p-5 bg-slate-50 hover:bg-slate-100/70 dark:bg-[#171a26]/40 dark:hover:bg-[#171a26] border border-slate-200 dark:border-slate-800/80 rounded-2xl transition-all cursor-pointer text-center relative overflow-hidden shadow-xs hover:shadow-md"
+                      className="group relative flex flex-col justify-between p-5 bg-primary-container hover:bg-surface border border-outline hover:border-primary/50 rounded-2xl transition-all duration-300 shadow-xs hover:shadow-xl hover:-translate-y-1 overflow-hidden"
                     >
-                      {/* Logo wrapper */}
-                      <div className="w-20 h-20 rounded-full border-2 border-slate-200 dark:border-slate-800 flex items-center justify-center overflow-hidden bg-white dark:bg-[#11131c] mb-4 shadow-inner group-hover:scale-105 transition-transform duration-300">
-                        {eq.logo ? (
-                          <img src={resolverUrlImagen(eq.logo) || ''} alt={eq.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-2xl text-slate-400 dark:text-slate-500 font-extrabold uppercase">{eq.name[0] || '?'}</span>
-                        )}
+                      {/* Header de la Tarjeta */}
+                      <div className="flex items-center justify-between w-full mb-3">
+                        <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${
+                          eq.registration_status === 'aprobado'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                            : eq.registration_status === 'rechazado'
+                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                        }`}>
+                          {eq.registration_status || 'pendiente'}
+                        </span>
+
+                        <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            title="Ver Detalle"
+                            onClick={(e) => { e.stopPropagation(); setModalVerEq({ abierto: true, eq }); }}
+                            className="w-7 h-7 rounded-lg bg-surface border border-outline text-on-surface hover:text-primary flex items-center justify-center cursor-pointer transition-colors shadow-2xs"
+                          >
+                            <span className="material-symbols-outlined text-sm">visibility</span>
+                          </button>
+                          <button
+                            type="button"
+                            title="Editar Equipo"
+                            onClick={(e) => { e.stopPropagation(); abrirModalEditar(eq); }}
+                            className="w-7 h-7 rounded-lg bg-surface border border-outline text-on-surface hover:text-primary flex items-center justify-center cursor-pointer transition-colors shadow-2xs"
+                          >
+                            <span className="material-symbols-outlined text-sm">edit</span>
+                          </button>
+                        </div>
                       </div>
 
-                      {/* Info */}
-                      <h4 className="text-sm font-extrabold text-slate-800 dark:text-slate-200 line-clamp-1 mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                        {eq.name}
-                      </h4>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider line-clamp-1 mb-2">
-                        {eq.representative || <span className="text-slate-400 dark:text-slate-500 italic">Sin delegado</span>}
-                      </p>
+                      {/* Contenido Central: Logo y Nombre */}
+                      <div
+                        onClick={() => setModalVerEq({ abierto: true, eq })}
+                        className="flex flex-col items-center text-center cursor-pointer my-1"
+                      >
+                        <div className="w-20 h-20 rounded-full border-2 border-outline flex items-center justify-center overflow-hidden bg-surface mb-3 shadow-inner group-hover:scale-105 transition-transform duration-300">
+                          {eq.logo ? (
+                            <img src={resolverUrlImagen(eq.logo) || ''} alt={eq.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-2xl text-on-surface-variant font-extrabold uppercase">{eq.name[0] || '?'}</span>
+                          )}
+                        </div>
 
-                      {/* Status pill */}
-                      <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border ${
-                        eq.registration_status === 'aprobado'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
-                          : eq.registration_status === 'rechazado'
-                          ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-450 dark:border-rose-500/20'
-                          : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-450 dark:border-amber-500/20'
-                      }`}>
-                        {eq.registration_status || 'pendiente'}
-                      </span>
+                        <h4 className="text-sm font-extrabold text-on-surface line-clamp-1 mb-1 group-hover:text-primary transition-colors">
+                          {eq.name}
+                        </h4>
+                      </div>
+
+                      {/* Pie con Estado de Delegado */}
+                      <div className="mt-3 pt-3 border-t border-outline/60 w-full flex items-center justify-center">
+                        {eq.championship_user?.user?.name || eq.representative ? (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold truncate max-w-full">
+                            <span className="material-symbols-outlined text-[13px]">badge</span>
+                            <span className="truncate">{eq.championship_user?.user?.name || eq.representative}</span>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); abrirModalEditar(eq); }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider hover:bg-amber-500/20 transition-all cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[13px]">add_circle</span>
+                            <span>Asignar Delegado</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                   {equiposFiltrados.length === 0 && (
@@ -2431,30 +2500,30 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
           <div className="space-y-5">
             {/* Selector de equipo o Info de Delegado */}
             {delegadoTeamId !== null ? (
-              <div className="relative rounded-xl bg-gradient-to-r from-slate-900 via-[#11131c] to-slate-900 border border-slate-800 p-5 shadow-xs overflow-hidden">
-                <div className="absolute top-0 bottom-0 left-0 w-1 bg-emerald-500"></div>
+              <div className="relative rounded-2xl bg-primary-container border border-outline p-5 shadow-xs overflow-hidden text-on-surface">
+                <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-emerald-500"></div>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="space-y-1 pl-3">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider">
+                  <div className="space-y-1 pl-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-wider">
                       <span className="material-symbols-outlined text-xs">shield</span>
                       Delegado de Equipo Autorizado
                     </span>
-                    <h3 className="text-base font-black text-white tracking-tight leading-none">
+                    <h3 className="text-base font-black text-on-surface tracking-tight leading-none">
                       Panel de Inscripción de {equipoSel?.name || 'Cargando equipo...'}
                     </h3>
-                    <p className="text-xs text-slate-400 font-medium leading-relaxed mt-1">
+                    <p className="text-xs text-on-surface-variant font-medium leading-relaxed mt-1">
                       Como delegado oficial, tienes permisos para inscribir jugadores, dorsales y gestionar tu planilla.
                     </p>
                   </div>
                   {equipoSel?.logo && (
-                    <div className="w-14 h-14 rounded-xl bg-[#0c0e17] border border-slate-800 flex items-center justify-center p-2 shrink-0">
+                    <div className="w-14 h-14 rounded-2xl bg-surface border border-outline flex items-center justify-center p-2 shrink-0 shadow-2xs">
                       <img src={equipoSel.logo} className="w-full h-full object-contain" alt="Logo Equipo" />
                     </div>
                   )}
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+              <div className="bg-primary-container rounded-2xl border border-outline p-5 shadow-xs text-on-surface">
                 <div className="max-w-md">
                   <Autocomplete
                     label="Seleccionar Equipo"
@@ -2470,23 +2539,23 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
 
             {/* Panel de datos del equipo (inmóvil) */}
             {equipoSel && (
-              <div className="bg-[#11131c] border border-slate-800 rounded-2xl p-5">
-                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-3">Datos del Equipo — solo lectura</p>
+              <div className="bg-primary-container border border-outline rounded-2xl p-5 text-on-surface shadow-xs">
+                <p className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider mb-3">Datos del Equipo — solo lectura</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
-                    <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Equipo</p>
-                    <p className="text-sm font-bold text-white mt-0.5">{equipoSel.name}</p>
+                    <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-wide">Equipo</p>
+                    <p className="text-sm font-bold text-on-surface mt-0.5">{equipoSel.name}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Representante</p>
-                    <p className="text-sm font-bold text-slate-200 mt-0.5">{equipoSel.representative || '—'}</p>
+                    <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-wide">Representante</p>
+                    <p className="text-sm font-bold text-on-surface mt-0.5">{equipoSel.representative || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Estado</p>
+                    <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-wide">Estado</p>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide mt-0.5 ${
                       equipoSel.registration_status === 'aprobado'
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
                     }`}>
                       {equipoSel.registration_status || 'pendiente'}
                     </span>
@@ -2495,248 +2564,156 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
               </div>
             )}
 
-            {/* Tabla de jugadores */}
+            {/* Galería de Tarjetas de Jugadores (Player Cards Grid) */}
             {equipoSel && (
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                  <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900">
-                    Jugadores de {equipoSel.name}
-                  </h2>
-                  <span className="text-xs text-slate-400 font-semibold">
-                    {filasJugadores.filter(f => f.guardado).length} registrados
-                  </span>
+              <div className="space-y-4">
+                {/* Cabecera del Plantel de Jugadores */}
+                <div className="bg-primary-container rounded-2xl border border-outline p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-on-surface">
+                  <div className="space-y-1">
+                    <h2 className="font-black text-base uppercase tracking-wider text-on-surface flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary text-lg">groups</span>
+                      Plantel de Jugadores de {equipoSel.name}
+                    </h2>
+                    <p className="text-xs text-on-surface-variant font-medium">
+                      {filasJugadores.filter(f => f.guardado).length} deportistas registrados en el torneo.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setModalNuevoJugAbierto(true)}
+                      disabled={isDeadlineExpired}
+                      className="flex items-center gap-2 bg-primary text-white hover:opacity-90 disabled:opacity-50 px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-xs active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-sm">person_add</span>
+                      <span>Inscribir Jugador</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setModalCargaMasivaAbierto(true)}
+                      disabled={isDeadlineExpired}
+                      className="flex items-center gap-2 bg-surface hover:bg-surface-bright text-on-surface border border-outline px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                    >
+                      <span className="material-symbols-outlined text-sm text-primary">upload_file</span>
+                      <span>Carga Masiva</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={descargarPlantilla}
+                      className="flex items-center gap-1.5 bg-surface hover:bg-surface-bright text-on-surface border border-outline px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                      title="Descargar Formato de Ejemplo CSV"
+                    >
+                      <span className="material-symbols-outlined text-sm text-emerald-600 dark:text-emerald-400">download</span>
+                      <span>Plantilla (.CSV)</span>
+                    </button>
+                  </div>
                 </div>
 
+                {/* Tarjetas del Plantel */}
                 {cargandoPlanilla ? (
-                  <div className="p-10 flex flex-col items-center gap-3">
-                    <div className="w-7 h-7 rounded-full border-4 border-slate-200 border-t-indigo-500 animate-spin" />
-                    <span className="text-xs text-slate-400 font-semibold">Cargando jugadores...</span>
+                  <div className="py-16 flex flex-col items-center justify-center gap-3">
+                    <div className="w-8 h-8 rounded-full border-4 border-outline border-t-primary animate-spin" />
+                    <span className="text-xs text-on-surface-variant font-extrabold uppercase tracking-widest animate-pulse">Cargando plantel...</span>
+                  </div>
+                ) : filasJugadores.filter(f => f.guardado).length === 0 ? (
+                  <div className="bg-primary-container border border-outline rounded-3xl p-12 text-center space-y-4 text-on-surface">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mx-auto">
+                      <span className="material-symbols-outlined text-3xl">person_off</span>
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-base font-black">Aún no hay jugadores en tu plantilla</h3>
+                      <p className="text-xs text-on-surface-variant max-w-sm mx-auto font-medium leading-relaxed">
+                        Inscribe a tus deportistas uno por uno o sube la planilla masiva en formato Excel / CSV.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setModalNuevoJugAbierto(true)}
+                      className="inline-flex items-center gap-2 bg-primary text-white hover:opacity-90 px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md"
+                    >
+                      <span className="material-symbols-outlined text-sm">person_add</span>
+                      <span>Inscribir Primer Jugador</span>
+                    </button>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm border-collapse">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-100">
-                          <th className="p-3 pl-5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider w-8">#</th>
-                          <th className="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-12 text-center">Foto</th>
-                          <th className="p-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nombre Completo *</th>
-                          <th className="p-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider w-32">DNI</th>
-                          <th className="p-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider w-24">Edad *</th>
-                          <th className="p-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider w-24">Dorsal</th>
-                          <th className="p-3 pr-5 text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider w-28">Acción</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filasJugadores.map((fila, idx) => (
-                          <tr
-                            key={idx}
-                            className={`border-b border-slate-100 transition-colors ${
-                              fila.guardado ? 'bg-white' : 'bg-indigo-50/40'
-                            }`}
-                          >
-                            {/* Número de fila */}
-                            <td className="p-3 pl-5 text-slate-400 text-xs font-bold">{idx + 1}</td>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {filasJugadores.filter(f => f.guardado).map((fila, idx) => {
+                      const jug = jugadoresDePlanilla.find(j => j.id === fila.id);
+                      return (
+                        <div
+                          key={fila.id || idx}
+                          className="bg-primary-container border border-outline rounded-3xl p-4 shadow-xs hover:shadow-lg hover:border-primary transition-all duration-300 relative flex flex-col items-center text-center group text-on-surface"
+                        >
+                          {/* Badge de Dorsal (#) */}
+                          <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-primary text-white font-black text-xs flex items-center justify-center shadow-md border border-white/20 z-10">
+                            #{fila.dorsal || idx + 1}
+                          </div>
 
-                             {/* Foto */}
-                            <td className="p-2 w-12 text-center">
-                              {fila.guardado ? (
-                                fila.foto ? (
-                                  <img
-                                    src={fila.foto}
-                                    alt={fila.nombre}
-                                    className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-2xs mx-auto"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150';
-                                    }}
-                                  />
-                                ) : (
-                                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200 shadow-2xs mx-auto">
-                                    <span className="material-symbols-outlined text-sm">person</span>
-                                  </div>
-                                )
-                              ) : (
-                                <div className="relative group w-8 h-8 mx-auto">
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    id={`input-foto-${idx}`}
-                                    className="hidden"
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) {
-                                        actualizarFila(idx, 'fotoFile', file);
-                                        actualizarFila(idx, 'fotoUrlLocal', URL.createObjectURL(file));
-                                      }
-                                    }}
-                                  />
-                                  {fila.fotoUrlLocal ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => document.getElementById(`input-foto-${idx}`)?.click()}
-                                      className="w-8 h-8 rounded-full overflow-hidden border border-indigo-400 shadow-2xs focus:outline-hidden cursor-pointer"
-                                      title="Cambiar Foto"
-                                    >
-                                      <img
-                                        src={fila.fotoUrlLocal}
-                                        alt="Previsualización"
-                                        className="w-full h-full object-cover"
-                                      />
-                                    </button>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => document.getElementById(`input-foto-${idx}`)?.click()}
-                                      className="w-8 h-8 rounded-full bg-indigo-50/50 hover:bg-indigo-100/70 flex items-center justify-center text-indigo-500 border border-indigo-200 border-dashed focus:outline-hidden transition-all cursor-pointer"
-                                      title="Subir Foto"
-                                    >
-                                      <span className="material-symbols-outlined text-xs">add_a_photo</span>
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                            </td>
-
-                            {/* Nombre */}
-                            <td className="p-2">
-                              <input
-                                type="text"
-                                value={fila.nombre}
-                                disabled={fila.guardado || isDeadlineExpired}
-                                onChange={e => actualizarFila(idx, 'nombre', e.target.value)}
-                                placeholder="Nombre completo"
-                                aria-label={`Nombre completo del jugador de la fila ${idx + 1}`}
-                                className={`w-full text-sm rounded-lg px-3 py-2 outline-hidden transition-all ${
-                                  fila.guardado
-                                    ? 'bg-transparent text-slate-800 font-semibold cursor-default border-transparent'
-                                    : 'border border-slate-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20 bg-white'
-                                }`}
+                          {/* Foto de Rostro del Jugador Prominente */}
+                          <div className="relative my-2 group-hover:scale-105 transition-transform duration-300">
+                            {fila.foto ? (
+                              <img
+                                src={resolverUrlImagen(fila.foto) || fila.foto}
+                                alt={fila.nombre}
+                                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-2 border-primary/50 shadow-md"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150';
+                                }}
                               />
-                            </td>
+                            ) : (
+                              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-surface-dim border-2 border-dashed border-outline flex flex-col items-center justify-center text-on-surface-variant shadow-2xs">
+                                <span className="material-symbols-outlined text-4xl text-primary/60">person</span>
+                              </div>
+                            )}
+                          </div>
 
-                            {/* DNI */}
-                            <td className="p-2">
-                              <input
-                                type="text"
-                                value={fila.dni}
-                                disabled={fila.guardado || isDeadlineExpired}
-                                onChange={e => actualizarFila(idx, 'dni', e.target.value)}
-                                placeholder="DNI"
-                                aria-label={`DNI del jugador de la fila ${idx + 1}`}
-                                className={`w-full text-sm rounded-lg px-3 py-2 outline-hidden transition-all ${
-                                  fila.guardado
-                                    ? 'bg-transparent text-slate-700 cursor-default border-transparent'
-                                    : 'border border-slate-200 focus:border-indigo-400 bg-white'
-                                }`}
-                              />
-                            </td>
+                          {/* Nombre Completo */}
+                          <h3 className="font-black text-xs sm:text-sm text-on-surface tracking-tight leading-tight line-clamp-1 mt-1 w-full px-1" title={fila.nombre}>
+                            {fila.nombre}
+                          </h3>
 
-                            {/* Edad */}
-                            <td className="p-2">
-                              <input
-                                type="number"
-                                value={fila.edad}
-                                disabled={fila.guardado || isDeadlineExpired}
-                                onChange={e => actualizarFila(idx, 'edad', e.target.value)}
-                                placeholder="Edad"
-                                aria-label={`Edad del jugador de la fila ${idx + 1}`}
-                                min="1"
-                                className={`w-full text-sm rounded-lg px-3 py-2 outline-hidden transition-all ${
-                                  fila.guardado
-                                    ? 'bg-transparent text-slate-700 cursor-default border-transparent'
-                                    : 'border border-slate-200 focus:border-indigo-400 bg-white'
-                                }`}
-                              />
-                            </td>
+                          {/* Metadatos: DNI y Edad */}
+                          <div className="flex items-center justify-center gap-1.5 text-[10px] text-on-surface-variant font-semibold mt-2 w-full">
+                            <span className="truncate px-2 py-0.5 rounded-lg bg-surface border border-outline/70 font-mono">
+                              DNI: {fila.dni || '—'}
+                            </span>
+                            <span className="truncate px-2 py-0.5 rounded-lg bg-surface border border-outline/70">
+                              {fila.edad ? `${fila.edad} a.` : '—'}
+                            </span>
+                          </div>
 
-                            {/* Dorsal */}
-                            <td className="p-2">
-                              <input
-                                type="number"
-                                value={fila.dorsal}
-                                disabled={fila.guardado || isDeadlineExpired}
-                                onChange={e => actualizarFila(idx, 'dorsal', e.target.value)}
-                                placeholder="#"
-                                aria-label={`Dorsal del jugador de la fila ${idx + 1}`}
-                                min="1"
-                                className={`w-full text-sm rounded-lg px-3 py-2 outline-hidden transition-all ${
-                                  fila.guardado
-                                    ? 'bg-transparent text-slate-700 cursor-default border-transparent'
-                                    : 'border border-slate-200 focus:border-indigo-400 bg-white'
-                                }`}
-                              />
-                            </td>
+                          {/* Acciones de la Tarjeta */}
+                          <div className="flex items-center justify-center gap-1.5 mt-2.5 pt-2 border-t border-outline/40 w-full">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (jug) abrirModalEditarJugador(jug);
+                              }}
+                              disabled={isDeadlineExpired}
+                              className="flex-1 flex items-center justify-center gap-1 bg-surface hover:bg-surface-bright text-on-surface border border-outline py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer shadow-2xs disabled:opacity-50"
+                            >
+                              <span className="material-symbols-outlined text-[11px] text-primary">edit</span>
+                              <span>Editar</span>
+                            </button>
 
-                            {/* Acciones */}
-                            <td className="p-2 pr-5 text-right flex justify-end gap-2.5 items-center">
-                              {fila.guardado ? (
-                                <>
-                                  <button
-                                    onClick={() => {
-                                      const jug = jugadoresDePlanilla.find(j => j.id === fila.id);
-                                      if (jug) abrirModalEditarJugador(jug);
-                                    }}
-                                    disabled={isDeadlineExpired}
-                                    className="text-xs font-bold text-indigo-600 hover:text-indigo-850 disabled:opacity-50 disabled:cursor-not-allowed hover:underline cursor-pointer transition-colors"
-                                  >
-                                    Editar
-                                  </button>
-                                  <span className="text-slate-300">|</span>
-                                  <button
-                                    onClick={() => { if (!isDeadlineExpired) eliminarFilaJugador(idx); }}
-                                    disabled={isDeadlineExpired}
-                                    className="text-xs font-bold text-rose-500 hover:text-rose-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline hover:underline cursor-pointer transition-colors"
-                                  >
-                                    Eliminar
-                                  </button>
-                                </>
-                              ) : (
-                                <button
-                                  onClick={() => guardarFila(idx)}
-                                  disabled={fila.guardando || isDeadlineExpired}
-                                  className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all"
-                                >
-                                  {fila.guardando
-                                    ? <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                    : <span className="material-symbols-outlined text-xs">save</span>
-                                  }
-                                  {fila.guardando ? 'Guardando' : 'Guardar'}
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-
-                        {/* Error inline */}
-                        {filasJugadores.map((fila, idx) =>
-                          fila.error ? (
-                            <tr key={`err-${idx}`} className="bg-rose-50">
-                              <td colSpan={6} className="px-5 py-1.5 text-xs text-rose-600 font-semibold flex items-center gap-1">
-                                <span className="material-symbols-outlined text-xs">error</span>
-                                Fila {idx + 1}: {fila.error}
-                              </td>
-                            </tr>
-                          ) : null
-                        )}
-
-                        {filasJugadores.length === 0 && (
-                          <tr>
-                            <td colSpan={6} className="p-10 text-center text-slate-400 text-xs">
-                              Sin jugadores aún. Completa la primera fila y guarda.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
+                            <button
+                              type="button"
+                              onClick={() => { if (!isDeadlineExpired) eliminarFilaJugador(idx); }}
+                              disabled={isDeadlineExpired}
+                              className="flex items-center justify-center p-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all cursor-pointer disabled:opacity-50"
+                              title="Eliminar Jugador"
+                            >
+                              <span className="material-symbols-outlined text-[11px]">delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
-
-                {/* Pie con tip */}
-                <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-xs text-slate-400">info</span>
-                  <p className="text-[10px] text-slate-400 font-semibold">
-                    Cada fila se guarda individualmente. Las filas guardadas quedan en gris y no se pueden editar desde aquí.
-                  </p>
-                </div>
               </div>
             )}
 
@@ -2752,27 +2729,28 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
       </main>
 
       {/* ── Modal Añadir Equipo ── */}
-      {modalNuevoEqAbierto && (
+      {modalNuevoEqAbierto && createPortal(
         <div
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fadeIn"
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-nuevo-equipo-title"
         >
-          <div className="bg-white dark:bg-[#11131c] text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-150 dark:border-slate-800/80 animate-scaleIn">
+          <div className="bg-primary-container text-on-surface rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-outline animate-scaleIn">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-855 bg-slate-50 dark:bg-[#151722]/50">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-outline bg-surface-dim">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-indigo-650 dark:text-indigo-400 text-base">group_add</span>
-                <h3 id="modal-nuevo-equipo-title" className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wide">Añadir Nuevo Equipo</h3>
+                <span className="material-symbols-outlined text-primary text-base">group_add</span>
+                <h3 id="modal-nuevo-equipo-title" className="font-extrabold text-sm text-on-surface uppercase tracking-wide">Añadir Nuevo Equipo</h3>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   setModalNuevoEqAbierto(false);
                   setNuevoEq({ name: '', representative: '', discipline_id: '', category_id: '', enable_delegate: false, delegate_name: '', delegate_email: '', delegate_password: '' });
                   setLogoEqFile(null); setLogoEqUrl('');
                 }}
-                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-455 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-100 transition-all cursor-pointer"
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-outline text-on-surface-variant hover:bg-surface-bright hover:text-on-surface transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
@@ -2781,67 +2759,67 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
             {/* Body */}
             <form onSubmit={guardarEquipo} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto font-sans">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Nombre del Equipo *</label>
+                <label className="text-xs font-bold text-on-surface-variant block">Nombre del Equipo *</label>
                 <input
                   type="text"
                   required
                   placeholder="Ej: Real Arequipa"
                   value={nuevoEq.name}
                   onChange={(e) => setNuevoEq({ ...nuevoEq, name: e.target.value })}
-                  className="w-full text-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                  className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none focus:border-primary"
                 />
               </div>
 
               {!nuevoEq.enable_delegate && (
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Delegado/Representante (Solo Nombre)</label>
+                  <label className="text-xs font-bold text-on-surface-variant block">Delegado/Representante (Solo Nombre)</label>
                   <input
                     type="text"
                     placeholder="Representante del equipo"
                     value={nuevoEq.representative}
                     onChange={(e) => setNuevoEq({ ...nuevoEq, representative: e.target.value })}
-                    className="w-full text-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                    className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none focus:border-primary"
                   />
                 </div>
               )}
 
-              <div className="border border-slate-100 dark:border-slate-800/80 bg-slate-50/55 dark:bg-[#151722]/30 rounded-xl p-3 space-y-3">
+              <div className="border border-outline bg-surface rounded-xl p-3 space-y-3">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={nuevoEq.enable_delegate}
                     onChange={(e) => setNuevoEq({ ...nuevoEq, enable_delegate: e.target.checked })}
-                    className="w-4 h-4 text-indigo-650 border-slate-350 dark:border-slate-800 rounded focus:ring-indigo-500"
+                    className="w-4 h-4 text-primary border-outline rounded focus:ring-primary cursor-pointer"
                   />
-                  <span className="text-xs font-bold text-slate-855 dark:text-slate-200">Habilitar cuenta de acceso para el Delegado</span>
+                  <span className="text-xs font-bold text-on-surface">Habilitar cuenta de acceso para el Delegado</span>
                 </label>
                 
                 {nuevoEq.enable_delegate && (
                   <div className="space-y-2.5 pt-1.5 animate-fadeIn">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase block">Nombre del Delegado *</label>
+                      <label className="text-[10px] font-extrabold text-on-surface-variant uppercase block">Nombre del Delegado *</label>
                       <input
                         type="text"
                         required
                         placeholder="Nombre completo"
                         value={nuevoEq.delegate_name}
                         onChange={(e) => setNuevoEq({ ...nuevoEq, delegate_name: e.target.value })}
-                        className="w-full text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                        className="w-full text-xs border border-outline bg-surface text-on-surface rounded-lg p-2 outline-none focus:border-primary"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase block">Correo Electrónico *</label>
+                      <label className="text-[10px] font-extrabold text-on-surface-variant uppercase block">Correo Electrónico *</label>
                       <input
                         type="email"
                         required
                         placeholder="correo@ejemplo.com"
                         value={nuevoEq.delegate_email}
                         onChange={(e) => setNuevoEq({ ...nuevoEq, delegate_email: e.target.value })}
-                        className="w-full text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                        className="w-full text-xs border border-outline bg-surface text-on-surface rounded-lg p-2 outline-none focus:border-primary"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase block">Contraseña Temporal *</label>
+                      <label className="text-[10px] font-extrabold text-on-surface-variant uppercase block">Contraseña Temporal *</label>
                       <div className="flex gap-2">
                         <input
                           type="text"
@@ -2849,7 +2827,7 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
                           placeholder="Clave de 8+ caracteres"
                           value={nuevoEq.delegate_password}
                           onChange={(e) => setNuevoEq({ ...nuevoEq, delegate_password: e.target.value })}
-                          className="flex-1 text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2 outline-hidden focus:border-indigo-400"
+                          className="flex-1 text-xs border border-outline bg-surface text-on-surface rounded-lg p-2 outline-none focus:border-primary"
                         />
                         <button
                           type="button"
@@ -2861,7 +2839,7 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
                             }
                             setNuevoEq({ ...nuevoEq, delegate_password: pass });
                           }}
-                          className="px-2.5 py-2 text-xs font-bold text-indigo-655 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-855 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all cursor-pointer flex items-center gap-1"
+                          className="px-2.5 py-2 text-xs font-bold text-primary border border-primary/30 rounded-lg hover:bg-primary/10 transition-all cursor-pointer flex items-center gap-1"
                         >
                           Generar
                         </button>
@@ -2873,24 +2851,24 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Disciplina *</label>
+                  <label className="text-xs font-bold text-on-surface-variant block">Disciplina *</label>
                   <select
                     required
                     value={nuevoEq.discipline_id}
                     onChange={(e) => setNuevoEq({ ...nuevoEq, discipline_id: e.target.value, category_id: '' })}
-                    className="w-full text-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2.5 outline-hidden cursor-pointer"
+                    className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none cursor-pointer"
                   >
                     <option value="">Seleccionar Disciplina</option>
                     {disciplinas.map((d) => <option key={d.id} value={String(d.id)}>{d.name}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Categoría *</label>
+                  <label className="text-xs font-bold text-on-surface-variant block">Categoría *</label>
                   <select
                     required
                     value={nuevoEq.category_id}
                     onChange={(e) => setNuevoEq({ ...nuevoEq, category_id: e.target.value })}
-                    className="w-full text-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2.5 outline-hidden cursor-pointer"
+                    className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none cursor-pointer"
                   >
                     <option value="">Seleccionar Categoría</option>
                     {categorias
@@ -2907,7 +2885,7 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
                 onUrlChange={setLogoEqUrl}
               />
 
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-855 flex items-center justify-end gap-3">
+              <div className="pt-2 border-t border-outline flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -2915,13 +2893,13 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
                     setNuevoEq({ name: '', representative: '', discipline_id: '', category_id: '', enable_delegate: false, delegate_name: '', delegate_email: '', delegate_password: '' });
                     setLogoEqFile(null); setLogoEqUrl('');
                   }}
-                  className="px-4 py-2 text-xs font-bold text-slate-650 dark:text-slate-400 border border-slate-200 dark:border-slate-855 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
+                  className="px-4 py-2 text-xs font-bold text-on-surface-variant border border-outline rounded-xl hover:bg-surface-bright transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-indigo-655 hover:bg-indigo-700 rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                  className="px-5 py-2 text-xs font-black text-white bg-primary hover:opacity-90 rounded-xl transition-all cursor-pointer flex items-center gap-1 uppercase tracking-wider shadow-xs"
                 >
                   <span className="material-symbols-outlined text-xs">save</span>
                   Guardar Equipo
@@ -2929,30 +2907,32 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── Modal Ver Detalles del Equipo ── */}
-      {modalVerEq.abierto && modalVerEq.eq && (() => {
+      {modalVerEq.abierto && modalVerEq.eq && createPortal((() => {
         const eq = modalVerEq.eq;
         const jugadoresDelEquipo = jugadores.filter(j => (j.team_id ?? j.team?.id) === eq.id);
         return (
           <div
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fadeIn"
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-ver-equipo-title"
           >
-            <div className="bg-white dark:bg-[#11131c] border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="bg-primary-container border border-outline text-on-surface rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-[#151722]/50">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-outline bg-surface-dim">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-indigo-500 dark:text-indigo-400 text-base">info</span>
-                  <h3 id="modal-ver-equipo-title" className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wide">Detalle del Equipo</h3>
+                  <span className="material-symbols-outlined text-primary text-base">info</span>
+                  <h3 id="modal-ver-equipo-title" className="font-extrabold text-sm text-on-surface uppercase tracking-wide">Detalle del Equipo</h3>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setModalVerEq({ abierto: false, eq: null })}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center border border-outline text-on-surface-variant hover:bg-surface-bright hover:text-on-surface transition-all cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-sm">close</span>
                 </button>
@@ -2961,68 +2941,100 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
               {/* Body */}
               <div className="px-6 py-5 space-y-5">
                 {/* Logo y Nombre principal */}
-                <div className="flex flex-col items-center text-center pb-4 border-b border-slate-100 dark:border-slate-800">
-                  <div className="w-24 h-24 rounded-full border border-slate-200 dark:border-slate-850 flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-[#171a26] mb-3 shadow-inner">
+                <div className="flex flex-col items-center text-center pb-4 border-b border-outline">
+                  <div className="w-24 h-24 rounded-full border border-outline flex items-center justify-center overflow-hidden bg-surface mb-3 shadow-inner">
                     {eq.logo ? (
                       <img src={resolverUrlImagen(eq.logo) || ''} alt={eq.name} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-3xl text-slate-400 dark:text-slate-500 font-extrabold uppercase">{eq.name[0] || '?'}</span>
+                      <span className="text-3xl text-on-surface-variant font-extrabold uppercase">{eq.name[0] || '?'}</span>
                     )}
                   </div>
-                  <h2 className="text-xl font-black text-slate-900 dark:text-white">{eq.name}</h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-450 font-bold uppercase tracking-wider mt-1">
-                    Delegado: {eq.representative || <span className="text-slate-400 dark:text-slate-500 italic">No registrado</span>}
+                  <h2 className="text-xl font-black text-on-surface">{eq.name}</h2>
+                  <p className="text-xs text-on-surface-variant font-bold uppercase tracking-wider mt-1">
+                    Delegado: {eq.championship_user?.user?.name || eq.representative || <span className="text-on-surface-variant italic">Sin registrar</span>}
                   </p>
                 </div>
 
                 {/* Grid de Información Técnica */}
                 <div className="grid grid-cols-2 gap-4 text-xs font-sans">
-                  <div className="bg-slate-50 dark:bg-[#171a26] p-3 rounded-xl border border-slate-100 dark:border-slate-800/60">
-                    <p className="text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider mb-1">Disciplina</p>
-                    <p className="font-extrabold text-slate-850 dark:text-slate-200 text-sm">{eq.discipline?.name || 'No asignada'}</p>
+                  <div className="bg-surface p-3 rounded-xl border border-outline">
+                    <p className="text-on-surface-variant font-bold uppercase tracking-wider mb-1">Disciplina</p>
+                    <p className="font-extrabold text-on-surface text-sm">{eq.discipline?.name || 'No asignada'}</p>
                   </div>
-                  <div className="bg-slate-50 dark:bg-[#171a26] p-3 rounded-xl border border-slate-100 dark:border-slate-800/60">
-                    <p className="text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider mb-1">Categoría</p>
-                    <p className="font-extrabold text-slate-850 dark:text-slate-200 text-sm">{eq.category?.name || 'No asignada'}</p>
+                  <div className="bg-surface p-3 rounded-xl border border-outline">
+                    <p className="text-on-surface-variant font-bold uppercase tracking-wider mb-1">Categoría</p>
+                    <p className="font-extrabold text-on-surface text-sm">{eq.category?.name || 'No asignada'}</p>
                   </div>
                 </div>
 
-                {/* Selector de Estado */}
-                <div className="flex items-center justify-between bg-slate-50 dark:bg-[#171a26] p-3 rounded-xl border border-slate-100 dark:border-slate-800/60 text-xs font-sans">
-                  <span className="text-slate-550 dark:text-slate-550 font-bold uppercase tracking-wider">Estado del Registro:</span>
-                  <select
-                    value={eq.registration_status || 'pendiente'}
-                    onChange={async (e) => {
-                      const nuevoEstado = e.target.value as 'pendiente' | 'aprobado' | 'rechazado';
-                      await cambiarEstadoEquipo(eq.id, nuevoEstado);
-                      setModalVerEq(prev => prev.eq ? { ...prev, eq: { ...prev.eq, registration_status: nuevoEstado } } : prev);
-                    }}
-                    className={`text-xs font-bold uppercase tracking-wide rounded px-2.5 py-1 border cursor-pointer outline-hidden transition-colors ${
-                      eq.registration_status === 'aprobado'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
-                        : eq.registration_status === 'rechazado'
-                        ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-450 dark:border-rose-500/20'
-                        : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-450 dark:border-amber-500/20'
-                    }`}
-                  >
-                    <option value="pendiente">Pendiente</option>
-                    <option value="aprobado">Aprobado</option>
-                    <option value="rechazado">Rechazado</option>
-                  </select>
+                {/* Selector de Estado con 3 Botones */}
+                <div className="space-y-2 bg-surface p-3.5 rounded-xl border border-outline font-sans">
+                  <span className="text-xs font-black uppercase tracking-wider text-on-surface block">
+                    Estado del Registro
+                  </span>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await cambiarEstadoEquipo(eq.id, 'aprobado');
+                        setModalVerEq(prev => prev.eq ? { ...prev, eq: { ...prev.eq, registration_status: 'aprobado' } } : prev);
+                      }}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        eq.registration_status === 'aprobado'
+                          ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs scale-[1.02]'
+                          : 'bg-surface text-on-surface-variant border-outline hover:border-emerald-500/50 hover:bg-emerald-500/10'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-xs">check_circle</span>
+                      <span>Aprobado</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await cambiarEstadoEquipo(eq.id, 'pendiente');
+                        setModalVerEq(prev => prev.eq ? { ...prev, eq: { ...prev.eq, registration_status: 'pendiente' } } : prev);
+                      }}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        eq.registration_status === 'pendiente' || !eq.registration_status
+                          ? 'bg-amber-500 text-white border-amber-600 shadow-xs scale-[1.02]'
+                          : 'bg-surface text-on-surface-variant border-outline hover:border-amber-500/50 hover:bg-amber-500/10'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-xs">schedule</span>
+                      <span>Pendiente</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await cambiarEstadoEquipo(eq.id, 'rechazado');
+                        setModalVerEq(prev => prev.eq ? { ...prev, eq: { ...prev.eq, registration_status: 'rechazado' } } : prev);
+                      }}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        eq.registration_status === 'rechazado'
+                          ? 'bg-rose-600 text-white border-rose-700 shadow-xs scale-[1.02]'
+                          : 'bg-surface text-on-surface-variant border-outline hover:border-rose-500/50 hover:bg-rose-500/10'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-xs">cancel</span>
+                      <span>Rechazado</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Jugadores Inscritos */}
-                <div className="border-t border-slate-100 dark:border-slate-800 pt-4 font-sans">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Jugadores Inscritos ({jugadoresDelEquipo.length})</h4>
+                <div className="border-t border-outline pt-4 font-sans">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-2">Jugadores Inscritos ({jugadoresDelEquipo.length})</h4>
                   {jugadoresDelEquipo.length === 0 ? (
-                    <p className="text-xs text-slate-450 dark:text-slate-500 italic py-2">No hay jugadores inscritos en este equipo.</p>
+                    <p className="text-xs text-on-surface-variant italic py-2">No hay jugadores inscritos en este equipo.</p>
                   ) : (
                     <ul className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                       {jugadoresDelEquipo.map(j => (
-                        <li key={j.id} className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-[#11131c] border border-slate-100 dark:border-slate-800 rounded-lg px-2.5 py-1.5">
-                          <span className="material-symbols-outlined text-sm text-slate-400">person</span>
+                        <li key={j.id} className="flex items-center gap-2 text-xs text-on-surface bg-surface border border-outline rounded-lg px-2.5 py-1.5">
+                          <span className="material-symbols-outlined text-sm text-on-surface-variant">person</span>
                           <span className="font-semibold">{j.name || j.name}</span>
-                          {j.number && <span className="ml-auto text-slate-400 dark:text-slate-500 font-mono">#{j.number}</span>}
+                          {j.number && <span className="ml-auto text-on-surface-variant font-mono">#{j.number}</span>}
                         </li>
                       ))}
                     </ul>
@@ -3030,17 +3042,17 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
                 </div>
 
                 {/* Delegado */}
-                {eq.delegate && (
-                  <div className="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-800/30 rounded-xl p-3 text-xs font-sans">
-                    <p className="text-indigo-500 dark:text-indigo-400 font-bold uppercase tracking-wider mb-1">Cuenta de Delegado</p>
-                    <p className="font-semibold text-slate-800 dark:text-slate-200">{eq.delegate.name}</p>
-                    <p className="text-slate-500 dark:text-slate-400">{eq.delegate.email}</p>
+                {(eq.delegate || eq.championship_user?.user) && (
+                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-xs font-sans">
+                    <p className="text-primary font-bold uppercase tracking-wider mb-1">Cuenta de Delegado</p>
+                    <p className="font-semibold text-on-surface">{eq.championship_user?.user?.name || eq.delegate?.name}</p>
+                    <p className="text-on-surface-variant">{eq.championship_user?.user?.email || eq.delegate?.email}</p>
                   </div>
                 )}
               </div>
 
               {/* Footer */}
-              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end items-center gap-2 bg-slate-50 dark:bg-[#151722]/50">
+              <div className="px-6 py-4 border-t border-outline flex justify-end items-center gap-2 bg-surface-dim">
                 {delegadoTeamId === null && (
                   <>
                     <button
@@ -3075,102 +3087,104 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
             </div>
           </div>
         );
-      })()}
+      })(), document.body)}
 
       {/* ── Modal Editar Categoría ── */}
-      {modalEditarCat.abierto && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
-              <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Editar Categoría</h3>
+      {modalEditarCat.abierto && createPortal(
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-primary-container text-on-surface rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-outline">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-outline bg-surface-dim">
+              <h3 className="font-extrabold text-sm text-on-surface uppercase tracking-wide">Editar Categoría</h3>
               <button
+                type="button"
                 onClick={() => setModalEditarCat({ abierto: false, id: null, name: '', age_min: '', age_max: '', gender: 'Masculino', guardando: false })}
-                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all cursor-pointer"
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-outline text-on-surface-variant hover:bg-surface-bright hover:text-on-surface transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
             </div>
             <form onSubmit={guardarEdicionCat} className="p-6 space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Nombre Categoría *</label>
+                <label className="text-xs font-bold text-on-surface-variant block">Nombre Categoría *</label>
                 <input
                   type="text" required
                   value={modalEditarCat.name}
                   onChange={(e) => setModalEditarCat(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                  className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Edad Mínima</label>
+                  <label className="text-xs font-bold text-on-surface-variant block">Edad Mínima</label>
                   <input
                     type="number" min="0"
                     value={modalEditarCat.age_min}
                     onChange={(e) => setModalEditarCat(prev => ({ ...prev, age_min: e.target.value }))}
-                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                    className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Edad Máxima</label>
+                  <label className="text-xs font-bold text-on-surface-variant block">Edad Máxima</label>
                   <input
                     type="number" min="0"
                     value={modalEditarCat.age_max}
                     onChange={(e) => setModalEditarCat(prev => ({ ...prev, age_max: e.target.value }))}
-                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                    className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none"
                   />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Género</label>
+                <label className="text-xs font-bold text-on-surface-variant block">Género</label>
                 <select
                   value={modalEditarCat.gender}
                   onChange={(e) => setModalEditarCat(prev => ({ ...prev, gender: e.target.value }))}
-                  className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                  className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none cursor-pointer"
                 >
                   <option value="Masculino">Masculino</option>
                   <option value="Femenino">Femenino</option>
                   <option value="Mixto">Mixto</option>
                 </select>
               </div>
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-3">
+              <div className="pt-2 border-t border-outline flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setModalEditarCat({ abierto: false, id: null, name: '', age_min: '', age_max: '', gender: 'Masculino', guardando: false })}
-                  className="px-4 py-2 text-xs font-bold text-slate-650 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all cursor-pointer"
+                  className="px-4 py-2 text-xs font-bold text-on-surface-variant border border-outline rounded-xl hover:bg-surface-bright transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={modalEditarCat.guardando}
-                  className="px-5 py-2 text-xs font-bold text-white bg-indigo-650 hover:bg-indigo-700 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 text-xs font-black uppercase tracking-wider text-white bg-primary hover:opacity-90 rounded-xl transition-all cursor-pointer disabled:opacity-50 shadow-xs"
                 >
                   {modalEditarCat.guardando ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-
-      {/* ── Modal Editar Equipo ── */}
-      {modalEditarEq.abierto && (
+            {/* ── Modal Editar Equipo ── */}
+      {modalEditarEq.abierto && createPortal(
         <div
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fadeIn"
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-editar-equipo-title"
         >
-          <div className="bg-white dark:bg-[#11131c] text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-150 dark:border-slate-800/80 animate-scaleIn">
+          <div className="bg-primary-container text-on-surface rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-outline animate-scaleIn">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-850 bg-slate-50 dark:bg-[#151722]/50">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-outline bg-surface-dim">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-indigo-500 dark:text-indigo-400 text-base">edit</span>
-                <h3 id="modal-editar-equipo-title" className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wide">Editar Equipo</h3>
+                <span className="material-symbols-outlined text-primary text-base">edit</span>
+                <h3 id="modal-editar-equipo-title" className="font-extrabold text-sm text-on-surface uppercase tracking-wide">Editar Equipo</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setModalEditarEq({ abierto: false, eq: null, nombre: '', representante: '', estado: 'pendiente', guardando: false, enable_delegate: false, delegate_name: '', delegate_email: '', delegate_password: '' })}
-                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-455 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-100 transition-all cursor-pointer"
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-outline text-on-surface-variant hover:bg-surface-bright hover:text-on-surface transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
@@ -3180,74 +3194,74 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
             <div className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto font-sans">
               {/* Nombre */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Nombre del Equipo *</label>
+                <label className="text-xs font-bold text-on-surface-variant block">Nombre del Equipo *</label>
                 <input
                   type="text"
                   value={modalEditarEq.nombre}
                   onChange={e => setModalEditarEq(prev => ({ ...prev, nombre: e.target.value }))}
                   placeholder="Nombre del equipo"
-                  className="w-full text-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                  className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none focus:border-primary"
                 />
               </div>
 
               {/* Representante */}
               {!modalEditarEq.enable_delegate && (
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Representante / Delegado (Solo Nombre)</label>
+                  <label className="text-xs font-bold text-on-surface-variant block">Representante / Delegado (Solo Nombre)</label>
                   <input
                     type="text"
                     value={modalEditarEq.representante}
                     onChange={e => setModalEditarEq(prev => ({ ...prev, representante: e.target.value }))}
                     placeholder="Nombre del representante"
-                    className="w-full text-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2.5 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                    className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none focus:border-primary"
                   />
                 </div>
               )}
 
-              <div className="border border-slate-100 dark:border-slate-800/80 bg-slate-50/55 dark:bg-[#151722]/30 rounded-xl p-3 space-y-3">
+              <div className="border border-outline bg-surface rounded-xl p-3 space-y-3">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={modalEditarEq.enable_delegate}
                     onChange={(e) => setModalEditarEq(prev => ({ ...prev, enable_delegate: e.target.checked }))}
-                    className="w-4 h-4 text-indigo-650 border-slate-350 dark:border-slate-800 rounded focus:ring-indigo-500"
+                    className="w-4 h-4 text-primary border-outline rounded focus:ring-primary cursor-pointer"
                   />
-                  <span className="text-xs font-bold text-slate-855 dark:text-slate-200">Habilitar cuenta de acceso para el Delegado</span>
+                  <span className="text-xs font-bold text-on-surface">Habilitar cuenta de acceso para el Delegado</span>
                 </label>
 
                 {modalEditarEq.enable_delegate && (
                   <div className="space-y-2.5 pt-1.5 animate-fadeIn">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase block">Nombre del Delegado *</label>
+                      <label className="text-[10px] font-extrabold text-on-surface-variant uppercase block">Nombre del Delegado *</label>
                       <input
                         type="text"
                         required
                         placeholder="Nombre completo"
                         value={modalEditarEq.delegate_name}
                         onChange={(e) => setModalEditarEq(prev => ({ ...prev, delegate_name: e.target.value }))}
-                        className="w-full text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                        className="w-full text-xs border border-outline bg-surface text-on-surface rounded-lg p-2 outline-none focus:border-primary"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase block">Correo Electrónico *</label>
+                      <label className="text-[10px] font-extrabold text-on-surface-variant uppercase block">Correo Electrónico *</label>
                       <input
                         type="email"
                         required
                         placeholder="correo@ejemplo.com"
                         value={modalEditarEq.delegate_email}
                         onChange={(e) => setModalEditarEq(prev => ({ ...prev, delegate_email: e.target.value }))}
-                        className="w-full text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                        className="w-full text-xs border border-outline bg-surface text-on-surface rounded-lg p-2 outline-none focus:border-primary"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase block">Contraseña Temporal / Restablecer</label>
+                      <label className="text-[10px] font-extrabold text-on-surface-variant uppercase block">Contraseña Temporal / Restablecer</label>
                       <div className="flex gap-2">
                         <input
                           type="text"
                           placeholder="Dejar en blanco para no cambiar"
                           value={modalEditarEq.delegate_password || ''}
                           onChange={(e) => setModalEditarEq(prev => ({ ...prev, delegate_password: e.target.value }))}
-                          className="flex-1 text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2 outline-hidden focus:border-indigo-400"
+                          className="flex-1 text-xs border border-outline bg-surface text-on-surface rounded-lg p-2 outline-none focus:border-primary"
                         />
                         <button
                           type="button"
@@ -3259,7 +3273,7 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
                             }
                             setModalEditarEq(prev => ({ ...prev, delegate_password: pass }));
                           }}
-                          className="px-2.5 py-2 text-xs font-bold text-indigo-650 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-850 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all cursor-pointer flex items-center gap-1"
+                          className="px-2.5 py-2 text-xs font-bold text-primary border border-primary/30 rounded-lg hover:bg-primary/10 transition-all cursor-pointer flex items-center gap-1"
                         >
                           Generar
                         </button>
@@ -3269,18 +3283,49 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
                 )}
               </div>
 
-              {/* Estado */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Estado de Registro</label>
-                <select
-                  value={modalEditarEq.estado}
-                  onChange={e => setModalEditarEq(prev => ({ ...prev, estado: e.target.value as 'pendiente' | 'aprobado' | 'rechazado' }))}
-                  className="w-full text-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171a26] text-slate-900 dark:text-slate-100 rounded-lg p-2.5 outline-hidden cursor-pointer"
-                >
-                  <option value="pendiente">Pendiente</option>
-                  <option value="aprobado">Aprobado</option>
-                  <option value="rechazado">Rechazado</option>
-                </select>
+              {/* Estado de Registro con 3 Botones */}
+              <div className="space-y-1.5 font-sans">
+                <label className="text-xs font-bold text-on-surface-variant block">Estado del Registro *</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setModalEditarEq(prev => ({ ...prev, estado: 'aprobado' }))}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      modalEditarEq.estado === 'aprobado'
+                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs scale-[1.02]'
+                        : 'bg-surface text-on-surface-variant border-outline hover:border-emerald-500/50 hover:bg-emerald-500/10'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-xs">check_circle</span>
+                    <span>Aprobado</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setModalEditarEq(prev => ({ ...prev, estado: 'pendiente' }))}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      modalEditarEq.estado === 'pendiente'
+                        ? 'bg-amber-500 text-white border-amber-600 shadow-xs scale-[1.02]'
+                        : 'bg-surface text-on-surface-variant border-outline hover:border-amber-500/50 hover:bg-amber-500/10'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-xs">schedule</span>
+                    <span>Pendiente</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setModalEditarEq(prev => ({ ...prev, estado: 'rechazado' }))}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      modalEditarEq.estado === 'rechazado'
+                        ? 'bg-rose-600 text-white border-rose-700 shadow-xs scale-[1.02]'
+                        : 'bg-surface text-on-surface-variant border-outline hover:border-rose-500/50 hover:bg-rose-500/10'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-xs">cancel</span>
+                    <span>Rechazado</span>
+                  </button>
+                </div>
               </div>
 
               <LogoInput
@@ -3313,13 +3358,14 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── Modal Editar Jugador ── */}
       {modalEditarJug.abierto && (
         <div
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn"
+          className="fixed inset-0 bg-black/60 backdrop-blur-md z-[999] flex items-center justify-center p-4 animate-fadeIn"
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-editar-jugador-title"
@@ -3458,16 +3504,19 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
             </div>
             <div className="flex-1 overflow-y-auto p-5 space-y-3">
               <p className="text-[10px] text-slate-400 font-semibold leading-relaxed mb-4">
-                Sigue estos pasos en orden para inscribir correctamente a los competidores de tu torneo:
+                {delegadoTeamId !== null
+                  ? 'Guía rápida para la inscripción de deportistas de tu equipo:'
+                  : 'Sigue estos pasos en orden para inscribir correctamente a los competidores de tu torneo:'
+                }
               </p>
-              {PASOS_AYUDA_PARTICIPANTES.map((p) => (
+              {(delegadoTeamId !== null ? PASOS_AYUDA_DELEGADO : PASOS_AYUDA_PARTICIPANTES).map((p) => (
                 <div key={p.paso} className={`flex gap-3 p-3 rounded-xl border transition-colors ${
-                  p.paso === '6' || p.paso === '7'
+                  p.paso === '5' || p.paso === '6' || p.paso === '7'
                     ? 'bg-emerald-50 border-emerald-100 hover:bg-emerald-100/60'
                     : 'bg-slate-50 border-slate-100 hover:bg-slate-100/60'
                 }`}>
                   <div className={`w-6 h-6 rounded-full text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5 border ${
-                    p.paso === '6' || p.paso === '7'
+                    p.paso === '5' || p.paso === '6' || p.paso === '7'
                       ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
                       : 'bg-primary/10 text-primary border-primary/20'
                   }`}>
@@ -3491,6 +3540,315 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
             </div>
           </div>
         </div>
+      )}
+      {/* ── Modal Inscribir Nuevo Jugador ── */}
+      {modalNuevoJugAbierto && createPortal(
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-fadeIn text-on-surface"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-nuevo-jugador-title"
+        >
+          <div className="bg-primary-container border border-outline rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-outline">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">person_add</span>
+                <h3 id="modal-nuevo-jugador-title" className="font-black text-sm uppercase tracking-wide">Inscribir Nuevo Jugador</h3>
+              </div>
+              <button
+                type="button"
+                onClick={cerrarModalNuevoJug}
+                className="w-8 h-8 rounded-full border border-outline flex items-center justify-center text-on-surface-variant hover:bg-surface transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+
+            {/* Body */}
+            <form onSubmit={async (e) => {
+              await guardarJugador(e);
+              cerrarModalNuevoJug();
+            }} className="p-6 space-y-4">
+              {/* Indicaciones de Validación */}
+              <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20 flex items-start gap-2.5 text-on-surface">
+                <span className="material-symbols-outlined text-primary text-base shrink-0 mt-0.5">info</span>
+                <p className="text-[11px] font-medium leading-tight">
+                  <strong className="font-extrabold text-primary block mb-0.5">Reglas de Inscripción:</strong>
+                  El <strong>DNI/Cédula</strong> debe ser único y el <strong>número de dorsal (#)</strong> no se puede repetir dentro del mismo equipo.
+                </p>
+              </div>
+
+              {/* Cargador de Foto */}
+              <LogoInput
+                logoFile={fotoJugFile}
+                logoUrlTexto={fotoJugUrl}
+                onFileChange={setFotoJugFile}
+                onUrlChange={setFotoJugUrl}
+                label="Foto del Rostro del Jugador"
+              />
+
+              {/* Nombre Completo */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-on-surface-variant block font-sans">Nombre Completo *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: Mateo Messi"
+                  value={nuevoJug.name}
+                  onChange={(e) => setNuevoJug({ ...nuevoJug, name: e.target.value })}
+                  className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-3 outline-none focus:border-primary transition-all font-medium"
+                />
+              </div>
+
+              {/* DNI y Edad */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-on-surface-variant block font-sans">DNI / Cédula *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Número de documento"
+                    value={nuevoJug.dni}
+                    onChange={(e) => setNuevoJug({ ...nuevoJug, dni: e.target.value })}
+                    className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-3 outline-none focus:border-primary transition-all font-medium"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-on-surface-variant block font-sans">Edad *</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    placeholder="Ej: 22"
+                    value={nuevoJug.age}
+                    onChange={(e) => setNuevoJug({ ...nuevoJug, age: e.target.value })}
+                    className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-3 outline-none focus:border-primary transition-all font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* Dorsal (#) y Equipo */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-on-surface-variant block font-sans">Dorsal (#) *</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    placeholder="Ej: 10"
+                    value={nuevoJug.number}
+                    onChange={(e) => setNuevoJug({ ...nuevoJug, number: e.target.value })}
+                    className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-3 outline-none focus:border-primary transition-all font-medium font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-on-surface-variant block font-sans">Equipo *</label>
+                  <select
+                    value={delegadoTeamId !== null ? String(delegadoTeamId) : (equipoSelId ? String(equipoSelId) : nuevoJug.team_id)}
+                    disabled={delegadoTeamId !== null}
+                    onChange={(e) => setNuevoJug({ ...nuevoJug, team_id: e.target.value })}
+                    className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-3 outline-none cursor-pointer font-medium disabled:opacity-60"
+                  >
+                    <option value="">Seleccionar Equipo</option>
+                    {equipos.map((eq) => (
+                      <option key={eq.id} value={String(eq.id)}>{eq.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="pt-4 border-t border-outline flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={cerrarModalNuevoJug}
+                  className="px-4 py-2.5 text-xs font-bold text-on-surface-variant border border-outline rounded-xl hover:bg-surface transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white bg-primary hover:opacity-90 rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-sm">check_circle</span>
+                  <span>Guardar Jugador</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+      {/* ── Modal Carga Masiva de Plantel ── */}
+      {modalCargaMasivaAbierto && createPortal(
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-fadeIn text-on-surface"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-carga-masiva-title"
+        >
+          <div className="bg-primary-container border border-outline rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-outline">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">upload_file</span>
+                <h3 id="modal-carga-masiva-title" className="font-black text-sm uppercase tracking-wide">Carga Masiva de Plantel en Bloque</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalCargaMasivaAbierto(false)}
+                className="w-8 h-8 rounded-full border border-outline flex items-center justify-center text-on-surface-variant hover:bg-surface transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-5">
+              {/* Reglas de Unicidad */}
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 flex items-start gap-2.5">
+                <span className="material-symbols-outlined text-amber-600 text-base shrink-0 mt-0.5">verified</span>
+                <p className="text-[11px] font-medium leading-tight">
+                  <strong className="font-extrabold block mb-0.5">Importante para la Carga Masiva:</strong>
+                  Revisa que ningún jugador tenga el mismo <strong>DNI</strong> ni el mismo <strong>número de dorsal (#)</strong> repetido en la planilla.
+                </p>
+              </div>
+
+              {/* Banner de Descarga de Plantilla */}
+              <div className="bg-surface border border-outline rounded-2xl p-4 flex items-center justify-between gap-3 shadow-2xs">
+                <div className="space-y-0.5 min-w-0">
+                  <h4 className="font-extrabold text-xs text-on-surface">Formato de Plantilla Requerido</h4>
+                  <p className="text-[10px] text-on-surface-variant">Descarga el archivo CSV de muestra para llenar la plantilla de deportistas.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={descargarPlantilla}
+                  className="shrink-0 flex items-center gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-xs">download</span>
+                  <span>Descargar CSV</span>
+                </button>
+              </div>
+
+              {/* Equipo Destino */}
+              {delegadoTeamId === null && (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-on-surface-variant block font-sans">Equipo Destino *</label>
+                  <select
+                    value={equipoIdMasiva ?? (equipoSelId ?? '')}
+                    onChange={(e) => {
+                      setEquipoIdMasiva(e.target.value ? parseInt(e.target.value) : null);
+                      setResultadoCarga(null);
+                    }}
+                    className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-3 outline-none cursor-pointer font-medium"
+                  >
+                    <option value="">-- Selecciona el equipo --</option>
+                    {equipos.map((eq) => (
+                      <option key={eq.id} value={eq.id}>{eq.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Zona de Dropzone */}
+              <div
+                onClick={() => inputArchivoRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files[0];
+                  if (file && (file.name.endsWith('.csv') || file.name.endsWith('.xlsx'))) {
+                    setArchivoCsv(file);
+                    setResultadoCarga(null);
+                  } else {
+                    mostrarMensaje('Solo se permiten archivos CSV o Excel.', true);
+                  }
+                }}
+                className="border-2 border-dashed border-outline hover:border-primary bg-surface/50 hover:bg-surface rounded-2xl p-8 text-center cursor-pointer transition-all space-y-2 group"
+              >
+                <span className="material-symbols-outlined text-4xl text-primary/70 group-hover:scale-110 transition-transform">cloud_upload</span>
+                {archivoCsv ? (
+                  <div>
+                    <p className="text-xs font-black text-primary">{archivoCsv.name}</p>
+                    <p className="text-[10px] text-on-surface-variant mt-0.5">{(archivoCsv.size / 1024).toFixed(1)} KB · Haz clic para cambiar archivo</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-xs font-bold text-on-surface">Arrastra tu archivo de plantilla aquí o haz clic para examinar</p>
+                    <p className="text-[10px] text-on-surface-variant mt-0.5">Formatos permitidos: .CSV (Recomendado) / .XLSX</p>
+                  </div>
+                )}
+                <input
+                  ref={inputArchivoRef}
+                  type="file"
+                  accept=".csv,.xlsx"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setArchivoCsv(file);
+                      setResultadoCarga(null);
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Resumen de Resultados */}
+              {resultadoCarga && (
+                <div className="space-y-2 text-xs">
+                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-2">
+                    <span className="material-symbols-outlined text-sm">check_circle</span>
+                    <span>¡{resultadoCarga.ok} jugadores inscritos con éxito!</span>
+                  </div>
+                  {resultadoCarga.errores.length > 0 && (
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 font-medium space-y-1 max-h-32 overflow-y-auto">
+                      {resultadoCarga.errores.map((err, i) => (
+                        <p key={i} className="text-[10px] flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[10px]">error</span>
+                          {err}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="pt-3 border-t border-outline flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setModalCargaMasivaAbierto(false)}
+                  className="px-4 py-2.5 text-xs font-bold text-on-surface-variant border border-outline rounded-xl hover:bg-surface transition-all cursor-pointer"
+                >
+                  Cerrar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await procesarCsvJugadores();
+                    if (delegadoTeamId !== null) {
+                      cargarJugadoresDeEquipo(delegadoTeamId);
+                    }
+                  }}
+                  disabled={!archivoCsv || cargandoCsv}
+                  className="px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white bg-primary hover:opacity-90 disabled:opacity-50 rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-2"
+                >
+                  {cargandoCsv ? (
+                    <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />Procesando...</>
+                  ) : (
+                    <><span className="material-symbols-outlined text-sm">upload</span>Procesar Carga Masiva</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
       </div>
 

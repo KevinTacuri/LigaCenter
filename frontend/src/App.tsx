@@ -30,6 +30,25 @@ import { EquipoDetalle } from './paginas/public/EquipoDetalle';
 import { JugadorDetalle } from './paginas/public/JugadorDetalle';
 import { CampeonatoDetalle } from './paginas/public/CampeonatoDetalle';
 
+// Componente de Guardia para proteger rutas de Organizador/Admin
+const RutaProtegidaOrganizador: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { usuario, tieneRol } = useAutenticacion();
+  const { campeonatoActivo } = useCampeonato();
+
+  const membresiaActiva = campeonatoActivo && usuario?.championship_memberships?.find(
+    (m: any) => m.championship_id === campeonatoActivo.id
+  );
+  const esOrganizador = tieneRol('organizador') || tieneRol('administrador') || membresiaActiva?.role === 'organizer' || membresiaActiva?.role === 'admin';
+  const esDelegado = (membresiaActiva && membresiaActiva.role === 'team_delegate') || tieneRol('delegado') || tieneRol('delegado_equipo');
+  const esDelegadoPuro = esDelegado && !esOrganizador;
+
+  if (esDelegadoPuro) {
+    return <Navigate to="/tablero" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 const App: React.FC = () => {
   const [tema, setTema] = useState<'light' | 'dark'>(
     () => (localStorage.getItem('theme') as 'light' | 'dark') || 'dark'
@@ -77,14 +96,14 @@ const App: React.FC = () => {
 
               {/* Rutas Privadas */}
               <Route path="/tablero" element={<Tablero />} />
-              <Route path="/tablero/usuarios" element={<GestionUsuarios />} />
-              <Route path="/tablero/delegados" element={<GestionDelegados />} />
+              <Route path="/tablero/usuarios" element={<RutaProtegidaOrganizador><GestionUsuarios /></RutaProtegidaOrganizador>} />
+              <Route path="/tablero/delegados" element={<RutaProtegidaOrganizador><GestionDelegados /></RutaProtegidaOrganizador>} />
               <Route path="/tablero/participantes" element={<GestionParticipantes />} />
               <Route path="/tablero/fixture" element={<ProgramacionFixture />} />
-              <Route path="/tablero/mesa" element={<MesaControl />} />
+              <Route path="/tablero/mesa" element={<RutaProtegidaOrganizador><MesaControl /></RutaProtegidaOrganizador>} />
               <Route path="/tablero/publico" element={<TablaPosiciones />} />
-              <Route path="/tablero/saas-admin" element={<ConsolaSaaS />} />
-              <Route path="/tablero/configuracion" element={<Configuracion />} />
+              <Route path="/tablero/saas-admin" element={<RutaProtegidaOrganizador><ConsolaSaaS /></RutaProtegidaOrganizador>} />
+              <Route path="/tablero/configuracion" element={<RutaProtegidaOrganizador><Configuracion /></RutaProtegidaOrganizador>} />
               <Route path="/tablero/perfil" element={<Perfil />} />
               <Route path="/tablero/estadisticas" element={<EstadisticasOrganizador />} />
 

@@ -29,9 +29,19 @@ class UserController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        $users = User::whereHas('roles', function($query) {
-            $query->where('name', '!=', 'usuario_publico');
-        })->with('roles')->paginate(15);
+        $query = User::whereHas('roles', function($q) {
+            $q->where('name', '!=', 'usuario_publico');
+        })->with('roles');
+
+        if ($request->boolean('exclude_privileged') || $request->has('exclude_roles')) {
+            $excluded = explode(',', $request->query('exclude_roles', 'administrador,organizador'));
+            $query->whereDoesntHave('roles', function($q) use ($excluded) {
+                $q->whereIn('name', $excluded);
+            });
+        }
+
+        $perPage = (int) $request->query('per_page', 15);
+        $users = $query->paginate($perPage);
 
         return $this->successResponse([
             'users' => $users->items(),

@@ -1,9 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../contexto/ContextoCampeonato';
 import { serviciosCampeonatos } from '../servicios/api';
 import { BotonTema } from './BotonTema';
 import { sileo } from 'sileo';
+import logoImg from '../assets/logo.svg';
 
 interface CabeceraEstandarProps {
   titulo?: string;
@@ -16,8 +18,15 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
   subtitulo,
   leftElement,
 }) => {
-  const { usuario, tieneRol } = useAutenticacion();
+  const { usuario, tieneRol, cerrarSesion } = useAutenticacion();
   const { campeonatoActivo, panelCampeonatosAbierto, setPanelCampeonatosAbierto } = useCampeonato();
+  const navigate = useNavigate();
+
+  const membresiaActiva = campeonatoActivo && usuario?.championship_memberships?.find(
+    (m: any) => m.championship_id === campeonatoActivo.id
+  );
+  const esOrganizador = tieneRol('organizador') || tieneRol('administrador') || membresiaActiva?.role === 'organizer' || membresiaActiva?.role === 'admin';
+  const esDelegadoPuro = ((membresiaActiva && membresiaActiva.role === 'team_delegate') || tieneRol('delegado') || tieneRol('delegado_equipo')) && !esOrganizador;
 
   const manejarDescargarReglamento = async () => {
     if (!campeonatoActivo) return;
@@ -53,17 +62,56 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
     <header className="bg-primary-container/90 backdrop-blur-md border-b border-outline px-6 h-16 sticky top-0 z-30 shadow-xs flex items-center justify-between shrink-0 text-on-surface">
       <div className="flex items-center gap-3">
         {leftElement}
+
+        {/* Logo Oficial LigaCenter (Navegación al Inicio) */}
+        <button
+          type="button"
+          onClick={() => navigate('/tablero')}
+          className="flex items-center gap-2 hover:opacity-85 transition-opacity cursor-pointer group shrink-0"
+          title="Ir al Inicio / Dashboard"
+        >
+          <img src={logoImg} className="w-8 h-8 object-contain group-hover:scale-105 transition-transform" alt="Logo LigaCenter" />
+          <span className="font-black text-base text-on-surface tracking-tight hidden sm:inline">
+            Liga<span className="text-primary">Center</span>
+          </span>
+        </button>
+
+        <div className="h-6 w-px bg-outline mx-1 hidden sm:block"></div>
+
         <div>
-          <h1 className="text-lg font-black text-on-surface leading-none tracking-tight">
+          <h1 className="text-sm font-black text-on-surface leading-none tracking-tight">
             {displayTitle}
           </h1>
-          <span className="text-[10px] text-on-surface-variant font-semibold tracking-wider uppercase mt-1.5 block leading-none">
+          <span className="text-[10px] text-on-surface-variant font-semibold tracking-wider uppercase mt-1 block leading-none">
             {displaySubtitle}
           </span>
         </div>
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Etiquetas para Delegado en Barra Superior */}
+        {esDelegadoPuro && (
+          <div className="hidden md:flex items-center gap-2 mr-1">
+            <button
+              type="button"
+              onClick={() => navigate('/tablero/participantes?tab=planilla-jugadores')}
+              className="flex items-center gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-xl px-3 py-1.5 text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-2xs"
+            >
+              <span className="material-symbols-outlined text-sm">person_add</span>
+              <span>Registrar Jugadores</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/tablero/fixture?tab=partidos')}
+              className="flex items-center gap-1.5 bg-surface hover:bg-surface-bright text-on-surface border border-outline rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+            >
+              <span className="material-symbols-outlined text-sm text-primary">calendar_month</span>
+              <span>Partidos</span>
+            </button>
+          </div>
+        )}
+
         <BotonTema />
 
         {!esAdministrador && campeonatoActivo && campeonatoActivo.rules_pdf && (
@@ -120,6 +168,26 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
               )
             )}
           </div>
+        )}
+
+        {/* Botón Cerrar Sesión (Logout) */}
+        {usuario && (
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await cerrarSesion();
+              } catch {
+                // Ignore error on redirect
+              }
+              navigate('/login');
+            }}
+            className="flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer shadow-2xs shrink-0"
+            title="Cerrar Sesión"
+          >
+            <span className="material-symbols-outlined text-sm">logout</span>
+            <span className="hidden sm:inline">Salir</span>
+          </button>
         )}
       </div>
     </header>
