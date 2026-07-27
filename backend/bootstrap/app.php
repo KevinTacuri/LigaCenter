@@ -21,6 +21,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'championship.access' => \App\Http\Middleware\CheckChampionshipAccess::class,
         ]);
+
+        // Para rutas /api/* sin auth: retornar 401 en vez de redirigir a 'login'
+        $middleware->redirectGuestsTo(function (Request $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return null;  // null = no redirigir, devolver 401
+            }
+            return '/login';  // para web
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

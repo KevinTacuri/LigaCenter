@@ -1,24 +1,4 @@
-# =============================================================================
-# LigaCenter - Stack completo para Dokploy / Producción
-# =============================================================================
-# Levanta 3 servicios:
-#   - db       : MariaDB 11.8 (datos)
-#   - backend  : Laravel 13 + PHP 8.4 + Nginx (API)
-#   - frontend : React 19 + Vite + Nginx (UI, con proxy /api → backend)
-#
-# Uso local (sin Dokploy):
-#   docker compose up -d --build
-#
-# Uso en Dokploy:
-#   Subir esta carpeta como "Compose" source type.
-#   Configurar las variables de entorno en la UI de Dokploy.
-# =============================================================================
-
 services:
-
-  # ---------------------------------------------------------------------------
-  # Base de datos
-  # ---------------------------------------------------------------------------
   db:
     image: mariadb:11
     container_name: ligacenter-db
@@ -31,18 +11,17 @@ services:
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test:
+        - CMD
+        - healthcheck.sh
+        - --connect
+        - --innodb_initialized
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
     networks:
       - ligacenter-net
-    # NO expone puertos al host — la DB solo es accesible desde la red interna
-
-  # ---------------------------------------------------------------------------
-  # Backend Laravel (PHP-FPM + Nginx en un contenedor vía Supervisor)
-  # ---------------------------------------------------------------------------
   backend:
     build:
       context: ./backend
@@ -61,21 +40,15 @@ services:
       APP_DEBUG: "false"
       APP_URL: ${APP_URL}
       APP_KEY: ${APP_KEY}
-
-      # DB
       DB_CONNECTION: mysql
       DB_HOST: db
       DB_PORT: 3306
       DB_DATABASE: ${DB_DATABASE}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
-
-      # Sesiones / cache
       SESSION_DRIVER: database
       CACHE_STORE: database
       QUEUE_CONNECTION: database
-
-      # Logs (stderr → los recoge Dokploy)
       LOG_CHANNEL: stderr
       LOG_LEVEL: info
     volumes:
@@ -83,47 +56,156 @@ services:
       - backend_cache:/var/www/html/bootstrap/cache
     networks:
       - ligacenter-net
+      - dokploy-network
+      - default
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://localhost:8000/ || exit 1"]
+      test:
+        - CMD-SHELL
+        - curl -fsS -o /dev/null http://localhost:8000/ || exit 1
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 60s
+    labels:
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-web.rule=Host(`api.compose-connect-primary-bandwidth-elym5d-9de16a-144-126-134-104.sslip.io`)
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-web.entrypoints=web
+      - traefik.http.services.compose-connect-primary-bandwidth-elym5d-5-web.loadbalancer.server.port=8000
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-web.service=compose-connect-primary-bandwidth-elym5d-5-web
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-websecure.rule=Host(`api.compose-connect-primary-bandwidth-elym5d-9de16a-144-126-134-104.sslip.io`)
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-websecure.entrypoints=websecure
+      - traefik.http.services.compose-connect-primary-bandwidth-elym5d-5-websecure.loadbalancer.server.port=8000
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-websecure.service=compose-connect-primary-bandwidth-elym5d-5-websecure
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-websecure.tls.certresolver=letsencrypt
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-web.rule=Host(`api.compose-connect-primary-bandwidth-elym5d-9de16a-144-126-134-104.sslip.io`)
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-web.entrypoints=web
+      - traefik.http.services.compose-connect-primary-bandwidth-elym5d-5-web.loadbalancer.server.port=8000
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-web.service=compose-connect-primary-bandwidth-elym5d-5-web
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-websecure.rule=Host(`api.compose-connect-primary-bandwidth-elym5d-9de16a-144-126-134-104.sslip.io`)
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-websecure.entrypoints=websecure
+      - traefik.http.services.compose-connect-primary-bandwidth-elym5d-5-websecure.loadbalancer.server.port=8000
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-websecure.service=compose-connect-primary-bandwidth-elym5d-5-websecure
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-websecure.tls.certresolver=letsencrypt
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-web.rule=Host(`api.compose-connect-primary-bandwidth-elym5d-9de16a-144-126-134-104.sslip.io`)
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-web.entrypoints=web
+      - traefik.http.services.compose-connect-primary-bandwidth-elym5d-5-web.loadbalancer.server.port=8000
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-web.service=compose-connect-primary-bandwidth-elym5d-5-web
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-websecure.rule=Host(`api.compose-connect-primary-bandwidth-elym5d-9de16a-144-126-134-104.sslip.io`)
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-websecure.entrypoints=websecure
+      - traefik.http.services.compose-connect-primary-bandwidth-elym5d-5-websecure.loadbalancer.server.port=8000
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-websecure.service=compose-connect-primary-bandwidth-elym5d-5-websecure
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-5-websecure.tls.certresolver=letsencrypt
+      - traefik.enable=true
+  reverb:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ligacenter-reverb:latest
+    container_name: ligacenter-reverb
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL}
+      APP_KEY: ${APP_KEY}
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      BROADCAST_CONNECTION: reverb
+      REVERB_APP_ID: ${REVERB_APP_ID}
+      REVERB_APP_KEY: ${REVERB_APP_KEY}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET}
+      REVERB_HOST: "0.0.0.0"
+      REVERB_PORT: "8080"
+      REVERB_SCHEME: "http"
+      LOG_CHANNEL: stderr
+      LOG_LEVEL: info
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    networks:
+      - ligacenter-net
+      - dokploy-network
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-reverb-web.rule=Host(`ws.compose-connect-primary-bandwidth-elym5d-9de16a-144-126-134-104.sslip.io`)
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-reverb-web.entrypoints=web
+      - traefik.http.services.compose-connect-primary-bandwidth-elym5d-reverb-web.loadbalancer.server.port=8080
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-reverb-web.service=compose-connect-primary-bandwidth-elym5d-reverb-web
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-reverb-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-reverb-websecure.rule=Host(`ws.compose-connect-primary-bandwidth-elym5d-9de16a-144-126-134-104.sslip.io`)
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-reverb-websecure.entrypoints=websecure
+      - traefik.http.services.compose-connect-primary-bandwidth-elym5d-reverb-websecure.loadbalancer.server.port=8080
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-reverb-websecure.service=compose-connect-primary-bandwidth-elym5d-reverb-websecure
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-reverb-websecure.tls.certresolver=letsencrypt
 
-  # ---------------------------------------------------------------------------
-  # Frontend React (build estático + Nginx con proxy a /api)
-  # ---------------------------------------------------------------------------
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # Para Dokploy detrás de un dominio: dejalo en /api y el proxy del nginx lo resuelve
-        VITE_API_URL: /api
+        VITE_API_URL: https://api.compose-connect-primary-bandwidth-elym5d-9de16a-144-126-134-104.sslip.io/api
     image: ligacenter-frontend:latest
     container_name: ligacenter-frontend
     restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
-    # NOTA: NO se publica `ports:` para Dokploy — Traefik ya expone el servicio
-    # en :80/:443 y hacer el bind directo choca con dokploy-traefik (port already allocated).
-    # Si necesitás publicar el puerto (solo para desarrollo local con `docker compose up`
-    # fuera de Dokploy), agregá:
-    #   ports:
-    #     - "8080:80"
     networks:
       - ligacenter-net
+      - dokploy-network
+      - default
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://localhost/ || exit 1"]
+      test:
+        - CMD-SHELL
+        - curl -fsS -o /dev/null http://localhost/ || exit 1
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 20s
-
-# =============================================================================
-# Volúmenes persistentes
-# =============================================================================
+    labels:
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-web.rule=Host(`compose-connect-primary-bandwidth-elym5d-9de16a-144-126-134-104.sslip.io`)
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-web.entrypoints=web
+      - traefik.http.services.compose-connect-primary-bandwidth-elym5d-1-web.loadbalancer.server.port=80
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-web.service=compose-connect-primary-bandwidth-elym5d-1-web
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-websecure.rule=Host(`compose-connect-primary-bandwidth-elym5d-9de16a-144-126-134-104.sslip.io`)
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-websecure.entrypoints=websecure
+      - traefik.http.services.compose-connect-primary-bandwidth-elym5d-1-websecure.loadbalancer.server.port=80
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-websecure.service=compose-connect-primary-bandwidth-elym5d-1-websecure
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-websecure.tls.certresolver=letsencrypt
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-web.rule=Host(`compose-connect-primary-bandwidth-elym5d-9de16a-144-126-134-104.sslip.io`)
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-web.entrypoints=web
+      - traefik.http.services.compose-connect-primary-bandwidth-elym5d-1-web.loadbalancer.server.port=80
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-web.service=compose-connect-primary-bandwidth-elym5d-1-web
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-websecure.rule=Host(`compose-connect-primary-bandwidth-elym5d-9de16a-144-126-134-104.sslip.io`)
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-websecure.entrypoints=websecure
+      - traefik.http.services.compose-connect-primary-bandwidth-elym5d-1-websecure.loadbalancer.server.port=80
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-websecure.service=compose-connect-primary-bandwidth-elym5d-1-websecure
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-websecure.tls.certresolver=letsencrypt
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-web.rule=Host(`compose-connect-primary-bandwidth-elym5d-9de16a-144-126-134-104.sslip.io`)
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-web.entrypoints=web
+      - traefik.http.services.compose-connect-primary-bandwidth-elym5d-1-web.loadbalancer.server.port=80
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-web.service=compose-connect-primary-bandwidth-elym5d-1-web
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-websecure.rule=Host(`compose-connect-primary-bandwidth-elym5d-9de16a-144-126-134-104.sslip.io`)
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-websecure.entrypoints=websecure
+      - traefik.http.services.compose-connect-primary-bandwidth-elym5d-1-websecure.loadbalancer.server.port=80
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-websecure.service=compose-connect-primary-bandwidth-elym5d-1-websecure
+      - traefik.http.routers.compose-connect-primary-bandwidth-elym5d-1-websecure.tls.certresolver=letsencrypt
+      - traefik.enable=true
 volumes:
   db_data:
     driver: local
@@ -131,10 +213,8 @@ volumes:
     driver: local
   backend_cache:
     driver: local
-
-# =============================================================================
-# Red interna
-# =============================================================================
 networks:
   ligacenter-net:
     driver: bridge
+  dokploy-network:
+    external: true

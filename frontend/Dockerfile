@@ -40,6 +40,10 @@ RUN rm /etc/nginx/conf.d/default.conf
 # Nuestra configuración con proxy reverso
 COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 
+# Cache-buster: cambiar este valor (1, 2, 3...) para forzar rebuild
+ARG CACHEBUSTER=2
+RUN echo "Build #${CACHEBUSTER} at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
 # Copiar los assets construidos desde el stage anterior
 COPY --from=builder /app/dist /usr/share/nginx/html
 
