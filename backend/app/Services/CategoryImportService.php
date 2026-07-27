@@ -55,6 +55,8 @@ class CategoryImportService
             $category = Category::firstOrCreate(
 
                 [
+                    'championship_id' => $championship->id,
+                    'discipline_id' => $discipline->id,
                     'championship_discipline_id' =>
                         $championshipDiscipline->id,
 
