@@ -71,8 +71,8 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
   );
   const rolCampeonato = membresiaActiva ? membresiaActiva.role : null;
 
-  const esOrganizador = rol === 'organizador' || rol === 'administrador' || rolCampeonato === 'organizer' || rolCampeonato === 'admin' || usuario?.roles?.includes('organizador') || usuario?.roles?.includes('administrador');
-  const esDelegadoPuro = (rolCampeonato === 'team_delegate' || usuario?.roles?.includes('delegado') || usuario?.roles?.includes('delegado_equipo')) && !esOrganizador;
+  const esOrganizador = !!(rol === 'organizador' || rol === 'administrador' || rolCampeonato === 'organizer' || usuario?.roles?.includes('organizador') || usuario?.roles?.includes('administrador'));
+  const esDelegadoPuro = !!(rolCampeonato === 'team_delegate' || usuario?.roles?.includes('delegado') || usuario?.roles?.includes('delegado_equipo')) && !esOrganizador;
 
   const manejarCerrarSesion = async () => {
     const isConfirmed = await confirm({
@@ -134,7 +134,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
       titulo: 'Encargados de Mesa',
       icono: 'badge',
       ruta: '/tablero/delegados',
-      visible: !!campeonatoActivo && esOrganizador
+      visible: !!(campeonatoActivo && esOrganizador)
     },
     {
       id: 'fixture',
@@ -148,7 +148,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
       titulo: 'Mesa de Control',
       icono: 'edit_note',
       ruta: '/tablero/mesa',
-      visible: !!campeonatoActivo && (esOrganizador || rolCampeonato === 'score_table' || rolCampeonato === 'referee')
+      visible: !!(campeonatoActivo && (esOrganizador || rolCampeonato === 'score_table' || rolCampeonato === 'referee'))
     },
     {
       id: 'posiciones',
@@ -189,7 +189,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
       titulo: 'Configurar Campeonato',
       icono: 'settings',
       ruta: '/tablero/configuracion',
-      visible: !!campeonatoActivo && esOrganizador
+      visible: !!(campeonatoActivo && esOrganizador)
     }
   ];
 
@@ -216,7 +216,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
     if (itemsAjustes.some(item => item.visible && isActive(item.ruta))) setSeccionAjustesAbierta(true);
 
     itemsTorneo.forEach((item) => {
-      // Solo expandir automáticamente si la vista está activa Y el usuario no ha cerrado manualmente la sección
       if (isActive(item.ruta) && !submenusModificadosPorUsuario[item.id]) {
         setSubmenusDesplegados((prev) => ({ ...prev, [item.id]: true }));
       }
@@ -282,7 +281,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
           )}
         </button>
 
-        {/* Submenú desplegable animado */}
         {!colapsado && tieneSubItems && (
           <div
             className={`grid transition-all duration-300 ease-in-out border-l border-outline ml-5 mt-1 pl-3 pr-1 ${
@@ -389,13 +387,11 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
 
   return (
     <>
-      {/* Sidebar Desktop */}
       <aside
         className={`hidden lg:flex flex-col bg-primary-container border-r border-outline transition-all duration-300 ease-in-out text-on-surface ${
           colapsado ? 'w-20' : 'w-64'
         } fixed left-0 top-0 h-full z-40 shadow-2xl`}
       >
-        {/* Cabecera del Sidebar con botón de contraer en la parte superior (Estilo ChatGPT / IDE) */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-outline">
           <div className="flex items-center gap-2.5 overflow-hidden">
             <img src={logoImg} className="w-8 h-8 object-contain shrink-0" alt="LigaCenter" />
@@ -417,7 +413,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
           </button>
         </div>
 
-        {/* Navegación Principal */}
         <nav className="flex-1 py-6 px-3 space-y-4 overflow-y-auto">
           {visibleTorneo.length > 0 && (
             <div className="space-y-1">
@@ -498,7 +493,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
           )}
         </nav>
 
-        {/* Pie de Barra Lateral: Usuario & Cerrar Sesión */}
         <div className="border-t border-outline bg-surface-dim p-3.5 space-y-2">
           <div className={`flex items-center gap-3 ${colapsado ? 'justify-center' : 'justify-start'}`}>
             <div className={`w-9 h-9 rounded-full border flex items-center justify-center font-black text-xs shrink-0 select-none ${colorAvatar.bg} ${colorAvatar.text}`} title={usuario?.name}>
@@ -526,7 +520,6 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
         </div>
       </aside>
 
-      {/* Dispositivos Móviles */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <button
           type="button"

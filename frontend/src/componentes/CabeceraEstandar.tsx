@@ -25,7 +25,7 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
   const membresiaActiva = campeonatoActivo && usuario?.championship_memberships?.find(
     (m: any) => m.championship_id === campeonatoActivo.id
   );
-  const esOrganizador = tieneRol('organizador') || tieneRol('administrador') || membresiaActiva?.role === 'organizer' || membresiaActiva?.role === 'admin';
+  const esOrganizador = tieneRol('organizador') || tieneRol('administrador') || membresiaActiva?.role === 'organizer';
   const esDelegadoPuro = ((membresiaActiva && membresiaActiva.role === 'team_delegate') || tieneRol('delegado') || tieneRol('delegado_equipo')) && !esOrganizador;
 
   const manejarDescargarReglamento = async () => {

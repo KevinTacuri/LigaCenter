@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ProveedorAutenticacion } from './contexto/ContextoAutenticacion';
-import { ProveedorCampeonato } from './contexto/ContextoCampeonato';
+import { ProveedorAutenticacion, useAutenticacion } from './contexto/ContextoAutenticacion';
+import { ProveedorCampeonato, useCampeonato } from './contexto/ContextoCampeonato';
 import { Login } from './paginas/auth/Login';
 import { Registro } from './paginas/auth/Registro';
 import { Tablero } from './paginas/dashboard/Tablero';
@@ -38,7 +38,8 @@ const RutaProtegidaOrganizador: React.FC<{ children: React.ReactNode }> = ({ chi
   const membresiaActiva = campeonatoActivo && usuario?.championship_memberships?.find(
     (m: any) => m.championship_id === campeonatoActivo.id
   );
-  const esOrganizador = tieneRol('organizador') || tieneRol('administrador') || membresiaActiva?.role === 'organizer' || membresiaActiva?.role === 'admin';
+  
+  const esOrganizador = tieneRol('organizador') || tieneRol('administrador') || membresiaActiva?.role === 'organizer';
   const esDelegado = (membresiaActiva && membresiaActiva.role === 'team_delegate') || tieneRol('delegado') || tieneRol('delegado_equipo');
   const esDelegadoPuro = esDelegado && !esOrganizador;
 
