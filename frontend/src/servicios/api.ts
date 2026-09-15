@@ -290,6 +290,7 @@ export interface Categoria {
   age_max?: number | null;
   gender: string;
   gender_type?: string;
+  discipline_id?: number | null;
   championship_discipline_id: number;
   championship_discipline?: ChampionshipDiscipline;
   format?: 'liga' | 'grupos' | 'eliminacion_directa';
@@ -326,6 +327,13 @@ export interface Equipo {
     name: string;
     email: string;
   } | null;
+  championship_user?: {
+    user_id?: number;
+    user?: {
+      name?: string;
+      email?: string;
+    };
+  } | null;
 }
 
 export interface Jugador {
@@ -333,6 +341,8 @@ export interface Jugador {
   name: string;
   dni?: string | null;
   phone?: string | null;
+  age?: number | null;
+  birth_date?: string | null;
   team_id: number;
   number?: number | null;
   position?: string | null;

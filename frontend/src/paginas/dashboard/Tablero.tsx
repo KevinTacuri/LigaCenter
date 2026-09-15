@@ -47,7 +47,7 @@ export const Tablero: React.FC = () => {
   const membresiaActiva = campeonatoActivo && usuario?.championship_memberships?.find(
     (m: any) => m.championship_id === campeonatoActivo.id
   );
-  const esOrganizador = tieneRol('organizador') || tieneRol('administrador') || membresiaActiva?.role === 'organizer' || membresiaActiva?.role === 'admin';
+  const esOrganizador = tieneRol('organizador') || tieneRol('administrador') || membresiaActiva?.role === 'organizer' || (membresiaActiva as any)?.role === 'admin';
   const esDelegado = (membresiaActiva && membresiaActiva.role === 'team_delegate') || tieneRol('delegado') || tieneRol('delegado_equipo');
   const esDelegadoPuro = esDelegado && !esOrganizador;
   const equipoNombre = esDelegado ? (membresiaActiva?.team_name || 'tu equipo') : null;

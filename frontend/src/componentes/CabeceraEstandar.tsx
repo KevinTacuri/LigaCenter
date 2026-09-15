@@ -63,20 +63,23 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
       <div className="flex items-center gap-3">
         {leftElement}
 
-        {/* Logo Oficial LigaCenter (Navegación al Inicio) */}
-        <button
-          type="button"
-          onClick={() => navigate('/tablero')}
-          className="flex items-center gap-2 hover:opacity-85 transition-opacity cursor-pointer group shrink-0"
-          title="Ir al Inicio / Dashboard"
-        >
-          <img src={logoImg} className="w-8 h-8 object-contain group-hover:scale-105 transition-transform" alt="Logo LigaCenter" />
-          <span className="font-black text-base text-on-surface tracking-tight hidden sm:inline">
-            Liga<span className="text-primary">Center</span>
-          </span>
-        </button>
-
-        <div className="h-6 w-px bg-outline mx-1 hidden sm:block"></div>
+        {/* Logo Oficial LigaCenter (Solo visible si no hay barra lateral fija en pantalla, ej: Delegado o Usuario público) */}
+        {esDelegadoPuro && (
+          <>
+            <button
+              type="button"
+              onClick={() => navigate('/tablero')}
+              className="flex items-center gap-2 hover:opacity-85 transition-opacity cursor-pointer group shrink-0"
+              title="Ir al Inicio / Dashboard"
+            >
+              <img src={logoImg} className="w-8 h-8 object-contain group-hover:scale-105 transition-transform" alt="Logo LigaCenter" />
+              <span className="font-black text-base text-on-surface tracking-tight hidden sm:inline">
+                Liga<span className="text-primary">Center</span>
+              </span>
+            </button>
+            <div className="h-6 w-px bg-outline mx-1 hidden sm:block"></div>
+          </>
+        )}
 
         <div>
           <h1 className="text-sm font-black text-on-surface leading-none tracking-tight">
@@ -88,14 +91,14 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* Etiquetas para Delegado en Barra Superior */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Acciones para Delegados en Barra Superior */}
         {esDelegadoPuro && (
-          <div className="hidden md:flex items-center gap-2 mr-1">
+          <div className="hidden lg:flex items-center gap-2 mr-1">
             <button
               type="button"
               onClick={() => navigate('/tablero/participantes?tab=planilla-jugadores')}
-              className="flex items-center gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-xl px-3 py-1.5 text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-2xs"
+              className="flex items-center gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-lg px-3 py-1.5 text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-2xs"
             >
               <span className="material-symbols-outlined text-sm">person_add</span>
               <span>Registrar Jugadores</span>
@@ -104,7 +107,7 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
             <button
               type="button"
               onClick={() => navigate('/tablero/fixture?tab=partidos')}
-              className="flex items-center gap-1.5 bg-surface hover:bg-surface-bright text-on-surface border border-outline rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+              className="flex items-center gap-1.5 bg-surface hover:bg-surface-bright text-on-surface border border-outline rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer shadow-2xs"
             >
               <span className="material-symbols-outlined text-sm text-primary">calendar_month</span>
               <span>Partidos</span>
@@ -116,11 +119,13 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
 
         {!esAdministrador && campeonatoActivo && campeonatoActivo.rules_pdf && (
           <button
+            type="button"
             onClick={manejarDescargarReglamento}
             className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all shadow-xs"
+            title="Descargar Reglamento PDF"
           >
             <span className="material-symbols-outlined text-sm">download</span>
-            <span className="hidden sm:inline">Reglamento (PDF)</span>
+            <span className="hidden md:inline">Reglamento (PDF)</span>
           </button>
         )}
 
@@ -131,36 +136,42 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
                 href={`/publico?campeonato=${campeonatoActivo.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 bg-surface hover:bg-surface-bright text-on-surface border border-outline rounded-lg px-3 py-1.5 text-xs font-extrabold cursor-pointer transition-all shadow-xs"
+                className="flex items-center gap-1.5 bg-surface hover:bg-surface-bright text-on-surface border border-outline rounded-lg px-3 py-1.5 text-xs font-bold cursor-pointer transition-all shadow-xs"
+                title="Abrir Vista Pública del Campeonato"
               >
                 <span className="material-symbols-outlined text-sm text-primary">visibility</span>
-                <span className="hidden sm:inline">Vista Pública</span>
+                <span className="hidden md:inline">Vista Pública</span>
               </a>
             ) : (
               <a
                 href="/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 bg-surface hover:bg-surface-bright text-on-surface border border-outline rounded-lg px-3 py-1.5 text-xs font-extrabold cursor-pointer transition-all shadow-xs"
+                className="flex items-center gap-1.5 bg-surface hover:bg-surface-bright text-on-surface border border-outline rounded-lg px-3 py-1.5 text-xs font-bold cursor-pointer transition-all shadow-xs"
+                title="Ir al Portal Público General"
               >
                 <span className="material-symbols-outlined text-sm text-primary">visibility</span>
-                <span className="hidden sm:inline">Portal Público</span>
+                <span className="hidden md:inline">Portal Público</span>
               </a>
             )}
 
             {!panelCampeonatosAbierto && (
               campeonatoActivo ? (
                 <button
+                  type="button"
                   onClick={() => setPanelCampeonatosAbierto(true)}
-                  className="flex items-center gap-1.5 bg-primary hover:opacity-90 text-white border border-primary rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all shadow-xs active:scale-95"
+                  className="flex items-center gap-1.5 bg-primary hover:opacity-90 text-white border border-primary rounded-lg px-3 py-1.5 text-xs font-bold cursor-pointer transition-all shadow-xs active:scale-95"
+                  title="Cambiar Campeonato Activo"
                 >
                   <span className="material-symbols-outlined text-sm">swap_horiz</span>
                   <span className="hidden sm:inline">Cambiar Torneo</span>
                 </button>
               ) : (
                 <button
+                  type="button"
                   onClick={() => setPanelCampeonatosAbierto(true)}
                   className="flex items-center gap-1.5 bg-primary hover:opacity-90 text-white rounded-lg px-3.5 py-1.5 text-xs font-bold cursor-pointer transition-all shadow-xs"
+                  title="Seleccionar Campeonato"
                 >
                   <span className="material-symbols-outlined text-sm">sports_soccer</span>
                   <span>Seleccionar Campeonato</span>
@@ -170,7 +181,7 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
           </div>
         )}
 
-        {/* Botón Cerrar Sesión (Logout) */}
+        {/* Botón de Logout estilizado en Cabecera */}
         {usuario && (
           <button
             type="button"
@@ -182,11 +193,10 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
               }
               navigate('/login');
             }}
-            className="flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer shadow-2xs shrink-0"
+            className="flex items-center justify-center w-8 h-8 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 transition-all cursor-pointer shrink-0"
             title="Cerrar Sesión"
           >
             <span className="material-symbols-outlined text-sm">logout</span>
-            <span className="hidden sm:inline">Salir</span>
           </button>
         )}
       </div>

@@ -319,11 +319,17 @@ export const GestionParticipantes: React.FC = () => {
   const [filtroCategoriaEq, setFiltroCategoriaEq] = useState<string>('todos');
   const [ordenEq, setOrdenEq] = useState<'nombre_asc' | 'nombre_desc' | 'representante_asc' | 'representante_desc' | 'estado'>('nombre_asc');
 
+  // ── Estado: Filtros y orden de la tabla de Categorías ──
+  const [busquedaCat, setBusquedaCat] = useState('');
+  const [filtroGenderCat, setFiltroGenderCat] = useState('todos');
+  const [filtroDiscCat, setFiltroDiscCat] = useState('todos');
+  const [modalNuevaCatAbierto, setModalNuevaCatAbierto] = useState(false);
+
   // ── Estado: Filtros y orden de la tabla de Jugadores ──
-const [busquedaJug, setBusquedaJug] = useState('');
-const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_asc' | 'equipo_desc'>('nombre_asc');
-const [filtroCategoriaJug, setFiltroCategoriaJug] = useState<number | null>(null);
-const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
+  const [busquedaJug, setBusquedaJug] = useState('');
+  const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_asc' | 'equipo_desc'>('nombre_asc');
+  const [filtroCategoriaJug, setFiltroCategoriaJug] = useState<number | null>(null);
+  const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
 
   // ── Formularios originales ─────────────────
   const [nuevaDisc, setNuevaDisc] = useState({ name: '', description: '', rules: '', status: 'active' });
@@ -802,6 +808,7 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
       });
       if (res.success) {
         mostrarMensaje('Categoría registrada exitosamente.');
+        setModalNuevaCatAbierto(false);
         setNuevaCat({
           name: '',
           age_min: '',
@@ -1581,504 +1588,124 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
             TABS ORIGINALES (sin tocar)
         ════════════════════════════════════════════ */}
         {(tabActiva === 'disciplinas' || tabActiva === 'categorias' || tabActiva === 'equipos' || tabActiva === 'jugadores') && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Columna Izquierda: Formulario de Registro */}
-            {tabActiva !== 'equipos' && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs h-fit">
-                <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900 mb-4 border-b border-slate-100 pb-2">
-                  Añadir {tabActiva.slice(0, -1)}
-                </h2>
-
-              {tabActiva === 'disciplinas' && (
-                <form onSubmit={guardarDisciplina} className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Nombre Disciplina *</label>
-                    <select
-                      required
-                      value={nuevaDisc.name}
-                      onChange={(e) => setNuevaDisc({ ...nuevaDisc, name: e.target.value })}
-                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 focus:border-secondary outline-hidden cursor-pointer"
-                    >
-                      <option value="">-- Selecciona Disciplina --</option>
-                      <option value="Fútbol">Fútbol</option>
-                      <option value="Futsal">Futsal</option>
-                      <option value="Vóley">Vóley</option>
-                      <option value="Básquetbol">Básquetbol</option>
-                      <option value="Atletismo">Atletismo</option>
-                      <option value="Natación">Natación</option>
-                      <option value="Tenis">Tenis</option>
-                      <option value="Otro">Otro...</option>
-                    </select>
-                  </div>
-                  {nuevaDisc.name === 'Otro' && (
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 block">Nombre Disciplina Personalizado *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Ej: Balonmano, Karate, etc."
-                        value={customDiscName}
-                        onChange={(e) => setCustomDiscName(e.target.value)}
-                        className="w-full text-sm border border-slate-200 rounded-lg p-2.5 focus:border-secondary focus:ring-1 focus:ring-secondary outline-hidden"
-                      />
-                    </div>
-                  )}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Descripción</label>
-                    <textarea placeholder="Detalles de la disciplina..."
-                      value={nuevaDisc.description} onChange={(e) => setNuevaDisc({ ...nuevaDisc, description: e.target.value })}
-                      className="w-full text-sm border border-slate-200 rounded-lg p-2.5 min-h-[80px] outline-hidden" />
-                  </div>
-                  <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer">
-                    Guardar Disciplina
-                  </button>
-                </form>
-              )}
-
-              {tabActiva === 'categorias' && (
-                <div className="space-y-4">
-                {/* Importación Excel */}
-                <div className="flex rounded-xl border border-slate-200 overflow-hidden text-xs font-bold">
-                  <button
-                      type="button"
-                      onClick={() => setTabCategoria('manual')}
-                      className={`flex-1 py-2.5 flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        tabCategoria === 'manual'
-                          ? 'bg-indigo-600 text-white'
-                          : 'text-slate-500 hover:bg-slate-50'
-                      }`}
-                    >
-                      Registro Manual
-                  </button>
-                  <button 
-                      type="button"
-                      onClick={() => setTabCategoria('masiva')}
-                      className={`flex-1 py-2.5 flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        tabCategoria === 'masiva'
-                          ? 'bg-sky-600 text-white'
-                          : 'text-slate-500 hover:bg-slate-50'
-                      }`}
-                    >
-                      Carga Masiva (Excel)
-                  </button>
+          <div className="w-full space-y-4">
+            {/* Columna de Contenido Principal (Categorías, Equipos, Jugadores) */}
+            <div className="bg-primary-container text-on-surface rounded-2xl border border-outline p-6 shadow-xs space-y-4 w-full">
+              
+              {/* Encabezado Principal del Tab con Botón de Acción Modal */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-outline pb-4">
+                <div>
+                  <h2 className="font-black text-base uppercase tracking-wide text-on-surface flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-xl">
+                      {tabActiva === 'categorias' ? 'category' : tabActiva === 'equipos' ? 'groups' : 'person'}
+                    </span>
+                    Gestión de {tabActiva === 'categorias' ? 'Categorías' : tabActiva === 'equipos' ? 'Equipos' : 'Jugadores'}
+                  </h2>
+                  <p className="text-xs text-on-surface-variant font-medium mt-0.5">
+                    {tabActiva === 'categorias' && `Total: ${categorias.length} categorías registradas.`}
+                    {tabActiva === 'equipos' && `Total: ${equipos.length} equipos en el campeonato.`}
+                    {tabActiva === 'jugadores' && `Total: ${jugadores.length} jugadores inscritos.`}
+                  </p>
                 </div>
 
-                {tabCategoria === 'manual' && (
-                  <form onSubmit={guardarCategoria} className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 block">Disciplina *</label>
-                      <select required value={nuevaCat.discipline_id}
-                        onChange={(e) => setNuevaCat({ ...nuevaCat, discipline_id: e.target.value })}
-                        className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
-                        <option value="">-- Selecciona Disciplina --</option>
-                        {disciplinas.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 block">Nombre Categoría *</label>
-                      <input type="text" required placeholder="Sub-15, Libres, Senior..."
-                        value={nuevaCat.name} onChange={(e) => setNuevaCat({ ...nuevaCat, name: e.target.value })}
-                        className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 block">Edad Mínima</label>
-                        <input type="number" placeholder="Ej: 10"
-                          value={nuevaCat.age_min} onChange={(e) => setNuevaCat({ ...nuevaCat, age_min: e.target.value })}
-                          className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 block">Edad Máxima</label>
-                        <input type="number" placeholder="Ej: 15"
-                          value={nuevaCat.age_max} onChange={(e) => setNuevaCat({ ...nuevaCat, age_max: e.target.value })}
-                          className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 block">Género</label>
-                      <select value={nuevaCat.gender} onChange={(e) => setNuevaCat({ ...nuevaCat, gender: e.target.value })}
-                        className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
-                        <option value="Masculino">Masculino</option>
-                        <option value="Femenino">Femenino</option>
-                        <option value="Mixto">Mixto</option>
-                      </select>
-                    </div>
-
-                    <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer">
-                      Guardar Categoría
-                    </button>
-                  </form>
-                )}
-
-                {tabCategoria === 'masiva' && (
-                    // selector de Excel + botón importar
-                  <div className="mb-4">
-                    <input
-                      type="file"
-                      accept=".xlsx,.xls"
-                      ref={inputExcelRef}
-                      className="hidden"
-                      onChange={(e) => setArchivoExcel(e.target.files?.[0] ?? null)}
-                    />
-                    {/* Drop zone */}
-                      {isDeadlineExpired ? (
-                        <div className="border-2 border-dashed border-amber-500/25 bg-amber-500/5 rounded-xl p-6 text-center">
-                          <span className="material-symbols-outlined text-3xl text-amber-500 block mb-2">lock</span>
-                          <p className="text-xs font-bold text-amber-300 font-sans">Carga Masiva Deshabilitada</p>
-                          <p className="text-[10px] text-slate-400 mt-1 font-sans">El plazo de inscripción de categorias ha vencido.</p>
-                        </div>
-                      ) : (
-                        <div
-                          onClick={() => inputExcelRef.current?.click()}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            const file = e.dataTransfer.files[0];
-                            if (file && (file.name.endsWith('.xlsx'))) {
-                              setArchivoExcel(file);
-                            } else {
-                              mostrarMensaje('Solo se permiten archivos Excel.', true);
-                            }
-                          }}
-                          className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:border-sky-400 hover:bg-sky-50/30 transition-all"
-                        >
-                          <span className="material-symbols-outlined text-3xl text-slate-300 block mb-2">cloud_upload</span>
-                          {archivoExcel ? (
-                            <div>
-                              <p className="text-xs font-bold text-sky-700">{archivoExcel.name}</p>
-                              <p className="text-[10px] text-slate-400 mt-0.5">{(archivoExcel.size / 1024).toFixed(1)} KB · Haz clic para cambiar</p>
-                            </div>
-                          ) : (
-                            <div>
-                              <p className="text-xs font-bold text-slate-600">Arrastra tu archivo aquí</p>
-                              <p className="text-[10px] text-slate-400 mt-0.5">Formatos permitidos: .XLSX (Máx. 10MB)</p>
-                            </div>
-                          )}
-                          <input
-                            ref={inputExcelRef}
-                            type="file"
-                            accept=".xlsx"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) { setArchivoExcel(file)}
-                            }}
-                          />
-                        </div>
-                      )}
-
-
+                <div className="flex items-center gap-2 shrink-0">
+                  {tabActiva === 'categorias' && (
                     <button
                       type="button"
-                      onClick={() => importarExcel()}
-                      disabled={!archivoExcel || importandoExcel}
-                      className="
-                          w-full relative overflow-hidden
-                          py-3 rounded-xl text-xs font-bold tracking-wide uppercase font-sans
-                          bg-indigo-650 hover:bg-indigo-700 text-white disabled:opacity-60 disabled:cursor-not-allowed transition-all
-                          flex items-center justify-center gap-2
-                          transition-all duration-200 cursor-pointer
-                          focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2
-                          disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none
-                          bg-sky-600 hover:bg-sky-500 active:bg-sky-700
-                          shadow-md hover:shadow-sky-500/40 hover:shadow-lg active:shadow-none
-                          active:scale-[0.98] hover:scale-[1.01]
-                          text-white
-                        "
+                      onClick={() => setModalNuevaCatAbierto(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:opacity-90 text-white text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all shadow-xs active:scale-95"
                     >
-                      {importandoExcel ? "Importando..." : "Iniciar Carga"}
-                    </button >
-                  </div>
-                )}
-     
-                 </div>
-              )}
-
-
-
-              {tabActiva === 'jugadores' && (
-                <div className="space-y-4">
-
-                  {/* Toggle Modo */}
-                  <div className="flex rounded-xl border border-slate-200 overflow-hidden text-xs font-bold">
+                      <span className="material-symbols-outlined text-sm">add_circle</span>
+                      Añadir Categoría
+                    </button>
+                  )}
+                  {tabActiva === 'equipos' && (
                     <button
                       type="button"
-                      onClick={() => { setModoJugador('manual'); setResultadoCarga(null); }}
-                      className={`flex-1 py-2.5 flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        modoJugador === 'manual'
-                          ? 'bg-indigo-600 text-white'
-                          : 'text-slate-500 hover:bg-slate-50'
-                      }`}
+                      onClick={() => setModalNuevoEqAbierto(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:opacity-90 text-white text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all shadow-xs active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-sm">add_circle</span>
+                      Añadir Equipo
+                    </button>
+                  )}
+                  {tabActiva === 'jugadores' && (
+                    <button
+                      type="button"
+                      onClick={() => setModalNuevoJugAbierto(true)}
+                      disabled={isDeadlineExpired}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:opacity-90 disabled:opacity-50 text-white text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all shadow-xs active:scale-95"
                     >
                       <span className="material-symbols-outlined text-sm">person_add</span>
-                      Registro Manual
+                      Añadir Jugador
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => { setModoJugador('masiva'); setResultadoCarga(null); }}
-                      className={`flex-1 py-2.5 flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        modoJugador === 'masiva'
-                          ? 'bg-sky-600 text-white'
-                          : 'text-slate-500 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-sm">upload_file</span>
-                      Carga Masiva
-                    </button>
-                  </div>
-
-                  {/* ── MODO MANUAL ── */} 
-                  {modoJugador === 'manual' && (
-                    <form onSubmit={guardarJugador} className="space-y-4">
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 block">Nombre Completo *</label>
-                        <input type="text" required placeholder="Nombre del jugador"
-                          value={nuevoJug.name} onChange={(e) => setNuevoJug({ ...nuevoJug, name: e.target.value })}
-                          className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-700 block">DNI / Documento</label>
-                          <input type="text" placeholder="DNI"
-                            value={nuevoJug.dni} onChange={(e) => setNuevoJug({ ...nuevoJug, dni: e.target.value })}
-                            className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-700 block">Edad *</label>
-                          <input type="number" required placeholder="Edad" min="1"
-                            value={nuevoJug.age} onChange={(e) => setNuevoJug({ ...nuevoJug, age: e.target.value })}
-                            className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-700 block">Dorsal</label>
-                          <input type="number" placeholder="Ej: 10"
-                            value={nuevoJug.number} onChange={(e) => setNuevoJug({ ...nuevoJug, number: e.target.value })}
-                            className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden" />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 block font-sans">Equipo *</label>
-                        <select
-                          required
-                          value={delegadoTeamId !== null ? String(delegadoTeamId) : nuevoJug.team_id}
-                          disabled={delegadoTeamId !== null}
-                          onChange={(e) => setNuevoJug({ ...nuevoJug, team_id: e.target.value })}
-                          className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer disabled:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-500 font-sans"
-                        >
-                          <option value="">Seleccionar Equipo</option>
-                          {equipos.map((eq) => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
-                        </select>
-                      </div>
-                      <LogoInput
-                        logoFile={fotoJugFile}
-                        logoUrlTexto={fotoJugUrl}
-                        onFileChange={setFotoJugFile}
-                        onUrlChange={setFotoJugUrl}
-                        label="Foto del Jugador"
-                      />
-                      <button
-                        type="submit"
-                        disabled={isDeadlineExpired}
-                        className="w-full bg-secondary hover:bg-secondary-container disabled:bg-slate-300 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer font-sans"
-                      >
-                        {isDeadlineExpired ? 'Plazo de Inscripción Expirado' : 'Guardar Jugador'}
-                      </button>
-                    </form>
-                  )}
-
-                  {/* ── MODO CARGA MASIVA ── */}
-                  {modoJugador === 'masiva' && (
-                    <div className="space-y-3">
-
-                        {/* Selector de equipo — NUEVO */}
-                        <div className="space-y-1">
-                          <label className="text-xs font-bold text-slate-700 block font-sans">Equipo destino *</label>
-                          <select
-                            value={delegadoTeamId !== null ? delegadoTeamId : (equipoIdMasiva ?? '')}
-                            disabled={delegadoTeamId !== null}
-                            onChange={(e) => {
-                              setEquipoIdMasiva(e.target.value ? parseInt(e.target.value) : null);
-                              setResultadoCarga(null);
-                              setArchivoCsv(null);  // ← limpiar también el archivo
-                              if (inputArchivoRef.current) inputArchivoRef.current.value = '';
-                            }}
-                            className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer disabled:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-500 font-sans"
-                          >
-                            <option value="">-- Selecciona el equipo --</option>
-                            {equipos.map((eq) => (
-                              <option key={eq.id} value={eq.id}>{eq.name}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                      {/* Drop zone */}
-                      {isDeadlineExpired ? (
-                        <div className="border-2 border-dashed border-amber-500/25 bg-amber-500/5 rounded-xl p-6 text-center">
-                          <span className="material-symbols-outlined text-3xl text-amber-500 block mb-2">lock</span>
-                          <p className="text-xs font-bold text-amber-300 font-sans">Carga Masiva Deshabilitada</p>
-                          <p className="text-[10px] text-slate-400 mt-1 font-sans">El plazo de inscripción de jugadores ha vencido.</p>
-                        </div>
-                      ) : (
-                        <div
-                          onClick={() => inputArchivoRef.current?.click()}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            const file = e.dataTransfer.files[0];
-                            if (file && (file.name.endsWith('.csv') || file.name.endsWith('.xlsx'))) {
-                              setArchivoCsv(file);
-                              setResultadoCarga(null);
-                            } else {
-                              mostrarMensaje('Solo se permiten archivos CSV.', true);
-                            }
-                          }}
-                          className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:border-sky-400 hover:bg-sky-50/30 transition-all"
-                        >
-                          <span className="material-symbols-outlined text-3xl text-slate-300 block mb-2">cloud_upload</span>
-                          {archivoCsv ? (
-                            <div>
-                              <p className="text-xs font-bold text-sky-700">{archivoCsv.name}</p>
-                              <p className="text-[10px] text-slate-400 mt-0.5">{(archivoCsv.size / 1024).toFixed(1)} KB · Haz clic para cambiar</p>
-                            </div>
-                          ) : (
-                            <div>
-                              <p className="text-xs font-bold text-slate-600">Arrastra tu archivo aquí</p>
-                              <p className="text-[10px] text-slate-400 mt-0.5">Formatos permitidos: .CSV (Máx. 10MB)</p>
-                            </div>
-                          )}
-                          <input
-                            ref={inputArchivoRef}
-                            type="file"
-                            accept=".csv"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) { setArchivoCsv(file); setResultadoCarga(null); }
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {/* Acciones inferiores */}
-                      <div className="flex items-center justify-between text-[10px]">
-                        <button
-                          type="button"
-                          onClick={descargarPlantilla}
-                          className="flex items-center gap-1 text-sky-600 font-bold hover:underline cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-xs">download</span>
-                          Descargar Plantilla .XLSX
-                        </button>
-                        <span className="flex items-center gap-1 text-slate-400 font-semibold">
-                          <span className="material-symbols-outlined text-xs text-amber-500">info</span>
-                          Validación automática activa
-                        </span>
-                      </div>
-
-                      {/* Botón procesar */}
-                      <button
-                        type="button"
-                        onClick={procesarCsvJugadores}
-                        disabled={!archivoCsv || !equipoIdMasiva || cargandoCsv || isDeadlineExpired}
-                        className="
-                          w-full relative overflow-hidden
-                          py-3 rounded-xl text-xs font-bold tracking-wide uppercase font-sans
-                          bg-indigo-650 hover:bg-indigo-700 text-white disabled:opacity-60 disabled:cursor-not-allowed transition-all
-                          flex items-center justify-center gap-2
-                          transition-all duration-200 cursor-pointer
-                          focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2
-                          disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none
-                          bg-sky-600 hover:bg-sky-500 active:bg-sky-700
-                          shadow-md hover:shadow-sky-500/40 hover:shadow-lg active:shadow-none
-                          active:scale-[0.98] hover:scale-[1.01]
-                          text-white
-                        "
-                      >
-                        {/* Brillo superior al hacer hover */}
-                        <span className="absolute inset-x-0 top-0 h-px bg-white/30 rounded-full pointer-events-none" />
-
-                        {cargandoCsv ? (
-                          <>
-                            <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            Procesando...
-                          </>
-                        ) : (
-                          <>
-                            <span className="material-symbols-outlined text-base">cloud_upload</span>
-                            Iniciar Carga
-                          </>
-                        )}
-                      </button>
-
-                      {/* Resultado */}
-                      {resultadoCarga && (
-                        <div className="rounded-xl border overflow-hidden text-xs">
-                          {resultadoCarga.ok > 0 && (
-                            <div className="bg-emerald-50 border-emerald-200 px-3 py-2 flex items-center gap-1.5 text-emerald-700 font-bold">
-                              <span className="material-symbols-outlined text-sm">check_circle</span>
-                              {resultadoCarga.ok} jugador(es) importado(s) correctamente.
-                            </div>
-                          )}
-                          {resultadoCarga.errores.length > 0 && (
-                            <div className="bg-rose-50 border-t border-rose-100 px-3 py-2 space-y-1">
-                              <p className="font-bold text-rose-700 flex items-center gap-1">
-                                <span className="material-symbols-outlined text-xs">error</span>
-                                {resultadoCarga.errores.length} error(es):
-                              </p>
-                              {resultadoCarga.errores.map((err, i) => (
-                                <p key={i} className="text-rose-600 pl-4">• {err}</p>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
                   )}
                 </div>
-              )}
-            </div>
-            )}
-
-            {/* Columna Derecha: Listado */}
-            <div className={`${tabActiva === 'equipos' ? 'lg:col-span-3' : 'lg:col-span-2'} bg-white rounded-2xl border border-slate-200 p-6 shadow-xs`}>
-              <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
-                <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900">
-                  Lista de {tabActiva}
-                </h2>
-                {tabActiva === 'equipos' && (
-                  <button
-                    onClick={() => setModalNuevoEqAbierto(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#800f2f] hover:bg-[#991238] text-white text-xs font-bold uppercase tracking-wide rounded-lg cursor-pointer transition-all shadow-xs active:scale-95"
-                  >
-                    <span className="material-symbols-outlined text-xs">add</span>
-                    Añadir Equipo
-                  </button>
-                )}
               </div>
 
-              {/* ── Filtros y orden (solo tab Equipos) ── */}
-              {tabActiva === 'equipos' && (
-                <div className="mb-4 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                    {/* Buscador */}
-                    <div className="relative md:col-span-1">
+              {/* ── Barra de Filtros y Búsqueda (Categorías) ── */}
+              {tabActiva === 'categorias' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="relative sm:col-span-1">
                       <input
                         type="text"
-                        placeholder="Buscar por nombre o representante..."
-                        value={busquedaEq}
-                        onChange={(e) => setBusquedaEq(e.target.value)}
-                        className="w-full text-sm border border-slate-200 rounded-lg p-2.5 pr-8 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                        placeholder="Buscar categoría..."
+                        value={busquedaCat}
+                        onChange={(e) => setBusquedaCat(e.target.value)}
+                        className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 pr-8 outline-none focus:border-primary"
                       />
-                      <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">
+                      <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm pointer-events-none">
                         search
                       </span>
                     </div>
 
-                    {/* Filtro Categoría */}
+                    <select
+                      value={filtroGenderCat}
+                      onChange={(e) => setFiltroGenderCat(e.target.value)}
+                      className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none cursor-pointer"
+                    >
+                      <option value="todos">Todos los géneros</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Femenino">Femenino</option>
+                      <option value="Mixto">Mixto</option>
+                    </select>
+
+                    <select
+                      value={filtroDiscCat}
+                      onChange={(e) => setFiltroDiscCat(e.target.value)}
+                      className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none cursor-pointer"
+                    >
+                      <option value="todos">Todas las disciplinas</option>
+                      {disciplinas.map((d) => (
+                        <option key={d.id} value={String(d.id)}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Barra de Filtros y Búsqueda (Equipos) ── */}
+              {tabActiva === 'equipos' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="relative md:col-span-1">
+                      <input
+                        type="text"
+                        placeholder="Buscar por nombre o delegado..."
+                        value={busquedaEq}
+                        onChange={(e) => setBusquedaEq(e.target.value)}
+                        className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 pr-8 outline-none focus:border-primary"
+                      />
+                      <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm pointer-events-none">
+                        search
+                      </span>
+                    </div>
+
                     <select
                       value={filtroCategoriaEq}
                       onChange={(e) => setFiltroCategoriaEq(e.target.value)}
-                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                      className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none cursor-pointer"
                     >
                       <option value="todos">Todas las categorías</option>
                       {categorias.map((c) => {
@@ -2092,11 +1719,10 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
                       <option value="sin_categoria">Sin categoría</option>
                     </select>
 
-                    {/* Filtro Estado */}
                     <select
                       value={filtroEstadoEq}
                       onChange={(e) => setFiltroEstadoEq(e.target.value as any)}
-                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                      className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none cursor-pointer"
                     >
                       <option value="todos">Todos los estados</option>
                       <option value="aprobado">Aprobado</option>
@@ -2104,11 +1730,10 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
                       <option value="rechazado">Rechazado</option>
                     </select>
 
-                    {/* Orden */}
                     <select
                       value={ordenEq}
                       onChange={(e) => setOrdenEq(e.target.value as any)}
-                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                      className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none cursor-pointer"
                     >
                       <option value="nombre_asc">Nombre (A-Z)</option>
                       <option value="nombre_desc">Nombre (Z-A)</option>
@@ -2117,35 +1742,30 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
                       <option value="estado">Estado</option>
                     </select>
                   </div>
-
-                  {/* Contador de resultados */}
-                  <p className="text-[11px] text-slate-400 font-semibold">
-                    Mostrando {equiposFiltrados.length} de {equipos.length} equipos
-                  </p>
                 </div>
               )}
+
+              {/* ── Barra de Filtros y Búsqueda (Jugadores) ── */}
               {tabActiva === 'jugadores' && (
-                <div className="mb-4 space-y-3">
+                <div className="space-y-3">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {/* Buscador */}
                     <div className="relative md:col-span-2">
                       <input
                         type="text"
-                        placeholder="Buscar por nombre del jugador..."
+                        placeholder="Buscar por nombre del jugador o DNI..."
                         value={busquedaJug}
                         onChange={(e) => setBusquedaJug(e.target.value)}
-                        className="w-full text-sm border border-slate-200 rounded-lg p-2.5 pr-8 outline-hidden focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20"
+                        className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 pr-8 outline-none focus:border-primary"
                       />
-                      <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">
+                      <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm pointer-events-none">
                         search
                       </span>
                     </div>
 
-                    {/* Orden */}
                     <select
                       value={ordenJug}
                       onChange={(e) => setOrdenJug(e.target.value as any)}
-                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                      className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none cursor-pointer"
                     >
                       <option value="nombre_asc">Nombre (A-Z)</option>
                       <option value="nombre_desc">Nombre (Z-A)</option>
@@ -2162,7 +1782,7 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
                           setFiltroCategoriaJug(e.target.value ? Number(e.target.value) : null);
                           setFiltroEquipoJug(null);
                         }}
-                        className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                        className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none cursor-pointer"
                       >
                         <option value="">Todas las categorías</option>
                         {categorias.map((c) => (
@@ -2172,7 +1792,7 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
                       <select
                         value={filtroEquipoJug ?? ''}
                         onChange={(e) => setFiltroEquipoJug(e.target.value ? Number(e.target.value) : null)}
-                        className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                        className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none cursor-pointer"
                       >
                         <option value="">Todos los equipos</option>
                         {equipos
@@ -2183,21 +1803,88 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
                       </select>
                     </div>
                   )}
-
-                  {/* Contador de resultados */}
-                  <p className="text-[11px] text-slate-400 font-semibold">
-                    Mostrando {jugadoresFiltrados.length} de {jugadores.length} jugadores
-                  </p>
                 </div>
               )}
+
+              {/* Loader */}
               {cargando ? (
                 <div className="p-12 flex flex-col items-center justify-center gap-3">
-                  <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
-                  <span className="text-xs text-slate-500 uppercase tracking-widest font-bold">Cargando registros...</span>
+                  <div className="w-8 h-8 rounded-full border-4 border-outline border-t-primary animate-spin" />
+                  <span className="text-xs text-on-surface-variant uppercase tracking-widest font-bold">Cargando registros...</span>
+                </div>
+              ) : tabActiva === 'categorias' ? (
+                /* ── Galería de Tarjetas de Categorías ── */
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 py-2 animate-fadeIn">
+                  {categorias.filter((c) => {
+                    const q = busquedaCat.toLowerCase().trim();
+                    const discName = c.championship_discipline?.discipline?.name?.toLowerCase() || '';
+                    const matchBusqueda = !q || c.name.toLowerCase().includes(q) || discName.includes(q);
+                    const matchGender = filtroGenderCat === 'todos' || (c.gender_type || c.gender || '').toLowerCase() === filtroGenderCat.toLowerCase();
+                    const matchDisc = filtroDiscCat === 'todos' || String(c.championship_discipline?.discipline_id || c.discipline_id) === filtroDiscCat;
+                    return matchBusqueda && matchGender && matchDisc;
+                  }).map((c) => (
+                    <div
+                      key={c.id}
+                      className="group relative flex flex-col justify-between p-5 bg-primary-container hover:bg-surface border border-outline hover:border-primary/50 rounded-2xl transition-all duration-300 shadow-xs hover:shadow-xl hover:-translate-y-1 overflow-hidden"
+                    >
+                      {/* Top Badges */}
+                      <div className="flex items-center justify-between w-full mb-3 gap-2">
+                        <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 truncate">
+                          {c.championship_discipline?.discipline?.name || 'Deporte'}
+                        </span>
+                        <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border shrink-0 ${
+                          (c.gender_type || c.gender) === 'Femenino'
+                            ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+                            : (c.gender_type || c.gender) === 'Mixto'
+                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                            : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
+                        }`}>
+                          {c.gender_type || c.gender || 'General'}
+                        </span>
+                      </div>
+
+                      {/* Main Info */}
+                      <div className="my-2 space-y-1">
+                        <h4 className="text-base font-extrabold text-on-surface line-clamp-1 group-hover:text-primary transition-colors">
+                          {c.name}
+                        </h4>
+                        <div className="flex items-center gap-1.5 text-xs text-on-surface-variant font-medium pt-1">
+                          <span className="material-symbols-outlined text-sm text-primary">group</span>
+                          <span>Rango de edad: <strong>{c.age_min ?? 0} - {c.age_max ?? 'Sin límite'} años</strong></span>
+                        </div>
+                      </div>
+
+                      {/* Footer Actions */}
+                      <div className="mt-4 pt-3 border-t border-outline/60 w-full flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => abrirModalEditarCat(c)}
+                          className="px-3 py-1.5 rounded-lg bg-surface border border-outline text-on-surface hover:text-primary text-xs font-bold transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-sm">edit</span>
+                          <span>Editar</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => eliminarElemento(c.id)}
+                          className="px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 text-xs font-bold transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-sm">delete</span>
+                          <span>Eliminar</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {categorias.length === 0 && (
+                    <div className="col-span-full py-12 flex flex-col items-center justify-center gap-2 text-on-surface-variant">
+                      <span className="material-symbols-outlined text-4xl">category</span>
+                      <p className="text-xs font-bold uppercase tracking-wider">No hay categorías creadas aún</p>
+                    </div>
+                  )}
                 </div>
               ) : tabActiva === 'equipos' ? (
-                /* Matrix/Grid Layout for Teams */
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 py-4 animate-fadeIn">
+                /* ── Galería de Tarjetas de Equipos ── */
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 py-2 animate-fadeIn">
                   {equiposFiltrados.map((eq) => (
                     <div
                       key={eq.id}
@@ -2274,109 +1961,81 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
                     </div>
                   ))}
                   {equiposFiltrados.length === 0 && (
-                    <div className="col-span-full py-12 flex flex-col items-center justify-center gap-2 text-slate-450 dark:text-slate-500">
-                      <span className="material-symbols-outlined text-4xl text-slate-350">group_off</span>
+                    <div className="col-span-full py-12 flex flex-col items-center justify-center gap-2 text-on-surface-variant">
+                      <span className="material-symbols-outlined text-4xl">group_off</span>
                       <p className="text-xs font-bold uppercase tracking-wider">No se encontraron equipos</p>
                     </div>
                   )}
                 </div>
               ) : (
-                /* Classic Table Layout for other tabs */
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-                        {tabActiva === 'jugadores' ? (
-                          <>
-                            <th className="p-3 pl-4 w-12"></th>
-                            <th className="p-3">Nombre Completo</th>
-                            <th className="p-3">DNI</th>
-                            <th className="p-3">Dorsal</th>
-                            <th className="p-3">Equipo</th>
-                            <th className="p-3 pr-4 text-right">Acciones</th>
-                          </>
-                        ) : (
-                          <>
-                            <th className="p-3 pl-4">Detalles</th>
-                            <th className="p-3 pr-4 text-right">Acciones</th>
-                          </>
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
-                      {tabActiva === 'disciplinas' && disciplinas.map((d) => (
-                        <tr key={d.id} className="hover:bg-slate-50/40">
-                          <td className="p-3 pl-4">
-                            <div className="font-bold text-slate-900">{d.name}</div>
-                            <div className="text-xs text-slate-500">{d.description || 'Sin descripción'}</div>
-                          </td>
-                          <td className="p-3 pr-4 text-right">
-                            <button onClick={() => eliminarElemento(d.id)} className="text-xs font-bold text-rose-600 hover:underline cursor-pointer">Eliminar</button>
-                          </td>
-                        </tr>
-                      ))}
-                      {tabActiva === 'categorias' && categorias.map((c) => (
-                        <tr key={c.id} className="hover:bg-slate-50/40">
-                          <td className="p-3 pl-4">
-                            <div className="font-bold text-slate-900">{c.name}</div>
-                            <div className="text-xs text-slate-500">
-                              Edades: {c.age_min ?? 'N/A'} - {c.age_max ?? 'N/A'} | Género: {c.gender_type || c.gender || 'N/A'} | Disciplina: {c.championship_discipline?.discipline?.name || 'N/A'}
-                            </div>
-                          </td>
-                          <td className="p-3 pr-4 text-right space-x-3">
-                            <button onClick={() => abrirModalEditarCat(c)} className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer">Editar</button>
-                            <button onClick={() => eliminarElemento(c.id)} className="text-xs font-bold text-rose-600 hover:underline cursor-pointer">Eliminar</button>
-                          </td>
-                        </tr>
-                      ))}
-                      {tabActiva === 'jugadores' && jugadoresFiltrados.map((j) => (
-                        <tr key={j.id} className="hover:bg-slate-50/40">
-                          <td className="p-3 pl-4">
-                            <LogoCircular nombre={j.name} logo={j.photo} />
-                          </td>
-                          <td className="p-3 pl-4">
-                            <div className="font-bold text-slate-900">{j.name}</div>
-                          </td>
-                          <td className="p-3 text-sm text-slate-700">
-                            {j.dni || <span className="text-slate-400 italic text-xs">No registrado</span>}
-                          </td>
-                          <td className="p-3 text-sm text-slate-700">
-                            {j.number != null ? j.number : <span className="text-slate-400 italic text-xs">N/A</span>}
-                          </td>
-                          <td className="p-3 text-sm text-slate-700">
-                            {j.team?.name || <span className="text-slate-400 italic text-xs">Sin equipo</span>}
-                          </td>
-                          <td className="p-3 pr-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => abrirModalEditarJugador(j)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-600 hover:text-white hover:border-indigo-600 active:scale-95 transition-all cursor-pointer"
-                              >
-                                <span className="material-symbols-outlined text-xs">edit</span>
-                                Editar
-                              </button>
-                              <button
-                                onClick={() => eliminarElemento(j.id)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-rose-600 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-600 hover:text-white hover:border-rose-600 active:scale-95 transition-all cursor-pointer"
-                              >
-                                <span className="material-symbols-outlined text-xs">delete</span>
-                                Eliminar
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                      {!cargando && (
-                        (tabActiva === 'disciplinas' && disciplinas.length === 0) ||
-                        (tabActiva === 'categorias' && categorias.length === 0) ||
-                        (tabActiva === 'jugadores' && jugadoresFiltrados.length === 0)
-                      ) && (
-                        <tr>
-                          <td colSpan={tabActiva === 'jugadores' ? 6 : 4} className="p-10 text-center text-slate-500 text-xs">No hay registros cargados.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                /* ── Galería de Tarjetas de Jugadores ── */
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 py-2 animate-fadeIn">
+                  {jugadoresFiltrados.map((j) => (
+                    <div
+                      key={j.id}
+                      className="group relative flex flex-col justify-between p-5 bg-primary-container hover:bg-surface border border-outline hover:border-primary/50 rounded-2xl transition-all duration-300 shadow-xs hover:shadow-xl hover:-translate-y-1 overflow-hidden"
+                    >
+                      {/* Top Badges */}
+                      <div className="flex items-center justify-between w-full mb-3 gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">tag</span>
+                          #{j.number ?? 'N/A'}
+                        </span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-surface border border-outline text-on-surface-variant truncate max-w-[120px]">
+                          {j.team?.name || 'Sin equipo'}
+                        </span>
+                      </div>
+
+                      {/* Avatar y Datos del Jugador */}
+                      <div className="flex items-center gap-3.5 my-2">
+                        <div className="w-14 h-14 rounded-full border-2 border-outline flex items-center justify-center overflow-hidden bg-surface shrink-0 shadow-inner group-hover:scale-105 transition-transform duration-300">
+                          {j.photo ? (
+                            <img src={resolverUrlImagen(j.photo) || ''} alt={j.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-xl text-on-surface-variant font-extrabold uppercase">{j.name[0] || '?'}</span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-sm font-extrabold text-on-surface truncate leading-snug group-hover:text-primary transition-colors">
+                            {j.name}
+                          </h4>
+                          <p className="text-[11px] text-on-surface-variant font-semibold mt-0.5">
+                            DNI: {j.dni || 'Sin DNI'}
+                          </p>
+                          <div className="flex items-center gap-1.5 text-[10px] text-on-surface-variant mt-1 font-bold">
+                            {j.age && <span>{j.age} años</span>}
+                            {j.position && <span className="bg-surface px-1.5 py-0.5 rounded border border-outline uppercase">{j.position}</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Footer Actions */}
+                      <div className="mt-4 pt-3 border-t border-outline/60 w-full flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => abrirModalEditarJugador(j)}
+                          className="px-3 py-1.5 rounded-lg bg-surface border border-outline text-on-surface hover:text-primary text-xs font-bold transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-sm">edit</span>
+                          <span>Editar</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => eliminarElemento(j.id)}
+                          className="px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 text-xs font-bold transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-sm">delete</span>
+                          <span>Eliminar</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {jugadoresFiltrados.length === 0 && (
+                    <div className="col-span-full py-12 flex flex-col items-center justify-center gap-2 text-on-surface-variant">
+                      <span className="material-symbols-outlined text-4xl">person_off</span>
+                      <p className="text-xs font-bold uppercase tracking-wider">No se encontraron jugadores</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -3088,6 +2747,101 @@ const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
           </div>
         );
       })(), document.body)}
+
+      {/* ── Modal Crear Categoría ── */}
+      {modalNuevaCatAbierto && createPortal(
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-primary-container text-on-surface rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-outline animate-scaleIn">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-outline bg-surface-dim">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">category</span>
+                <h3 className="font-extrabold text-sm text-on-surface uppercase tracking-wide">Añadir Nueva Categoría</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalNuevaCatAbierto(false)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-outline text-on-surface-variant hover:bg-surface-bright hover:text-on-surface transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+            <form onSubmit={guardarCategoria} className="p-6 space-y-4 font-sans">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-on-surface-variant block">Disciplina deportiva *</label>
+                <select
+                  required
+                  value={nuevaCat.discipline_id}
+                  onChange={(e) => setNuevaCat(prev => ({ ...prev, discipline_id: e.target.value }))}
+                  className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none cursor-pointer"
+                >
+                  <option value="">-- Selecciona Disciplina --</option>
+                  {disciplinas.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-on-surface-variant block">Nombre de la Categoría *</label>
+                <input
+                  type="text" required
+                  placeholder="Ej: Sub-18, Libres, Máster +40"
+                  value={nuevaCat.name}
+                  onChange={(e) => setNuevaCat(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none focus:border-primary"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-on-surface-variant block">Edad Mínima</label>
+                  <input
+                    type="number" min="0" placeholder="Ej: 16"
+                    value={nuevaCat.age_min}
+                    onChange={(e) => setNuevaCat(prev => ({ ...prev, age_min: e.target.value }))}
+                    className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-on-surface-variant block">Edad Máxima</label>
+                  <input
+                    type="number" min="0" placeholder="Ej: 35"
+                    value={nuevaCat.age_max}
+                    onChange={(e) => setNuevaCat(prev => ({ ...prev, age_max: e.target.value }))}
+                    className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-on-surface-variant block">Género / Modalidad</label>
+                <select
+                  value={nuevaCat.gender}
+                  onChange={(e) => setNuevaCat(prev => ({ ...prev, gender: e.target.value }))}
+                  className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl p-2.5 outline-none cursor-pointer"
+                >
+                  <option value="Masculino">Masculino</option>
+                  <option value="Femenino">Femenino</option>
+                  <option value="Mixto">Mixto</option>
+                </select>
+              </div>
+              <div className="pt-3 border-t border-outline flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setModalNuevaCatAbierto(false)}
+                  className="px-4 py-2 text-xs font-bold text-on-surface-variant border border-outline rounded-xl hover:bg-surface-bright transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-black uppercase tracking-wider text-white bg-primary hover:opacity-90 rounded-xl transition-all cursor-pointer shadow-xs"
+                >
+                  Guardar Categoría
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* ── Modal Editar Categoría ── */}
       {modalEditarCat.abierto && createPortal(
