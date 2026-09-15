@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use OpenApi\Attributes as OA;
+use App\Traits\ApiResponse;
 
 #[OA\Tag(
     name: "Players",
@@ -16,6 +17,8 @@ use OpenApi\Attributes as OA;
 )]
 class PlayerController extends Controller
 {
+    use ApiResponse;
+
     #[OA\Get(
         path: "/api/players",
         summary: "Listar jugadores",
@@ -40,11 +43,16 @@ class PlayerController extends Controller
     public function index(Request $request)
     {
         $query = Player::with([
-            'team.category.championshipDiscipline.discipline'
+            'championshipPlayers',
         ]);
 
-        if ($request->has('championship_id')) {
-            $query->whereHas('team', function ($q) use ($request) {
+        if (!$request->has('championship_id')) {
+            return $this->errorResponse('El parámetro championship_id es obligatorio.', 422);
+        }
+
+        // players that are not associated with any team in the championship
+        if ($request->has('available') && $request->available) {
+            $query->whereDoesntHave('championshipPlayers.championshipTeam.championshipDiscipline', function ($q) use ($request) {
                 $q->where('championship_id', $request->championship_id);
             });
         }
