@@ -9,7 +9,7 @@ class Standing extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'team_id',
+        'championship_team_id',
         'category_id',
         'championship_id',
         'matches_played',
@@ -45,6 +45,11 @@ class Standing extends Model
     public function team()
     {
         return $this->belongsTo(Team::class);
+    }
+
+    public function championshipTeam()
+    {
+        return $this->belongsTo(ChampionshipTeam::class);
     }
 
     public function category()

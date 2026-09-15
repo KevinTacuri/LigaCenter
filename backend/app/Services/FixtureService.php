@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Team;
+use App\Models\ChampionshipTeam;
 use App\Models\GameMatch;
 use App\Models\Category;
 use Carbon\Carbon;
@@ -45,13 +45,21 @@ class FixtureService
             GameMatch::where('championship_id', $championshipId)
                 ->where('category_id', $categoryId)
                 ->delete();
-
+            
             DB::table('group_teams')
-                ->whereIn('team_id', function($query) use ($championshipId, $categoryId) {
-                    $query->select('id')->from('teams')
-                        ->where('championship_id', $championshipId)
-                        ->where('category_id', $categoryId);
-                })->delete();
+                ->whereIn('championship_team_id', function ($query) use ($championshipId, $categoryId) {
+                    $query->select('ct.id')
+                        ->from('championship_teams as ct')
+                        ->join(
+                            'championship_disciplines as cd',
+                            'cd.id',
+                            '=',
+                            'ct.championship_discipline_id'
+                        )
+                        ->where('cd.championship_id', $championshipId)
+                        ->where('ct.category_id', $categoryId);
+                })
+                ->delete();
 
             $format = $category->format ?? 'liga';
             $settings = $category->format_settings ?? [];
@@ -89,7 +97,9 @@ class FixtureService
                     return $result;
 
                 case 'eliminacion_directa':
-                    $teams = Team::where('championship_id', $championshipId)
+                    $teams = ChampionshipTeam::whereHas('championship', function ($query) use ($championshipId) {
+                        $query->where('championships.id', $championshipId);
+                    })
                         ->where('category_id', $categoryId)
                         ->where('registration_status', 'aprobado')
                         ->get();
@@ -120,7 +130,9 @@ class FixtureService
 
     public function generateRoundRobin($championshipId, $categoryId, $startDate, $venueIds)
     {
-        $teams = Team::where('championship_id', $championshipId)
+        $teams = ChampionshipTeam::whereHas('championship', function ($query) use ($championshipId) {
+                $query->where('championships.id', $championshipId);
+            })
             ->where('category_id', $categoryId)
             ->where('registration_status', 'aprobado')
             ->get();

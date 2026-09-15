@@ -32,7 +32,7 @@ class StandingService
 
         $localStanding = Standing::firstOrCreate(
             [
-                'team_id' => $match->local_team_id,
+                'championship_team_id' => $match->local_team_id,
                 'championship_id' => $match->championship_id,
                 'category_id' => $match->category_id,
             ],
@@ -41,7 +41,7 @@ class StandingService
 
         $visitorStanding = Standing::firstOrCreate(
             [
-                'team_id' => $match->visitor_team_id,
+                'championship_team_id' => $match->visitor_team_id,
                 'championship_id' => $match->championship_id,
                 'category_id' => $match->category_id,
             ],
