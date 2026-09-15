@@ -284,6 +284,11 @@ export const publicApi = {
             params 
         }),
 
+    getChampionshipTeams: (params?: { championship_id?: number; search?: string; page?: number; year?: number }) =>
+        apiPublic.get<{ success: boolean; data: { data: PublicTeam[] }; message: string }>('/public/championshipTeams', { 
+            params 
+        }),
+
     getTeam: (id: number) =>
         apiPublic.get<{ success: boolean; data: PublicTeamDetail; message: string }>(`/public/teams/${id}`),
     

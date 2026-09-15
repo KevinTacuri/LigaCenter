@@ -148,7 +148,7 @@ export const CampeonatoDetalle: React.FC = () => {
             const [champRes, disciplinesRes, teamsRes] = await Promise.all([
                 publicApi.getChampionship(championshipId),
                 publicApi.getChampionshipDisciplines(championshipId),
-                publicApi.getTeams({ championship_id: championshipId })
+                publicApi.getChampionshipTeams({ championship_id: championshipId })
             ]);
 
             if (champRes.data.success) {
