@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Championship;
 use App\Models\Team;
+use App\Models\ChampionshipTeam;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
@@ -12,7 +13,8 @@ class TeamImportService
     public function import(
         Championship $championship,
         Worksheet $sheet,
-        array $categoryMap
+        array $categoryMap,
+        ?int $userId = null
     ): int {
 
         $created = 0;
@@ -44,22 +46,20 @@ class TeamImportService
                     continue;
                 }
 
-                Team::create([
-
-                    'name' => $teamName . ' - ' . $categoryData['discipline_name'] .' - ' . $categoryData['category_name'],
-
-                    'championship_id' => $championship->id,
-
-                    'category_id' => $categoryData['category_id'],
-
-                    'registration_status' => 'Pendiente',
-
-                    'representative' => null,
-
+                $team = Team::create([
+                    'name' => $teamName,
                     'logo' => null,
+                    'description' => null,
+                    'discipline_id' => $categoryData['discipline_id'],
+                    'user_id' => $userId,
+                ]);
 
-                    'description' => null
-
+                ChampionshipTeam::create([
+                    'championship_discipline_id' => $categoryData['championship_discipline_id'],
+                    'team_id' => $team->id,
+                    'category_id' => $categoryData['category_id'],
+                    'representative' => null,
+                    'registration_status' => 'Pendiente',
                 ]);
 
                 $created++;

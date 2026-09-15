@@ -55,8 +55,8 @@ class CategoryImportService
             $category = Category::firstOrCreate(
 
                 [
-                    'championship_id' => $championship->id,
-                    'discipline_id' => $discipline->id,
+                    //'championship_id' => $championship->id,
+                    //'discipline_id' => $discipline->id,
                     'championship_discipline_id' =>
                         $championshipDiscipline->id,
 
@@ -85,6 +85,8 @@ class CategoryImportService
             $columnCategoryMap[$column] = [
                 'category_id' => $category->id,
                 'discipline_name' => $discipline->name,
+                'discipline_id' => $discipline->id,
+                'championship_discipline_id' => $championshipDiscipline->id,
                 'category_name' => $header['category'],
             ];
         }
