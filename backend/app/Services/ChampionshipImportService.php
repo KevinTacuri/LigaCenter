@@ -18,10 +18,11 @@ class ChampionshipImportService
 
     public function import(
         Championship $championship,
-        UploadedFile $file
+        UploadedFile $file,
+        ?int $userId = null
     )
     {
-        return DB::transaction(function () use ($championship, $file) {
+        return DB::transaction(function () use ($championship, $file, $userId) {
 
             $spreadsheet = IOFactory::load($file->getRealPath());
 
@@ -43,7 +44,8 @@ class ChampionshipImportService
             $teamsCreated = $this->teamImportService->import(
                 $championship,
                 $sheet,
-                $categoryMap
+                $categoryMap,
+                $userId
             );
 
             return [
