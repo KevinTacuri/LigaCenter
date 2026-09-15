@@ -7,6 +7,7 @@ use App\Http\Controllers\Public\PublicMatchController;
 use App\Http\Controllers\Public\PublicPlayerController;
 use App\Http\Controllers\Public\PublicSearchController;
 use App\Http\Controllers\Public\PublicTeamController;
+use App\Http\Controllers\Public\PublicChampionshipTeamController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -45,6 +46,10 @@ Route::prefix('public')->group(function () {
     // Equipos
     Route::get('/teams', [PublicTeamController::class, 'index']);
     Route::get('/teams/{id}', [PublicTeamController::class, 'show']);
+
+    // Equipos de campeonatos
+    Route::get('/championshipTeams', [PublicChampionshipTeamController::class, 'index']);
+    Route::get('/championshipTeams/{id}', [PublicChampionshipTeamController::class, 'show']);
 
     // Jugadores
     Route::get('/players', [PublicPlayerController::class, 'index']);
