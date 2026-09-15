@@ -11,6 +11,8 @@ use App\Models\Category;
 use App\Models\Venue;
 use App\Models\Team;
 use App\Models\GameMatch;
+use App\Models\ChampionshipTeam;
+use App\Models\ChampionshipPlayer;
 
 class TestDataSeeder extends Seeder
 {
@@ -130,12 +132,111 @@ class TestDataSeeder extends Seeder
         );
 
         // 6. Equipos
-        $eq1 = Team::firstOrCreate(['name' => 'Agrounsa FC', 'championship_id' => $championship->id], ['category_id' => $catFutbolLibre->id, 'representative' => 'Juan Perez']);
-        $eq2 = Team::firstOrCreate(['name' => 'Deportivo Minas', 'championship_id' => $championship->id], ['category_id' => $catFutbolLibre->id, 'representative' => 'Carlos Lopez']);
-        $eq3 = Team::firstOrCreate(['name' => 'Atlético Civil', 'championship_id' => $championship->id], ['category_id' => $catFutbolLibre->id, 'representative' => 'Mario Gomez']);
-        $eq4 = Team::firstOrCreate(['name' => 'Real Sistemas', 'championship_id' => $championship->id], ['category_id' => $catFutbolLibre->id, 'representative' => 'Luis Torres']);
-        $eq5 = Team::firstOrCreate(['name' => 'Club Industrial', 'championship_id' => $championship->id], ['category_id' => $catFutbolMaster->id, 'representative' => 'Pedro Ramirez']);
-        $eq6 = Team::firstOrCreate(['name' => 'Sporting Mecánica', 'championship_id' => $championship->id], ['category_id' => $catBasquet->id, 'representative' => 'Jorge Diaz']);
+        $eq1 = Team::firstOrCreate(['user_id' => $organizador->id, 'name' => 'Agrounsa FC'], ['discipline_id' => $futbol->id]);
+        $eq2 = Team::firstOrCreate(['user_id' => $organizador->id, 'name' => 'Deportivo Minas'], ['discipline_id' => $futbol->id]);
+        $eq3 = Team::firstOrCreate(['user_id' => $organizador->id, 'name' => 'Atlético Civil'], ['discipline_id' => $futbol->id]);
+        $eq4 = Team::firstOrCreate(['user_id' => $organizador->id, 'name' => 'Real Sistemas'], ['discipline_id' => $futbol->id]);
+        $eq5 = Team::firstOrCreate(['user_id' => $organizador->id, 'name' => 'Club Industrial'], ['discipline_id' => $futbol->id]);
+        $eq6 = Team::firstOrCreate(['user_id' => $organizador->id, 'name' => 'Sporting Mecánica'], ['discipline_id' => $basquet->id]);
+
+        // Asociar equipos a categorías y campeonatos a través de ChampionshipTeam 
+        $championshipTeam1 = ChampionshipTeam::firstOrCreate(
+            [
+                'championship_discipline_id' => $champFutbol->id,
+                'team_id' => $eq1->id,
+            ],
+            [
+                'category_id' => $catFutbolLibre->id,
+                'representative' => $eq1->representative,
+            ]
+        );
+        $championshipTeam2 = ChampionshipTeam::firstOrCreate(
+            [
+                'championship_discipline_id' => $champFutbol->id,
+                'team_id' => $eq2->id,
+            ],
+            [
+                'category_id' => $catFutbolLibre->id,
+                'representative' => $eq2->representative,
+            ]
+        );
+        $championshipTeam3 = ChampionshipTeam::firstOrCreate(
+            [
+                'championship_discipline_id' => $champFutbol->id,
+                'team_id' => $eq3->id,
+            ],
+            [
+                'category_id' => $catFutbolLibre->id,
+                'representative' => $eq3->representative,
+            ]
+        );
+        $championshipTeam4 = ChampionshipTeam::firstOrCreate(
+            [
+                'championship_discipline_id' => $champFutbol->id,
+                'team_id' => $eq4->id,
+            ],
+            [
+                'category_id' => $catFutbolLibre->id,
+                'representative' => $eq4->representative,
+            ]
+        );
+        $championshipTeam5 = ChampionshipTeam::firstOrCreate(
+            [
+                'championship_discipline_id' => $champFutbol->id,
+                'team_id' => $eq5->id,
+            ],
+            [
+                'category_id' => $catFutbolLibre->id,
+                'representative' => $eq5->representative,
+            ]
+        );
+        $championshipTeam6 = ChampionshipTeam::firstOrCreate(
+            [
+                'championship_discipline_id' => $champBasquet->id,
+                'team_id' => $eq6->id,
+            ],
+            [
+                'category_id' => $catBasquet->id,
+                'representative' => $eq6->representative,
+            ]
+        );
+
+        // 6.1 Agregar jugadores a los equipos (ejemplo de jugadores)
+        $playersData = [
+            ['team' => $eq1, 'names' => 'Juan', 'last_names' => 'Pérez', 'age' => 25, 'position' => 'Delantero', 'jersey_number' => 9, 'document_number' => '12345678'],
+            ['team' => $eq1, 'names' => 'Carlos', 'last_names' => 'López', 'age' => 28, 'position' => 'Mediocampista', 'jersey_number' => 8, 'document_number' => '87654321'],
+            ['team' => $eq2, 'names' => 'Miguel', 'last_names' => 'Torres', 'age' => 30, 'position' => 'Defensa', 'jersey_number' => 4, 'document_number' => '11223344'],
+            ['team' => $eq2, 'names' => 'Luis', 'last_names' => 'Ramírez', 'age' => 27, 'position' => 'Portero', 'jersey_number' => 1, 'document_number' => '44332211'],
+            ['team' => $eq3, 'names' => 'Andrés', 'last_names' => 'Gómez', 'age' => 26, 'position' => 'Delantero', 'jersey_number' => 10, 'document_number' => '55667788'],
+            ['team' => $eq3, 'names' => 'Jorge', 'last_names' => 'Castillo', 'age' => 29, 'position' => 'Mediocampista', 'jersey_number' => 7, 'document_number' => '99887766'],
+        ];
+
+        foreach ($playersData as $playerData) {
+            $player = \App\Models\Player::firstOrCreate(
+                [
+                    'names' => $playerData['names'],
+                    'last_names' => $playerData['last_names'],
+                    'document_number' => $playerData['document_number']
+                ],
+                [
+                    'birth_date' => now()->subYears($playerData['age'])->toDateString(),
+                ]
+            );
+
+            // Asociar jugador al campeonato a través de ChampionshipPlayer
+            ChampionshipPlayer::firstOrCreate(
+                [
+                    'championship_team_id' => ChampionshipTeam::where('team_id', $playerData['team']->id)->first()->id,
+                    'player_id' => $player->id,
+                ],
+                [
+                    'jersey_number' => $playerData['jersey_number'],
+                    'position' => $playerData['position'],
+                    'is_captain' => false,
+                ]
+            );
+        }
+
 
         // 7. Partidos de Prueba
         // Partido 1: En juego (Fútbol Libre)
@@ -143,8 +244,8 @@ class TestDataSeeder extends Seeder
             [
                 'championship_id' => $championship->id,
                 'category_id' => $catFutbolLibre->id,
-                'home_team_id' => $eq1->id,
-                'away_team_id' => $eq2->id,
+                'home_team_id' => $championshipTeam1->id,
+                'away_team_id' => $championshipTeam2->id,
                 'round' => 1,
             ],
             [
@@ -166,8 +267,8 @@ class TestDataSeeder extends Seeder
             [
                 'championship_id' => $championship->id,
                 'category_id' => $catFutbolLibre->id,
-                'home_team_id' => $eq3->id,
-                'away_team_id' => $eq4->id,
+                'home_team_id' => $championshipTeam3->id,
+                'away_team_id' => $championshipTeam4->id,
                 'round' => 1,
             ],
             [
@@ -186,8 +287,8 @@ class TestDataSeeder extends Seeder
             [
                 'championship_id' => $championship->id,
                 'category_id' => $catFutbolMaster->id,
-                'home_team_id' => $eq5->id,
-                'away_team_id' => $eq6->id,
+                'home_team_id' => $championshipTeam5->id,
+                'away_team_id' => $championshipTeam6->id,
                 'round' => 1,
             ],
             [
@@ -206,8 +307,8 @@ class TestDataSeeder extends Seeder
             [
                 'championship_id' => $championship->id,
                 'category_id' => $catBasquet->id,
-                'home_team_id' => $eq1->id,
-                'away_team_id' => $eq3->id,
+                'home_team_id' => $championshipTeam1->id,
+                'away_team_id' => $championshipTeam3->id,
                 'round' => 1,
             ],
             [
@@ -226,8 +327,8 @@ class TestDataSeeder extends Seeder
             [
                 'championship_id' => $championship->id,
                 'category_id' => $catFutbolLibre->id,
-                'home_team_id' => $eq5->id,
-                'away_team_id' => $eq2->id,
+                'home_team_id' => $championshipTeam5->id,
+                'away_team_id' => $championshipTeam2->id,
                 'round' => 2,
             ],
             [
