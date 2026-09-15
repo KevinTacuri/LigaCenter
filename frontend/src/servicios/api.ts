@@ -338,6 +338,7 @@ export interface Jugador {
   position?: string | null;
   photo?: string | null;
   team?: Equipo;
+  birth_date?: string | null;
 }
 
 export interface Escenario {
@@ -562,8 +563,18 @@ export const serviciosParticipantes = {
   },
 
   // Equipos
-  obtenerEquipos: async (): Promise<RespuestaApi<Equipo[]>> => {
+  obtenerEquiposBase: async (availableForChampionship: boolean = false): Promise<RespuestaApi<Equipo[]>> => {
+    if (availableForChampionship) {
+      const res = await clienteApi.get(`/teams?available=${availableForChampionship}`);
+      return res.data;
+    }
     const res = await clienteApi.get('/teams');
+    return res.data;
+  },
+
+  // Championship Teams (Equipos de Campeonato)
+  obtenerEquipos: async (): Promise<RespuestaApi<Equipo[]>> => {
+    const res = await clienteApi.get('/championshipTeams');
     return res.data;
   },
   obtenerEquiposPorCategoria: async (categoryId: number): Promise<RespuestaApi<Equipo[]>> => {
@@ -572,10 +583,10 @@ export const serviciosParticipantes = {
   },
   crearEquipo: async (datos: any): Promise<RespuestaApi<Equipo>> => {
     if (datos instanceof FormData) {
-      const res = await clienteApi.post('/teams', datos); // ← sin headers manuales
+      const res = await clienteApi.post('/championshipTeams', datos); // ← sin headers manuales
       return res.data;
     }
-    const res = await clienteApi.post('/teams', datos);
+    const res = await clienteApi.post('/championshipTeams', datos);
     return res.data;
   },
   actualizarEquipo: async (id: number, datos: any): Promise<RespuestaApi<Equipo>> => {
@@ -583,19 +594,29 @@ export const serviciosParticipantes = {
       if (!datos.has('_method')) {
         datos.append('_method', 'PUT');
       }
-      const res = await clienteApi.post(`/teams/${id}`, datos); // ← sin headers manuales
+      const res = await clienteApi.post(`/championshipTeams/${id}`, datos); // ← sin headers manuales
       return res.data;
     }
-    const res = await clienteApi.put(`/teams/${id}`, datos);
+    const res = await clienteApi.put(`/championshipTeams/${id}`, datos);
     return res.data;
   },
   eliminarEquipo: async (id: number): Promise<RespuestaApi<null>> => {
-    const res = await clienteApi.delete(`/teams/${id}`);
+    const res = await clienteApi.delete(`/championshipTeams/${id}`);
+    return res.data;
+  },
+  anadirVariosEquiposExistentes: async (teamIds: number[]): Promise<RespuestaApi<any>> => {
+    const res = await clienteApi.post('/championshipTeams/addExistingTeams', {
+      team_ids: teamIds
+    });
     return res.data;
   },
 
   // Jugadores
-  obtenerJugadores: async (): Promise<RespuestaApi<Jugador[]>> => {
+  obtenerJugadores: async (availableForChampionship: boolean = false): Promise<RespuestaApi<Jugador[]>> => {
+    if (availableForChampionship) {
+      const res = await clienteApi.get(`/players?available=${availableForChampionship}`);
+      return res.data;
+    }
     const res = await clienteApi.get('/players');
     return res.data;
   },
@@ -607,6 +628,43 @@ export const serviciosParticipantes = {
     const res = await clienteApi.delete(`/players/${id}`);
     return res.data;
   },
+  // Jugadores de un campeonato específico
+  obtenerJugadoresPorCampeonato: async (): Promise<RespuestaApi<Jugador[]>> => {
+    const res = await clienteApi.get(`/championshipPlayers`);
+    return res.data;
+  },
+
+  eliminarJugadorDeCampeonato: async (id: number): Promise<RespuestaApi<null>> => {
+    const res = await clienteApi.delete(`/championshipPlayers/${id}`);
+    return res.data;
+  },
+
+  crearJugadorEnCampeonato: async (datos: any): Promise<RespuestaApi<Jugador>> => {
+    const res = await clienteApi.post('/championshipPlayers', datos);
+    return res.data;
+  },
+
+  actualizarJugadorEnCampeonato: async (id: number, datos: any): Promise<RespuestaApi<Jugador>> => {
+    if (datos instanceof FormData) {
+      if (!datos.has('_method')) {
+        datos.append('_method', 'PUT');
+      }
+      const res = await clienteApi.post(`/championshipPlayers/${id}`, datos);
+      return res.data;
+    } 
+    const res = await clienteApi.put(`/championshipPlayers/${id}`, datos);
+    return res.data;
+  },
+
+  anadirVariosJugadoresExistentes: async (playerIds: number[], championshipTeamId: number | null = null): Promise<RespuestaApi<any>> => {
+    const res = await clienteApi.post('/championshipPlayers/addExistingPlayers', {
+      player_ids: playerIds,
+      championship_team_id: championshipTeamId
+    });
+    return res.data;
+  },
+
+
   // Actualizar datos de un jugador
   actualizarJugador: async (
     id: number,
