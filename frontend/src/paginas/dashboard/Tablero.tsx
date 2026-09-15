@@ -138,7 +138,7 @@ export const Tablero: React.FC = () => {
       const [resEq, resMatch, resJug] = await Promise.all([
         serviciosParticipantes.obtenerEquipos(),
         serviciosFixture.obtenerPartidos ? serviciosFixture.obtenerPartidos() : Promise.resolve({ success: false, data: [] }),
-        serviciosParticipantes.obtenerJugadores(),
+        serviciosParticipantes.obtenerJugadoresPorCampeonato(),
       ]);
 
       const equiposList = resEq.success ? resEq.data : [];
