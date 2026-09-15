@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('championship_id')->constrained()->onDelete('cascade');
             $table->foreignId('category_id')->constrained()->onDelete('cascade');
-            $table->foreignId('team_id')->constrained()->onDelete('cascade');
+            $table->foreignId('championship_team_id')->constrained('championship_teams')->onDelete('cascade');
             
             // Campos base (todos los deportes)
             $table->integer('matches_played')->default(0);
@@ -43,7 +43,7 @@ return new class extends Migration
             
             $table->timestamp('last_updated')->useCurrent();
 
-            $table->unique(['championship_id', 'category_id', 'team_id'], 'standing_unique');
+            $table->unique(['championship_id', 'category_id', 'championship_team_id'], 'standing_unique');
         });
     }
 

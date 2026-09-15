@@ -13,7 +13,8 @@ return new class extends Migration
             $table->foreignId('championship_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('role');
-            $table->foreignId('team_id')->nullable()->constrained()->onDelete('set null');
+            //$table->foreignId('team_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('championship_team_id')->nullable()->constrained()->onDelete('set null');
             $table->timestamps();
 
             $table->unique(['championship_id', 'user_id', 'role'], 'champ_user_unique');
