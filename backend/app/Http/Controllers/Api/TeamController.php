@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Team;
 use App\Models\Championship;
+use App\Models\Discipline;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -23,50 +24,82 @@ class TeamController extends Controller
     use ApiResponse;
 
     #[OA\Get(
-        path: "/categories/{category_id}/teams",
+        path: "/teams?discipline_id={discipline_id}",
         summary: "Listar equipos",
-        description: "Retorna una lista de equipos registrados en una categoría específica.",
+        description: "Retorna una lista de equipos registrados en una disciplina específica.",
         tags: ["Teams"],
         security: [["sanctum" => []]],
         parameters: [
-            new OA\Parameter(name: "category_id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
+            new OA\Parameter(
+                name: "discipline_id",
+                in: "path",
+                required: true,
+                schema: new OA\Schema(type: "integer")
+            )
         ],
         responses: [
-            new OA\Response(response: 200, description: "Equipos obtenidos exitosamente"),
-            new OA\Response(response: 404, description: "Categoría no encontrada")
+            new OA\Response(
+                response: 200,
+                description: "Equipos obtenidos exitosamente"
+            ),
+            new OA\Response(
+                response: 404,
+                description: "Disciplina no encontrada"
+            ),
+            new OA\Response(
+                response: 401,
+                description: "Usuario no autenticado"
+            )
         ]
     )]
-    public function index(Request $request, $categoryId = null)
+    public function index(Request $request, $disciplineId = null)
     {
-        if ($categoryId) {
-            $category = Category::find($categoryId);
+        $userId = $request->user()->id;
 
-            if (!$category) {
-                return $this->errorResponse('Categoría no encontrada', 404);
+        if (!$userId) {
+            return $this->errorResponse(
+                'Usuario no autenticado',
+                401
+            );
+        }
+
+        $query = Team::where('user_id', $userId);
+
+        if ($disciplineId) {
+            $discipline = Discipline::find($disciplineId);
+
+            if (!$discipline) {
+                return $this->errorResponse(
+                    'Disciplina no encontrada',
+                    404
+                );
             }
 
-            $teams = $category->teams()
-                ->with(['category.championshipDiscipline.discipline', 'championshipUser.user'])
-                ->withCount('players')
-                ->get();
-
-            return $this->successResponse(TeamListResource::collection($teams), 'Equipos obtenidos exitosamente');
+            $query->where('discipline_id', $disciplineId);
         }
 
-        $championshipId = $request->query('championship_id') 
-            ?? $request->header('X-Championship-ID');
+        // Solo equipos que todavía no pertenecen al campeonato
+        if ($request->boolean('available') && $request->filled('championship_id')) {
+            $championshipId = $request->championship_id;
 
-        if (!$championshipId) {
-            return $this->errorResponse('Falta el ID del campeonato', 400);
+            $query->whereDoesntHave('championshipTeams', function ($q) use ($championshipId) {
+                $q->whereHas('championshipDiscipline', function ($q) use ($championshipId) {
+                    $q->where('championship_id', $championshipId);
+                });
+            });
         }
 
-        $teams = Team::where('championship_id', $championshipId)
-            ->with(['category.championshipDiscipline.discipline', 'championshipUser.user'])
+        $teams = $query
+            ->with('latestChampionshipTeam.category')
             ->withCount('players')
             ->get();
 
-        return $this->successResponse(TeamListResource::collection($teams), 'Equipos obtenidos exitosamente');
+        return $this->successResponse(
+            TeamListResource::collection($teams),
+            'Equipos obtenidos exitosamente'
+        );
     }
+
 
     #[OA\Post(
         path: "/api/teams",

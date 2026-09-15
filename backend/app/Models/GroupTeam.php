@@ -10,7 +10,7 @@ class GroupTeam extends Model
 
     protected $fillable = [
         'group_id',
-        'team_id',
+        'championship_team_id',
         'points',
         'goals_for',
         'goals_against',
@@ -37,6 +37,6 @@ class GroupTeam extends Model
 
     public function team()
     {
-        return $this->belongsTo(Team::class);
+        return $this->belongsTo(ChampionshipTeam::class);
     }
 }

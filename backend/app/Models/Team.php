@@ -13,11 +13,13 @@ class Team extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'representative',
-        'category_id',
+        //'representative',
+        //'category_id',
         'name',
-        'registration_status',
-        'championship_id',
+        'user_id',
+        'discipline_id',
+        //'registration_status',
+        //'championship_id',
         'logo',
         'description',
     ];
@@ -88,5 +90,26 @@ class Team extends Model
     public function getChampionshipAttribute()
     {
         return $this->category?->championshipDiscipline?->championship;
+    }
+
+    public function championshipTeams()
+    {
+        return $this->hasMany(ChampionshipTeam::class);
+    }
+
+    public function latestChampionshipTeam()
+    {
+        return $this->hasOne(ChampionshipTeam::class)
+            ->latestOfMany();
+    }
+
+    public function latestCategory(): BelongsTo
+    {
+        return $this->latestChampionshipTeam->category();
+    }
+
+    public function discipline()
+    {
+        return $this->belongsTo(Discipline::class);
     }
 }

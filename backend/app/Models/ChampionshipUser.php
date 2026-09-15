@@ -12,7 +12,7 @@ class ChampionshipUser extends Model
         'championship_id',
         'user_id',
         'role',
-        'team_id',
+        'championship_team_id',
     ];
 
     public function championship()
@@ -27,6 +27,11 @@ class ChampionshipUser extends Model
 
     public function team()
     {
-        return $this->belongsTo(Team::class);
+        return $this->belongsTo(ChampionshipTeam::class);
     }
+
+    //public function championshipTeam()
+    //{
+    //    return $this->belongsTo(ChampionshipTeam::class);
+    //}
 }
