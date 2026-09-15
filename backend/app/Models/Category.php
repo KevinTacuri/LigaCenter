@@ -31,7 +31,8 @@ class Category extends Model
 
     public function teams(): HasMany
     {
-        return $this->hasMany(Team::class);
+        //return $this->hasMany(Team::class);
+        return $this->hasMany(ChampionshipTeam::class);
     }
 
     public function championshipDiscipline()

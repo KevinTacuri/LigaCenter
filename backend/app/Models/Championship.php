@@ -34,7 +34,7 @@ class Championship extends Model
     public function users()
     {
         return $this->belongsToMany(User::class, 'championship_users')
-            ->withPivot('role', 'team_id')
+            ->withPivot('role', 'championship_team_id')
             ->withTimestamps();
     }
 
@@ -45,7 +45,19 @@ class Championship extends Model
 
     public function teams()
     {
-        return $this->hasMany(Team::class);
+        return $this->hasMany(ChampionshipTeam::class);
+    }
+
+    public function championshipTeams()
+    {
+        return $this->hasManyThrough(
+            ChampionshipTeam::class,
+            ChampionshipDiscipline::class,
+            'championship_id',
+            'championship_discipline_id',
+            'id',
+            'id'
+        );
     }
 
     public function venues()

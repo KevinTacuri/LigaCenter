@@ -61,7 +61,7 @@ class User extends Authenticatable
     public function assignedChampionships()
     {
         return $this->belongsToMany(Championship::class, 'championship_users')
-            ->withPivot('role', 'team_id')
+            ->withPivot('role', 'championship_team_id')
             ->withTimestamps();
     }
 
@@ -71,6 +71,6 @@ class User extends Authenticatable
      */
     public function teams()
     {
-        return $this->hasMany(Team::class, 'representative');
+        return $this->hasMany(ChampionshipTeam::class, 'representative');
     }
 }
