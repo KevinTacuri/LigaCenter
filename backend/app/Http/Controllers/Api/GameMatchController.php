@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\GameMatch;
+use App\Http\Resources\GameMatchResource;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -81,7 +82,7 @@ class GameMatchController extends Controller
         }
 
         $matches = $query->orderBy('match_date')->orderBy('match_time')->get();
-        return $this->successResponse($matches, 'Partidos obtenidos exitosamente');
+        return $this->successResponse(GameMatchResource::collection($matches), 'Partidos obtenidos exitosamente');
     }
 
     #[OA\Get(
@@ -107,7 +108,7 @@ class GameMatchController extends Controller
         if (!$match) {
             return $this->errorResponse('Partido no encontrado', 404);
         }
-        return $this->successResponse($match, 'Partido obtenido exitosamente');
+        return $this->successResponse(new GameMatchResource($match), 'Partido obtenido exitosamente');
     }
 
     #[OA\Put(

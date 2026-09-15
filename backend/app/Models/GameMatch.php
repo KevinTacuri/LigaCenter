@@ -104,12 +104,12 @@ class GameMatch extends Model
 
     public function localTeam()
     {
-        return $this->belongsTo(Team::class, 'home_team_id');
+        return $this->belongsTo(ChampionshipTeam::class, 'home_team_id');
     }
 
     public function visitorTeam()
     {
-        return $this->belongsTo(Team::class, 'away_team_id');
+        return $this->belongsTo(ChampionshipTeam::class, 'away_team_id');
     }
 
     public function report()

@@ -268,7 +268,7 @@ class MatchReportController extends Controller
         $isWalkover = strpos($report->observations ?? '', 'WALKOVER') !== false || 
                       strpos($report->observations ?? '', 'W.O.') !== false;
 
-        $tournamentId = $request->input('tournament_id', null);
+        $tournamentId = $request->input('championship_id', null);
         
         // SIEMPRE actualizar la tabla de posiciones (incluso para Walkover)
         $this->standingService->updateFromMatch($match, $report->local_score, $report->visitor_score);
