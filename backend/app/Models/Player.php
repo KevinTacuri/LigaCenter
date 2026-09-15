@@ -101,4 +101,9 @@ class Player extends Model
 
         return asset('storage/' . $value);
     }
+
+    public function championshipPlayers()
+    {
+        return $this->hasMany(ChampionshipPlayer::class);
+    }
 }
