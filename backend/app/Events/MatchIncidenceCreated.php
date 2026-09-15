@@ -43,21 +43,21 @@ class MatchIncidenceCreated implements ShouldBroadcastNow
         return [
             'id' => $this->incidence->id,
             'match_id' => $this->incidence->match_id,
-            'player_id' => $this->incidence->player_id,
-            'team_id' => $this->incidence->team_id,
+            'player_id' => $this->incidence->championship_player_id,
+            'team_id' => $this->incidence->championship_team_id,
             'type' => $this->incidence->type,
             'minute' => $this->incidence->minute,
             'second' => $this->incidence->second,
             'description' => $this->incidence->description,
             'player' => $this->incidence->player ? [
                 'id' => $this->incidence->player->id,
-                'name' => $this->incidence->player->name,
-                'photo' => $this->incidence->player->photo,
+                'name' => $this->incidence->player->player->name,
+                'photo' => $this->incidence->player->player->photo,
             ] : null,
             'team' => $this->incidence->team ? [
                 'id' => $this->incidence->team->id,
-                'name' => $this->incidence->team->name,
-                'logo' => $this->incidence->team->logo,
+                'name' => $this->incidence->team->team->name,
+                'logo' => $this->incidence->team->team->logo,
             ] : null,
         ];
     }

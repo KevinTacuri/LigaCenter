@@ -8,6 +8,7 @@ use App\Models\MatchIncidence;
 use App\Models\MatchReport;
 use App\Traits\ApiResponse;
 use OpenApi\Attributes as OA;
+use App\Http\Resources\MatchIncidenceResource;
 
 class MatchIncidenceController extends Controller
 {
@@ -55,7 +56,7 @@ class MatchIncidenceController extends Controller
         $incidences = $query->get();
 
         return $this->successResponse(
-            $incidences,
+            MatchIncidenceResource::collection($incidences),
             'Incidencias obtenidas exitosamente'
         );
     }
@@ -104,8 +105,8 @@ class MatchIncidenceController extends Controller
     {
         $request->validate([
             'match_id' => 'required|exists:matches,id',
-            'player_id' => 'nullable|exists:players,id',
-            'team_id' => 'required|exists:teams,id',
+            'player_id' => 'nullable|exists:championship_players,id',
+            'team_id' => 'required|exists:championship_teams,id',
             'incidence_type' => 'required|string',
             'minute' => 'required|integer|min:0|max:130',
             'second' => 'required|integer|min:0|max:59',
@@ -126,8 +127,8 @@ class MatchIncidenceController extends Controller
 
         $incidence = MatchIncidence::create([
             'match_id' => $request->match_id,
-            'player_id' => $request->player_id,
-            'team_id' => $request->team_id,
+            'championship_player_id' => $request->player_id,
+            'championship_team_id' => $request->team_id,
             'type' => $request->incidence_type,
             'minute' => $request->minute,
             'second' => $request->second,
@@ -141,7 +142,7 @@ class MatchIncidenceController extends Controller
         event(new \App\Events\MatchIncidenceCreated($incidence));
 
         return $this->successResponse(
-            $incidence,
+            new MatchIncidenceResource($incidence),
             'Incidencia registrada exitosamente',
             201
         );
@@ -178,7 +179,7 @@ class MatchIncidenceController extends Controller
         }
 
         return $this->successResponse(
-            $incidence,
+            new MatchIncidenceResource($incidence),
             'Incidencia obtenida exitosamente'
         );
     }
@@ -249,7 +250,7 @@ class MatchIncidenceController extends Controller
         $incidence->load(['player', 'team']);
 
         return $this->successResponse(
-            $incidence,
+            new MatchIncidenceResource($incidence),
             'Incidencia actualizada exitosamente'
         );
     }

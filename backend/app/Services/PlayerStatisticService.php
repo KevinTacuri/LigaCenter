@@ -8,6 +8,7 @@ use App\Models\Player;
 use App\Models\PlayerStatistic;
 use App\Models\TeamPlayer;
 use App\Models\DisciplineStatistic;
+use App\Models\ChampionshipPlayer;
 
 class PlayerStatisticService
 {
@@ -18,16 +19,19 @@ class PlayerStatisticService
             'discipline_id',
             $match->discipline_id
         )
+        ->with('statisticType')
         ->get()
-        ->keyBy('slug');
+        ->keyBy(function ($disciplineStatistic) {
+            return $disciplineStatistic->statisticType->slug;
+        });
 
 
-        $localTeamPlayers = TeamPlayer::where('team_id', $match->local_team_id)
-            ->with('player')
+        $localTeamPlayers = ChampionshipPlayer::where('championship_team_id', $match->local_team_id)
+            ->with('player', 'championshipTeam')
             ->get();
 
-        $visitorTeamPlayers = TeamPlayer::where('team_id', $match->visitor_team_id)
-            ->with('player')
+        $visitorTeamPlayers = ChampionshipPlayer::where('championship_team_id', $match->visitor_team_id)
+            ->with('player', 'championshipTeam')
             ->get();
 
         $allTeamPlayers = $localTeamPlayers->merge($visitorTeamPlayers);
@@ -96,7 +100,7 @@ class PlayerStatisticService
             $this->addStatistic($player, $teamPlayer, $match, $championshipId, $disciplineStatistics->get('yellow_cards'), $yellowCardsCount);
             $this->addStatistic($player, $teamPlayer, $match, $championshipId, $disciplineStatistics->get('red_cards'), $redCardsCount);
 
-            $statistics = PlayerStatistic::with('statistic')
+            $statistics = PlayerStatistic::with('discipline', 'category', 'championship', 'disciplineStatistic.statisticType')
                 ->where('player_id', $player->id)
                 ->where('championship_id', $championshipId)
                 ->get();
@@ -301,7 +305,7 @@ class PlayerStatisticService
 
     private function addStatistic(
         Player $player,
-        TeamPlayer $teamPlayer,
+        ChampionshipPlayer $teamPlayer,
         GameMatch $match,
         ?int $championshipId,
         DisciplineStatistic $disciplineStatistic,
@@ -314,7 +318,7 @@ class PlayerStatisticService
         $statistic = PlayerStatistic::firstOrCreate(
             [
                 'player_id' => $player->id,
-                'team_id' => $teamPlayer->team_id,
+                'team_id' => $teamPlayer->championshipTeam->team_id,
                 'discipline_id' => $match->discipline_id,
                 'category_id' => $match->category_id,
                 'championship_id' => $championshipId,

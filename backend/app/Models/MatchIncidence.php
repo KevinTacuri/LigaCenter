@@ -11,8 +11,8 @@ class MatchIncidence extends Model
 
     protected $fillable = [
         'match_id',
-        'player_id',
-        'team_id',
+        'championship_player_id',
+        'championship_team_id',
         'type',
         'incidence_type',
         'minute',
@@ -40,12 +40,12 @@ class MatchIncidence extends Model
 
     public function player()
     {
-        return $this->belongsTo(Player::class);
+        return $this->belongsTo(ChampionshipPlayer::class, 'championship_player_id');
     }
 
     public function team()
     {
-        return $this->belongsTo(Team::class);
+        return $this->belongsTo(ChampionshipTeam::class, 'championship_team_id');
     }
 
     public function createdBy()
