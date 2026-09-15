@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Public;
 use App\Models\Championship;
 use App\Models\Standing;
 use App\Models\GameMatch;
-use App\Models\Team;
+use App\Models\ChampionshipTeam;
 use App\Models\Category;
 use App\Http\Resources\Public\PublicChampionshipResource;
 use App\Http\Resources\Public\PublicMatchResource;
@@ -22,7 +22,7 @@ class PublicChampionshipController extends PublicController
 
         $championships = Championship::where('is_public', true)
             ->with(['disciplines'])
-            ->withCount(['teams', 'matches'])
+            ->withCount(['championshipTeams', 'matches'])
             ->when($disciplineId, function ($query) use ($disciplineId) {
                 return $query->whereHas('disciplines', function ($q) use ($disciplineId) {
                     $q->where('disciplines.id', $disciplineId);
@@ -44,7 +44,7 @@ class PublicChampionshipController extends PublicController
     {
         $championship = Championship::where('is_public', true)
             ->with(['disciplines'])
-            ->withCount(['teams', 'matches'])
+            ->withCount(['championshipTeams', 'matches'])
             ->find($id);
 
         if (!$championship) {
@@ -261,7 +261,10 @@ class PublicChampionshipController extends PublicController
         $result = [];
 
         if ($categoryId) {
-            $teamsQuery = Team::where('championship_id', $id)
+            //$teamsQuery = ChampionshipTeam::where('championship.championship_id', $id)
+            $teamsQuery = ChampionshipTeam::whereHas('championship', function ($query) use ($id) {
+                $query->where('championships.id', $id);
+            })
                 ->where('category_id', $categoryId)
                 ->where('registration_status', 'aprobado');
 
@@ -271,23 +274,23 @@ class PublicChampionshipController extends PublicController
                 });
             }
 
-            $teams = $teamsQuery->get();
+            $championshipTeams = $teamsQuery->get();
 
-            if ($teams->isNotEmpty()) {
+            if ($championshipTeams->isNotEmpty()) {
                 $standings = Standing::where('championship_id', $id)
                     ->where('category_id', $categoryId)
                     ->get()
-                    ->keyBy('team_id');
+                    ->keyBy('championship_team_id');
 
-                foreach ($teams as $team) {
-                    if ($standings->has($team->id)) {
-                        $standing = $standings->get($team->id);
+                foreach ($championshipTeams as $championshipTeam) {
+                    if ($standings->has($championshipTeam->id)) {
+                        $standing = $standings->get($championshipTeam->id);
                         $result[] = [
                             'position' => null,
                             'team' => [
-                                'id' => $team->id,
-                                'name' => $team->name,
-                                'logo' => $team->logo ?? null,
+                                'id' => $championshipTeam->id,
+                                'name' => $championshipTeam->team->name,
+                                'logo' => $championshipTeam->team->logo ?? null,
                             ],
                             'matches_played' => $standing->matches_played ?? 0,
                             'wins' => $standing->wins ?? 0,
@@ -313,9 +316,9 @@ class PublicChampionshipController extends PublicController
                         $result[] = [
                             'position' => null,
                             'team' => [
-                                'id' => $team->id,
-                                'name' => $team->name,
-                                'logo' => $team->logo ?? null,
+                                'id' => $championshipTeam->id,
+                                'name' => $championshipTeam->team->name,
+                                'logo' => $championshipTeam->team->logo ?? null,
                             ],
                             'matches_played' => 0,
                             'wins' => 0,

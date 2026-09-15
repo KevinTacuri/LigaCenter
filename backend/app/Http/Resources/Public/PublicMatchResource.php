@@ -30,8 +30,8 @@ class PublicMatchResource extends JsonResource
 
         return [
             'id' => $this->id,
-            'home_team' => new PublicTeamResource($this->whenLoaded('localTeam')),
-            'away_team' => new PublicTeamResource($this->whenLoaded('visitorTeam')),
+            'home_team' => new PublicChampionshipTeamResource($this->whenLoaded('localTeam')),
+            'away_team' => new PublicChampionshipTeamResource($this->whenLoaded('visitorTeam')),
             'home_score' => $this->home_score ?? null,
             'away_score' => $this->away_score ?? null,
             'status' => $statusMap[$this->status] ?? $this->status,
