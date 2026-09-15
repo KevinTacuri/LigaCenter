@@ -443,7 +443,7 @@ export const GestionParticipantes: React.FC = () => {
           continue;
         }
         try {
-          const res = await serviciosParticipantes.crearJugador({
+          const res = await serviciosParticipantes.crearJugadorEnCampeonato({
             full_name: nombre,
             team_id: targetTeamId,
             dni: dni || null,
@@ -521,12 +521,131 @@ export const GestionParticipantes: React.FC = () => {
   const [modalCargaMasivaAbierto, setModalCargaMasivaAbierto] = useState(false);
   const [modalVerEq, setModalVerEq] = useState<{ abierto: boolean; eq: Equipo | null }>({ abierto: false, eq: null });
 
+  // ── Estado: Modal Añadir Jugador Existente ─────
+  const [modalJugExistenteAbierto, setModalJugExistenteAbierto] = useState(false);
+  const [busquedaJugador, setBusquedaJugador] = useState("");
+  const [jugadoresExistentesSeleccionados, setJugadoresExistentesSeleccionados] = useState<number[]>([]);
+  const [jugadoresDisponibles, setJugadoresDisponibles] = useState<Jugador[]>([]);
+  const [cargandoJugadores, setCargandoJugadores] = useState(false);
+  const [guardandoJugadores, setGuardandoJugadores] = useState(false);
+
+  // ── Estado: Modal Añadir Equipos Existentes ─────
+  const [modalEqExistenteAbierto, setModalEqExistenteAbierto] = useState(false);
+  const [equiposExistentes, setEquiposExistentes] = useState<Equipo[]>([]);
+  const [equiposSeleccionados, setEquiposSeleccionados] = useState<number[]>([]);
+  const [busquedaEquipo, setBusquedaEquipo] = useState('');
+
   const cerrarModalNuevoJug = () => {
     setModalNuevoJugAbierto(false);
     setNuevoJug({ name: '', dni: '', age: '', phone: '', team_id: delegadoTeamId !== null ? String(delegadoTeamId) : (equipoSelId ? String(equipoSelId) : ''), number: '', position: 'Delantero' });
     setFotoJugFile(null);
     setFotoJugUrl('');
   };
+
+  const cargarEquiposExistentes = async () => {
+    try {
+      console.log('Cargando equipos existentes para campeonato:', campeonatoActivo?.id);
+      const res = await serviciosParticipantes.obtenerEquiposBase(true);
+
+      if (res.success) {
+        setEquiposExistentes(res.data);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const anadirEquiposExistentes = async () => {
+    if (equiposSeleccionados.length === 0) {
+      mostrarMensaje('Debes seleccionar al menos un equipo.', true);
+      return;
+    }
+    try {
+      const res = await serviciosParticipantes.anadirVariosEquiposExistentes(equiposSeleccionados);
+      if (res.success) {
+        mostrarMensaje('Equipos añadidos correctamente.');
+        setModalEqExistenteAbierto(false);
+        setEquiposSeleccionados([]);
+        cargarDatos();
+      }
+    } catch (error: any) {
+      //console.error(error);
+      console.log('STATUS:', error.response?.status);
+      console.log('DATA:', error.response?.data);
+      console.log('REQUEST:', error.config?.data);
+      console.log('HEADERS:', error.config?.headers);
+      mostrarMensaje('Error al añadir equipos existentes.', true);
+    }
+  };
+
+  const cargarJugadoresDisponibles = async () => {
+    setCargandoJugadores(true);
+    try {
+      const res = await serviciosParticipantes.obtenerJugadores(true);
+      if (res.success) {
+        setJugadoresDisponibles(res.data);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setCargandoJugadores(false);
+    }
+  };
+
+  const agregarJugadoresExistentes = async () => {
+    if (jugadoresExistentesSeleccionados.length === 0) {
+      mostrarMensaje('Debes seleccionar al menos un jugador.', true);
+      return;
+    }
+    try {
+
+      const res = await serviciosParticipantes.anadirVariosJugadoresExistentes(jugadoresExistentesSeleccionados, equipoSelId!);
+      setGuardandoJugadores(true);
+
+      /*
+      await addExistingPlayers({
+        player_ids: playerIds,
+        team_id: equipoSelId,
+      });
+      */
+
+      if (res.success) {
+        mostrarMensaje('Jugadores añadidos correctamente.');
+      } else {
+        mostrarMensaje('Error al añadir jugadores existentes.', true);
+      }
+
+      cerrarModalJugExistente();
+      cargarDatos();
+
+      // Recargar la lista de jugadores del equipo
+      //await cargarJugadores();
+
+
+
+    } catch (error) {
+      console.error('Error al añadir jugadores existentes:', error);
+    } finally {
+      setGuardandoJugadores(false);
+    }
+  };
+
+  const cerrarModalJugExistente = () => {
+    setModalJugExistenteAbierto(false);
+    setBusquedaJugador("");
+    setJugadoresExistentesSeleccionados([]);
+  };
+
+  const jugadoresExistentesFiltrados = jugadoresDisponibles.filter((jugador) => {
+    const texto = busquedaJugador.toLowerCase().trim();
+
+    if (!texto) return true;
+
+    return (
+      jugador.name?.toLowerCase().includes(texto) ||
+      jugador.dni?.toLowerCase().includes(texto)
+    );
+  });
 
   // ── Estado: Modal Editar Equipo ────────────
   const [modalEditarEq, setModalEditarEq] = useState<{
@@ -620,6 +739,9 @@ export const GestionParticipantes: React.FC = () => {
           setModalNuevoEqAbierto(false);
           setNuevoEq({ name: '', representative: '', discipline_id: '', category_id: '', enable_delegate: false, delegate_name: '', delegate_email: '', delegate_password: '' });
           setLogoEqFile(null); setLogoEqUrl('');
+        }
+        if (modalEqExistenteAbierto) {
+          setModalEqExistenteAbierto(false);
         }
         if (modalEditarEq.abierto) {
           setModalEditarEq(prev => ({ ...prev, abierto: false }));
@@ -724,7 +846,7 @@ export const GestionParticipantes: React.FC = () => {
         if (resCat.success) setCategorias(resCat.data);
       } else if (tabActiva === 'jugadores') {
         const [resJug, resEq] = await Promise.all([
-          serviciosParticipantes.obtenerJugadores(),
+          serviciosParticipantes.obtenerJugadoresPorCampeonato(),
           serviciosParticipantes.obtenerEquipos(),
         ]);
         if (resJug.success) setJugadores(resJug.data);
@@ -774,7 +896,7 @@ export const GestionParticipantes: React.FC = () => {
   const cargarJugadoresDeEquipo = async (teamId: number) => {
     setCargandoPlanilla(true);
     try {
-      const res = await serviciosParticipantes.obtenerJugadores();
+      const res = await serviciosParticipantes.obtenerJugadoresPorCampeonato();
       if (res.success) {
         const jugEquipo = res.data.filter((j: any) => {
           const tId = j.team_id ?? j.team?.id;
@@ -1075,7 +1197,7 @@ export const GestionParticipantes: React.FC = () => {
       if (fotoJugFile) formData.append('photo', fotoJugFile);
       else if (fotoJugUrl.trim()) formData.append('photo', fotoJugUrl.trim());
 
-      const res = await serviciosParticipantes.crearJugador(formData);
+      const res = await serviciosParticipantes.crearJugadorEnCampeonato(formData);
       if (res.success) {
         mostrarMensaje('Jugador inscrito exitosamente.');
         setNuevoJug({ name: '', dni: '', age: '', phone: '', team_id: delegadoTeamId !== null ? String(delegadoTeamId) : '', number: '', position: 'Delantero' });
@@ -1110,7 +1232,7 @@ export const GestionParticipantes: React.FC = () => {
         if (tabActiva === 'disciplinas') res = await serviciosParticipantes.eliminarDisciplina(id);
         else if (tabActiva === 'categorias') res = await serviciosParticipantes.eliminarCategoria(id);
         else if (tabActiva === 'equipos') res = await serviciosParticipantes.eliminarEquipo(id);
-        else if (tabActiva === 'jugadores') res = await serviciosParticipantes.eliminarJugador(id);
+        else if (tabActiva === 'jugadores') res = await serviciosParticipantes.eliminarJugadorDeCampeonato(id);
         if (res && res.success) {
           mostrarMensaje('Registro eliminado correctamente.');
           if (tabActiva === 'disciplinas') setDisciplinas(prev => prev.filter(d => d.id !== id));
@@ -1172,6 +1294,8 @@ export const GestionParticipantes: React.FC = () => {
 
       const res = await serviciosParticipantes.actualizarEquipo(modalEditarEq.eq.id, formData);
       if (res.success) {
+        console.log('Equipo anterior:', modalEditarEq.eq);
+        console.log('Respuesta API:', res.data);
         setEquipos(prev => prev.map(e => e.id === modalEditarEq.eq!.id ? res.data : e));
         if (modalEditarEq.enable_delegate && modalEditarEq.delegate_password) {
           try {
@@ -1345,7 +1469,7 @@ export const GestionParticipantes: React.FC = () => {
       if (fotoEditJugFile) formData.append('photo', fotoEditJugFile);
       else if (fotoEditJugUrl.trim()) formData.append('photo', fotoEditJugUrl.trim());
 
-      const res = await serviciosParticipantes.actualizarJugador(modalEditarJug.jug.id, formData);
+      const res = await serviciosParticipantes.actualizarJugadorEnCampeonato(modalEditarJug.jug.id, formData);
       if (res.success) {
         setJugadores(prev => prev.map(j => j.id === modalEditarJug.jug!.id ? res.data : j));
         mostrarMensaje('Jugador actualizado correctamente.');
@@ -1384,7 +1508,7 @@ export const GestionParticipantes: React.FC = () => {
     });
     if (isConfirmed) {
       try {
-        const res = await serviciosParticipantes.eliminarJugador(fila.id!);
+        const res = await serviciosParticipantes.eliminarJugadorDeCampeonato(fila.id!);
         if (res.success) {
           setFilasJugadores(prev => prev.filter((_, i) => i !== idx));
           mostrarMensaje('Jugador eliminado.');
@@ -1762,7 +1886,36 @@ export const GestionParticipantes: React.FC = () => {
                 </div>
               )}
 
-              {/* ── Barra de Filtros y Búsqueda (Equipos) ── */}
+            {/* Columna Derecha: Listado */}
+            <div className={`${tabActiva === 'equipos' ? 'lg:col-span-3' : 'lg:col-span-2'} bg-white rounded-2xl border border-slate-200 p-6 shadow-xs`}>
+              <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
+                <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900">
+                  Lista de {tabActiva}
+                </h2>
+                {tabActiva === 'equipos' && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setModalNuevoEqAbierto(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#800f2f] hover:bg-[#991238] text-white text-xs font-bold uppercase tracking-wide rounded-lg cursor-pointer transition-all shadow-xs active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-xs">add</span>
+                      Crear Equipo Nuevo
+                    </button>
+                    <button
+                      onClick={() => {
+                        setModalEqExistenteAbierto(true);
+                        cargarEquiposExistentes();
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold uppercase tracking-wide rounded-lg cursor-pointer transition-all shadow-xs active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-xs">add</span>
+                      Añadir Equipo Existente 
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Filtros y orden (solo tab Equipos) ── */}
               {tabActiva === 'equipos' && (
                 <div className="space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
@@ -2342,7 +2495,23 @@ export const GestionParticipantes: React.FC = () => {
                       <span className="material-symbols-outlined text-sm">person_add</span>
                       <span>Inscribir Jugador</span>
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModalJugExistenteAbierto(true);
+                        cargarJugadoresDisponibles();
+                      }}
+                      disabled={isDeadlineExpired || cargandoJugadores}
+                      className="flex items-center gap-2 bg-gray-600 text-white hover:bg-blue-700 disabled:opacity-50 px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-xs active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-sm">
+                        {cargandoJugadores ? 'progress_activity' : 'person_add_alt'}
+                      </span>
 
+                      <span>
+                        {cargandoJugadores ? 'Cargando...' : 'Añadir Existente'}
+                      </span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => setModalCargaMasivaAbierto(true)}
@@ -2659,6 +2828,217 @@ export const GestionParticipantes: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Modal Añadir Equipo Existente ── */}
+
+      {modalEqExistenteAbierto && createPortal(
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fadeIn"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-equipo-existente-title"
+        >
+          <div className="bg-primary-container text-on-surface rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-outline animate-scaleIn">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-outline bg-surface-dim">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">
+                  group
+                </span>
+
+                <h3
+                  id="modal-equipo-existente-title"
+                  className="font-extrabold text-sm text-on-surface uppercase tracking-wide"
+                >
+                  Añadir Equipo Existente
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setModalEqExistenteAbierto(false);
+                  setEquiposSeleccionados([]);
+                  setBusquedaEquipo('');
+                }}
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-outline text-on-surface-variant hover:bg-surface-bright hover:text-on-surface transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">
+                  close
+                </span>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+
+              {/* Buscador */}
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">
+                  search
+                </span>
+
+                <input
+                  type="text"
+                  placeholder="Buscar equipo..."
+                  value={busquedaEquipo}
+                  onChange={(e) => setBusquedaEquipo(e.target.value)}
+                  className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl py-2.5 pl-10 pr-3 outline-none focus:border-primary"
+                />
+              </div>
+
+              {/* Contador */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-on-surface-variant">
+                  Equipos disponibles
+                </span>
+
+                {equiposSeleccionados.length > 0 && (
+                  <span className="text-xs font-bold text-primary">
+                    {equiposSeleccionados.length} seleccionado(s)
+                  </span>
+                )}
+              </div>
+
+              {/* Lista */}
+              <div className="border border-outline rounded-xl bg-surface overflow-hidden">
+
+                <div className="max-h-[45vh] overflow-y-auto divide-y divide-outline">
+
+                  {equiposExistentes
+                    .filter((equipo) =>
+                      equipo.name
+                        .toLowerCase()
+                        .includes(busquedaEquipo.toLowerCase())
+                    )
+                    .map((equipo) => {
+
+                      const seleccionado =
+                        equiposSeleccionados.includes(equipo.id);
+
+                      return (
+                        <button
+                          key={equipo.id}
+                          type="button"
+                          onClick={() => {
+                            setEquiposSeleccionados((prev) =>
+                              seleccionado
+                                ? prev.filter((id) => id !== equipo.id)
+                                : [...prev, equipo.id]
+                            );
+                          }}
+                          className={`w-full flex items-center gap-3 p-3 text-left transition-all cursor-pointer ${
+                            seleccionado
+                              ? 'bg-primary/10'
+                              : 'hover:bg-surface-bright'
+                          }`}
+                        >
+
+                          {/* Checkbox */}
+                          <div
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${
+                              seleccionado
+                                ? 'bg-primary border-primary text-white'
+                                : 'border-outline'
+                            }`}
+                          >
+                            {seleccionado && (
+                              <span className="material-symbols-outlined text-sm">
+                                check
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Logo */}
+                          <div className="w-10 h-10 rounded-lg bg-surface-dim border border-outline flex items-center justify-center overflow-hidden shrink-0">
+                            {equipo.logo ? (
+                              <img
+                                src={equipo.logo}
+                                alt={equipo.name}
+                                className="w-full h-full object-contain"
+                              />
+                            ) : (
+                              <span className="material-symbols-outlined text-on-surface-variant">
+                                groups
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Información */}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-on-surface truncate">
+                              {equipo.name}
+                            </p>
+                            <p className="text-[11px] text-on-surface-variant mt-0.5">
+                              {equipo.discipline?.name || 'Sin disciplina'}
+                            </p>
+
+                            {equipo.category && (
+                              <p className="text-[10px] text-on-surface-variant/70 mt-0.5">
+                                Anterior: {equipo.category.name}
+                              </p>
+                            )}
+                          </div>
+
+                        </button>
+                      );
+                    })}
+
+                  {equiposExistentes.filter((equipo) =>
+                    equipo.name
+                      .toLowerCase()
+                      .includes(busquedaEquipo.toLowerCase())
+                  ).length === 0 && (
+                    <div className="py-10 text-center">
+                      <span className="material-symbols-outlined text-3xl text-on-surface-variant">
+                        search_off
+                      </span>
+
+                      <p className="text-xs font-bold text-on-surface-variant mt-2">
+                        No se encontraron equipos
+                      </p>
+                    </div>
+                  )}
+
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex justify-end gap-2 pt-2">
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalEqExistenteAbierto(false);
+                    setEquiposSeleccionados([]);
+                    setBusquedaEquipo('');
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-on-surface-variant border border-outline rounded-lg hover:bg-surface-bright transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  disabled={equiposSeleccionados.length === 0}
+                  onClick={anadirEquiposExistentes}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#800f2f] hover:bg-[#991238] disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wide rounded-lg transition-all shadow-xs active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    group_add
+              </span>
+
+                  Añadir seleccionados
+                </button>
+
+              </div>
+
+            </div>
           </div>
         </div>,
         document.body
@@ -3527,6 +3907,235 @@ export const GestionParticipantes: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+      {/* ── Modal Añadir Jugadores Existentes ── */}
+      {modalJugExistenteAbierto && createPortal(
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-fadeIn text-on-surface"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-jugadores-existentes-title"
+        >
+          <div className="bg-primary-container border border-outline rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-outline">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-blue-600 text-base">
+                  person_add_alt
+                </span>
+
+                <h3
+                  id="modal-jugadores-existentes-title"
+                  className="font-black text-sm uppercase tracking-wide"
+                >
+                  Añadir Jugadores Existentes
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={cerrarModalJugExistente}
+                className="w-8 h-8 rounded-full border border-outline flex items-center justify-center text-on-surface-variant hover:bg-surface transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">
+                  close
+                </span>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+
+              {/* Información */}
+              <div className="p-3 rounded-2xl bg-blue-600/10 border border-blue-600/20 flex items-start gap-2.5">
+                <span className="material-symbols-outlined text-blue-600 text-base shrink-0 mt-0.5">
+                  info
+                </span>
+
+                <p className="text-[11px] font-medium leading-tight">
+                  <strong className="font-extrabold text-blue-600 block mb-0.5">
+                    Seleccionar jugadores
+                  </strong>
+                  Busca y selecciona uno o varios jugadores registrados previamente
+                  para añadirlos al equipo.
+                </p>
+              </div>
+
+              {/* Buscador */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-on-surface-variant block">
+                  Buscar Jugador
+                </label>
+
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-base">
+                    search
+                  </span>
+
+                  <input
+                    type="text"
+                    placeholder="Nombre o DNI..."
+                    value={busquedaJugador}
+                    onChange={(e) => setBusquedaJugador(e.target.value)}
+                    className="w-full text-sm border border-outline bg-surface text-on-surface rounded-xl py-3 pl-10 pr-3 outline-none focus:border-blue-600 transition-all font-medium"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {/* Contador */}
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-on-surface-variant">
+                  Jugadores disponibles
+                </span>
+
+                <span className="text-[11px] font-black text-blue-600">
+                  {jugadoresExistentesSeleccionados.length} seleccionados
+                </span>
+              </div>
+
+              {/* Lista */}
+              <div className="border border-outline rounded-xl bg-surface overflow-hidden">
+
+                <div className="max-h-64 overflow-y-auto divide-y divide-outline">
+
+                  {jugadoresExistentesFiltrados.length === 0 ? (
+
+                    <div className="px-4 py-8 text-center">
+                      <span className="material-symbols-outlined text-2xl text-on-surface-variant">
+                        person_search
+                      </span>
+
+                      <p className="text-xs text-on-surface-variant mt-1">
+                        {busquedaJugador
+                          ? "No se encontraron jugadores."
+                          : "No hay jugadores disponibles."
+                        }
+                      </p>
+                    </div>
+
+                  ) : (
+
+                    jugadoresExistentesFiltrados.map((jugador) => {
+
+                      const seleccionado =
+                        jugadoresExistentesSeleccionados.some(
+                          (id) => id === jugador.id
+                        );
+
+                      return (
+                        <button
+                          key={jugador.id}
+                          type="button"
+                          onClick={() => {
+                            setJugadoresExistentesSeleccionados((actuales) =>
+                              seleccionado
+                                ? actuales.filter(
+                                    (id) => id !== jugador.id
+                                  )
+                                : [...actuales, jugador.id]
+                            );
+                          }}
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all cursor-pointer ${
+                            seleccionado
+                              ? "bg-blue-600/10"
+                              : "hover:bg-surface-container"
+                          }`}
+                        >
+
+                          {/* Checkbox */}
+                          <div
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-all ${
+                              seleccionado
+                                ? "bg-blue-600 border-blue-600 text-white"
+                                : "border-outline"
+                            }`}
+                          >
+                            {seleccionado && (
+                              <span className="material-symbols-outlined text-sm">
+                                check
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Foto */}
+                          <div className="w-9 h-9 rounded-full bg-surface-container border border-outline overflow-hidden shrink-0 flex items-center justify-center">
+                            {jugador.photo ? (
+                              <img
+                                src={jugador.photo}
+                                alt={jugador.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="material-symbols-outlined text-on-surface-variant text-base">
+                                person
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Información */}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-extrabold truncate">
+                              {jugador.name}
+                            </p>
+
+                            <p className="text-[10px] text-on-surface-variant">
+                              DNI: {jugador.dni || "Sin documento"}
+                            </p>
+                          </div>
+
+                          {/* Estado seleccionado */}
+                          {seleccionado && (
+                            <span className="material-symbols-outlined text-blue-600 text-base">
+                              check_circle
+                            </span>
+                          )}
+
+                        </button>
+                      );
+                    })
+
+                  )}
+
+                </div>
+              </div>
+              {/* Footer */}
+              <div className="pt-4 border-t border-outline flex items-center justify-end gap-3">
+
+                <button
+                  type="button"
+                  onClick={cerrarModalJugExistente}
+                  className="px-4 py-2.5 text-xs font-bold text-on-surface-variant border border-outline rounded-xl hover:bg-surface transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  disabled={jugadoresExistentesSeleccionados.length === 0}
+                  onClick={agregarJugadoresExistentes}
+                  className="px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    person_add_alt
+                  </span>
+
+                  <span>
+                    Añadir
+                    {jugadoresExistentesSeleccionados.length > 0
+                      ? ` (${jugadoresExistentesSeleccionados.length})`
+                      : ""
+                    }
+                  </span>
+                </button>
+
+              </div>
+
+            </div>
           </div>
         </div>,
         document.body
