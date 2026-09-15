@@ -255,6 +255,54 @@ const LogoCircular: React.FC<LogoCircularProps> = ({ nombre, logo }) => {
   );
 };
 
+// ─────────────────────────────────────────────
+// COMPONENTE: Paginación reutilizable
+// ─────────────────────────────────────────────
+interface PaginacionProps {
+  paginaActual: number;
+  totalPaginas: number;
+  totalItems: number;
+  itemsPorPagina: number;
+  onCambiar: (pagina: number) => void;
+}
+
+const Paginacion: React.FC<PaginacionProps> = ({
+  paginaActual, totalPaginas, totalItems, itemsPorPagina, onCambiar
+}) => {
+  if (totalPaginas <= 1) return null;
+  const desde = (paginaActual - 1) * itemsPorPagina + 1;
+  const hasta = Math.min(paginaActual * itemsPorPagina, totalItems);
+
+  return (
+    <div className="col-span-full flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 mt-2 border-t border-outline">
+      <p className="text-[11px] text-on-surface-variant font-semibold">
+        Mostrando {desde}–{hasta} de {totalItems}
+      </p>
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => onCambiar(Math.max(1, paginaActual - 1))}
+          disabled={paginaActual === 1}
+          className="w-8 h-8 rounded-lg border border-outline flex items-center justify-center text-on-surface disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-bright transition-all cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-sm">chevron_left</span>
+        </button>
+        <span className="text-xs font-bold text-on-surface px-2 select-none">
+          Página {paginaActual} de {totalPaginas}
+        </span>
+        <button
+          type="button"
+          onClick={() => onCambiar(Math.min(totalPaginas, paginaActual + 1))}
+          disabled={paginaActual === totalPaginas}
+          className="w-8 h-8 rounded-lg border border-outline flex items-center justify-center text-on-surface disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-bright transition-all cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-sm">chevron_right</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const PASOS_AYUDA_DELEGADO = [
   { paso: '1', titulo: 'Seleccionar tu Equipo', desc: 'Verifica los datos y categoría de tu equipo asignado.', icono: 'groups' },
   { paso: '2', titulo: 'Modalidad de Carga', desc: 'Descarga la plantilla Excel/CSV para carga masiva o usa el formulario uno por uno.', icono: 'upload_file' },
@@ -318,6 +366,8 @@ export const GestionParticipantes: React.FC = () => {
   const [filtroEstadoEq, setFiltroEstadoEq] = useState<'todos' | 'aprobado' | 'pendiente' | 'rechazado'>('todos');
   const [filtroCategoriaEq, setFiltroCategoriaEq] = useState<string>('todos');
   const [ordenEq, setOrdenEq] = useState<'nombre_asc' | 'nombre_desc' | 'representante_asc' | 'representante_desc' | 'estado'>('nombre_asc');
+  const [paginaEq, setPaginaEq] = useState(1);
+  const ITEMS_POR_PAGINA_EQ = 10; // ajusta la cantidad de tarjetas por página aquí
 
   // ── Estado: Filtros y orden de la tabla de Categorías ──
   const [busquedaCat, setBusquedaCat] = useState('');
@@ -330,6 +380,8 @@ export const GestionParticipantes: React.FC = () => {
   const [ordenJug, setOrdenJug] = useState<'nombre_asc' | 'nombre_desc' | 'equipo_asc' | 'equipo_desc'>('nombre_asc');
   const [filtroCategoriaJug, setFiltroCategoriaJug] = useState<number | null>(null);
   const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
+  const [paginaJug, setPaginaJug] = useState(1);
+  const ITEMS_POR_PAGINA_JUG = 8; // ajusta la cantidad de tarjetas por página 
 
   // ── Formularios originales ─────────────────
   const [nuevaDisc, setNuevaDisc] = useState({ name: '', description: '', rules: '', status: 'active' });
@@ -546,6 +598,16 @@ export const GestionParticipantes: React.FC = () => {
       setTabActiva('planilla-jugadores');
     }
   }, [delegadoTeamId, tabActiva]);
+
+    // Volver a la página 1 cada vez que cambian los filtros de Equipos
+  useEffect(() => {
+    setPaginaEq(1);
+  }, [busquedaEq, filtroEstadoEq, filtroCategoriaEq, ordenEq]);
+
+  // Volver a la página 1 cada vez que cambian los filtros de Jugadores
+  useEffect(() => {
+    setPaginaJug(1);
+  }, [busquedaJug, ordenJug, filtroCategoriaJug, filtroEquipoJug]);
 
   // Cierre de modales con la tecla Escape (a11y)
   useEffect(() => {
@@ -1365,6 +1427,14 @@ export const GestionParticipantes: React.FC = () => {
       return 0;
     });
 
+    
+  // Paginación sobre la lista ya filtrada/ordenada
+  const totalPaginasEq = Math.max(1, Math.ceil(equiposFiltrados.length / ITEMS_POR_PAGINA_EQ));
+  const equiposPaginados = equiposFiltrados.slice(
+    (paginaEq - 1) * ITEMS_POR_PAGINA_EQ,
+    paginaEq * ITEMS_POR_PAGINA_EQ
+  );
+
   // Lista de jugadores filtrada y ordenada para la tabla (no modifica `jugadores` original)
   const jugadoresFiltrados = jugadores
     .filter(j => {
@@ -1383,6 +1453,13 @@ export const GestionParticipantes: React.FC = () => {
       if (ordenJug === 'equipo_desc') return (b.team?.name || '').localeCompare(a.team?.name || '');
       return 0;
     });
+
+  // Paginación sobre la lista ya filtrada/ordenada
+  const totalPaginasJug = Math.max(1, Math.ceil(jugadoresFiltrados.length / ITEMS_POR_PAGINA_JUG));
+  const jugadoresPaginados = jugadoresFiltrados.slice(
+    (paginaJug - 1) * ITEMS_POR_PAGINA_JUG,
+    paginaJug * ITEMS_POR_PAGINA_JUG
+  );
 
 
 
@@ -1882,10 +1959,10 @@ export const GestionParticipantes: React.FC = () => {
                     </div>
                   )}
                 </div>
-              ) : tabActiva === 'equipos' ? (
+) : tabActiva === 'equipos' ? (
                 /* ── Galería de Tarjetas de Equipos ── */
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 py-2 animate-fadeIn">
-                  {equiposFiltrados.map((eq) => (
+                  {equiposPaginados.map((eq) => (
                     <div
                       key={eq.id}
                       className="group relative flex flex-col justify-between p-5 bg-primary-container hover:bg-surface border border-outline hover:border-primary/50 rounded-2xl transition-all duration-300 shadow-xs hover:shadow-xl hover:-translate-y-1 overflow-hidden"
@@ -1966,11 +2043,20 @@ export const GestionParticipantes: React.FC = () => {
                       <p className="text-xs font-bold uppercase tracking-wider">No se encontraron equipos</p>
                     </div>
                   )}
+
+                  <Paginacion
+                    paginaActual={paginaEq}
+                    totalPaginas={totalPaginasEq}
+                    totalItems={equiposFiltrados.length}
+                    itemsPorPagina={ITEMS_POR_PAGINA_EQ}
+                    onCambiar={setPaginaEq}
+                  />
                 </div>
+
               ) : (
                 /* ── Galería de Tarjetas de Jugadores ── */
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 py-2 animate-fadeIn">
-                  {jugadoresFiltrados.map((j) => (
+                  {jugadoresPaginados.map((j) => (
                     <div
                       key={j.id}
                       className="group relative flex flex-col justify-between p-5 bg-primary-container hover:bg-surface border border-outline hover:border-primary/50 rounded-2xl transition-all duration-300 shadow-xs hover:shadow-xl hover:-translate-y-1 overflow-hidden"
@@ -2036,6 +2122,14 @@ export const GestionParticipantes: React.FC = () => {
                       <p className="text-xs font-bold uppercase tracking-wider">No se encontraron jugadores</p>
                     </div>
                   )}
+
+                  <Paginacion
+                    paginaActual={paginaJug}
+                    totalPaginas={totalPaginasJug}
+                    totalItems={jugadoresFiltrados.length}
+                    itemsPorPagina={ITEMS_POR_PAGINA_JUG}
+                    onCambiar={setPaginaJug}
+                  />
                 </div>
               )}
             </div>
