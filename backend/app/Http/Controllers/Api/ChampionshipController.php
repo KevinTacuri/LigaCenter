@@ -375,9 +375,12 @@ class ChampionshipController extends Controller
             'file' => 'required|file|mimes:xlsx,xls'
         ]);
 
+        $userId = $request->user()->id;
+
         $result = $this->importService->import(
             $championship,
-            $request->file('file')
+            $request->file('file'),
+            $userId
         );
 
         return response()->json($result);
