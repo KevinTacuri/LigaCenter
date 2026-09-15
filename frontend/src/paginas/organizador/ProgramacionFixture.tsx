@@ -145,7 +145,7 @@ export const ProgramacionFixture: React.FC = () => {
         const [resPart, resEsc, resJug] = await Promise.all([
           serviciosFixture.obtenerPartidos(),
           serviciosFixture.obtenerEscenarios(),
-          serviciosParticipantes.obtenerJugadores()
+          serviciosParticipantes.obtenerJugadoresPorCampeonato()
         ]);
         if (resPart.success) setPartidos(resPart.data);
         if (resEsc.success) setEscenarios(resEsc.data);
