@@ -5,9 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Standing;
-use App\Models\Team;
+use App\Models\ChampionshipTeam;
 use App\Traits\ApiResponse;
 use OpenApi\Attributes as OA;
+use App\Http\Resources\ChampionshipTeamResource;
 
 class StandingController extends Controller
 {
@@ -47,7 +48,7 @@ class StandingController extends Controller
     #[OA\Security(name: 'sanctum')]
     public function index(Request $request)
     {
-        $query = Standing::with(['team', 'category.championshipDiscipline.discipline']);
+        $query = Standing::with(['championshipTeam', 'championshipTeam.championshipDiscipline.discipline']);
 
         if ($request->has('championship_id')) {
             $query->where('championship_id', $request->championship_id);
@@ -135,12 +136,14 @@ class StandingController extends Controller
         // Recalcular dinámicamente posiciones si hay partidos finalizados
         $this->recalcularPosicionesSiEsNecesario($championshipId, $categoryId);
 
-        $teams = Team::where('teams.category_id', $categoryId)
-            ->where('teams.championship_id', $championshipId)
-            ->whereIn('teams.id', $teamIdsWithMatches) // SOLO EQUIPOS CON PARTIDOS
-            ->leftJoin('group_teams', 'teams.id', '=', 'group_teams.team_id')
+        $teams = ChampionshipTeam::where('championship_teams.category_id', $categoryId)
+            ->whereHas('championship', function ($query) use ($championshipId) {
+                $query->where('championships.id', $championshipId);
+            })
+            ->whereIn('championship_teams.id', $teamIdsWithMatches) // SOLO EQUIPOS CON PARTIDOS
+            ->leftJoin('group_teams', 'championship_teams.id', '=', 'group_teams.championship_team_id')
             ->leftJoin('groups', 'group_teams.group_id', '=', 'groups.id')
-            ->select('teams.*', 'groups.name as group_name')
+            ->select('championship_teams.*', 'groups.name as group_name')
             ->get();
 
         $standings = Standing::where('championship_id', $championshipId)
@@ -162,7 +165,7 @@ class StandingController extends Controller
                 $result[] = (object) [
                     'id' => null,
                     'team_id' => $team->id,
-                    'team' => $team,
+                    'team' => new ChampionshipTeamResource($team),
                     'category_id' => $categoryId,
                     'championship_id' => $championshipId,
                     'matches_played' => 0,
