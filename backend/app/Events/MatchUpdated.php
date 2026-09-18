@@ -44,8 +44,8 @@ class MatchUpdated implements ShouldBroadcastNow
         return [
             'match_id' => $this->match->id,
             'championship_id' => $this->match->championship_id,
-            'local_team_goals' => $this->match->local_team_goals,
-            'visitor_team_goals' => $this->match->visitor_team_goals,
+            'local_team_goals' => $this->match->home_score,
+            'visitor_team_goals' => $this->match->away_score,
             'status' => $this->match->status,
             'timer_status' => $this->match->timer_status ?? 'stopped',
             'current_period' => $this->match->current_period ?? 1,
