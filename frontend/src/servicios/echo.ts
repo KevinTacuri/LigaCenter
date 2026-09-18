@@ -29,8 +29,8 @@ export const echo = new Echo({
 });
 
 export const registrarCanalPartido = (matchId: number) => {
-  //return echo.channel(`matches.${matchId}`);
-  return echo.connector.pusher.subscribe(`matches.${matchId}`);
+  const canal = echo.channel(`matches.${matchId}`);
+  return canal;
 };
 
 export const registrarCanalCampeonato = (championshipId: number) => {

@@ -4,7 +4,7 @@ import { LayoutPublico } from '../../componentes/public/LayoutPublico';
 import { TiempoEnVivo } from '../../componentes/public/TiempoEnVivo';
 import { publicApi } from '../../servicios/apiPublic';
 
-import { registrarCanalPartido } from '../../servicios/echo';
+import { echo, registrarCanalPartido } from '../../servicios/echo';
 
 interface PartidoDetalleData {
   match: any;
@@ -50,7 +50,7 @@ export const PartidoDetalle: React.FC = () => {
     const canal = registrarCanalPartido(Number(id));
 
     // 1. Escuchar actualización general de estado y marcador de goles
-    canal.bind('MatchUpdated', (e: any) => {
+    canal.listen('.MatchUpdated', (e: any) => {
       setData((prev) => {
         if (!prev) return prev;
         return {
@@ -68,7 +68,7 @@ export const PartidoDetalle: React.FC = () => {
     });
 
     // 2. Escuchar sincronización del cronómetro en vivo
-    canal.bind('MatchTimerSynced', (e: any) => {
+    canal.listen('.MatchTimerSynced', (e: any) => {
       setData((prev) => {
         if (!prev) return prev;
         return {
@@ -85,7 +85,7 @@ export const PartidoDetalle: React.FC = () => {
     });
 
     // 3. Escuchar registro de nuevas incidencias (goles, tarjetas, etc.)
-    canal.bind('MatchIncidenceCreated', (e: any) => {
+    canal.listen('.MatchIncidenceCreated', (e: any) => {
       setData((prev) => {
         if (!prev) return prev;
         const type = e.type;
@@ -117,7 +117,7 @@ export const PartidoDetalle: React.FC = () => {
     });
 
     // 4. Escuchar eliminación de incidencias
-    canal.bind('MatchIncidenceDeleted', (e: any) => {
+    canal.listen('.MatchIncidenceDeleted', (e: any) => {
       setData((prev) => {
         if (!prev) return prev;
         const incidencesPrev = { ...prev.incidences };
@@ -134,7 +134,7 @@ export const PartidoDetalle: React.FC = () => {
     });
 
     return () => {
-      canal.unsubscribe();
+      echo.leave(`matches.${id}`);
     };
   }, [id]);
 
