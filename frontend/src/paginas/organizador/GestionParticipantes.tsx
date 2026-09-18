@@ -1821,14 +1821,26 @@ export const GestionParticipantes: React.FC = () => {
                     </button>
                   )}
                   {tabActiva === 'equipos' && (
-                    <button
-                      type="button"
-                      onClick={() => setModalNuevoEqAbierto(true)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:opacity-90 text-white text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all shadow-xs active:scale-95"
-                    >
-                      <span className="material-symbols-outlined text-sm">add_circle</span>
-                      Añadir Equipo
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setModalNuevoEqAbierto(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:opacity-90 text-white text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all shadow-xs active:scale-95"
+                      >
+                        <span className="material-symbols-outlined text-sm">add_circle</span>
+                        Añadir Equipo
+                      </button>
+                                          <button
+                        onClick={() => {
+                          setModalEqExistenteAbierto(true);
+                          cargarEquiposExistentes();
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold uppercase tracking-wide rounded-lg cursor-pointer transition-all shadow-xs active:scale-95"
+                      >
+                        <span className="material-symbols-outlined text-xs">add</span>
+                        Añadir Equipo Existente 
+                      </button>
+                    </div>
                   )}
                   {tabActiva === 'jugadores' && (
                     <button
@@ -1885,6 +1897,7 @@ export const GestionParticipantes: React.FC = () => {
                   </div>
                 </div>
               )}
+            </div>
 
             {/* Columna Derecha: Listado */}
             <div className={`${tabActiva === 'equipos' ? 'lg:col-span-3' : 'lg:col-span-2'} bg-white rounded-2xl border border-slate-200 p-6 shadow-xs`}>
@@ -1892,27 +1905,6 @@ export const GestionParticipantes: React.FC = () => {
                 <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900">
                   Lista de {tabActiva}
                 </h2>
-                {tabActiva === 'equipos' && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setModalNuevoEqAbierto(true)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#800f2f] hover:bg-[#991238] text-white text-xs font-bold uppercase tracking-wide rounded-lg cursor-pointer transition-all shadow-xs active:scale-95"
-                    >
-                      <span className="material-symbols-outlined text-xs">add</span>
-                      Crear Equipo Nuevo
-                    </button>
-                    <button
-                      onClick={() => {
-                        setModalEqExistenteAbierto(true);
-                        cargarEquiposExistentes();
-                      }}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold uppercase tracking-wide rounded-lg cursor-pointer transition-all shadow-xs active:scale-95"
-                    >
-                      <span className="material-symbols-outlined text-xs">add</span>
-                      Añadir Equipo Existente 
-                    </button>
-                  </div>
-                )}
               </div>
 
               {/* ── Filtros y orden (solo tab Equipos) ── */}
