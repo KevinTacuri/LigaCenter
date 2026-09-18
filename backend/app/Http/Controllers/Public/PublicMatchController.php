@@ -148,7 +148,7 @@ class PublicMatchController extends PublicController
                     'id' => $incidence->id,
                     'minute' => $incidence->minute,
                     'type' => $incidence->type,
-                    'player' => $incidence->player ? $incidence->player->names . ' ' . $incidence->player->last_names : null,
+                    'player' => $incidence->player->player ? $incidence->player->player->names . ' ' . $incidence->player->player->last_names : null,
                     'description' => $incidence->description,
                 ];
             });
