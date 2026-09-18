@@ -7,8 +7,12 @@ use Illuminate\Http\Request;
 use App\Models\MatchIncidence;
 use App\Models\MatchReport;
 use App\Traits\ApiResponse;
+use App\Models\GameMatch;
+use App\Services\Scoring\ScoreStrategyFactory;
 use OpenApi\Attributes as OA;
 use App\Http\Resources\MatchIncidenceResource;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class MatchIncidenceController extends Controller
 {
@@ -125,21 +129,38 @@ class MatchIncidenceController extends Controller
             );
         }
 
-        $incidence = MatchIncidence::create([
-            'match_id' => $request->match_id,
-            'championship_player_id' => $request->player_id,
-            'championship_team_id' => $request->team_id,
-            'type' => $request->incidence_type,
-            'minute' => $request->minute,
-            'second' => $request->second,
-            'description' => $request->description,
-            'created_by_user_id' => auth()->id(),
-        ]);
+        [$incidence, $match] = DB::transaction(function () use ($request) {
+            // get the match with championship and lock it for update to prevent race conditions
+            $match = GameMatch::with('championship')
+                ->where('id', $request->match_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $incidence = MatchIncidence::create([
+                'match_id' => $request->match_id,
+                'championship_player_id' => $request->player_id,
+                'championship_team_id' => $request->team_id,
+                'type' => $request->incidence_type,
+                'minute' => $request->minute,
+                'second' => $request->second,
+                'description' => $request->description,
+                'created_by_user_id' => auth()->id(),
+            ]);
+
+            // Apply scoring strategy based on the discipline of the match (futbol, baloncesto, etc.)
+            $disciplineSlug = Str::slug($match->discipline->name); 
+            $strategy = ScoreStrategyFactory::make($disciplineSlug);
+            $strategy->applyScore($match, $incidence);
+
+            return [$incidence, $match];
+        });
 
         $incidence->load(['player', 'team']);
 
         // Disparar evento de WebSocket
         event(new \App\Events\MatchIncidenceCreated($incidence));
+        // Dispara evento luego de actualizar el marcador 
+        event(new \App\Events\MatchUpdated($match));
 
         return $this->successResponse(
             new MatchIncidenceResource($incidence),
