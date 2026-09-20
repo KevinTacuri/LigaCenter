@@ -619,7 +619,7 @@ export const MesaControl: React.FC = () => {
   const cargarPartidos = async () => {
     setCargando(true);
     try {
-      const res = await serviciosFixture.obtenerPartidos();
+      const res = await serviciosFixture.obtenerTodosPartidos();
       if (res.success) {
         setPartidos(res.data);
       }

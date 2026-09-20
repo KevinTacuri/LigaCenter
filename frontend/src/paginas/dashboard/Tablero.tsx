@@ -137,7 +137,7 @@ export const Tablero: React.FC = () => {
     try {
       const [resEq, resMatch, resJug] = await Promise.all([
         serviciosParticipantes.obtenerTodosEquipos(),
-        serviciosFixture.obtenerPartidos ? serviciosFixture.obtenerPartidos() : Promise.resolve({ success: false, data: [] }),
+        serviciosFixture.obtenerTodosPartidos ? serviciosFixture.obtenerTodosPartidos() : Promise.resolve({ success: false, data: [] }),
         serviciosParticipantes.obtenerTodosJugadoresPorCampeonato(),
       ]);
 
@@ -265,7 +265,7 @@ export const Tablero: React.FC = () => {
   const cargarCampeonatos = async () => {
     setCargandoCampeonatos(true);
     try {
-      const res = await serviciosCampeonatos.obtenerCampeonatos();
+      const res = await serviciosCampeonatos.obtenerTodosCampeonatos();
       if (res.success) {
         setCampeonatos(res.data);
       } else {

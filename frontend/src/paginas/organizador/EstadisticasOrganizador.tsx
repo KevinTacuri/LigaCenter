@@ -212,7 +212,7 @@ export const EstadisticasOrganizador: React.FC = () => {
           setPosiciones([]);
       }
 
-      const matchRes = await serviciosFixture.obtenerPartidos();
+      const matchRes = await serviciosFixture.obtenerTodosPartidos();
       let matches: Partido[] = [];
       if (matchRes.success) {
           matches = matchRes.data || [];

@@ -59,6 +59,8 @@ export interface DatosUsuariosPaginados {
   users: Usuario[];
   pagination: Paginacion;
 }
+export interface DatosPartidosPaginados { matches: Partido[]; pagination: Paginacion; }
+export interface DatosCampeonatosPaginados { championships: Campeonato[]; pagination: Paginacion; }
 
 export interface DatosEquiposPaginados {
   teams: Equipo[];
@@ -732,9 +734,13 @@ export const serviciosFixture = {
   },
 
   // Partidos
-  obtenerPartidos: async (): Promise<RespuestaApi<Partido[]>> => {
-    const res = await clienteApi.get('/matches');
+  obtenerPartidos: async (params: { page?: number; per_page?: number } = {}): Promise<RespuestaApi<DatosPartidosPaginados>> => {
+    const res = await clienteApi.get('/matches', { params });
     return res.data;
+  },
+  obtenerTodosPartidos: async (): Promise<RespuestaApi<Partido[]>> => {
+    const res = await serviciosFixture.obtenerPartidos({ page: 1, per_page: 100 });
+    return { success: res.success, data: res.success ? res.data.matches : [], message: res.message };
   },
   actualizarPartido: async (id: number, datos: any): Promise<RespuestaApi<Partido>> => {
     const res = await clienteApi.put(`/matches/${id}`, datos);
@@ -976,9 +982,9 @@ export const serviciosCampeonatos = {
     const res = await clienteApi.delete(`/championship-users/${id}`);
     return res.data;
   },
-  obtenerCampeonatos: async (): Promise<RespuestaApi<Campeonato[]>> => {
+  obtenerCampeonatos: async (params: { page?: number; per_page?: number } = {}): Promise<RespuestaApi<DatosCampeonatosPaginados>> => {
     try {
-      const res = await clienteApi.get('/championships');
+      const res = await clienteApi.get('/championships', { params });
       return res.data;
     } catch (err) {
       // Fallback a localStorage si el backend no ha implementado la ruta
@@ -990,8 +996,12 @@ export const serviciosCampeonatos = {
       if (!locales) {
         localStorage.setItem('campeonatos_simulados', JSON.stringify(lista));
       }
-      return { success: true, data: lista, message: 'Retornado de fallback local' };
+      return { success: true, data: { championships: lista, pagination: { total: lista.length, per_page: lista.length, current_page: 1, last_page: 1 } }, message: 'Retornado de fallback local' };
     }
+  },
+  obtenerTodosCampeonatos: async (): Promise<RespuestaApi<Campeonato[]>> => {
+    const res = await serviciosCampeonatos.obtenerCampeonatos({ page: 1, per_page: 100 });
+    return { success: res.success, data: res.success ? res.data.championships : [], message: res.message };
   },
   crearCampeonato: async (datos: any): Promise<RespuestaApi<Campeonato>> => {
     try {

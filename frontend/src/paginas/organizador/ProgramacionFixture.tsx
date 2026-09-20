@@ -136,14 +136,14 @@ export const ProgramacionFixture: React.FC = () => {
         const resDisc = await serviciosParticipantes.obtenerDisciplinas();
         const resCat = await serviciosParticipantes.obtenerCategoriasPorCampeonato(champId);
         const resEsc = await serviciosFixture.obtenerEscenarios();
-        const resPart = await serviciosFixture.obtenerPartidos();
+        const resPart = await serviciosFixture.obtenerTodosPartidos();
         if (resDisc.success) setDisciplinas(resDisc.data);
         if (resCat.success) setCategorias(resCat.data);
         if (resEsc.success) setEscenarios(resEsc.data);
         if (resPart.success) setPartidos(resPart.data);
       } else if (tabActiva === 'partidos') {
         const [resPart, resEsc, resJug] = await Promise.all([
-          serviciosFixture.obtenerPartidos(),
+          serviciosFixture.obtenerTodosPartidos(),
           serviciosFixture.obtenerEscenarios(),
           serviciosParticipantes.obtenerTodosJugadoresPorCampeonato()
         ]);

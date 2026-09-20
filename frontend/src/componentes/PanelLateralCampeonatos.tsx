@@ -58,7 +58,7 @@ export const PanelLateralCampeonatos: React.FC = () => {
     setCargando(true);
     setErrorLocal(null);
     try {
-      const res = await serviciosCampeonatos.obtenerCampeonatos();
+      const res = await serviciosCampeonatos.obtenerTodosCampeonatos();
       if (res.success) {
         setCampeonatos(res.data);
       } else {
