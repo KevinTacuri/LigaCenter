@@ -63,6 +63,7 @@ class GameMatchController extends Controller
     
     public function index(Request $request)
     {
+        $perPage = min(max((int) $request->query('per_page', 15), 1), 100);
         $query = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'category', 'report']);
 
         if ($request->has('championship_id')) {
@@ -81,8 +82,14 @@ class GameMatchController extends Controller
             $query->where('status', $request->status);
         }
 
-        $matches = $query->orderBy('match_date')->orderBy('match_time')->get();
-        return $this->successResponse(GameMatchResource::collection($matches), 'Partidos obtenidos exitosamente');
+        $matches = $query->orderBy('match_date')->orderBy('match_time')->paginate($perPage);
+        return $this->successResponse([
+            'matches' => GameMatchResource::collection($matches->items()),
+            'pagination' => [
+                'total' => $matches->total(), 'per_page' => $matches->perPage(),
+                'current_page' => $matches->currentPage(), 'last_page' => $matches->lastPage(),
+            ],
+        ], 'Partidos obtenidos exitosamente');
     }
 
     #[OA\Get(

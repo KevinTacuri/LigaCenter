@@ -36,13 +36,21 @@ class ChampionshipController extends Controller
     )]
     public function index(Request $request)
     {
+        $perPage = min(max((int) $request->query('per_page', 15), 1), 100);
         $championships = Championship::where('user_id', $request->user()->id)
             ->orWhereHas('users', function ($query) use ($request) {
                 $query->where('user_id', $request->user()->id);
             })
-            ->get();
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
 
-        return $this->successResponse($championships, 'Campeonatos obtenidos exitosamente');
+        return $this->successResponse([
+            'championships' => $championships->items(),
+            'pagination' => [
+                'total' => $championships->total(), 'per_page' => $championships->perPage(),
+                'current_page' => $championships->currentPage(), 'last_page' => $championships->lastPage(),
+            ],
+        ], 'Campeonatos obtenidos exitosamente');
     }
 
     #[OA\Post(
