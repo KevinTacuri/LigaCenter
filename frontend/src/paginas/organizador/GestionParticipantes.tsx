@@ -768,7 +768,7 @@ export const GestionParticipantes: React.FC = () => {
     } else {
       cargarDatos();
     }
-  }, [tabActiva, paginaEq, paginaJug, cargandoAuth, cargandoCampeonato]);
+  }, [tabActiva, paginaEq, paginaJug, busquedaEq, filtroEstadoEq, filtroCategoriaEq, ordenEq, busquedaJug, ordenJug, filtroCategoriaJug, filtroEquipoJug, cargandoAuth, cargandoCampeonato]);
 
   // Al cambiar equipo seleccionado en planilla o cuando se cargan los equipos
   useEffect(() => {
@@ -831,7 +831,13 @@ export const GestionParticipantes: React.FC = () => {
         }
       } else if (tabActiva === 'equipos') {
         const [resEq, resDisc, resCat] = await Promise.all([
-          serviciosParticipantes.obtenerEquipos({ page: paginaEq, per_page: ITEMS_POR_PAGINA_EQ }),
+          serviciosParticipantes.obtenerEquipos({
+            page: paginaEq, per_page: ITEMS_POR_PAGINA_EQ, search: busquedaEq || undefined,
+            category_id: filtroCategoriaEq !== 'todos' && filtroCategoriaEq !== 'sin_categoria' ? Number(filtroCategoriaEq) : undefined,
+            registration_status: filtroEstadoEq === 'todos' ? undefined : filtroEstadoEq,
+            sort: ordenEq === 'estado' ? 'registration_status' : ordenEq.startsWith('representante') ? 'representative' : 'name',
+            direction: ordenEq.endsWith('_desc') ? 'desc' : 'asc',
+          }),
           serviciosParticipantes.obtenerDisciplinasCampeonato(campeonatoActivo.id),
           serviciosParticipantes.obtenerCategoriasPorCampeonato(campeonatoActivo.id),
         ]);
@@ -852,7 +858,10 @@ export const GestionParticipantes: React.FC = () => {
         if (resCat.success) setCategorias(resCat.data);
       } else if (tabActiva === 'jugadores') {
         const [resJug, resEq] = await Promise.all([
-          serviciosParticipantes.obtenerJugadoresPorCampeonato({ page: paginaJug, per_page: ITEMS_POR_PAGINA_JUG }),
+          serviciosParticipantes.obtenerJugadoresPorCampeonato({
+            page: paginaJug, per_page: ITEMS_POR_PAGINA_JUG, search: busquedaJug || undefined,
+            category_id: filtroCategoriaJug || undefined, championship_team_id: filtroEquipoJug || undefined,
+          }),
           serviciosParticipantes.obtenerTodosEquipos(),
         ]);
         if (resJug.success) {

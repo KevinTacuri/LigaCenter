@@ -592,7 +592,7 @@ export const serviciosParticipantes = {
   },
 
   // Championship Teams (Equipos de Campeonato)
-  obtenerEquipos: async (params: { page?: number; per_page?: number } = {}): Promise<RespuestaApi<DatosEquiposPaginados>> => {
+  obtenerEquipos: async (params: { page?: number; per_page?: number; search?: string; category_id?: number; registration_status?: string; sort?: string; direction?: 'asc' | 'desc' } = {}): Promise<RespuestaApi<DatosEquiposPaginados>> => {
     const res = await clienteApi.get('/championshipTeams', { params });
     return res.data;
   },

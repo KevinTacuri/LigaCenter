@@ -130,7 +130,34 @@ class ChampionshipTeamController extends Controller
                 'category.championshipDiscipline.discipline',
                 'championshipUser.user',
             ])
-            ->withCount('players')
+            ->withCount('players');
+
+        if ($request->filled('search')) {
+            $search = trim($request->query('search'));
+            $championshipTeams->where(function ($query) use ($search) {
+                $query->where('representative', 'like', "%{$search}%")
+                    ->orWhereHas('team', fn ($teamQuery) => $teamQuery->where('name', 'like', "%{$search}%"));
+            });
+        }
+        if ($request->filled('category_id')) {
+            $championshipTeams->where('category_id', $request->integer('category_id'));
+        }
+        if ($request->filled('registration_status')) {
+            $championshipTeams->where('registration_status', $request->query('registration_status'));
+        }
+
+        $sort = $request->query('sort', 'name');
+        $direction = strtolower($request->query('direction', 'asc')) === 'desc' ? 'desc' : 'asc';
+        if ($sort === 'representative' || $sort === 'registration_status') {
+            $championshipTeams->orderBy($sort, $direction);
+        } else {
+            $championshipTeams->orderBy(
+                Team::select('name')->whereColumn('teams.id', 'championship_teams.team_id'),
+                $direction
+            );
+        }
+
+        $championshipTeams = $championshipTeams
             ->paginate($perPage);
 
         return $this->successResponse([
