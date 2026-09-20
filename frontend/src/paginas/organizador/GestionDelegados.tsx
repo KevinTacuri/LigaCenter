@@ -162,7 +162,7 @@ export const GestionDelegados: React.FC = () => {
     try {
       const [resMiembros, resEquipos] = await Promise.all([
         serviciosCampeonatos.obtenerUsuariosCampeonato(campeonatoActivo.id),
-        serviciosParticipantes.obtenerEquipos(),
+        serviciosParticipantes.obtenerTodosEquipos(),
       ]);
       if (resMiembros.success) setMiembros(resMiembros.data);
       if (resEquipos.success) setEquipos(resEquipos.data);

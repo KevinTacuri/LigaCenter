@@ -11,7 +11,8 @@ import type {
   Disciplina,
   Categoria,
   Equipo,
-  Jugador
+  Jugador,
+  Paginacion as PaginacionApi
 } from '../../servicios/api';
 import { useCampeonato } from '../../contexto/ContextoCampeonato';
 
@@ -367,6 +368,7 @@ export const GestionParticipantes: React.FC = () => {
   const [filtroCategoriaEq, setFiltroCategoriaEq] = useState<string>('todos');
   const [ordenEq, setOrdenEq] = useState<'nombre_asc' | 'nombre_desc' | 'representante_asc' | 'representante_desc' | 'estado'>('nombre_asc');
   const [paginaEq, setPaginaEq] = useState(1);
+  const [paginacionEq, setPaginacionEq] = useState<PaginacionApi>({ total: 0, per_page: 10, current_page: 1, last_page: 1 });
   const ITEMS_POR_PAGINA_EQ = 10; // ajusta la cantidad de tarjetas por página aquí
 
   // ── Estado: Filtros y orden de la tabla de Categorías ──
@@ -381,6 +383,7 @@ export const GestionParticipantes: React.FC = () => {
   const [filtroCategoriaJug, setFiltroCategoriaJug] = useState<number | null>(null);
   const [filtroEquipoJug, setFiltroEquipoJug] = useState<number | null>(null);
   const [paginaJug, setPaginaJug] = useState(1);
+  const [paginacionJug, setPaginacionJug] = useState<PaginacionApi>({ total: 0, per_page: 8, current_page: 1, last_page: 1 });
   const ITEMS_POR_PAGINA_JUG = 8; // ajusta la cantidad de tarjetas por página 
 
   // ── Formularios originales ─────────────────
@@ -765,7 +768,7 @@ export const GestionParticipantes: React.FC = () => {
     } else {
       cargarDatos();
     }
-  }, [tabActiva, cargandoAuth, cargandoCampeonato]);
+  }, [tabActiva, paginaEq, paginaJug, cargandoAuth, cargandoCampeonato]);
 
   // Al cambiar equipo seleccionado en planilla o cuando se cargan los equipos
   useEffect(() => {
@@ -828,11 +831,14 @@ export const GestionParticipantes: React.FC = () => {
         }
       } else if (tabActiva === 'equipos') {
         const [resEq, resDisc, resCat] = await Promise.all([
-          serviciosParticipantes.obtenerEquipos(),
+          serviciosParticipantes.obtenerEquipos({ page: paginaEq, per_page: ITEMS_POR_PAGINA_EQ }),
           serviciosParticipantes.obtenerDisciplinasCampeonato(campeonatoActivo.id),
           serviciosParticipantes.obtenerCategoriasPorCampeonato(campeonatoActivo.id),
         ]);
-        if (resEq.success) setEquipos(resEq.data);
+        if (resEq.success) {
+          setEquipos(resEq.data.teams);
+          setPaginacionEq(resEq.data.pagination);
+        }
         if (resDisc.success) {
           const mapped = resDisc.data.map(cd => ({
             id: cd.id,
@@ -846,10 +852,13 @@ export const GestionParticipantes: React.FC = () => {
         if (resCat.success) setCategorias(resCat.data);
       } else if (tabActiva === 'jugadores') {
         const [resJug, resEq] = await Promise.all([
-          serviciosParticipantes.obtenerJugadoresPorCampeonato(),
-          serviciosParticipantes.obtenerEquipos(),
+          serviciosParticipantes.obtenerJugadoresPorCampeonato({ page: paginaJug, per_page: ITEMS_POR_PAGINA_JUG }),
+          serviciosParticipantes.obtenerTodosEquipos(),
         ]);
-        if (resJug.success) setJugadores(resJug.data);
+        if (resJug.success) {
+          setJugadores(resJug.data.players);
+          setPaginacionJug(resJug.data.pagination);
+        }
         if (resEq.success) setEquipos(resEq.data);
       } else if (tabActiva === 'registro-equipo') {
         const [resDisc, resCat] = await Promise.all([
@@ -868,7 +877,7 @@ export const GestionParticipantes: React.FC = () => {
         }
         if (resCat.success) setCategorias(resCat.data);
       } else if (tabActiva === 'planilla-jugadores') {
-        const resEq = await serviciosParticipantes.obtenerEquipos();
+        const resEq = await serviciosParticipantes.obtenerTodosEquipos();
         if (resEq.success) setEquipos(resEq.data);
         // Recargar jugadores del equipo seleccionado si había uno
         if (equipoSelId !== null) cargarJugadoresDeEquipo(equipoSelId);
@@ -896,7 +905,7 @@ export const GestionParticipantes: React.FC = () => {
   const cargarJugadoresDeEquipo = async (teamId: number) => {
     setCargandoPlanilla(true);
     try {
-      const res = await serviciosParticipantes.obtenerJugadoresPorCampeonato();
+      const res = await serviciosParticipantes.obtenerTodosJugadoresPorCampeonato();
       if (res.success) {
         const jugEquipo = res.data.filter((j: any) => {
           const tId = j.team_id ?? j.team?.id;
@@ -1370,7 +1379,7 @@ export const GestionParticipantes: React.FC = () => {
         mostrarMensaje(`Equipo "${reqEq.nombre}" registrado y aprobado.`);
         setReqEq({ nombre: '', representante: '', discId: null, catId: null });
         setLogoReqFile(null); setLogoReqUrl('');
-        const resEq = await serviciosParticipantes.obtenerEquipos();
+        const resEq = await serviciosParticipantes.obtenerTodosEquipos();
         if (resEq.success) setEquipos(resEq.data);
       }
     } catch (err: any) {
@@ -1553,11 +1562,8 @@ export const GestionParticipantes: React.FC = () => {
 
     
   // Paginación sobre la lista ya filtrada/ordenada
-  const totalPaginasEq = Math.max(1, Math.ceil(equiposFiltrados.length / ITEMS_POR_PAGINA_EQ));
-  const equiposPaginados = equiposFiltrados.slice(
-    (paginaEq - 1) * ITEMS_POR_PAGINA_EQ,
-    paginaEq * ITEMS_POR_PAGINA_EQ
-  );
+  const totalPaginasEq = paginacionEq.last_page;
+  const equiposPaginados = equiposFiltrados;
 
   // Lista de jugadores filtrada y ordenada para la tabla (no modifica `jugadores` original)
   const jugadoresFiltrados = jugadores
@@ -1579,11 +1585,8 @@ export const GestionParticipantes: React.FC = () => {
     });
 
   // Paginación sobre la lista ya filtrada/ordenada
-  const totalPaginasJug = Math.max(1, Math.ceil(jugadoresFiltrados.length / ITEMS_POR_PAGINA_JUG));
-  const jugadoresPaginados = jugadoresFiltrados.slice(
-    (paginaJug - 1) * ITEMS_POR_PAGINA_JUG,
-    paginaJug * ITEMS_POR_PAGINA_JUG
-  );
+  const totalPaginasJug = paginacionJug.last_page;
+  const jugadoresPaginados = jugadoresFiltrados;
 
 
 
@@ -2192,8 +2195,8 @@ export const GestionParticipantes: React.FC = () => {
                   <Paginacion
                     paginaActual={paginaEq}
                     totalPaginas={totalPaginasEq}
-                    totalItems={equiposFiltrados.length}
-                    itemsPorPagina={ITEMS_POR_PAGINA_EQ}
+                    totalItems={paginacionEq.total}
+                    itemsPorPagina={paginacionEq.per_page}
                     onCambiar={setPaginaEq}
                   />
                 </div>
@@ -2271,8 +2274,8 @@ export const GestionParticipantes: React.FC = () => {
                   <Paginacion
                     paginaActual={paginaJug}
                     totalPaginas={totalPaginasJug}
-                    totalItems={jugadoresFiltrados.length}
-                    itemsPorPagina={ITEMS_POR_PAGINA_JUG}
+                    totalItems={paginacionJug.total}
+                    itemsPorPagina={paginacionJug.per_page}
                     onCambiar={setPaginaJug}
                   />
                 </div>

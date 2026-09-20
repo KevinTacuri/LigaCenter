@@ -60,6 +60,16 @@ export interface DatosUsuariosPaginados {
   pagination: Paginacion;
 }
 
+export interface DatosEquiposPaginados {
+  teams: Equipo[];
+  pagination: Paginacion;
+}
+
+export interface DatosJugadoresPaginados {
+  players: Jugador[];
+  pagination: Paginacion;
+}
+
 // Estructura de Rol simplificada
 export interface Rol {
   id: number;
@@ -348,7 +358,6 @@ export interface Jugador {
   position?: string | null;
   photo?: string | null;
   team?: Equipo;
-  birth_date?: string | null;
 }
 
 export interface Escenario {
@@ -583,9 +592,13 @@ export const serviciosParticipantes = {
   },
 
   // Championship Teams (Equipos de Campeonato)
-  obtenerEquipos: async (): Promise<RespuestaApi<Equipo[]>> => {
-    const res = await clienteApi.get('/championshipTeams');
+  obtenerEquipos: async (params: { page?: number; per_page?: number } = {}): Promise<RespuestaApi<DatosEquiposPaginados>> => {
+    const res = await clienteApi.get('/championshipTeams', { params });
     return res.data;
+  },
+  obtenerTodosEquipos: async (): Promise<RespuestaApi<Equipo[]>> => {
+    const res = await serviciosParticipantes.obtenerEquipos({ page: 1, per_page: 100 });
+    return { success: res.success, data: res.success ? res.data.teams : [], message: res.message };
   },
   obtenerEquiposPorCategoria: async (categoryId: number): Promise<RespuestaApi<Equipo[]>> => {
     const res = await clienteApi.get(`/categories/${categoryId}/teams`);
@@ -639,9 +652,13 @@ export const serviciosParticipantes = {
     return res.data;
   },
   // Jugadores de un campeonato específico
-  obtenerJugadoresPorCampeonato: async (): Promise<RespuestaApi<Jugador[]>> => {
-    const res = await clienteApi.get(`/championshipPlayers`);
+  obtenerJugadoresPorCampeonato: async (params: { page?: number; per_page?: number; search?: string; championship_team_id?: number; category_id?: number } = {}): Promise<RespuestaApi<DatosJugadoresPaginados>> => {
+    const res = await clienteApi.get('/championshipPlayers', { params });
     return res.data;
+  },
+  obtenerTodosJugadoresPorCampeonato: async (): Promise<RespuestaApi<Jugador[]>> => {
+    const res = await serviciosParticipantes.obtenerJugadoresPorCampeonato({ page: 1, per_page: 100 });
+    return { success: res.success, data: res.success ? res.data.players : [], message: res.message };
   },
 
   eliminarJugadorDeCampeonato: async (id: number): Promise<RespuestaApi<null>> => {

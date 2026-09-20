@@ -234,7 +234,7 @@ export const EstadisticasOrganizador: React.FC = () => {
         setSanciones(sanRes.data || []);
       }
 
-      const equiposRes = await serviciosParticipantes.obtenerEquipos();
+      const equiposRes = await serviciosParticipantes.obtenerTodosEquipos();
       if (equiposRes.success) {
           let equiposData = equiposRes.data || [];
           equiposData = equiposData.filter(eq => eq.registration_status === 'aprobado');

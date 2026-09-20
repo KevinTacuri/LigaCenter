@@ -738,7 +738,7 @@ export const MesaControl: React.FC = () => {
     setMaxExtraTime(maxExtra);
 
     try {
-      const resJugadores = await serviciosParticipantes.obtenerJugadoresPorCampeonato();
+      const resJugadores = await serviciosParticipantes.obtenerTodosJugadoresPorCampeonato();
       if (resJugadores.success) {
         const localId = partido.local_team_id || (partido as any).home_team_id;
         const visitorId = partido.visitor_team_id || (partido as any).away_team_id;
