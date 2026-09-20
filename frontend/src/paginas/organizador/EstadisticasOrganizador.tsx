@@ -67,8 +67,8 @@ export const EstadisticasOrganizador: React.FC = () => {
 
   const equiposFiltrados = useMemo(() => {
     return equipos.filter(eq => {
-      const coincideCategoria = !selectedCategory || eq.category?.id === selectedCategory;
-      const coincideDisciplina = !selectedDiscipline || eq.discipline?.id === selectedDiscipline;
+      const coincideCategoria = !selectedCategory || eq.category?.id === selectedCategory || (eq as any).category_id === selectedCategory;
+      const coincideDisciplina = !selectedDiscipline || eq.discipline?.id === selectedDiscipline || (eq as any).discipline_id === selectedDiscipline;
       return coincideCategoria && coincideDisciplina;
     });
   }, [equipos, selectedCategory, selectedDiscipline]);
@@ -135,11 +135,11 @@ export const EstadisticasOrganizador: React.FC = () => {
   }, [faseIndexActiva]);
 
   const getLocalScore = (match: Partido): number => {
-    return match.report?.local_score ?? 0;
+    return match.report?.local_score ?? (match as any).home_score ?? 0;
   };
 
   const getVisitorScore = (match: Partido): number => {
-    return match.report?.visitor_score ?? 0;
+    return match.report?.visitor_score ?? (match as any).away_score ?? 0;
   };
 
   const calculateStats = () => {
@@ -201,7 +201,10 @@ export const EstadisticasOrganizador: React.FC = () => {
           });
           if (posRes.success) {
               posicionesData = (posRes.data || []).filter((pos: any) => 
-                  pos.team?.registration_status === 'aprobado'
+                  !pos.team || 
+                  !pos.team.registration_status || 
+                  pos.team.registration_status === 'aprobado' || 
+                  pos.team.registration_status === 'pendiente'
               );
               setPosiciones(posicionesData);
               if (totalEquipos === 0 && posicionesData.length > 0) {
@@ -216,9 +219,10 @@ export const EstadisticasOrganizador: React.FC = () => {
       let matches: Partido[] = [];
       if (matchRes.success) {
           matches = matchRes.data || [];
+          // Permitir partidos sin equipos asignados aún (por definir en eliminatorias)
           matches = matches.filter((m: any) => 
-              m.local_team?.registration_status === 'aprobado' &&
-              m.visitor_team?.registration_status === 'aprobado'
+              (!m.local_team || !m.local_team.registration_status || m.local_team.registration_status === 'aprobado' || m.local_team.registration_status === 'pendiente') &&
+              (!m.visitor_team || !m.visitor_team.registration_status || m.visitor_team.registration_status === 'aprobado' || m.visitor_team.registration_status === 'pendiente')
           );
           if (selectedDiscipline) {
               matches = matches.filter((m: any) => m.discipline_id === selectedDiscipline);
@@ -237,12 +241,12 @@ export const EstadisticasOrganizador: React.FC = () => {
       const equiposRes = await serviciosParticipantes.obtenerTodosEquipos();
       if (equiposRes.success) {
           let equiposData = equiposRes.data || [];
-          equiposData = equiposData.filter(eq => eq.registration_status === 'aprobado');
+          equiposData = equiposData.filter(eq => eq.registration_status === 'aprobado' || eq.registration_status === 'pendiente');
           if (selectedCategory) {
-              equiposData = equiposData.filter(eq => eq.category?.id === selectedCategory);
+              equiposData = equiposData.filter(eq => eq.category?.id === selectedCategory || (eq as any).category_id === selectedCategory);
           }
           if (selectedDiscipline) {
-              equiposData = equiposData.filter(eq => eq.discipline?.id === selectedDiscipline);
+              equiposData = equiposData.filter(eq => eq.discipline?.id === selectedDiscipline || (eq as any).discipline_id === selectedDiscipline);
           }
           setEquipos(equiposData);
       }
@@ -354,7 +358,10 @@ export const EstadisticasOrganizador: React.FC = () => {
     const grupos: Record<string, Posicion[]> = {};
     
     posiciones.forEach(pos => {
-      const nombreGrupo = (pos as any).group_name || 'Grupo Unico';
+      const nombreGrupo = (pos as any).group_name 
+        || (pos as any).group?.name 
+        || (pos as any).group_team?.group?.name 
+        || 'Grupo Único';
       
       if (!grupos[nombreGrupo]) {
         grupos[nombreGrupo] = [];
@@ -399,10 +406,29 @@ export const EstadisticasOrganizador: React.FC = () => {
       }
     });
 
+    const ordenFasesPredefinido: Record<string, number> = {
+      '16avos': 1,
+      '16vos': 1,
+      'octavos': 2,
+      'octavos_de_final': 2,
+      'cuartos': 3,
+      'cuartos_de_final': 3,
+      'semifinal': 4,
+      'semifinales': 4,
+      'final': 5,
+      'tercer_puesto': 6,
+      'tercer_lugar': 6,
+    };
+
     const fasesOrdenadas = Object.keys(estructura).sort((faseA, faseB) => {
       const roundA = estructura[faseA][0]?.round || 0;
       const roundB = estructura[faseB][0]?.round || 0;
-      return roundA - roundB;
+      if (roundA !== roundB) {
+        return roundA - roundB;
+      }
+      const orderA = ordenFasesPredefinido[faseA] || 99;
+      const orderB = ordenFasesPredefinido[faseB] || 99;
+      return orderA - orderB;
     });
 
     return fasesOrdenadas.reduce((acc, fase) => {
@@ -552,7 +578,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                     loadData();
                   }}
                   disabled={loading}
-                  className="text-xs bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 px-3 py-2 rounded-lg transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-xs bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 px-3 py-2 rounded-lg transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-sm">refresh</span>
                   {loading ? 'Cargando...' : 'Recargar'}
@@ -603,7 +629,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                         setSubTabActiva('grupos');
                         setPaginaPartidos(1);
                       }}
-                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
                         subTabActiva === 'grupos' 
                           ? 'bg-indigo-500 text-white shadow-xs' 
                           : 'text-slate-400 hover:text-white'
@@ -616,7 +642,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                         setSubTabActiva('knockout');
                         setPaginaPartidos(1);
                       }}
-                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
                         subTabActiva === 'knockout' 
                           ? 'bg-indigo-500 text-white shadow-xs' 
                           : 'text-slate-400 hover:text-white'
@@ -634,7 +660,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                     <span className="material-symbols-outlined text-4xl block mb-2 opacity-50">info</span>
                     <p className="text-sm font-medium">Selecciona una categoría para ver la tabla de posiciones</p>
                   </div>
-                ) : posiciones.length === 0 ? (
+                ) : posiciones.length === 0 && subTabActiva === 'grupos' ? (
                   <div className="p-8 text-center text-slate-500 text-sm">
                     No hay posiciones disponibles para la categoría seleccionada
                   </div>
@@ -645,9 +671,14 @@ export const EstadisticasOrganizador: React.FC = () => {
                       const fasesReales = Object.keys(backendData);
 
                       const nombresFases: Record<string, string> = {
+                        '16avos': '16vos de final',
+                        '16vos': '16vos de final',
                         octavos: 'Octavos de final',
+                        octavos_de_final: 'Octavos de final',
                         cuartos: 'Cuartos de final',
+                        cuartos_de_final: 'Cuartos de final',
                         semifinal: 'Semifinales',
+                        semifinales: 'Semifinales',
                         final: 'Gran Final',
                         tercer_puesto: 'Tercer Puesto',
                         tercer_lugar: 'Tercer Puesto'
@@ -682,7 +713,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                             <button
                               onClick={() => setFaseIndexActiva(prev => Math.max(0, prev - 1))}
                               disabled={faseIndexActiva === 0}
-                              className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#171a26] border border-slate-800 text-slate-300 hover:text-white disabled:opacity-30 transition-colors"
+                              className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#171a26] border border-slate-800 text-slate-300 hover:text-white disabled:opacity-30 transition-colors cursor-pointer"
                             >
                               <span className="material-symbols-outlined text-sm">chevron_left</span>
                             </button>
@@ -690,7 +721,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                             <button
                               onClick={() => setFaseIndexActiva(prev => Math.min(fasesReales.length - 1, prev + 1))}
                               disabled={faseIndexActiva === fasesReales.length - 1}
-                              className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#171a26] border border-slate-800 text-slate-300 hover:text-white disabled:opacity-30 transition-colors"
+                              className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#171a26] border border-slate-800 text-slate-300 hover:text-white disabled:opacity-30 transition-colors cursor-pointer"
                             >
                               <span className="material-symbols-outlined text-sm">chevron_right</span>
                             </button>
@@ -727,8 +758,8 @@ export const EstadisticasOrganizador: React.FC = () => {
                                     {partidosAMostrar.map((partido, partIdx) => {
                                       const esPar = partIdx % 2 === 0;
                                       
-                                      const textoPredecidoLocal = partido.placeholder_text_home || 'Por definir';
-                                      const textoPredecidoVisita = partido.placeholder_text_away || 'Por definir';
+                                      const textoPredecidoLocal = (partido as any).placeholder_text_home || 'Por definir';
+                                      const textoPredecidoVisita = (partido as any).placeholder_text_away || 'Por definir';
 
                                       return (
                                         <div key={partido.id} className="relative w-full flex-1 flex flex-col justify-center py-2">
@@ -781,7 +812,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                                                   </span>
                                                 </div>
                                                 <span className="text-xs font-black px-2 py-0.5 rounded bg-[#171a26] text-slate-400">
-                                                  {partido.home_score !== null ? partido.home_score : '-'}
+                                                  {partido.report?.local_score ?? (partido as any).home_score ?? '-'}
                                                 </span>
                                               </div>
 
@@ -795,7 +826,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                                                   </span>
                                                 </div>
                                                 <span className="text-xs font-black px-2 py-0.5 rounded bg-[#171a26] text-slate-400">
-                                                  {partido.away_score !== null ? partido.away_score : '-'}
+                                                  {partido.report?.visitor_score ?? (partido as any).away_score ?? '-'}
                                                 </span>
                                               </div>
                                             </div>
@@ -811,7 +842,7 @@ export const EstadisticasOrganizador: React.FC = () => {
 
                             {tieneTercerPuesto && (() => {
                               const isFaseActivaTercero = faseIndexActiva === fasesReales.length - 1;
-                              const faseTercer = fasesReales.find(f => f === 'tercer_puesto' || f == 'tercer_lugar')!;
+                              const faseTercer = fasesReales.find(f => f === 'tercer_puesto' || f === 'tercer_lugar')!;
                               const partidoTercer = backendData[faseTercer][0];
 
                               if (!partidoTercer) return null;
@@ -855,11 +886,11 @@ export const EstadisticasOrganizador: React.FC = () => {
                                             <span className={`text-xs font-bold truncate ${
                                               partidoTercer.local_team ? 'text-white' : 'text-slate-500 font-mono text-[10px]'
                                             }`}>
-                                              {obtenerNombreEquipo(partidoTercer.local_team?.name) || partidoTercer.placeholder_text_home || 'Perdedor Semi 1'}
+                                              {obtenerNombreEquipo(partidoTercer.local_team?.name) || (partidoTercer as any).placeholder_text_home || 'Perdedor Semi 1'}
                                             </span>
                                           </div>
                                           <span className="text-xs font-black px-2 py-0.5 rounded bg-[#171a26] text-slate-400">
-                                            {partidoTercer.home_score !== null ? partidoTercer.home_score : '-'}
+                                            {partidoTercer.report?.local_score ?? (partidoTercer as any).home_score ?? '-'}
                                           </span>
                                         </div>
 
@@ -869,11 +900,11 @@ export const EstadisticasOrganizador: React.FC = () => {
                                             <span className={`text-xs font-bold truncate ${
                                               partidoTercer.visitor_team ? 'text-white' : 'text-slate-500 font-mono text-[10px]'
                                             }`}>
-                                              {obtenerNombreEquipo(partidoTercer.visitor_team?.name) || partidoTercer.placeholder_text_away || 'Perdedor Semi 2'}
+                                              {obtenerNombreEquipo(partidoTercer.visitor_team?.name) || (partidoTercer as any).placeholder_text_away || 'Perdedor Semi 2'}
                                             </span>
                                           </div>
                                           <span className="text-xs font-black px-2 py-0.5 rounded bg-[#171a26] text-slate-400">
-                                            {partidoTercer.away_score !== null ? partidoTercer.away_score : '-'}
+                                            {partidoTercer.report?.visitor_score ?? (partidoTercer as any).away_score ?? '-'}
                                           </span>
                                         </div>
                                       </div>
@@ -887,6 +918,27 @@ export const EstadisticasOrganizador: React.FC = () => {
                         </div>
                       );
                     })()}
+                  </div>
+                ) : esFormatoGrupos ? (
+                  <div className="space-y-6 p-2">
+                    {Object.entries(agruparPosicionesPorGrupo()).map(([nombreGrupo, posicionesGrupo]) => (
+                      <div key={nombreGrupo} className="space-y-3 bg-[#0c0e16]/50 p-4 rounded-xl border border-slate-800/80">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
+                          <h4 className="text-xs font-black text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                            {nombreGrupo}
+                          </h4>
+                          <span className="text-[10px] text-slate-400 font-semibold bg-[#171a26] px-2.5 py-1 rounded-md border border-slate-800">
+                            {posicionesGrupo.length} equipos
+                          </span>
+                        </div>
+                        <TablaPosicionesDinamica
+                          standings={posicionesGrupo}
+                          discipline={disciplinaActual?.name || 'futbol'}
+                          loading={loading}
+                        />
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <TablaPosicionesDinamica
@@ -902,7 +954,7 @@ export const EstadisticasOrganizador: React.FC = () => {
               <div className="px-5 py-3 border-b border-slate-900">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                   <span className="material-symbols-outlined text-amber-400 text-base">sports_soccer</span>
-                  Maximos Goleadores
+                  Máximos Goleadores
                 </h3>
               </div>
               <div className="divide-y divide-slate-800">
@@ -966,7 +1018,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className="font-bold text-sm text-white truncate">{obtenerNombreEquipo(match.local_team?.name) || 'Local'}</p>
+                        <p className="font-bold text-sm text-white truncate">{obtenerNombreEquipo(match.local_team?.name) || (match as any).placeholder_text_home || 'Local'}</p>
                       </div>
                       <div className="flex items-center gap-2 px-3">
                         <span className="font-bold text-base text-indigo-400">{getLocalScore(match)}</span>
@@ -974,7 +1026,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                         <span className="font-bold text-base text-indigo-400">{getVisitorScore(match)}</span>
                       </div>
                       <div className="flex-1 text-right">
-                        <p className="font-bold text-sm text-white truncate">{obtenerNombreEquipo(match.visitor_team?.name) || 'Visitante'}</p>
+                        <p className="font-bold text-sm text-white truncate">{obtenerNombreEquipo(match.visitor_team?.name) || (match as any).placeholder_text_away || 'Visitante'}</p>
                       </div>
                     </div>
                     <div className="mt-2 text-[9px] text-slate-500 flex justify-between">
@@ -990,7 +1042,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                 <button
                   onClick={() => setPaginaPartidos(prev => Math.max(1, prev - 1))}
                   disabled={paginaPartidos === 1}
-                  className="px-4 py-1.5 rounded-lg bg-[#171a26] border border-slate-800 text-xs font-bold text-slate-400 hover:text-white hover:border-indigo-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  className="px-4 py-1.5 rounded-lg bg-[#171a26] border border-slate-800 text-xs font-bold text-slate-400 hover:text-white hover:border-indigo-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                 >
                   Anterior
                 </button>
@@ -1000,7 +1052,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                 <button
                   onClick={() => setPaginaPartidos(prev => Math.min(totalPaginas, prev + 1))}
                   disabled={paginaPartidos === totalPaginas}
-                  className="px-4 py-1.5 rounded-lg bg-[#171a26] border border-slate-800 text-xs font-bold text-slate-400 hover:text-white hover:border-indigo-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  className="px-4 py-1.5 rounded-lg bg-[#171a26] border border-slate-800 text-xs font-bold text-slate-400 hover:text-white hover:border-indigo-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                 >
                   Siguiente
                 </button>
