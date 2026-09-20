@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Team;
+use App\Models\ChampionshipTeam;
 use App\Models\GameMatch;
 use App\Models\Group;
 use App\Models\GroupTeam;
@@ -13,6 +13,7 @@ class GroupStageService
 {
     public function generateGroups($championshipId, $categoryId, $settings, $startDate, $venueIds)
     {
+        // 1. Limpiar grupos y partidos previos
         Group::where('championship_id', $championshipId)
             ->where('category_id', $categoryId)
             ->delete();
@@ -22,16 +23,19 @@ class GroupStageService
             ->where('phase', 'grupos')
             ->delete();
 
-        $teams = Team::where('championship_id', $championshipId)
+        // 2. Obtener los equipos inscritos
+        $teams = ChampionshipTeam::whereHas('championshipDiscipline', function ($query) use ($championshipId) {
+                $query->where('championship_id', $championshipId);
+            })
             ->where('category_id', $categoryId)
             ->where('registration_status', 'aprobado')
             ->get();
 
         if ($teams->count() < 2) {
-            throw new \Exception('Se necesitan al menos 2 equipos');
+            throw new \Exception('Se necesitan al menos 2 equipos aprobados en la categoría.');
         }
 
-        // Obtener discipline_id de la categoria
+        // 3. Obtener discipline_id desde la categoría
         $category = Category::find($categoryId);
         $disciplineId = $category?->championshipDiscipline?->discipline_id;
 
@@ -41,9 +45,13 @@ class GroupStageService
 
         $teamsShuffled = $teams->shuffle();
         $groups = [];
-        $teamsPerGroup = ceil($teams->count() / $numGroups);
+        $teamsPerGroup = (int) ceil($teams->count() / $numGroups);
 
         for ($i = 0; $i < $numGroups; $i++) {
+            if ($teamsShuffled->isEmpty()) {
+                break;
+            }
+
             $groupName = chr(65 + $i);
             $group = Group::create([
                 'championship_id' => $championshipId,
@@ -57,12 +65,14 @@ class GroupStageService
             foreach ($groupTeams as $team) {
                 GroupTeam::create([
                     'group_id' => $group->id,
-                    'team_id' => $team->id,
+                    'championship_team_id' => $team->id,
                 ]);
             }
 
             $groups[] = $group;
-            $this->generateGroupMatches($group, $categoryId, $championshipId, $startDate, $venueIds, $disciplineId);
+
+            // Generar partidos del grupo
+            $this->generateGroupMatches($group, $groupTeams, $categoryId, $championshipId, $startDate, $venueIds, $disciplineId);
         }
 
         return [
@@ -72,9 +82,9 @@ class GroupStageService
         ];
     }
 
-    private function generateGroupMatches($group, $categoryId, $championshipId, $startDate, $venueIds, $disciplineId)
+    private function generateGroupMatches($group, $groupTeams, $categoryId, $championshipId, $startDate, $venueIds, $disciplineId)
     {
-        $teamIds = $group->teams->pluck('id')->toArray();
+        $teamIds = $groupTeams->pluck('id')->toArray();
 
         if (count($teamIds) < 2) {
             return;
@@ -83,7 +93,7 @@ class GroupStageService
         $matches = [];
         $n = count($teamIds);
         $date = Carbon::parse($startDate);
-        $venueCount = count($venueIds);
+        $venueCount = is_array($venueIds) && count($venueIds) > 0 ? count($venueIds) : 0;
 
         for ($i = 0; $i < $n; $i++) {
             for ($j = $i + 1; $j < $n; $j++) {
@@ -105,10 +115,10 @@ class GroupStageService
                 'discipline_id' => $disciplineId,
                 'home_team_id' => $match['home'],
                 'away_team_id' => $match['away'],
-                'venue_id' => $venueIds[$venueIndex % $venueCount],
+                'venue_id' => $venueCount > 0 ? $venueIds[$venueIndex % $venueCount] : null,
                 'round' => $round,
                 'phase' => 'grupos',
-                'match_date' => $date->copy()->addDays($round * 7)->toDateString(),
+                'match_date' => $date->copy()->addDays(($round - 1) * 7)->toDateString(),
                 'status' => 'programado',
             ]);
             $round++;
@@ -118,7 +128,8 @@ class GroupStageService
 
     public function getGroupStandings($groupId)
     {
-        return GroupTeam::with(['team'])
+        // Usa team.team para cargar de GroupTeam -> ChampionshipTeam -> Team
+        return GroupTeam::with(['team.team'])
             ->where('group_id', $groupId)
             ->orderBy('points', 'desc')
             ->orderBy('goals_for', 'desc')
@@ -136,6 +147,7 @@ class GroupStageService
         foreach ($groups as $group) {
             $standings = $this->getGroupStandings($group->id);
             foreach ($standings->take($advancePerGroup) as $standing) {
+                // $standing->team obtiene la instancia de ChampionshipTeam
                 $qualified[] = $standing->team;
             }
         }

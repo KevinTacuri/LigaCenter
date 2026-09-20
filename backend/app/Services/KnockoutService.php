@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Team;
+use App\Models\ChampionshipTeam;
 use App\Models\GameMatch;
 use App\Models\Category;
 use Carbon\Carbon;
@@ -35,7 +35,7 @@ class KnockoutService
 
         $phaseNames = $this->getPhaseNames($numPhases);
         
-        $currentTeams = $qualifiedTeams->shuffle()->toArray();
+        $currentTeams = $qualifiedTeams->shuffle()->values();
         $previousRoundMatches = [];
         $allCreatedMatches = [];
 
@@ -63,8 +63,8 @@ class KnockoutService
 
                 if ($phaseIndex === 0) {
                     // PRIMERA RONDA: Registramos los equipos reales mezclados que vienen de la petición
-                    $homeTeam = array_shift($currentTeams);
-                    $awayTeam = array_shift($currentTeams);
+                    $homeTeam = $currentTeams->shift();
+                    $awayTeam = $currentTeams->shift();
 
                     $matchData['home_team_id'] = $homeTeam['id'] ?? null;
                     $matchData['away_team_id'] = $awayTeam['id'] ?? null;
@@ -96,9 +96,9 @@ class KnockoutService
         // Generar definición de tercer puesto si se requiere, basándonos en las dos llaves de Semifinal
         if ($thirdPlace && $numPhases >= 2) {
             // Buscamos las semifinales dentro de los partidos creados
-            $semifinales = array_filter($allCreatedMatches, function($m) {
+            $semifinales = array_values(array_filter($allCreatedMatches, function ($m) {
                 return $m->phase === 'semifinal';
-            });
+            }));
             $semifinales = array_values($semifinales); // Reindexar
 
             if (count($semifinales) === 2) {
