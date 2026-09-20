@@ -123,6 +123,10 @@ export const MesaControl: React.FC = () => {
 
   const [periodoActualIdx, setPeriodoActualIdx] = useState(0);
   const [partidos, setPartidos] = useState<Partido[]>([]);
+  const [paginaPartidos, setPaginaPartidos] = useState(1);
+  const [totalPaginasPartidos, setTotalPaginasPartidos] = useState(1);
+  const [totalPartidos, setTotalPartidos] = useState(0);
+  const PARTIDOS_POR_PAGINA = 12;
   const [partidoSeleccionado, setPartidoSeleccionado] = useState<Partido | null>(null);
   const [acta, setActa] = useState<ActaPartido | null>(null);
   const [incidencias, setIncidencias] = useState<Incidencia[]>([]);
@@ -614,14 +618,16 @@ export const MesaControl: React.FC = () => {
     } else {
       cargarPartidos();
     }
-  }, [cargandoAuth]);
+  }, [cargandoAuth, paginaPartidos]);
 
   const cargarPartidos = async () => {
     setCargando(true);
     try {
-      const res = await serviciosFixture.obtenerTodosPartidos();
+      const res = await serviciosFixture.obtenerPartidos({ page: paginaPartidos, per_page: PARTIDOS_POR_PAGINA });
       if (res.success) {
-        setPartidos(res.data);
+        setPartidos(res.data.matches);
+        setTotalPaginasPartidos(res.data.pagination.last_page);
+        setTotalPartidos(res.data.pagination.total);
       }
     } catch (err) {
       setErrorLocal('Error al cargar partidos.');
@@ -1186,68 +1192,80 @@ export const MesaControl: React.FC = () => {
                 Cargando partidos de la mesa de control...
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {partidosFiltrados.map((part) => {
-                  const homeScore = part.report?.local_score ?? 0;
-                  const awayScore = part.report?.visitor_score ?? 0;
-                  return (
-                    <div
-                      key={part.id}
-                      onClick={() => seleccionarPartido(part)}
-                      className={`bg-primary-container rounded-2xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-4 group border text-on-surface ${
-                        part.status === 'en_curso' 
-                          ? 'border-emerald-500/50 shadow-lg shadow-emerald-500/10 hover:border-emerald-500 animate-pulse' 
-                          : 'border-outline hover:border-primary/60'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                        <span>Jornada {part.round}</span>
-                        <span className={`px-2 py-0.5 rounded-md font-extrabold text-[8px] uppercase tracking-wider border ${
-                          part.status === 'finalizado' 
-                            ? 'bg-surface-dim text-on-surface-variant border-outline' 
-                            : part.status === 'en_curso'
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 animate-pulse'
-                            : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
-                        }`}>{part.status}</span>
-                      </div>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {partidosFiltrados.map((part) => {
+                    const homeScore = part.report?.local_score ?? 0;
+                    const awayScore = part.report?.visitor_score ?? 0;
+                    return (
+                      <div
+                        key={part.id}
+                        onClick={() => seleccionarPartido(part)}
+                        className={`bg-primary-container rounded-2xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-4 group border text-on-surface ${
+                          part.status === 'en_curso' 
+                            ? 'border-emerald-500/50 shadow-lg shadow-emerald-500/10 hover:border-emerald-500 animate-pulse' 
+                            : 'border-outline hover:border-primary/60'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                          <span>Jornada {part.round}</span>
+                          <span className={`px-2 py-0.5 rounded-md font-extrabold text-[8px] uppercase tracking-wider border ${
+                            part.status === 'finalizado' 
+                              ? 'bg-surface-dim text-on-surface-variant border-outline' 
+                              : part.status === 'en_curso'
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 animate-pulse'
+                              : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
+                          }`}>{part.status}</span>
+                        </div>
 
-                      <div className="space-y-3 my-2">
-                        <div className="flex items-center justify-between">
-                          <span className="font-extrabold text-on-surface text-sm group-hover:text-primary transition-colors">{part.local_team?.name}</span>
-                          {part.status === 'finalizado' || part.status === 'en_curso' ? (
-                            <span className="font-black text-on-surface text-xs bg-surface px-2.5 py-1 rounded-md border border-outline shadow-2xs">
-                              {homeScore}
-                            </span>
-                          ) : null}
+                        <div className="space-y-3 my-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-extrabold text-on-surface text-sm group-hover:text-primary transition-colors">{part.local_team?.name}</span>
+                            {part.status === 'finalizado' || part.status === 'en_curso' ? (
+                              <span className="font-black text-on-surface text-xs bg-surface px-2.5 py-1 rounded-md border border-outline shadow-2xs">
+                                {homeScore}
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="flex items-center justify-between border-t border-outline pt-2">
+                            <span className="font-extrabold text-on-surface text-sm group-hover:text-primary transition-colors">{part.visitor_team?.name}</span>
+                            {part.status === 'finalizado' || part.status === 'en_curso' ? (
+                              <span className="font-black text-on-surface text-xs bg-surface px-2.5 py-1 rounded-md border border-outline shadow-2xs">
+                                {awayScore}
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between border-t border-outline pt-2">
-                          <span className="font-extrabold text-on-surface text-sm group-hover:text-primary transition-colors">{part.visitor_team?.name}</span>
-                          {part.status === 'finalizado' || part.status === 'en_curso' ? (
-                            <span className="font-black text-on-surface text-xs bg-surface px-2.5 py-1 rounded-md border border-outline shadow-2xs">
-                              {awayScore}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
 
-                      <div className="border-t border-outline pt-3 flex items-center justify-between text-[10px] text-on-surface-variant font-medium">
-                        <div className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[13px] text-on-surface-variant">calendar_today</span>
-                          <span>{part.match_date ? new Date(part.match_date).toLocaleDateString() : 'N/A'} - {part.match_time || 'N/A'}</span>
-                        </div>
-                        <div className="flex items-center gap-1 max-w-[120px] truncate" title={part.venue?.name}>
-                          <span className="material-symbols-outlined text-[13px] text-on-surface-variant">location_on</span>
-                          <span className="truncate">{part.venue?.name || 'N/A'}</span>
+                        <div className="border-t border-outline pt-3 flex items-center justify-between text-[10px] text-on-surface-variant font-medium">
+                          <div className="flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[13px] text-on-surface-variant">calendar_today</span>
+                            <span>{part.match_date ? new Date(part.match_date).toLocaleDateString() : 'N/A'} - {part.match_time || 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center gap-1 max-w-[120px] truncate" title={part.venue?.name}>
+                            <span className="material-symbols-outlined text-[13px] text-on-surface-variant">location_on</span>
+                            <span className="truncate">{part.venue?.name || 'N/A'}</span>
+                          </div>
                         </div>
                       </div>
+                    );
+                  })}
+                  {partidosFiltrados.length === 0 && (
+                    <div className="col-span-full bg-primary-container rounded-2xl border border-outline p-12 text-center text-on-surface-variant italic text-sm">
+                      {partidos.length === 0 
+                        ? 'No hay partidos programados en este momento.' 
+                        : 'No se encontraron partidos que coincidan con los filtros seleccionados.'}
                     </div>
-                  );
-                })}
-                {partidosFiltrados.length === 0 && (
-                  <div className="col-span-full bg-primary-container rounded-2xl border border-outline p-12 text-center text-on-surface-variant italic text-sm">
-                    {partidos.length === 0 
-                      ? 'No hay partidos programados en este momento.' 
-                      : 'No se encontraron partidos que coincidan con los filtros seleccionados.'}
+                  )}
+                </div>
+                {totalPaginasPartidos > 1 && (
+                  <div className="mt-6 pt-4 border-t border-outline flex items-center justify-between text-xs">
+                    <span className="text-on-surface-variant">{totalPartidos} partidos registrados</span>
+                    <div className="flex items-center gap-3">
+                      <button type="button" disabled={paginaPartidos === 1} onClick={() => setPaginaPartidos(prev => prev - 1)} className="px-3 py-1.5 rounded-lg border border-outline disabled:opacity-40">Anterior</button>
+                      <span className="font-bold">Página {paginaPartidos} de {totalPaginasPartidos}</span>
+                      <button type="button" disabled={paginaPartidos === totalPaginasPartidos} onClick={() => setPaginaPartidos(prev => prev + 1)} className="px-3 py-1.5 rounded-lg border border-outline disabled:opacity-40">Siguiente</button>
+                    </div>
                   </div>
                 )}
               </div>
