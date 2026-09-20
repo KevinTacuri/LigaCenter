@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('group_teams', function (Blueprint $table) {
             $table->id();
             $table->foreignId('group_id')->constrained()->onDelete('cascade');
-            $table->foreignId('team_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('championship_team_id');
             $table->integer('points')->default(0);
             $table->integer('goals_for')->default(0);
             $table->integer('goals_against')->default(0);
@@ -21,7 +21,7 @@ return new class extends Migration
             $table->integer('losses')->default(0);
             $table->timestamps();
 
-            $table->unique(['group_id', 'team_id']);
+            $table->unique(['group_id', 'championship_team_id']);
         });
     }
 
