@@ -23,6 +23,7 @@ class ChampionshipPlayerListResource extends JsonResource
             'photo' => $this->player->photo,
 
             'birth_date' => $this->player->birth_date,
+            'age' => $this->player->birth_date?->age,
 
             'team' => new ChampionshipTeamListResource(
                 $this->whenLoaded('championshipTeam')

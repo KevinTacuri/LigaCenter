@@ -52,15 +52,43 @@ class ChampionshipPlayerController extends Controller
             return $this->errorResponse('El parámetro championship_id es obligatorio.', 400);
         }
 
-        $championshipPlayers = ChampionshipPlayer::with([
-            'player'
+        $perPage = min(max((int) $request->query('per_page', 15), 1), 100);
+        $query = ChampionshipPlayer::with([
+            'player',
+            'championshipTeam.team.discipline',
+            'championshipTeam.category',
+            'championshipTeam.championshipUser.user',
         ])->whereHas('championshipTeam.championshipDiscipline', function ($query) use ($championshipId) {
             $query->where('championship_id', $championshipId);
-        })->get();
+        });
 
+        if ($request->filled('search')) {
+            $search = trim($request->query('search'));
+            $query->whereHas('player', function ($playerQuery) use ($search) {
+                $playerQuery->where('names', 'like', "%{$search}%")
+                    ->orWhere('last_names', 'like', "%{$search}%")
+                    ->orWhere('document_number', 'like', "%{$search}%");
+            });
+        }
+        if ($request->filled('championship_team_id')) {
+            $query->where('championship_team_id', $request->integer('championship_team_id'));
+        }
+        if ($request->filled('category_id')) {
+            $query->whereHas('championshipTeam', fn ($teamQuery) => $teamQuery->where('category_id', $request->integer('category_id')));
+        }
 
+        $direction = strtolower($request->query('direction', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $championshipPlayers = $query->orderBy('id', $direction)->paginate($perPage);
 
-        return response()->json(ChampionshipPlayerListResource::collection($championshipPlayers));
+        return $this->successResponse([
+            'players' => ChampionshipPlayerListResource::collection($championshipPlayers->items()),
+            'pagination' => [
+                'total' => $championshipPlayers->total(),
+                'per_page' => $championshipPlayers->perPage(),
+                'current_page' => $championshipPlayers->currentPage(),
+                'last_page' => $championshipPlayers->lastPage(),
+            ],
+        ], 'Jugadores obtenidos exitosamente');
     }
 
     #[OA\Post(

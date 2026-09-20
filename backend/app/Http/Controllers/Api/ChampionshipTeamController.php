@@ -87,6 +87,7 @@ class ChampionshipTeamController extends Controller
      */
     public function index(Request $request, $categoryId = null)
     {
+        $perPage = min(max((int) $request->query('per_page', 15), 1), 100);
         if ($categoryId) {
             $category = Category::find($categoryId);
 
@@ -103,9 +104,12 @@ class ChampionshipTeamController extends Controller
                 'championshipUser.user'
             ])
             ->withCount('players')
-            ->get();
+            ->paginate($perPage);
 
-            return $this->successResponse(ChampionshipTeamListResource::collection($championshipTeams), 'Equipos obtenidos exitosamente');
+            return $this->successResponse([
+                'teams' => ChampionshipTeamListResource::collection($championshipTeams->items()),
+                'pagination' => $this->paginationMeta($championshipTeams),
+            ], 'Equipos obtenidos exitosamente');
         }
 
         $championshipId = $request->query('championship_id') 
@@ -127,9 +131,22 @@ class ChampionshipTeamController extends Controller
                 'championshipUser.user',
             ])
             ->withCount('players')
-            ->get();
+            ->paginate($perPage);
 
-        return $this->successResponse(ChampionshipTeamListResource::collection($championshipTeams), 'Equipos obtenidos exitosamente');
+        return $this->successResponse([
+            'teams' => ChampionshipTeamListResource::collection($championshipTeams->items()),
+            'pagination' => $this->paginationMeta($championshipTeams),
+        ], 'Equipos obtenidos exitosamente');
+    }
+
+    private function paginationMeta($paginator): array
+    {
+        return [
+            'total' => $paginator->total(),
+            'per_page' => $paginator->perPage(),
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+        ];
     }
 
 
