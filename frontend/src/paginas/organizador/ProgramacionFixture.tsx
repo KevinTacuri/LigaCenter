@@ -8,7 +8,8 @@ import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
 import { useConfirm } from '@omit/react-confirm-dialog';
 import {
   serviciosFixture,
-  serviciosParticipantes
+  serviciosParticipantes,
+  serviciosEventosCompetencia,
 } from '../../servicios/api';
 import type {
   Escenario,
@@ -18,7 +19,7 @@ import type {
   Jugador
 } from '../../servicios/api';
 
-type TabType = 'escenarios' | 'generar' | 'programar' | 'partidos';
+type TabType = 'escenarios' | 'generar' | 'programar' | 'partidos' | 'eventos';
 
 export const ProgramacionFixture: React.FC = () => {
   const { usuario, tienePermiso, tieneRol, cargando: cargandoAuth } = useAutenticacion();
@@ -35,7 +36,7 @@ export const ProgramacionFixture: React.FC = () => {
 
   const [tabActiva, setTabActiva] = useState<TabType>(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['escenarios', 'generar', 'programar', 'partidos'].includes(tab)) {
+    if (tab && ['escenarios', 'generar', 'programar', 'partidos', 'eventos'].includes(tab)) {
       return tab as TabType;
     }
     return 'escenarios';
@@ -84,6 +85,139 @@ export const ProgramacionFixture: React.FC = () => {
   const [filtroEquipoPartidos, setFiltroEquipoPartidos] = useState<number | null>(null);
   const [filtroEstadoPartidos, setFiltroEstadoPartidos] = useState<string>('todos');
   const [filtroCanchaPartidos, setFiltroCanchaPartidos] = useState<number | null>(null);
+
+  // Cambio entre ui para generar fixture (partidos como futbol, básquetbol, etc.) o eventos (natacion, atletismo, etc.)
+  type GenerarMode = 'fixture' | 'eventos';
+  const [generarMode, setGenerarMode] =
+  useState<GenerarMode>('fixture');
+
+  // Datos para generar eventos
+  const [datosEvento, setDatosEvento] = useState({
+    discipline_id: '',
+    category_id: '',
+    name: '',
+    event_type: 'carrera' as 'carrera' | 'salto' | 'lanzamiento' | 'puntaje',
+    date: '',
+    start_time: '',
+    venue_id: '',
+  });
+
+  // Eventos de competencia (para disciplinas de atletismo, natación, etc.)
+  const [eventosCompetencia, setEventosCompetencia] = useState<any[]>([]);
+
+  // estados
+  const [eventoGestionado, setEventoGestionado] = useState<any | null>(null);
+  const [participantesEvento, setParticipantesEvento] = useState<any[]>([]);
+  const [cargandoParticipantes, setCargandoParticipantes] = useState(false);
+
+  const cargarEventosCompetencia = async () => {
+    try {
+      const res =
+        await serviciosEventosCompetencia.obtenerEventos();
+
+      if (res.success) {
+        setEventosCompetencia(res.data);
+      }
+    } catch (err) {
+      console.error('Error al cargar eventos:', err);
+    }
+  };
+
+  // Manejo de creación de eventos
+  const manejarCrearEvento = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const categoria = categorias.find(
+      (c) => c.id === parseInt(datosEvento.category_id)
+    );
+
+    if (!categoria?.championship_discipline?.id) {
+      mostrarMensaje(
+        'No se pudo determinar la disciplina del campeonato.',
+        true
+      );
+      return;
+    }
+
+    try {
+      const res = await serviciosEventosCompetencia.crearEvento({
+        championship_discipline_id:
+          categoria.championship_discipline.id,
+
+        category_id: parseInt(datosEvento.category_id),
+
+        name: datosEvento.name,
+
+        event_type: datosEvento.event_type,
+
+        date: datosEvento.date,
+
+        start_time: datosEvento.start_time || null,
+
+        venue_id: datosEvento.venue_id
+          ? parseInt(datosEvento.venue_id)
+          : null,
+
+        status: 'programado',
+      });
+
+      if (res.success) {
+        mostrarMensaje('Evento programado correctamente.');
+
+        setDatosEvento({
+          discipline_id: '',
+          category_id: '',
+          name: '',
+          event_type: 'carrera',
+          date: '',
+          start_time: '',
+          venue_id: '',
+        });
+
+        cargarEventosCompetencia();
+      }
+    } catch (err: any) {
+      mostrarMensaje(
+        err.response?.data?.message ||
+          'Error al programar el evento.',
+        true
+      );
+    }
+  };
+
+  // Manejo de gestión de eventos (ver participantes)
+  const gestionarEvento = async (evento: any) => {
+    setEventoGestionado(evento);
+    setCargandoParticipantes(true);
+
+    try {
+      const res =
+        await serviciosEventosCompetencia.obtenerParticipantes(
+          evento.id
+        );
+
+      if (res.success) {
+        setParticipantesEvento(res.data);
+      }
+    } catch (err) {
+      mostrarMensaje(
+        'Error al cargar los participantes del evento.',
+        true
+      );
+    } finally {
+      setCargandoParticipantes(false);
+    }
+  };
+
+  const formatearFecha = (fecha?: string) => {
+    if (!fecha) return '-';
+
+    const [year, month, day] = fecha
+      .substring(0, 10)
+      .split('-');
+
+    return `${day}/${month}/${year}`;
+  };
 
   // Estados de formularios
   const [nuevoEsc, setNuevoEsc] = useState({ name: '', venue_type: 'cancha', location: '', capacity: '', status: 'active' });
@@ -141,6 +275,13 @@ export const ProgramacionFixture: React.FC = () => {
         if (resCat.success) setCategorias(resCat.data);
         if (resEsc.success) setEscenarios(resEsc.data);
         if (resPart.success) setPartidos(resPart.data);
+      } else if (tabActiva === 'eventos') {
+        const resDisc = await serviciosParticipantes.obtenerDisciplinas();
+        const resCat = await serviciosParticipantes.obtenerCategoriasPorCampeonato(champId);
+        const resEventos = await serviciosEventosCompetencia.obtenerEventos();
+        if (resDisc.success) setDisciplinas(resDisc.data);
+        if (resCat.success) setCategorias(resCat.data);
+        if (resEventos.success) setEventosCompetencia(resEventos.data);
       } else if (tabActiva === 'partidos') {
         const [resPart, resEsc, resJug] = await Promise.all([
           serviciosFixture.obtenerTodosPartidos(),
@@ -542,7 +683,7 @@ export const ProgramacionFixture: React.FC = () => {
 
       {/* Tabs (visibles solo en móvil ya que en desktop se navega por la barra lateral) */}
       <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2 lg:hidden">
-        {(!esDelegado ? (['escenarios', 'generar', 'programar', 'partidos'] as TabType[]) : (['partidos'] as TabType[])).map((tab) => (
+        {(!esDelegado ? (['escenarios', 'generar', 'eventos','programar', 'partidos'] as TabType[]) : (['partidos'] as TabType[])).map((tab) => (
           <button
             key={tab}
             onClick={() => setSearchParams({ tab })}
@@ -552,7 +693,7 @@ export const ProgramacionFixture: React.FC = () => {
                 : 'text-slate-400 hover:bg-[#171a26] hover:text-white'
             }`}
           >
-            {tab === 'escenarios' ? 'Escenarios' : tab === 'generar' ? 'Generar Fixture' : tab === 'programar' ? 'Asignar Fechas' : 'Partidos'}
+            {tab === 'escenarios' ? 'Escenarios' : tab === 'generar' ? 'Generar Fixture' : tab === 'eventos' ? 'Eventos' : tab === 'programar' ? 'Asignar Fechas' : 'Partidos'}
           </button>
         ))}
       </div>
@@ -721,117 +862,352 @@ export const ProgramacionFixture: React.FC = () => {
 
         {tabActiva === 'generar' && (
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs max-w-2xl mx-auto">
-            <h2 className="font-extrabold text-base text-slate-900 mb-4 border-b border-slate-100 pb-2">Generar Calendario Round Robin (Todos contra Todos)</h2>
-            <form onSubmit={manejarGenerarFixture} className="space-y-5">
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Disciplina *</label>
-                  <select
-                    required value={datosFixture.discipline_id}
-                    onChange={(e) => setDatosFixture({ ...datosFixture, discipline_id: e.target.value, category_id: '' })}
-                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
-                  >
-                    <option value="">Seleccionar Disciplina</option>
-                    {disciplinas.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Categoría *</label>
-                  <select
-                    required value={datosFixture.category_id}
-                    onChange={(e) => {
-                      const catId = e.target.value;
-                      const format = categorias.find((c) => c.id === parseInt(catId))?.format || 'liga';
-                      setDatosFixture({ ...datosFixture, category_id: catId, format });
-                    }}
-                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
-                  >
-                    <option value="">Seleccionar Categoría</option>
-                    {categorias
-                      .filter((c) => !datosFixture.discipline_id || c.championship_discipline?.discipline_id === parseInt(datosFixture.discipline_id))
-                      .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)
-                    }
-                  </select>
-                </div>
+            <div>
+              {/* botones internos */}
+              <div className="flex gap-2 mb-5">
+                <button
+                  type="button"
+                  onClick={() => setGenerarMode('fixture')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    generarMode === 'fixture'
+                      ? 'bg-secondary text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-base">
+                    account_tree
+                  </span>
+                  Fixture
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setGenerarMode('eventos')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    generarMode === 'eventos'
+                      ? 'bg-secondary text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-base">
+                    event
+                  </span>
+                  Eventos
+                </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Fecha de Inicio del Torneo *</label>
-                  <input
-                    type="date" required value={datosFixture.start_date}
-                    onChange={(e) => setDatosFixture({ ...datosFixture, start_date: e.target.value })}
-                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
-                  />
-                </div>
-                {/* Formato de Competencia */}
-                  <div className="space-y-1 border-t border-slate-105 pt-3">
-                    <label className="text-xs font-bold text-slate-700 block">Formato de Competencia</label>
-                    <select value={datosFixture.format} onChange={(e) => setDatosFixture({ ...datosFixture, format: e.target.value as any })}
-                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
-                      <option value="liga">Liga (Todos contra todos)</option>
-                      <option value="grupos">Fase de Grupos + Eliminación</option>
-                      <option value="eliminacion_directa">Eliminación Directa</option>
+              {generarMode === 'fixture' && (
+              <div>
+              <h2 className="font-extrabold text-base text-slate-900 mb-4 border-b border-slate-100 pb-2">Generar Calendario Round Robin (Todos contra Todos)</h2>
+              <form onSubmit={manejarGenerarFixture} className="space-y-5">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Disciplina *</label>
+                    <select
+                      required value={datosFixture.discipline_id}
+                      onChange={(e) => setDatosFixture({ ...datosFixture, discipline_id: e.target.value, category_id: '' })}
+                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
+                    >
+                      <option value="">Seleccionar Disciplina</option>
+                      {disciplinas.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                     </select>
                   </div>
-
-                  {/* Campos condicionales de format_settings */}
-                  {datosFixture.format === 'grupos' && (
-                    <div className="space-y-3 bg-slate-50 p-3 rounded-xl border border-slate-100 animate-fadeIn">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-700 block">N° de Grupos *</label>
-                          <input type="number" min="2" placeholder="Ej: 4"
-                            value={datosFixture.num_groups} onChange={(e) => setDatosFixture({ ...datosFixture, num_groups: e.target.value })}
-                            className="w-full text-xs border border-slate-200 rounded-lg p-2 outline-hidden bg-white" />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-700 block">Clasificados/Grupo *</label>
-                          <input type="number" min="1" placeholder="Ej: 2"
-                            value={datosFixture.advance_per_group} onChange={(e) => setDatosFixture({ ...datosFixture, advance_per_group: e.target.value })}
-                            className="w-full text-xs border border-slate-200 rounded-lg p-2 outline-hidden bg-white" />
-                        </div>
-                      </div>
-                      <label className="flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" checked={datosFixture.third_place} onChange={(e) => setDatosFixture({ ...datosFixture, third_place: e.target.checked })}
-                          className="rounded-sm border-slate-300 text-indigo-600 outline-hidden" />
-                        <span className="text-[10px] font-bold text-slate-650 uppercase">Partido por 3° Puesto</span>
-                      </label>
-                    </div>
-                  )}
-
-                  {datosFixture.format === 'eliminacion_directa' && (
-                    <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-100 animate-fadeIn">
-                      <label className="flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" checked={datosFixture.third_place} onChange={(e) => setDatosFixture({ ...datosFixture, third_place: e.target.checked })}
-                          className="rounded-sm border-slate-300 text-indigo-600 outline-hidden" />
-                        <span className="text-[10px] font-bold text-slate-650 uppercase">Partido por 3° Puesto</span>
-                      </label>
-                    </div>
-                  )}
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 block">Escenarios Disponibles para Asignar *</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 bg-slate-50 border border-slate-150 rounded-xl">
-                  {escenarios.map((esc) => (
-                    <label key={esc.id} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                      <input
-                        type="checkbox" checked={datosFixture.venue_ids.includes(esc.id)}
-                        onChange={() => manejarCambioCheckboxVenue(esc.id)}
-                        className="rounded-sm border-slate-300 text-secondary focus:ring-secondary cursor-pointer"
-                      />
-                      {esc.name}
-                    </label>
-                  ))}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Categoría *</label>
+                    <select
+                      required value={datosFixture.category_id}
+                      onChange={(e) => {
+                        const catId = e.target.value;
+                        const format = categorias.find((c) => c.id === parseInt(catId))?.format || 'liga';
+                        setDatosFixture({ ...datosFixture, category_id: catId, format });
+                      }}
+                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
+                    >
+                      <option value="">Seleccionar Categoría</option>
+                      {categorias
+                        .filter((c) => !datosFixture.discipline_id || c.championship_discipline?.discipline_id === parseInt(datosFixture.discipline_id))
+                        .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)
+                      }
+                    </select>
+                  </div>
                 </div>
-              </div>
 
-              <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-3 rounded-lg text-sm transition-all cursor-pointer">
-                Generar Fixture del Campeonato
-              </button>
-            </form>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Fecha de Inicio del Torneo *</label>
+                    <input
+                      type="date" required value={datosFixture.start_date}
+                      onChange={(e) => setDatosFixture({ ...datosFixture, start_date: e.target.value })}
+                      className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                    />
+                  </div>
+                  {/* Formato de Competencia */}
+                    <div className="space-y-1 border-t border-slate-105 pt-3">
+                      <label className="text-xs font-bold text-slate-700 block">Formato de Competencia</label>
+                      <select value={datosFixture.format} onChange={(e) => setDatosFixture({ ...datosFixture, format: e.target.value as any })}
+                        className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
+                        <option value="liga">Liga (Todos contra todos)</option>
+                        <option value="grupos">Fase de Grupos + Eliminación</option>
+                        <option value="eliminacion_directa">Eliminación Directa</option>
+                      </select>
+                    </div>
+
+                    {/* Campos condicionales de format_settings */}
+                    {datosFixture.format === 'grupos' && (
+                      <div className="space-y-3 bg-slate-50 p-3 rounded-xl border border-slate-100 animate-fadeIn">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-700 block">N° de Grupos *</label>
+                            <input type="number" min="2" placeholder="Ej: 4"
+                              value={datosFixture.num_groups} onChange={(e) => setDatosFixture({ ...datosFixture, num_groups: e.target.value })}
+                              className="w-full text-xs border border-slate-200 rounded-lg p-2 outline-hidden bg-white" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-700 block">Clasificados/Grupo *</label>
+                            <input type="number" min="1" placeholder="Ej: 2"
+                              value={datosFixture.advance_per_group} onChange={(e) => setDatosFixture({ ...datosFixture, advance_per_group: e.target.value })}
+                              className="w-full text-xs border border-slate-200 rounded-lg p-2 outline-hidden bg-white" />
+                          </div>
+                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input type="checkbox" checked={datosFixture.third_place} onChange={(e) => setDatosFixture({ ...datosFixture, third_place: e.target.checked })}
+                            className="rounded-sm border-slate-300 text-indigo-600 outline-hidden" />
+                          <span className="text-[10px] font-bold text-slate-650 uppercase">Partido por 3° Puesto</span>
+                        </label>
+                      </div>
+                    )}
+
+                    {datosFixture.format === 'eliminacion_directa' && (
+                      <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-100 animate-fadeIn">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input type="checkbox" checked={datosFixture.third_place} onChange={(e) => setDatosFixture({ ...datosFixture, third_place: e.target.checked })}
+                            className="rounded-sm border-slate-300 text-indigo-600 outline-hidden" />
+                          <span className="text-[10px] font-bold text-slate-650 uppercase">Partido por 3° Puesto</span>
+                        </label>
+                      </div>
+                    )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-700 block">Escenarios Disponibles para Asignar *</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 bg-slate-50 border border-slate-150 rounded-xl">
+                    {escenarios.map((esc) => (
+                      <label key={esc.id} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                        <input
+                          type="checkbox" checked={datosFixture.venue_ids.includes(esc.id)}
+                          onChange={() => manejarCambioCheckboxVenue(esc.id)}
+                          className="rounded-sm border-slate-300 text-secondary focus:ring-secondary cursor-pointer"
+                        />
+                        {esc.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-3 rounded-lg text-sm transition-all cursor-pointer">
+                  Generar Fixture del Campeonato
+                </button>
+              </form>
+              </div>
+              )}
+              {generarMode === 'eventos' && (
+                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs max-w-2xl mx-auto">
+                  <form
+                    onSubmit={manejarCrearEvento}
+                    className="space-y-5"
+                  >
+                    {/* Disciplina / Categoría */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">
+                          Disciplina *
+                        </label>
+
+                        <select
+                          required
+                          value={datosEvento.discipline_id}
+                          onChange={(e) =>
+                            setDatosEvento({
+                              ...datosEvento,
+                              discipline_id: e.target.value,
+                              category_id: '',
+                            })
+                          }
+                          className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
+                        >
+                          <option value="">Seleccionar Disciplina</option>
+
+                          {disciplinas.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">
+                          Categoría *
+                        </label>
+
+                        <select
+                          required
+                          value={datosEvento.category_id}
+                          onChange={(e) =>
+                            setDatosEvento({
+                              ...datosEvento,
+                              category_id: e.target.value,
+                            })
+                          }
+                          className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
+                        >
+                          <option value="">Seleccionar Categoría</option>
+
+                          {categorias
+                            .filter(
+                              (c) =>
+                                !datosEvento.discipline_id ||
+                                c.championship_discipline?.discipline_id ===
+                                  parseInt(datosEvento.discipline_id)
+                            )
+                            .map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Nombre / Tipo */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">
+                          Evento *
+                        </label>
+
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ej: 100 metros planos"
+                          value={datosEvento.name}
+                          onChange={(e) =>
+                            setDatosEvento({
+                              ...datosEvento,
+                              name: e.target.value,
+                            })
+                          }
+                          className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">
+                          Tipo *
+                        </label>
+
+                        <select
+                          required
+                          value={datosEvento.event_type}
+                          onChange={(e) =>
+                            setDatosEvento({
+                              ...datosEvento,
+                              event_type: e.target.value as
+                                | 'carrera'
+                                | 'salto'
+                                | 'lanzamiento'
+                                | 'puntaje',
+                            })
+                          }
+                          className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
+                        >
+                          <option value="carrera">Carrera</option>
+                          <option value="salto">Salto</option>
+                          <option value="lanzamiento">Lanzamiento</option>
+                          <option value="puntaje">Puntaje</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Fecha / Hora */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">
+                          Fecha *
+                        </label>
+
+                        <input
+                          type="date"
+                          required
+                          value={datosEvento.date}
+                          onChange={(e) =>
+                            setDatosEvento({
+                              ...datosEvento,
+                              date: e.target.value,
+                            })
+                          }
+                          className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">
+                          Hora
+                        </label>
+
+                        <input
+                          type="time"
+                          value={datosEvento.start_time}
+                          onChange={(e) =>
+                            setDatosEvento({
+                              ...datosEvento,
+                              start_time: e.target.value,
+                            })
+                          }
+                          className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Escenario */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">
+                        Escenario
+                      </label>
+
+                      <select
+                        value={datosEvento.venue_id}
+                        onChange={(e) =>
+                          setDatosEvento({
+                            ...datosEvento,
+                            venue_id: e.target.value,
+                          })
+                        }
+                        className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
+                      >
+                        <option value="">Sin escenario</option>
+
+                        {escenarios.map((esc) => (
+                          <option key={esc.id} value={esc.id}>
+                            {esc.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-3 rounded-lg text-sm transition-all cursor-pointer"
+                    >
+                      Programar Evento
+                    </button>
+                  </form>
+                </div>
+              )}
+
+            </div>
+
           </div>
         )}
 
@@ -1074,6 +1450,313 @@ export const ProgramacionFixture: React.FC = () => {
               </table>
             </div>
           </div>
+        )}
+        {tabActiva === 'eventos' && (
+          <>
+          {!eventoGestionado ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+
+              <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900 mb-4 border-b border-slate-100 pb-2">
+                Eventos Programados
+              </h2>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+                      <th className="p-3 pl-4">Evento</th>
+                      <th className="p-3">Disciplina</th>
+                      <th className="p-3">Categoría</th>
+                      <th className="p-3">Fecha</th>
+                      <th className="p-3">Escenario</th>
+                      <th className="p-3">Estado</th>
+                      <th className="p-3 pr-4 text-right">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-100 text-sm">
+
+                    {eventosCompetencia.map((evento) => (
+                      <tr
+                        key={evento.id}
+                        className="hover:bg-slate-50/40"
+                      >
+                        <td className="p-3 pl-4">
+                          <div className="font-bold text-slate-900">
+                            {evento.name}
+                          </div>
+
+                          <div className="text-[10px] text-slate-400 uppercase font-bold">
+                            {evento.event_type}
+                          </div>
+                        </td>
+
+                        <td className="p-3 text-slate-600">
+                          {evento.championship_discipline
+                            ?.discipline?.name || '-'}
+                        </td>
+
+                        <td className="p-3 text-slate-600">
+                          {evento.category?.name || '-'}
+                        </td>
+
+                        <td className="p-3 text-slate-600 text-xs">
+                          {formatearFecha(evento.date)}
+                          {evento.start_time && (
+                            <>
+                              {' | '}
+                              {evento.start_time}
+                            </>
+                          )}
+                        </td>
+
+                        <td className="p-3 text-slate-600">
+                          {evento.venue?.name || 'Sin escenario'}
+                        </td>
+
+                        <td className="p-3">
+                          <span
+                            className={`inline-flex px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${
+                              evento.status === 'finalizado'
+                                ? 'bg-slate-100 text-slate-600 border-slate-200'
+                                : evento.status === 'en_curso'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : evento.status === 'cancelado'
+                                ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                : 'bg-amber-50 text-amber-700 border-amber-200'
+                            }`}
+                          >
+                            {evento.status}
+                          </span>
+                        </td>
+
+                        <td className="p-3 pr-4 text-right space-x-3">
+                          <button
+                            onClick={() => gestionarEvento(evento)}
+                            className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                          >
+                            Gestionar
+                          </button>
+
+                          <button
+                            className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+                          >
+                            Eliminar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+
+                    {eventosCompetencia.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          className="p-10 text-center text-slate-500 text-xs"
+                        >
+                          No hay eventos programados.
+                        </td>
+                      </tr>
+                    )}
+
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-5">
+
+              {/* Cabecera */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+                <div className="flex items-center justify-between gap-4">
+
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEventoGestionado(null);
+                        setParticipantesEvento([]);
+                      }}
+                      className="text-xs font-bold text-primary hover:underline cursor-pointer mb-2"
+                    >
+                      ← Volver a eventos
+                    </button>
+
+                    <h2 className="font-extrabold text-lg text-slate-900">
+                      {eventoGestionado.name}
+                    </h2>
+
+                    <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-500">
+                      <span>
+                        {eventoGestionado
+                          .championship_discipline
+                          ?.discipline?.name}
+                      </span>
+
+                      <span>·</span>
+
+                      <span>
+                        {eventoGestionado.category?.name}
+                      </span>
+
+                      <span>·</span>
+
+                      <span>
+                        {formatearFecha(eventoGestionado.date)}
+                      </span>
+
+                      {eventoGestionado.start_time && (
+                        <>
+                          <span>·</span>
+                          <span>
+                            {eventoGestionado.start_time}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <span className="inline-flex px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase bg-amber-50 text-amber-700 border border-amber-200">
+                    {eventoGestionado.status}
+                  </span>
+
+                </div>
+              </div>
+
+              {/* Participantes */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+
+                <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                  <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-900">
+                    Participantes
+                  </h3>
+
+                  <button
+                    type="button"
+                    className="bg-secondary hover:bg-secondary-container text-white font-bold px-4 py-2 rounded-lg text-xs transition-all cursor-pointer"
+                  >
+                    Agregar participante
+                  </button>
+                </div>
+
+                {cargandoParticipantes ? (
+                  <div className="py-10 text-center text-xs text-slate-500">
+                    Cargando participantes...
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+
+                    <table className="w-full text-left border-collapse">
+
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+                          <th className="p-3 pl-4">
+                            Participante
+                          </th>
+
+                          <th className="p-3">
+                            Equipo
+                          </th>
+
+                          <th className="p-3">
+                            Carril
+                          </th>
+
+                          <th className="p-3">
+                            Orden
+                          </th>
+
+                          <th className="p-3">
+                            Estado
+                          </th>
+
+                          <th className="p-3 pr-4 text-right">
+                            Acciones
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody className="divide-y divide-slate-100 text-sm">
+
+                        {participantesEvento.map((participante) => (
+                          <tr
+                            key={participante.id}
+                            className="hover:bg-slate-50/40"
+                          >
+
+                            <td className="p-3 pl-4 font-bold text-slate-900">
+                              {participante
+                                .championship_player
+                                ?.player?.name
+                                ??
+                                participante
+                                  .championship_player
+                                  ?.name
+                                ??
+                                'Jugador'}
+                            </td>
+
+                            <td className="p-3 text-slate-600">
+                              {participante
+                                .championship_team
+                                ?.team?.name
+                                ??
+                                participante
+                                  .championship_team
+                                  ?.name
+                                ??
+                                '-'}
+                            </td>
+
+                            <td className="p-3 text-slate-600">
+                              {participante.lane ?? '-'}
+                            </td>
+
+                            <td className="p-3 text-slate-600">
+                              {participante.start_order ?? '-'}
+                            </td>
+
+                            <td className="p-3">
+                              <span className="inline-flex px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                                {participante.status}
+                              </span>
+                            </td>
+
+                            <td className="p-3 pr-4 text-right">
+                              <button
+                                type="button"
+                                className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+                              >
+                                Quitar
+                              </button>
+                            </td>
+
+                          </tr>
+                        ))}
+
+                        {participantesEvento.length === 0 && (
+                          <tr>
+                            <td
+                              colSpan={6}
+                              className="p-10 text-center text-slate-500 text-xs"
+                            >
+                              No hay participantes registrados.
+                            </td>
+                          </tr>
+                        )}
+
+                      </tbody>
+                    </table>
+
+                  </div>
+                )}
+
+              </div>
+            </div>
+          )}
+          </>
         )}
 
       </main>
