@@ -861,6 +861,22 @@ export const serviciosEventosCompetencia = {
 
     return response.data;
   },
+
+  actualizarParticipante: async (
+    id: number,
+    datos: {
+      lane?: number | null;
+      start_order?: number | null;
+      status?: string;
+    }
+  ) => {
+    const response = await clienteApi.put(
+      `/competition-event-participants/${id}`,
+      datos
+    );
+
+    return response.data;
+  },
 }
 
 /**
