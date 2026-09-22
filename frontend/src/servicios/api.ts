@@ -795,6 +795,74 @@ export const serviciosFixture = {
   },
 };
 
+// Servicios de eventos y programacion de competencias (para disciplinas de atletismo, natación, etc.)
+export const serviciosEventosCompetencia = {
+  // crear evento de competencia
+  crearEvento: async (datos: {
+    championship_discipline_id: number;
+    category_id: number;
+    name: string;
+    event_type: 'carrera' | 'salto' | 'lanzamiento' | 'puntaje';
+    date: string;
+    start_time: string | null;
+    venue_id: number | null;
+    status: string;
+  }): Promise<RespuestaApi<any>> => {
+    const res = await clienteApi.post('/competition-events', datos);
+    return res.data;
+  },
+
+  obtenerEventos: async (params?: {
+    championship_discipline_id?: number;
+    category_id?: number;
+    date?: string;
+    status?: string;
+  }): Promise<RespuestaApi<any>> => {
+    const response = await clienteApi.get('/competition-events', {
+      params
+    });
+
+    return response.data;
+  },
+
+  obtenerParticipantes: async (eventoId: number): Promise<RespuestaApi<any>> => {
+    const response = await clienteApi.get(
+      '/competition-event-participants',
+      {
+        params: {
+          competition_event_id: eventoId
+        }
+      }
+    );
+
+    return response.data;
+  },
+
+  agregarParticipante: async (datos: {
+    competition_event_id: number;
+    championship_player_id: number;
+    championship_team_id?: number | null;
+    lane?: number | null;
+    start_order?: number | null;
+    status?: string;
+  }): Promise<RespuestaApi<any>> => {
+    const response = await clienteApi.post(
+      '/competition-event-participants',
+      datos
+    );
+
+    return response.data;
+  },
+
+  eliminarParticipante: async (id: number): Promise<RespuestaApi<any>> => {
+    const response = await clienteApi.delete(
+      `/competition-event-participants/${id}`
+    );
+
+    return response.data;
+  },
+}
+
 /**
  * Servicios de Resultados, Incidencias y Sanciones
  */
