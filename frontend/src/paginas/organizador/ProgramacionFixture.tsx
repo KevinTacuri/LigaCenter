@@ -117,8 +117,76 @@ export const ProgramacionFixture: React.FC = () => {
   const [busquedaJugador, setBusquedaJugador] = useState('');
   const [cargandoJugadores, setCargandoJugadores] = useState(false);
 
+  // estados para editar participantes de un evento
+  const [participanteEditando, setParticipanteEditando] =
+  useState<number | null>(null);
+
+  const [datosEdicionParticipante, setDatosEdicionParticipante] = useState({
+    lane: '',
+    start_order: '',
+  });
+
   const [jugadoresSeleccionados, setJugadoresSeleccionados] =
   useState<number[]>([]);
+
+  const iniciarEdicionParticipante = (participante: any) => {
+    setParticipanteEditando(participante.id);
+
+    setDatosEdicionParticipante({
+      lane:
+        participante.lane !== null &&
+        participante.lane !== undefined
+          ? participante.lane.toString()
+          : '',
+
+      start_order:
+        participante.start_order !== null &&
+        participante.start_order !== undefined
+          ? participante.start_order.toString()
+          : '',
+    });
+  };
+
+  const guardarEdicionParticipante = async (
+    participanteId: number
+  ) => {
+    if (!eventoGestionado) return;
+
+    try {
+      const res =
+        await serviciosEventosCompetencia.actualizarParticipante(
+          participanteId,
+          {
+            lane: datosEdicionParticipante.lane
+              ? parseInt(datosEdicionParticipante.lane)
+              : null,
+
+            start_order:
+              datosEdicionParticipante.start_order
+                ? parseInt(
+                    datosEdicionParticipante.start_order
+                  )
+                : null,
+          }
+        );
+
+      if (res.success) {
+        mostrarMensaje(
+          'Participante actualizado correctamente.'
+        );
+
+        setParticipanteEditando(null);
+
+        await gestionarEvento(eventoGestionado);
+      }
+    } catch (err: any) {
+      mostrarMensaje(
+        err.response?.data?.message ||
+          'Error al actualizar participante.',
+        true
+      );
+    }
+  };
 
   const toggleJugadorEvento = (id: number) => {
     setJugadoresSeleccionados((prev) =>
@@ -1882,11 +1950,43 @@ export const ProgramacionFixture: React.FC = () => {
                             </td>
 
                             <td className="p-3 text-slate-600">
-                              {participante.lane ?? '-'}
+                              {participanteEditando === participante.id ? (
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={datosEdicionParticipante.lane}
+                                  onChange={(e) =>
+                                    setDatosEdicionParticipante({
+                                      ...datosEdicionParticipante,
+                                      lane: e.target.value,
+                                    })
+                                  }
+                                  className="w-20 text-xs border border-slate-200 rounded-lg px-2 py-1.5 outline-hidden"
+                                />
+                              ) : (
+                                participante.lane ?? '-'
+                              )}
                             </td>
 
                             <td className="p-3 text-slate-600">
-                              {participante.start_order ?? '-'}
+                              {participanteEditando === participante.id ? (
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={
+                                    datosEdicionParticipante.start_order
+                                  }
+                                  onChange={(e) =>
+                                    setDatosEdicionParticipante({
+                                      ...datosEdicionParticipante,
+                                      start_order: e.target.value,
+                                    })
+                                  }
+                                  className="w-20 text-xs border border-slate-200 rounded-lg px-2 py-1.5 outline-hidden"
+                                />
+                              ) : (
+                                participante.start_order ?? '-'
+                              )}
                             </td>
 
                             <td className="p-3">
@@ -1894,17 +1994,64 @@ export const ProgramacionFixture: React.FC = () => {
                                 {participante.status}
                               </span>
                             </td>
-
+                            {/* Acciones participante evento */}
                             <td className="p-3 pr-4 text-right">
-                              <button
-                                type="button"
-                                className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
-                                onClick={() =>
-                                  quitarParticipanteEvento(participante.id)
-                                }
-                              >
-                                Quitar
-                              </button>
+                              {participanteEditando === participante.id ? (
+                                <div className="flex justify-end gap-3">
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      guardarEdicionParticipante(
+                                        participante.id
+                                      )
+                                    }
+                                    className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                                  >
+                                    Guardar
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setParticipanteEditando(null)
+                                    }
+                                    className="text-xs font-bold text-slate-500 hover:underline cursor-pointer"
+                                  >
+                                    Cancelar
+                                  </button>
+
+                                </div>
+                              ) : (
+                                <div className="flex justify-end gap-3">
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      iniciarEdicionParticipante(
+                                        participante
+                                      )
+                                    }
+                                    className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                                  >
+                                    Editar
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      quitarParticipanteEvento(
+                                        participante.id
+                                      )
+                                    }
+                                    className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+                                  >
+                                    Quitar
+                                  </button>
+
+                                </div>
+                              )}
+
                             </td>
 
                           </tr>
