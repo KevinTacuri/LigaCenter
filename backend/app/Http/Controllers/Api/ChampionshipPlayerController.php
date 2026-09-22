@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Player;
 use App\Models\ChampionshipPlayer;
-use App\Models\Team;
+use App\Models\CompetitionEventParticipant;
 use App\Models\ChampionshipTeam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -75,6 +75,22 @@ class ChampionshipPlayerController extends Controller
         }
         if ($request->filled('category_id')) {
             $query->whereHas('championshipTeam', fn ($teamQuery) => $teamQuery->where('category_id', $request->integer('category_id')));
+        }
+
+        if ($request->filled('available_for_event_id')) {
+            $competitionEventId = $request->integer(
+                'available_for_event_id'
+            );
+
+            $query->whereNotIn(
+                'championship_players.id',
+                CompetitionEventParticipant::query()
+                    ->select('championship_player_id')
+                    ->where(
+                        'competition_event_id',
+                        $competitionEventId
+                    )
+            );
         }
 
         $direction = strtolower($request->query('direction', 'asc')) === 'desc' ? 'desc' : 'asc';
