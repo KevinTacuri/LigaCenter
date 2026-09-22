@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CompetitionEvent;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use App\Events\CompetitionEventUpdated;
 
 class CompetitionEventController extends Controller
 {
@@ -217,6 +218,12 @@ class CompetitionEventController extends Controller
         ]);
 
         $competitionEvent->update($validated);
+
+        event(
+            new CompetitionEventUpdated(
+                $competitionEvent->fresh()
+            )
+        );
 
         $competitionEvent->load([
             'championshipDiscipline.discipline',
