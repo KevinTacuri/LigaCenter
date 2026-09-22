@@ -6,6 +6,8 @@ import { serviciosCampeonatos, serviciosParticipantes, clienteApi } from '../../
 import type { ChampionshipUser, Usuario, Equipo } from '../../servicios/api';
 import { BarraLateral } from '../../componentes/BarraLateral';
 import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
+import { Paginador } from '../../componentes/Paginador';
+import { EstadoVacio } from '../../componentes/EstadoVacio';
 import { sileo } from 'sileo';
 
 interface FormularioAgregar {
@@ -57,6 +59,18 @@ export const GestionDelegados: React.FC = () => {
   const [guardando, setGuardando] = useState(false);
   const [settings, setSettings] = useState<any>({});
   const [fechasLimites, setFechasLimites] = useState<Record<string, string>>({});
+
+  // Paginación
+  const [pagina, setPagina] = useState(1);
+  const itemsPorPagina = 8;
+  const totalPaginas = Math.max(1, Math.ceil(miembros.length / itemsPorPagina));
+  const miembrosPaginados = miembros.slice((pagina - 1) * itemsPorPagina, pagina * itemsPorPagina);
+
+  useEffect(() => {
+    if (pagina > totalPaginas) {
+      setPagina(1);
+    }
+  }, [miembros.length, totalPaginas, pagina]);
 
   useEffect(() => {
     if (campeonatoActivo) {
@@ -520,11 +534,13 @@ export const GestionDelegados: React.FC = () => {
             </div>
 
             {cargando ? (
-              <div className="p-12 text-center text-on-surface-variant text-xs">Cargando oficialidad...</div>
+              <div className="p-12 text-center text-on-surface-variant text-xs font-bold animate-pulse">Cargando oficialidad...</div>
             ) : miembros.length === 0 ? (
-              <div className="p-12 text-center text-on-surface-variant text-xs italic">
-                No hay encargados de mesa ni árbitros registrados aún en este torneo.
-              </div>
+              <EstadoVacio
+                icono="badge"
+                titulo="No hay oficiales ni técnicos asignados"
+                descripcion="No se han registrado encargados de mesa ni árbitros en este torneo aún."
+              />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
@@ -538,7 +554,7 @@ export const GestionDelegados: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline text-on-surface">
-                    {miembros.map((m) => (
+                    {miembrosPaginados.map((m) => (
                       <tr key={m.id} className="hover:bg-surface-bright/50 transition-colors">
                         <td className="p-3 pl-4 font-extrabold">{m.user?.name || 'Usuario Desconocido'}</td>
                         <td className="p-3 text-on-surface-variant">{m.user?.email || '—'}</td>
@@ -571,6 +587,14 @@ export const GestionDelegados: React.FC = () => {
                 </table>
               </div>
             )}
+
+            <Paginador
+              paginaActual={pagina}
+              totalPaginas={totalPaginas}
+              totalRegistros={miembros.length}
+              onCambiarPagina={setPagina}
+              etiqueta="oficiales"
+            />
           </div>
         </main>
       </div>

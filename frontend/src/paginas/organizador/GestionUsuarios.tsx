@@ -5,6 +5,9 @@ import { serviciosUsuarios } from '../../servicios/api';
 import type { Usuario, Rol } from '../../servicios/api';
 import { BarraLateral } from '../../componentes/BarraLateral';
 import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
+import { Paginador } from '../../componentes/Paginador';
+import { InsigniaEstado } from '../../componentes/InsigniaEstado';
+import { EstadoVacio } from '../../componentes/EstadoVacio';
 
 export const GestionUsuarios: React.FC = () => {
   const { usuario, tienePermiso, cargando: cargandoAuth } = useAutenticacion();
@@ -179,16 +182,7 @@ export const GestionUsuarios: React.FC = () => {
                         </select>
                       </td>
                       <td className="p-4">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                            usuario.is_active
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25'
-                              : 'bg-slate-500/10 text-slate-400 border border-slate-500/25'
-                          }`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full ${usuario.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'}`}></span>
-                          {usuario.is_active ? 'Activo' : 'Inactivo'}
-                        </span>
+                        <InsigniaEstado estado={usuario.is_active ? 'activo' : 'inactivo'} tipo="usuario" />
                       </td>
                       <td className="p-4 pr-6 text-right">
                         <button
@@ -209,26 +203,12 @@ export const GestionUsuarios: React.FC = () => {
             </div>
           )}
 
-          {/* Paginación */}
-          {totalPaginas > 1 && (
-            <div className="p-4 border-t border-slate-900 flex items-center justify-between text-xs">
-              <button
-                disabled={pagina === 1}
-                onClick={() => setPagina(pagina - 1)}
-                className="px-3 py-1.5 bg-[#171a26] border border-slate-850 text-slate-300 font-semibold rounded-lg hover:bg-slate-900 transition-all cursor-pointer disabled:opacity-50"
-              >
-                Anterior
-              </button>
-              <span className="text-slate-400">Página {pagina} de {totalPaginas}</span>
-              <button
-                disabled={pagina === totalPaginas}
-                onClick={() => setPagina(pagina + 1)}
-                className="px-3 py-1.5 bg-[#171a26] border border-slate-850 text-slate-300 font-semibold rounded-lg hover:bg-slate-900 transition-all cursor-pointer disabled:opacity-50"
-              >
-                Siguiente
-              </button>
-            </div>
-          )}
+          <Paginador
+            paginaActual={pagina}
+            totalPaginas={totalPaginas}
+            onCambiarPagina={setPagina}
+            etiqueta="usuarios"
+          />
         </section>
 
       </main>

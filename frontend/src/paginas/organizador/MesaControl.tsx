@@ -4,6 +4,9 @@ import { sileo } from 'sileo';
 import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
 import { BarraLateral } from '../../componentes/BarraLateral';
 import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
+import { Paginador } from '../../componentes/Paginador';
+import { InsigniaEstado } from '../../componentes/InsigniaEstado';
+import { EstadoVacio } from '../../componentes/EstadoVacio';
 import { useConfirm } from '@omit/react-confirm-dialog';
 import {
   serviciosFixture,
@@ -374,6 +377,12 @@ export const MesaControl: React.FC = () => {
 
     return true;
   });
+
+  // Paginación de partidos en Mesa de Control
+  const [paginaPartidosMesa, setPaginaPartidosMesa] = useState(1);
+  const itemsPorPaginaMesa = 6;
+  const totalPaginasPartidosMesa = Math.max(1, Math.ceil(partidosFiltrados.length / itemsPorPaginaMesa));
+  const partidosPaginadosMesa = partidosFiltrados.slice((paginaPartidosMesa - 1) * itemsPorPaginaMesa, paginaPartidosMesa * itemsPorPaginaMesa);
 
   const disciplinasUnicas = Array.from(
     new Map(
@@ -1186,71 +1195,80 @@ export const MesaControl: React.FC = () => {
                 Cargando partidos de la mesa de control...
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {partidosFiltrados.map((part) => {
-                  const homeScore = part.report?.local_score ?? 0;
-                  const awayScore = part.report?.visitor_score ?? 0;
-                  return (
-                    <div
-                      key={part.id}
-                      onClick={() => seleccionarPartido(part)}
-                      className={`bg-primary-container rounded-2xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-4 group border text-on-surface ${
-                        part.status === 'en_curso' 
-                          ? 'border-emerald-500/50 shadow-lg shadow-emerald-500/10 hover:border-emerald-500 animate-pulse' 
-                          : 'border-outline hover:border-primary/60'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                        <span>Jornada {part.round}</span>
-                        <span className={`px-2 py-0.5 rounded-md font-extrabold text-[8px] uppercase tracking-wider border ${
-                          part.status === 'finalizado' 
-                            ? 'bg-surface-dim text-on-surface-variant border-outline' 
-                            : part.status === 'en_curso'
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 animate-pulse'
-                            : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
-                        }`}>{part.status}</span>
-                      </div>
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {partidosPaginadosMesa.map((part) => {
+                    const homeScore = part.report?.local_score ?? 0;
+                    const awayScore = part.report?.visitor_score ?? 0;
+                    return (
+                      <div
+                        key={part.id}
+                        onClick={() => seleccionarPartido(part)}
+                        className={`bg-primary-container rounded-2xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-4 group border text-on-surface ${
+                          part.status === 'en_curso' 
+                            ? 'border-emerald-500/50 shadow-lg shadow-emerald-500/10 hover:border-emerald-500 animate-pulse' 
+                            : 'border-outline hover:border-primary/60'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                          <span>Jornada {part.round}</span>
+                          <InsigniaEstado estado={part.status} tipo="partido" />
+                        </div>
 
-                      <div className="space-y-3 my-2">
-                        <div className="flex items-center justify-between">
-                          <span className="font-extrabold text-on-surface text-sm group-hover:text-primary transition-colors">{part.local_team?.name}</span>
-                          {part.status === 'finalizado' || part.status === 'en_curso' ? (
-                            <span className="font-black text-on-surface text-xs bg-surface px-2.5 py-1 rounded-md border border-outline shadow-2xs">
-                              {homeScore}
-                            </span>
-                          ) : null}
+                        <div className="space-y-3 my-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-extrabold text-on-surface text-sm group-hover:text-primary transition-colors">{part.local_team?.name}</span>
+                            {part.status === 'finalizado' || part.status === 'en_curso' ? (
+                              <span className="font-black text-on-surface text-xs bg-surface px-2.5 py-1 rounded-md border border-outline shadow-2xs">
+                                {homeScore}
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="flex items-center justify-between border-t border-outline pt-2">
+                            <span className="font-extrabold text-on-surface text-sm group-hover:text-primary transition-colors">{part.visitor_team?.name}</span>
+                            {part.status === 'finalizado' || part.status === 'en_curso' ? (
+                              <span className="font-black text-on-surface text-xs bg-surface px-2.5 py-1 rounded-md border border-outline shadow-2xs">
+                                {awayScore}
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between border-t border-outline pt-2">
-                          <span className="font-extrabold text-on-surface text-sm group-hover:text-primary transition-colors">{part.visitor_team?.name}</span>
-                          {part.status === 'finalizado' || part.status === 'en_curso' ? (
-                            <span className="font-black text-on-surface text-xs bg-surface px-2.5 py-1 rounded-md border border-outline shadow-2xs">
-                              {awayScore}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
 
-                      <div className="border-t border-outline pt-3 flex items-center justify-between text-[10px] text-on-surface-variant font-medium">
-                        <div className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[13px] text-on-surface-variant">calendar_today</span>
-                          <span>{part.match_date ? new Date(part.match_date).toLocaleDateString() : 'N/A'} - {part.match_time || 'N/A'}</span>
-                        </div>
-                        <div className="flex items-center gap-1 max-w-[120px] truncate" title={part.venue?.name}>
-                          <span className="material-symbols-outlined text-[13px] text-on-surface-variant">location_on</span>
-                          <span className="truncate">{part.venue?.name || 'N/A'}</span>
+                        <div className="border-t border-outline pt-3 flex items-center justify-between text-[10px] text-on-surface-variant font-medium">
+                          <div className="flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[13px] text-on-surface-variant">calendar_today</span>
+                            <span>{part.match_date ? new Date(part.match_date).toLocaleDateString() : 'N/A'} - {part.match_time || 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center gap-1 max-w-[120px] truncate" title={part.venue?.name}>
+                            <span className="material-symbols-outlined text-[13px] text-on-surface-variant">location_on</span>
+                            <span className="truncate">{part.venue?.name || 'N/A'}</span>
+                          </div>
                         </div>
                       </div>
+                    );
+                  })}
+                  {partidosFiltrados.length === 0 && (
+                    <div className="col-span-full">
+                      <EstadoVacio
+                        icono="scoreboard"
+                        titulo="No hay partidos programados"
+                        descripcion={partidos.length === 0 
+                          ? 'No hay encuentros registrados en este torneo actualmente.' 
+                          : 'No se encontraron partidos que coincidan con la búsqueda o filtro seleccionado.'}
+                      />
                     </div>
-                  );
-                })}
-                {partidosFiltrados.length === 0 && (
-                  <div className="col-span-full bg-primary-container rounded-2xl border border-outline p-12 text-center text-on-surface-variant italic text-sm">
-                    {partidos.length === 0 
-                      ? 'No hay partidos programados en este momento.' 
-                      : 'No se encontraron partidos que coincidan con los filtros seleccionados.'}
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+
+                <Paginador
+                  paginaActual={paginaPartidosMesa}
+                  totalPaginas={totalPaginasPartidosMesa}
+                  totalRegistros={partidosFiltrados.length}
+                  onCambiarPagina={setPaginaPartidosMesa}
+                  etiqueta="partidos"
+                  className="mt-6 rounded-2xl border border-outline"
+                />
+              </>
             )}
           </div>
         ) : (

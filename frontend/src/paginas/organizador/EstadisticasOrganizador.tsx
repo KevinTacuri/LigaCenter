@@ -50,6 +50,11 @@ export const EstadisticasOrganizador: React.FC = () => {
   const [paginaPartidos, setPaginaPartidos] = useState(1);
   const partidosPorPagina = 10;
 
+  const [paginaSanciones, setPaginaSanciones] = useState(1);
+  const sancionesPorPagina = 8;
+  const totalPaginasSanciones = Math.max(1, Math.ceil(sanciones.length / sancionesPorPagina));
+  const sancionesPaginadas = sanciones.slice((paginaSanciones - 1) * sancionesPorPagina, paginaSanciones * sancionesPorPagina);
+
   const [stats, setStats] = useState({
     totalTeams: 0,
     totalMatches: 0,
@@ -1045,7 +1050,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                       </td>
                     </tr>
                   ) : (
-                    sanciones.map(san => (
+                    sancionesPaginadas.map(san => (
                       <tr key={san.id} className="hover:bg-[#171a26]/40 transition-colors">
                         <td className="p-3 pl-5 font-bold text-white text-sm">{san.player?.name || '—'}</td>
                         <td className="p-3 text-slate-300">{obtenerNombreEquipo(san.player?.team?.name)}</td>
@@ -1067,6 +1072,28 @@ export const EstadisticasOrganizador: React.FC = () => {
                 </tbody>
               </table>
             </div>
+
+            {totalPaginasSanciones > 1 && (
+              <div className="flex items-center justify-center gap-3 py-3 border-t border-slate-800">
+                <button
+                  onClick={() => setPaginaSanciones(prev => Math.max(1, prev - 1))}
+                  disabled={paginaSanciones === 1}
+                  className="px-4 py-1.5 rounded-lg bg-[#171a26] border border-slate-800 text-xs font-bold text-slate-400 hover:text-white hover:border-indigo-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                >
+                  Anterior
+                </button>
+                <span className="text-xs text-slate-500 font-medium">
+                  Página {paginaSanciones} de {totalPaginasSanciones} ({sanciones.length} sanciones)
+                </span>
+                <button
+                  onClick={() => setPaginaSanciones(prev => Math.min(totalPaginasSanciones, prev + 1))}
+                  disabled={paginaSanciones === totalPaginasSanciones}
+                  className="px-4 py-1.5 rounded-lg bg-[#171a26] border border-slate-800 text-xs font-bold text-slate-400 hover:text-white hover:border-indigo-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
           </div>
 
         </main>
