@@ -240,9 +240,7 @@ export const ProgramacionFixture: React.FC = () => {
               jugador.id,
 
             championship_team_id:
-              jugador.championship_team_id ??
-              jugador.championship_team?.id ??
-              null,
+              jugador.team_id,
 
             lane: null,
 
