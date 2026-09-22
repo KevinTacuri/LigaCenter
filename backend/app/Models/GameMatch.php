@@ -14,7 +14,6 @@ class GameMatch extends Model
     protected $appends = [
         'local_team_id',
         'visitor_team_id',
-        'discipline', // ← AGREGAR ESTO
     ];
 
     protected $fillable = [
@@ -43,6 +42,7 @@ class GameMatch extends Model
         'extra_time_minutes',
         'has_extra_time',
         'max_extra_time',
+        'score_data',
     ];
 
     protected $casts = [
@@ -53,6 +53,7 @@ class GameMatch extends Model
         'current_elapsed_time' => 'integer',
         'current_period' => 'integer',
         'timer_started_at' => 'datetime',
+        'score_data' => 'array',
     ];
 
     public function getLocalTeamIdAttribute()
@@ -73,18 +74,6 @@ class GameMatch extends Model
     public function setVisitorTeamIdAttribute($value)
     {
         $this->attributes['away_team_id'] = $value;
-    }
-
-    // ACCESOR PARA DISCIPLINE
-    public function getDisciplineAttribute()
-    {
-        // Primero intentar con la relacion directa
-        if ($this->relationLoaded('discipline') && $this->discipline) {
-            return $this->discipline;
-        }
-        
-        // Si no, obtener a traves de la categoria
-        return $this->category?->championshipDiscipline?->discipline;
     }
 
     public function venue()
