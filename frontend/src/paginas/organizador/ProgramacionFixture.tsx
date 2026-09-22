@@ -394,13 +394,7 @@ export const ProgramacionFixture: React.FC = () => {
 
       if (res.success) {
         const data: any = res.data;
-
-        console.log('Respuesta de jugadores por categoría:', data);
-
         const lista = data.players ?? [];
-        
-        console.log('Jugadores disponibles para evento:', lista);
-
         setJugadoresDisponibles(lista);
       }
     } catch {
@@ -2374,6 +2368,16 @@ export const ProgramacionFixture: React.FC = () => {
                   {jugadoresDisponibles.map((jugador) => {
                     const seleccionado =
                       jugadoresSeleccionados.includes(jugador.id);
+                      const nombre = jugador.name;
+                      const equipo =
+                        jugador.team?.name ??
+                        'Sin equipo';
+
+                      const documento =
+                        jugador.dni;
+
+                      const numero =
+                        jugador.number;
 
                     return (
                       <label
@@ -2395,19 +2399,26 @@ export const ProgramacionFixture: React.FC = () => {
 
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-bold text-slate-800">
-                            {jugador.player?.name ??
-                              jugador.name ??
-                              `Jugador ${jugador.id}`}
+                            {nombre}
                           </div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">
+                            {equipo}
 
-                          <div className="text-[10px] text-slate-400">
-                            {jugador.player?.dni &&
-                              `DNI: ${jugador.player.dni}`}
+                            {documento && (
+                              <>
+                                {' · '}
+                                DNI {documento}
+                              </>
+                            )}
 
-                            {jugador.championship_team?.team?.name &&
-                              ` · ${jugador.championship_team.team.name}`}
+                            {numero && (
+                              <>
+                                {' · '}
+                                #{numero}
+                              </>
+                            )}
                           </div>
-                        </div>
+                          </div>
                       </label>
                     );
                   })}
