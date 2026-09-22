@@ -260,7 +260,7 @@ export const MesaControl: React.FC = () => {
     } else if (name.includes('balon mano') || name.includes('balonmano') || name.includes('handball')) {
       rules = NORMAS_DEPORTES['balon mano'];
       duration = 30;
-    } else if (name.includes('voley') || name.includes('voleibol') || name.includes('volleyball')) {
+    } else if (name.includes('voley') || name.includes('vóley') || name.includes('voleibol') || name.includes('volleyball')) {
       rules = NORMAS_DEPORTES.voley;
     } else {
       rules = {
@@ -301,7 +301,7 @@ export const MesaControl: React.FC = () => {
     } else if (name.includes('balon mano') || name.includes('balonmano') || name.includes('handball')) {
       rules = NORMAS_DEPORTES['balon mano'];
       duration = 30;
-    } else if (name.includes('voley') || name.includes('voleibol') || name.includes('volleyball')) {
+    } else if (name.includes('voley') || name.includes('vóley') || name.includes('voleibol') || name.includes('volleyball')) {
       rules = NORMAS_DEPORTES.voley;
     } else {
       rules = {
@@ -926,7 +926,7 @@ export const MesaControl: React.FC = () => {
 
     if (name.includes('basquet') || name.includes('básquet') || name.includes('basketball') || name.includes('baloncesto')) {
       scoreGanador = '20';
-    } else if (name.includes('voley') || name.includes('voleibol') || name.includes('volleyball')) {
+    } else if (name.includes('voley') || name.includes('vóley') || name.includes('voleibol') || name.includes('volleyball')) {
       scoreGanador = '3';
     }
 
