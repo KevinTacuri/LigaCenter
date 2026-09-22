@@ -48,6 +48,19 @@ class Championship extends Model
         return $this->hasMany(ChampionshipTeam::class);
     }
 
+    public function players()
+    {
+        // through relationship to get all players in the championship through teams
+        return $this->hasManyThrough(
+            ChampionshipPlayer::class,
+            ChampionshipTeam::class,
+            'championship_discipline_id', // Foreign key on ChampionshipTeam table
+            'championship_team_id', // Foreign key on ChampionshipPlayer table
+            'id', // Local key on Championship table
+            'id' // Local key on ChampionshipTeam table
+        );
+    }
+
     public function championshipTeams()
     {
         return $this->hasManyThrough(
