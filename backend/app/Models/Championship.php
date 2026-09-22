@@ -45,7 +45,14 @@ class Championship extends Model
 
     public function teams()
     {
-        return $this->hasMany(ChampionshipTeam::class);
+        return $this->hasManyThrough(
+            ChampionshipTeam::class,
+            ChampionshipDiscipline::class,
+            'championship_id',           // Clave foránea en ChampionshipDiscipline
+            'championship_discipline_id',// Clave foránea en ChampionshipTeam
+            'id',                        // Clave local en Championship
+            'id'                         // Clave local en ChampionshipDiscipline
+        );
     }
 
     public function players()
