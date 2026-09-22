@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CompetitionEvent;
 use App\Models\CompetitionEventParticipant;
+use App\Models\ChampionshipPlayer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Http\Resources\CompetitionEventParticipantResource;
 
 class CompetitionEventParticipantController extends Controller
 {
@@ -50,7 +52,7 @@ class CompetitionEventParticipantController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $participants,
+            'data' => CompetitionEventParticipantResource::collection($participants),
         ]);
     }
 
@@ -105,14 +107,15 @@ class CompetitionEventParticipantController extends Controller
          * Verificar que el jugador pertenece al campeonato
          * del evento.
          */
-        $playerBelongsToChampionship = $event
+        $championshipId = $event
             ->championshipDiscipline
-            ->championship
-            ->players()
-            ->where(
-                'championship_players.id',
-                $validated['championship_player_id']
-            )
+            ->championship_id;
+
+        $playerBelongsToChampionship = ChampionshipPlayer::query()
+            ->where('id', $validated['championship_player_id'])
+            ->whereHas('championshipTeam.championshipDiscipline', function ($query) use ($championshipId) {
+                $query->where('championship_id', $championshipId);
+            })
             ->exists();
 
         if (!$playerBelongsToChampionship) {
