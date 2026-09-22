@@ -342,6 +342,46 @@ export const ProgramacionFixture: React.FC = () => {
     }
   };
 
+  const quitarParticipanteEvento = async (
+    participanteId: number
+  ) => {
+    if (!eventoGestionado) return;
+
+    const confirmado = await confirm({
+      title: 'Quitar participante',
+      description:
+        '¿Está seguro de quitar este participante del evento?',
+      confirmText: 'Quitar',
+      cancelText: 'Cancelar',
+      confirmButton: {
+        variant: 'destructive',
+      },
+    });
+
+    if (!confirmado) return;
+
+    try {
+      const res =
+        await serviciosEventosCompetencia.eliminarParticipante(
+          participanteId
+        );
+
+      if (res.success) {
+        mostrarMensaje(
+          'Participante retirado correctamente.'
+        );
+
+        await gestionarEvento(eventoGestionado);
+      }
+    } catch (err: any) {
+      mostrarMensaje(
+        err.response?.data?.message ||
+          'Error al quitar el participante.',
+        true
+      );
+    }
+  };
+
   const formatearFecha = (fecha?: string) => {
     if (!fecha) return '-';
 
@@ -1859,6 +1899,9 @@ export const ProgramacionFixture: React.FC = () => {
                               <button
                                 type="button"
                                 className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+                                onClick={() =>
+                                  quitarParticipanteEvento(participante.id)
+                                }
                               >
                                 Quitar
                               </button>
