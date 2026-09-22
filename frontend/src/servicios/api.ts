@@ -869,10 +869,39 @@ export const serviciosEventosCompetencia = {
       start_order?: number | null;
       status?: string;
     }
-  ) => {
+  ): Promise<RespuestaApi<any>> => {
     const response = await clienteApi.put(
       `/competition-event-participants/${id}`,
       datos
+    );
+
+    return response.data;
+  },
+
+  actualizarEvento: async (
+    id: number,
+    datos: {
+      championship_discipline_id?: number;
+      category_id?: number;
+      name?: string;
+      event_type?: 'carrera' | 'salto' | 'lanzamiento' | 'puntaje';
+      date?: string;
+      start_time?: string | null;
+      venue_id?: number | null;
+      status?: 'programado' | 'en_curso' | 'finalizado' | 'cancelado';
+    }
+  ): Promise<RespuestaApi<any>> => {
+    const response = await clienteApi.put(
+      `/competition-events/${id}`,
+      datos
+    );
+
+    return response.data;
+  },
+
+  eliminarEvento: async (id: number): Promise<RespuestaApi<any>> => {
+    const response = await clienteApi.delete(
+      `/competition-events/${id}`
     );
 
     return response.data;

@@ -91,12 +91,15 @@ export const ProgramacionFixture: React.FC = () => {
   const [generarMode, setGenerarMode] =
   useState<GenerarMode>('fixture');
 
+  // type event_type
+  type EventType = 'carrera' | 'salto' | 'lanzamiento' | 'puntaje';
+
   // Datos para generar eventos
   const [datosEvento, setDatosEvento] = useState({
     discipline_id: '',
     category_id: '',
     name: '',
-    event_type: 'carrera' as 'carrera' | 'salto' | 'lanzamiento' | 'puntaje',
+    event_type: 'carrera' as EventType,
     date: '',
     start_time: '',
     venue_id: '',
@@ -109,6 +112,107 @@ export const ProgramacionFixture: React.FC = () => {
   const [eventoGestionado, setEventoGestionado] = useState<any | null>(null);
   const [participantesEvento, setParticipantesEvento] = useState<any[]>([]);
   const [cargandoParticipantes, setCargandoParticipantes] = useState(false);
+
+  // estados para editar eventos
+  const [eventoEditando, setEventoEditando] = useState<any | null>(null);
+
+  const [datosEdicionEvento, setDatosEdicionEvento] = useState({
+    name: '',
+    event_type: 'carrera' as EventType,
+    date: '',
+    start_time: '',
+    venue_id: '',
+    status: 'programado' as
+      | 'programado'
+      | 'en_curso'
+      | 'finalizado'
+      | 'cancelado',
+  });
+
+  // Abrir modal de edición de evento
+  const abrirEdicionEvento = (evento: any) => {
+    setEventoEditando(evento);
+
+    setDatosEdicionEvento({
+      name: evento.name ?? '',
+      event_type: evento.event_type,
+      date: evento.date?.substring(0, 10) ?? '',
+      start_time: evento.start_time?.substring(0, 5) ?? '',
+      venue_id: evento.venue_id?.toString() ?? '',
+      status: evento.status,
+    });
+  };
+
+  // Guardar edición de evento
+  const guardarEdicionEvento = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!eventoEditando) return;
+
+    try {
+      const res =
+        await serviciosEventosCompetencia.actualizarEvento(
+          eventoEditando.id,
+          {
+            name: datosEdicionEvento.name,
+            event_type: datosEdicionEvento.event_type,
+            date: datosEdicionEvento.date,
+            start_time:
+              datosEdicionEvento.start_time || null,
+            venue_id: datosEdicionEvento.venue_id
+              ? parseInt(datosEdicionEvento.venue_id)
+              : null,
+            status: datosEdicionEvento.status,
+          }
+        );
+
+      if (res.success) {
+        mostrarMensaje('Evento actualizado correctamente.');
+
+        setEventoEditando(null);
+
+        await cargarDatos();
+      }
+    } catch (err: any) {
+      mostrarMensaje(
+        err.response?.data?.message ||
+          'Error al actualizar el evento.',
+        true
+      );
+    }
+  };
+
+  // Eliminar evento
+  const eliminarEventoCompetencia = async (id: number) => {
+    const confirmado = await confirm({
+      title: 'Eliminar evento',
+      description:
+        '¿Está seguro de eliminar este evento? También se eliminarán sus participantes y resultados relacionados.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      confirmButton: {
+        variant: 'destructive',
+      },
+    });
+
+    if (!confirmado) return;
+
+    try {
+      const res =
+        await serviciosEventosCompetencia.eliminarEvento(id);
+
+      if (res.success) {
+        mostrarMensaje('Evento eliminado correctamente.');
+        await cargarDatos();
+      }
+    } catch (err: any) {
+      mostrarMensaje(
+        err.response?.data?.message ||
+          'Error al eliminar el evento.',
+        true
+      );
+    }
+  };
 
   // estados para agregar participantes a un evento
   const [modalParticipante, setModalParticipante] = useState(false);
@@ -1773,18 +1877,31 @@ export const ProgramacionFixture: React.FC = () => {
                         </td>
 
                         <td className="p-3 pr-4 text-right space-x-3">
-                          <button
-                            onClick={() => gestionarEvento(evento)}
-                            className="text-xs font-bold text-primary hover:underline cursor-pointer"
-                          >
-                            Gestionar
-                          </button>
-
-                          <button
-                            className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
-                          >
-                            Eliminar
-                          </button>
+                          <div className="flex justify-end gap-3">
+                            <button
+                              type="button"
+                              onClick={() => gestionarEvento(evento)}
+                              className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                            >
+                              Gestionar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => abrirEdicionEvento(evento)}
+                              className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                eliminarEventoCompetencia(evento.id)
+                              }
+                              className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -2172,153 +2289,336 @@ export const ProgramacionFixture: React.FC = () => {
 
       {/* Modal agregar participante a evento */}
       {modalParticipante && eventoGestionado && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-lg">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-lg">
 
-          {/* Cabecera */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            {/* Cabecera */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
 
-            <div>
-              <h3 className="font-extrabold text-sm text-slate-900">
-                Agregar participante
-              </h3>
+              <div>
+                <h3 className="font-extrabold text-sm text-slate-900">
+                  Agregar participante
+                </h3>
 
-              <p className="text-[10px] text-slate-500 mt-0.5">
-                {eventoGestionado.name}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setModalParticipante(false)}
-              className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-sm">
-                close
-              </span>
-            </button>
-
-          </div>
-
-          <form
-            onSubmit={agregarParticipantesEvento}
-            className="p-6 space-y-4"
-          >
-
-            {/* Buscar */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 block">
-                Buscar jugador
-              </label>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Nombre o DNI"
-                  value={busquedaJugador}
-                  onChange={(e) =>
-                    setBusquedaJugador(e.target.value)
-                  }
-                  className="flex-1 text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
-                />
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    cargarJugadoresEvento(busquedaJugador)
-                  }
-                  className="px-4 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 cursor-pointer"
-                >
-                  Buscar
-                </button>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  {eventoGestionado.name}
+                </p>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setModalParticipante(false)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">
+                  close
+                </span>
+              </button>
+
             </div>
 
-            {/* Jugador */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-700">
-                  Jugadores *
+            <form
+              onSubmit={agregarParticipantesEvento}
+              className="p-6 space-y-4"
+            >
+
+              {/* Buscar */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">
+                  Buscar jugador
                 </label>
 
-                <button
-                  type="button"
-                  onClick={seleccionarTodosJugadores}
-                  className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
-                >
-                  {jugadoresSeleccionados.length === jugadoresDisponibles.length
-                    ? 'Deseleccionar todos'
-                    : 'Seleccionar todos'}
-                </button>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Nombre o DNI"
+                    value={busquedaJugador}
+                    onChange={(e) =>
+                      setBusquedaJugador(e.target.value)
+                    }
+                    className="flex-1 text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      cargarJugadoresEvento(busquedaJugador)
+                    }
+                    className="px-4 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 cursor-pointer"
+                  >
+                    Buscar
+                  </button>
+                </div>
               </div>
 
-              <div className="border border-slate-200 rounded-xl max-h-64 overflow-y-auto divide-y divide-slate-100">
-                {jugadoresDisponibles.map((jugador) => {
-                  const seleccionado =
-                    jugadoresSeleccionados.includes(jugador.id);
+              {/* Jugador */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700">
+                    Jugadores *
+                  </label>
 
-                  return (
-                    <label
-                      key={jugador.id}
-                      className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${
-                        seleccionado
-                          ? 'bg-secondary/5'
-                          : 'hover:bg-slate-50'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={seleccionado}
-                        onChange={() =>
-                          toggleJugadorEvento(jugador.id)
-                        }
-                        className="rounded border-slate-300 text-secondary focus:ring-secondary"
-                      />
+                  <button
+                    type="button"
+                    onClick={seleccionarTodosJugadores}
+                    className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
+                  >
+                    {jugadoresSeleccionados.length === jugadoresDisponibles.length
+                      ? 'Deseleccionar todos'
+                      : 'Seleccionar todos'}
+                  </button>
+                </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-bold text-slate-800">
-                          {jugador.player?.name ??
-                            jugador.name ??
-                            `Jugador ${jugador.id}`}
+                <div className="border border-slate-200 rounded-xl max-h-64 overflow-y-auto divide-y divide-slate-100">
+                  {jugadoresDisponibles.map((jugador) => {
+                    const seleccionado =
+                      jugadoresSeleccionados.includes(jugador.id);
+
+                    return (
+                      <label
+                        key={jugador.id}
+                        className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${
+                          seleccionado
+                            ? 'bg-secondary/5'
+                            : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={seleccionado}
+                          onChange={() =>
+                            toggleJugadorEvento(jugador.id)
+                          }
+                          className="rounded border-slate-300 text-secondary focus:ring-secondary"
+                        />
+
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold text-slate-800">
+                            {jugador.player?.name ??
+                              jugador.name ??
+                              `Jugador ${jugador.id}`}
+                          </div>
+
+                          <div className="text-[10px] text-slate-400">
+                            {jugador.player?.dni &&
+                              `DNI: ${jugador.player.dni}`}
+
+                            {jugador.championship_team?.team?.name &&
+                              ` · ${jugador.championship_team.team.name}`}
+                          </div>
                         </div>
+                      </label>
+                    );
+                  })}
 
-                        <div className="text-[10px] text-slate-400">
-                          {jugador.player?.dni &&
-                            `DNI: ${jugador.player.dni}`}
+                  {jugadoresDisponibles.length === 0 && (
+                    <div className="p-8 text-center text-xs text-slate-500">
+                      No hay jugadores disponibles.
+                    </div>
+                  )}
+                </div>
 
-                          {jugador.championship_team?.team?.name &&
-                            ` · ${jugador.championship_team.team.name}`}
-                        </div>
-                      </div>
-                    </label>
-                  );
-                })}
-
-                {jugadoresDisponibles.length === 0 && (
-                  <div className="p-8 text-center text-xs text-slate-500">
-                    No hay jugadores disponibles.
-                  </div>
-                )}
+                <div className="text-[10px] text-slate-500 font-semibold">
+                  {jugadoresSeleccionados.length} seleccionados
+                </div>
               </div>
 
-              <div className="text-[10px] text-slate-500 font-semibold">
-                {jugadoresSeleccionados.length} seleccionados
-              </div>
+              <button
+                type="submit"
+                disabled={jugadoresSeleccionados.length === 0}
+                className="w-full bg-secondary hover:bg-secondary-container disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer"
+              >
+                Agregar participantes ({jugadoresSeleccionados.length})
+              </button>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para editar un evento */}
+      {eventoEditando && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-lg">
+
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+
+              <h3 className="font-extrabold text-sm text-slate-900">
+                Editar evento
+              </h3>
+
+              <button
+                type="button"
+                onClick={() => setEventoEditando(null)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">
+                  close
+                </span>
+              </button>
+
             </div>
 
-            <button
-              type="submit"
-              disabled={jugadoresSeleccionados.length === 0}
-              className="w-full bg-secondary hover:bg-secondary-container disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer"
+            <form
+              onSubmit={guardarEdicionEvento}
+              className="p-6 space-y-4"
             >
-              Agregar participantes ({jugadoresSeleccionados.length})
-            </button>
 
-          </form>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">
+                  Nombre *
+                </label>
+
+                <input
+                  required
+                  type="text"
+                  value={datosEdicionEvento.name}
+                  onChange={(e) =>
+                    setDatosEdicionEvento({
+                      ...datosEdicionEvento,
+                      name: e.target.value,
+                    })
+                  }
+                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    Tipo
+                  </label>
+
+                  <select
+                    value={datosEdicionEvento.event_type}
+                    onChange={(e) =>
+                      setDatosEdicionEvento({
+                        ...datosEdicionEvento,
+                        event_type: e.target.value as any,
+                      })
+                    }
+                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer"
+                  >
+                    <option value="carrera">Carrera</option>
+                    <option value="salto">Salto</option>
+                    <option value="lanzamiento">
+                      Lanzamiento
+                    </option>
+                    <option value="puntaje">Puntaje</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    Estado
+                  </label>
+
+                  <select
+                    value={datosEdicionEvento.status}
+                    onChange={(e) =>
+                      setDatosEdicionEvento({
+                        ...datosEdicionEvento,
+                        status: e.target.value as any,
+                      })
+                    }
+                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer"
+                  >
+                    <option value="programado">
+                      Programado
+                    </option>
+                    <option value="en_curso">
+                      En curso
+                    </option>
+                    <option value="finalizado">
+                      Finalizado
+                    </option>
+                    <option value="cancelado">
+                      Cancelado
+                    </option>
+                  </select>
+                </div>
+
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    Fecha
+                  </label>
+
+                  <input
+                    type="date"
+                    value={datosEdicionEvento.date}
+                    onChange={(e) =>
+                      setDatosEdicionEvento({
+                        ...datosEdicionEvento,
+                        date: e.target.value,
+                      })
+                    }
+                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    Hora
+                  </label>
+
+                  <input
+                    type="time"
+                    value={datosEdicionEvento.start_time}
+                    onChange={(e) =>
+                      setDatosEdicionEvento({
+                        ...datosEdicionEvento,
+                        start_time: e.target.value,
+                      })
+                    }
+                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5"
+                  />
+                </div>
+
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">
+                  Escenario
+                </label>
+
+                <select
+                  value={datosEdicionEvento.venue_id}
+                  onChange={(e) =>
+                    setDatosEdicionEvento({
+                      ...datosEdicionEvento,
+                      venue_id: e.target.value,
+                    })
+                  }
+                  className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer"
+                >
+                  <option value="">Sin escenario</option>
+
+                  {escenarios.map((esc) => (
+                    <option key={esc.id} value={esc.id}>
+                      {esc.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer"
+              >
+                Guardar cambios
+              </button>
+
+            </form>
+          </div>
         </div>
-      </div>
-)}
+      )}
 
       {/* Botón Flotante de Ayuda */}
       <button
