@@ -110,6 +110,139 @@ export const ProgramacionFixture: React.FC = () => {
   const [participantesEvento, setParticipantesEvento] = useState<any[]>([]);
   const [cargandoParticipantes, setCargandoParticipantes] = useState(false);
 
+  // estados para agregar participantes a un evento
+  const [modalParticipante, setModalParticipante] = useState(false);
+
+  const [jugadoresDisponibles, setJugadoresDisponibles] = useState<any[]>([]);
+  const [busquedaJugador, setBusquedaJugador] = useState('');
+  const [cargandoJugadores, setCargandoJugadores] = useState(false);
+
+  const [jugadoresSeleccionados, setJugadoresSeleccionados] =
+  useState<number[]>([]);
+
+  const toggleJugadorEvento = (id: number) => {
+    setJugadoresSeleccionados((prev) =>
+      prev.includes(id)
+        ? prev.filter((jugadorId) => jugadorId !== id)
+        : [...prev, id]
+    );
+  };
+
+  const seleccionarTodosJugadores = () => {
+    if (
+      jugadoresSeleccionados.length ===
+      jugadoresDisponibles.length
+    ) {
+      setJugadoresSeleccionados([]);
+    } else {
+      setJugadoresSeleccionados(
+        jugadoresDisponibles.map((j) => j.id)
+      );
+    }
+  };
+
+  const agregarParticipantesEvento = async (
+    e: React.FormEvent
+  ) => {
+    e.preventDefault();
+
+    if (!eventoGestionado) return;
+
+    if (jugadoresSeleccionados.length === 0) {
+      mostrarMensaje(
+        'Selecciona al menos un jugador.',
+        true
+      );
+      return;
+    }
+
+    try {
+      const jugadoresARegistrar =
+        jugadoresDisponibles.filter((jugador) =>
+          jugadoresSeleccionados.includes(jugador.id)
+        );
+
+      const respuestas = await Promise.all(
+        jugadoresARegistrar.map((jugador, index) =>
+          serviciosEventosCompetencia.agregarParticipante({
+            competition_event_id:
+              eventoGestionado.id,
+
+            championship_player_id:
+              jugador.id,
+
+            championship_team_id:
+              jugador.championship_team_id ??
+              jugador.championship_team?.id ??
+              null,
+
+            lane: null,
+
+            start_order: index + 1,
+
+            status: 'inscrito',
+          })
+        )
+      );
+
+      const registrados = respuestas.filter(
+        (res) => res.success
+      ).length;
+
+      mostrarMensaje(
+        `${registrados} participante(s) agregados correctamente.`
+      );
+
+      setJugadoresSeleccionados([]);
+      setModalParticipante(false);
+
+      await gestionarEvento(eventoGestionado);
+
+    } catch (err: any) {
+      mostrarMensaje(
+        err.response?.data?.message ||
+          'Error al agregar participantes.',
+        true
+      );
+    }
+  };
+
+  // Cargar jugadores disponibles para agregar a un evento
+  const cargarJugadoresEvento = async (search: string = '') => {
+    if (!eventoGestionado) return;
+
+    setCargandoJugadores(true);
+
+    try {
+      const res =
+        await serviciosParticipantes.obtenerJugadoresPorCampeonato({
+          category_id: eventoGestionado.category_id,
+          available_for_event_id: eventoGestionado.id,
+          search: search || undefined,
+          per_page: 50,
+        });
+
+      if (res.success) {
+        const data: any = res.data;
+
+        console.log('Respuesta de jugadores por categoría:', data);
+
+        const lista = data.players ?? [];
+        
+        console.log('Jugadores disponibles para evento:', lista);
+
+        setJugadoresDisponibles(lista);
+      }
+    } catch {
+      mostrarMensaje(
+        'Error al cargar los jugadores.',
+        true
+      );
+    } finally {
+      setCargandoJugadores(false);
+    }
+  };
+
   const cargarEventosCompetencia = async () => {
     try {
       const res =
@@ -1625,7 +1758,7 @@ export const ProgramacionFixture: React.FC = () => {
                 </div>
               </div>
 
-              {/* Participantes */}
+              {/* Participantes de Evento */}
               <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
 
                 <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
@@ -1636,6 +1769,12 @@ export const ProgramacionFixture: React.FC = () => {
                   <button
                     type="button"
                     className="bg-secondary hover:bg-secondary-container text-white font-bold px-4 py-2 rounded-lg text-xs transition-all cursor-pointer"
+                    onClick={() => {
+                      setModalParticipante(true);
+                      setJugadoresSeleccionados([]);
+                      setBusquedaJugador('');
+                      cargarJugadoresEvento();
+                    }}
                   >
                     Agregar participante
                   </button>
@@ -1688,10 +1827,6 @@ export const ProgramacionFixture: React.FC = () => {
 
                             <td className="p-3 pl-4 font-bold text-slate-900">
                               {participante
-                                .championship_player
-                                ?.player?.name
-                                ??
-                                participante
                                   .championship_player
                                   ?.name
                                 ??
@@ -1700,10 +1835,6 @@ export const ProgramacionFixture: React.FC = () => {
 
                             <td className="p-3 text-slate-600">
                               {participante
-                                .championship_team
-                                ?.team?.name
-                                ??
-                                participante
                                   .championship_team
                                   ?.name
                                 ??
@@ -1850,6 +1981,156 @@ export const ProgramacionFixture: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal agregar participante a evento */}
+      {modalParticipante && eventoGestionado && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-lg">
+
+          {/* Cabecera */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+
+            <div>
+              <h3 className="font-extrabold text-sm text-slate-900">
+                Agregar participante
+              </h3>
+
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                {eventoGestionado.name}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setModalParticipante(false)}
+              className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-sm">
+                close
+              </span>
+            </button>
+
+          </div>
+
+          <form
+            onSubmit={agregarParticipantesEvento}
+            className="p-6 space-y-4"
+          >
+
+            {/* Buscar */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700 block">
+                Buscar jugador
+              </label>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Nombre o DNI"
+                  value={busquedaJugador}
+                  onChange={(e) =>
+                    setBusquedaJugador(e.target.value)
+                  }
+                  className="flex-1 text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    cargarJugadoresEvento(busquedaJugador)
+                  }
+                  className="px-4 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 cursor-pointer"
+                >
+                  Buscar
+                </button>
+              </div>
+            </div>
+
+            {/* Jugador */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700">
+                  Jugadores *
+                </label>
+
+                <button
+                  type="button"
+                  onClick={seleccionarTodosJugadores}
+                  className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
+                >
+                  {jugadoresSeleccionados.length === jugadoresDisponibles.length
+                    ? 'Deseleccionar todos'
+                    : 'Seleccionar todos'}
+                </button>
+              </div>
+
+              <div className="border border-slate-200 rounded-xl max-h-64 overflow-y-auto divide-y divide-slate-100">
+                {jugadoresDisponibles.map((jugador) => {
+                  const seleccionado =
+                    jugadoresSeleccionados.includes(jugador.id);
+
+                  return (
+                    <label
+                      key={jugador.id}
+                      className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${
+                        seleccionado
+                          ? 'bg-secondary/5'
+                          : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={seleccionado}
+                        onChange={() =>
+                          toggleJugadorEvento(jugador.id)
+                        }
+                        className="rounded border-slate-300 text-secondary focus:ring-secondary"
+                      />
+
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-bold text-slate-800">
+                          {jugador.player?.name ??
+                            jugador.name ??
+                            `Jugador ${jugador.id}`}
+                        </div>
+
+                        <div className="text-[10px] text-slate-400">
+                          {jugador.player?.dni &&
+                            `DNI: ${jugador.player.dni}`}
+
+                          {jugador.championship_team?.team?.name &&
+                            ` · ${jugador.championship_team.team.name}`}
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })}
+
+                {jugadoresDisponibles.length === 0 && (
+                  <div className="p-8 text-center text-xs text-slate-500">
+                    No hay jugadores disponibles.
+                  </div>
+                )}
+              </div>
+
+              <div className="text-[10px] text-slate-500 font-semibold">
+                {jugadoresSeleccionados.length} seleccionados
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={jugadoresSeleccionados.length === 0}
+              className="w-full bg-secondary hover:bg-secondary-container disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer"
+            >
+              Agregar participantes ({jugadoresSeleccionados.length})
+            </button>
+
+          </form>
+        </div>
+      </div>
+)}
 
       {/* Botón Flotante de Ayuda */}
       <button
