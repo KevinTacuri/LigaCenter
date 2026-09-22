@@ -93,7 +93,7 @@ class TestDataSeeder extends Seeder
                 'name' => 'Fútbol Libre Masculino',
             ],
             [
-                'gender_type' => 'masculino',
+                'gender_type' => 'Masculino',
                 'format' => 'liga',
             ]
         );
@@ -104,7 +104,7 @@ class TestDataSeeder extends Seeder
                 'name' => 'Fútbol Máster +40',
             ],
             [
-                'gender_type' => 'masculino',
+                'gender_type' => 'Masculino',
                 'format' => 'liga',
                 'age_min' => 40,
             ]
@@ -116,7 +116,7 @@ class TestDataSeeder extends Seeder
                 'name' => 'Básquet Libre Masculino',
             ],
             [
-                'gender_type' => 'masculino',
+                'gender_type' => 'Masculino',
                 'format' => 'liga',
             ]
         );
@@ -136,7 +136,7 @@ class TestDataSeeder extends Seeder
         $eq2 = Team::firstOrCreate(['user_id' => $organizador->id, 'name' => 'Deportivo Minas'], ['discipline_id' => $futbol->id]);
         $eq3 = Team::firstOrCreate(['user_id' => $organizador->id, 'name' => 'Atlético Civil'], ['discipline_id' => $futbol->id]);
         $eq4 = Team::firstOrCreate(['user_id' => $organizador->id, 'name' => 'Real Sistemas'], ['discipline_id' => $futbol->id]);
-        $eq5 = Team::firstOrCreate(['user_id' => $organizador->id, 'name' => 'Club Industrial'], ['discipline_id' => $futbol->id]);
+        $eq5 = Team::firstOrCreate(['user_id' => $organizador->id, 'name' => 'Club Industrial'], ['discipline_id' => $basquet->id]);
         $eq6 = Team::firstOrCreate(['user_id' => $organizador->id, 'name' => 'Sporting Mecánica'], ['discipline_id' => $basquet->id]);
 
         // Asociar equipos a categorías y campeonatos a través de ChampionshipTeam 
@@ -186,7 +186,7 @@ class TestDataSeeder extends Seeder
                 'team_id' => $eq5->id,
             ],
             [
-                'category_id' => $catFutbolLibre->id,
+                'category_id' => $catBasquet->id,
                 'representative' => $eq5->representative,
             ]
         );
