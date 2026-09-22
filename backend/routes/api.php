@@ -13,3 +13,4 @@ require __DIR__ . '/api/groups.php';
 require __DIR__ . '/api/championship-disciplines.php';
 require __DIR__ . '/api/categories.php';
 require __DIR__ . '/api/public.php';
+require __DIR__ . '/api/competition-events.php';
