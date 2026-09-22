@@ -654,7 +654,7 @@ export const serviciosParticipantes = {
     return res.data;
   },
   // Jugadores de un campeonato específico
-  obtenerJugadoresPorCampeonato: async (params: { page?: number; per_page?: number; search?: string; championship_team_id?: number; category_id?: number } = {}): Promise<RespuestaApi<DatosJugadoresPaginados>> => {
+  obtenerJugadoresPorCampeonato: async (params: { page?: number; per_page?: number; search?: string; championship_team_id?: number; category_id?: number; available_for_event_id?: number } = {}): Promise<RespuestaApi<DatosJugadoresPaginados>> => {
     const res = await clienteApi.get('/championshipPlayers', { params });
     return res.data;
   },
