@@ -64,7 +64,7 @@ class GameMatchController extends Controller
     public function index(Request $request)
     {
         $perPage = min(max((int) $request->query('per_page', 15), 1), 100);
-        $query = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'category', 'report']);
+        $query = GameMatch::with(['localTeam', 'visitorTeam', 'venue', 'category', 'report', 'discipline']);
 
         if ($request->has('championship_id')) {
             $query->where('championship_id', $request->championship_id);
