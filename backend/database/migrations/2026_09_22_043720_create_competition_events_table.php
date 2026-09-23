@@ -40,6 +40,8 @@ return new class extends Migration
                 ->nullOnDelete();
 
             $table->string('status')->default('programado');
+            $table->string('participation_type', 20)
+                ->default('individual');
 
             $table->timestamps();
         });

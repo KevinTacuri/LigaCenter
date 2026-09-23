@@ -14,8 +14,14 @@ return new class extends Migration
         Schema::create('competition_results', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('competition_event_participant_id')
-                ->constrained('competition_event_participants')
+            $table->foreignId('competition_event_group_participant_id');
+
+            $table->foreign(
+                'competition_event_group_participant_id',
+                'comp_result_group_part_fk'
+            )
+                ->references('id')
+                ->on('competition_event_group_participants')
                 ->cascadeOnDelete();
 
             $table->decimal('result_value', 12, 4)->nullable();
@@ -24,11 +30,14 @@ return new class extends Migration
 
             $table->unsignedInteger('position')->nullable();
 
-            $table->string('status')->default('registrado');
+            $table->string('status', 30)->default('registrado');
 
             $table->timestamps();
 
-            $table->unique('competition_event_participant_id');
+            $table->unique(
+                'competition_event_group_participant_id',
+                'group_participant_result_unique'
+            );
         });
 
     }

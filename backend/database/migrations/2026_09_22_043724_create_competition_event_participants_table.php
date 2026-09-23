@@ -19,6 +19,7 @@ return new class extends Migration
                 ->cascadeOnDelete();
 
             $table->foreignId('championship_player_id')
+                ->nullable()
                 ->constrained('championship_players')
                 ->cascadeOnDelete();
 
@@ -26,9 +27,6 @@ return new class extends Migration
                 ->nullable()
                 ->constrained('championship_teams')
                 ->nullOnDelete();
-
-            $table->unsignedInteger('lane')->nullable();
-            $table->unsignedInteger('start_order')->nullable();
 
             $table->string('status')->default('inscrito');
 

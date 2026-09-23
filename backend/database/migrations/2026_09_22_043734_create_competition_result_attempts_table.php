@@ -17,6 +17,18 @@ return new class extends Migration
             $table->foreignId('competition_result_id')
                 ->constrained('competition_results')
                 ->cascadeOnDelete();
+            
+            $table->foreignId(
+                'competition_event_participant_member_id'
+            )->nullable();
+
+            $table->foreign(
+                'competition_event_participant_member_id',
+                'result_attempt_member_fk'
+            )
+                ->references('id')
+                ->on('competition_event_participant_members')
+                ->cascadeOnDelete();
 
             $table->unsignedInteger('attempt_number');
 
@@ -24,9 +36,12 @@ return new class extends Migration
 
             $table->timestamps();
 
-            $table->unique(
-                ['competition_result_id', 'attempt_number'],
-                'result_attempt_unique'
+            $table->index(
+                [
+                    'competition_result_id',
+                    'competition_event_participant_member_id',
+                ],
+                'result_member_idx'
             );
         });
     }
