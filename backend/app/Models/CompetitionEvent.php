@@ -16,6 +16,7 @@ class CompetitionEvent extends Model
         'category_id',
         'name',
         'event_type',
+        'participation_type',
         'date',
         'start_time',
         'venue_id',
@@ -50,5 +51,12 @@ class CompetitionEvent extends Model
         return $this->hasMany(
             CompetitionEventParticipant::class
         );
+    }
+
+    public function stages()
+    {
+        return $this->hasMany(
+            CompetitionEventStage::class
+        )->orderBy('stage_number');
     }
 }
