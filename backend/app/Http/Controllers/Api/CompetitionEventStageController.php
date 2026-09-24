@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\CompetitionEvent;
 use App\Models\CompetitionEventStage;
+use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\CompetitionStageStandingService;
@@ -37,13 +38,26 @@ class CompetitionEventStageController extends Controller
 
             'stage_type' => [
                 'required',
-                'in:qualifying,semifinal,final,round',
+                'in:qualifying,semifinal,final',
             ],
 
             'stage_number' => [
                 'required',
                 'integer',
                 'min:1',
+                Rule::unique('competition_event_stages', 'stage_number')->where(fn ($query) => 
+                    $query->where('competition_event_id', $competitionEvent->id)
+                ),
+            ],
+            'rounds_count' => [
+                'required',
+                'integer',
+                'min:1',
+            ],
+            'result_aggregation' =>
+            [
+                'required',
+                'in:best,average,sum',
             ],
             'qualifiers_count' => [
                 'nullable',
@@ -52,7 +66,19 @@ class CompetitionEventStageController extends Controller
             ],
             'qualification_method' => [
                 'nullable',
-                'in:best_overall,all'
+                'in:best_overall,best_per_group,all,none'
+            ],
+
+            'qualifiers_per_group' => [
+                'nullable',
+                'integer',
+                'min:1',
+            ],
+
+            'podium_places' => [
+                'nullable',
+                'integer',
+                'min:1',
             ],
 
             'status' => [
@@ -61,32 +87,14 @@ class CompetitionEventStageController extends Controller
             ],
         ]);
 
-        if (
-            ($validated['qualification_method'] ?? null) === 'best_overall'
-            && empty($validated['qualifiers_count'])
-        ) {
+        $error = $this->validateStageConfiguration(
+            $validated
+        );
+
+        if ($error) {
             return response()->json([
                 'success' => false,
-                'message' =>
-                    'Debe indicar cuántos participantes clasifican.',
-            ], 422);
-        }
-
-        $exists = CompetitionEventStage::where(
-            'competition_event_id',
-            $competitionEvent->id
-        )
-            ->where(
-                'stage_number',
-                $validated['stage_number']
-            )
-            ->exists();
-
-        if ($exists) {
-            return response()->json([
-                'success' => false,
-                'message' =>
-                    'Ya existe una etapa con ese número.',
+                'message' => $error,
             ], 422);
         }
 
@@ -96,13 +104,13 @@ class CompetitionEventStageController extends Controller
                 'name' => $validated['name'],
                 'stage_type' => $validated['stage_type'],
                 'stage_number' => $validated['stage_number'],
-                'qualifiers_count' =>
-                    ($validated['qualification_method'] ?? null) === 'best_overall'
-                        ? ($validated['qualifiers_count'] ?? null)
-                        : null,
+                'rounds_count' => $validated['rounds_count'],
+                'result_aggregation' => $validated['result_aggregation'],
+                'qualifiers_count' => $validated['qualifiers_count'] ?? null,
                 'qualification_method' => $validated['qualification_method'] ?? null,
-                'status' =>
-                    $validated['status'] ?? 'programado',
+                'qualifiers_per_group' => $validated['qualifiers_per_group'] ?? null,
+                'podium_places' => $validated['podium_places'] ?? null,
+                'status' => $validated['status'] ?? 'programado',
             ]);
 
         return response()->json([
@@ -125,13 +133,41 @@ class CompetitionEventStageController extends Controller
 
             'stage_type' => [
                 'sometimes',
-                'in:qualifying,semifinal,final,round',
+                'in:qualifying,semifinal,final',
             ],
 
             'stage_number' => [
-                'sometimes',
+                'required',
                 'integer',
                 'min:1',
+
+                Rule::unique(
+                    'competition_event_stages',
+                    'stage_number'
+                )
+                    ->where(
+                        fn ($query) =>
+                            $query->where(
+                                'competition_event_id',
+                                $stage->competition_event_id
+                            )
+                    )
+                    ->ignore($stage->id),
+            ],
+
+            'rounds_count' => [
+                'required',
+                'integer',
+                'min:1',
+            ],
+
+            'result_aggregation' => [
+                'required',
+                Rule::in([
+                    'sum',
+                    'best',
+                    'average',
+                ]),
             ],
 
             'qualifiers_count' => [
@@ -144,7 +180,19 @@ class CompetitionEventStageController extends Controller
             'qualification_method' => [
                 'sometimes',
                 'nullable',
-                'in:best_overall, all'
+                'in:best_overall,best_per_group,all,none'
+            ],
+
+            'qualifiers_per_group' => [
+                'nullable',
+                'integer',
+                'min:1',
+            ],
+
+            'podium_places' => [
+                'nullable',
+                'integer',
+                'min:1',
             ],
 
             'status' => [
@@ -153,25 +201,15 @@ class CompetitionEventStageController extends Controller
             ],
         ]);
 
-        if (isset($validated['stage_number'])) {
-            $exists = CompetitionEventStage::where(
-                'competition_event_id',
-                $stage->competition_event_id
-            )
-                ->where(
-                    'stage_number',
-                    $validated['stage_number']
-                )
-                ->where('id', '!=', $stage->id)
-                ->exists();
+        $error = $this->validateStageConfiguration(
+            $validated
+        );
 
-            if ($exists) {
-                return response()->json([
-                    'success' => false,
-                    'message' =>
-                        'Ya existe una etapa con ese número.',
-                ], 422);
-            }
+        if ($error) {
+            return response()->json([
+                'success' => false,
+                'message' => $error,
+            ], 422);
         }
 
         $stage->update($validated);
@@ -179,7 +217,7 @@ class CompetitionEventStageController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Etapa actualizada correctamente.',
-            'data' => $stage,
+            'data' => $stage->fresh(),
         ]);
     }
 
@@ -232,5 +270,82 @@ class CompetitionEventStageController extends Controller
                 'message' => $e->getMessage(),
             ], 422);
         }
+    }
+
+    private function validateStageConfiguration(array &$data): ?string {
+        /*
+        |--------------------------------------------------------------------------
+        | FINAL
+        |--------------------------------------------------------------------------
+        */
+        if ($data['stage_type'] === 'final') {
+
+            $data['qualification_method'] = 'none';
+
+            $data['qualifiers_count'] = null;
+
+            $data['qualifiers_per_group'] = null;
+
+            if (empty($data['podium_places'])) {
+                return 'La final debe indicar la cantidad de puestos premiados.';
+            }
+
+            return null;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | CLASIFICATORIA / SEMIFINAL
+        |--------------------------------------------------------------------------
+        */
+
+        $data['podium_places'] = null;
+
+        $method =
+            $data['qualification_method'] ?? null;
+
+        if (!$method || $method === 'none') {
+            return 'Debe seleccionar un método de clasificación.';
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | MEJORES GENERALES
+        |--------------------------------------------------------------------------
+        */
+        if ($method === 'best_overall') {
+
+            if (empty($data['qualifiers_count'])) {
+                return 'Debe indicar cuántos participantes clasifican.';
+            }
+
+            $data['qualifiers_per_group'] = null;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | MEJORES POR GRUPO
+        |--------------------------------------------------------------------------
+        */
+        if ($method === 'best_per_group') {
+
+            if (empty($data['qualifiers_per_group'])) {
+                return 'Debe indicar cuántos participantes clasifican por grupo.';
+            }
+
+            $data['qualifiers_count'] = null;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | TODOS CLASIFICAN
+        |--------------------------------------------------------------------------
+        */
+        if ($method === 'all') {
+            $data['qualifiers_count'] = null;
+            $data['qualifiers_per_group'] = null;
+        }
+
+        return null;
     }
 }

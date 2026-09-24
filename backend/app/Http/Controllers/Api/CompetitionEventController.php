@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\CompetitionEvent;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 use App\Events\CompetitionEventUpdated;
 use App\Services\CompetitionEventLifecycleService;
 use App\Services\CompetitionEventStandingService;
+use App\Services\CompetitionStageGeneratorService;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class CompetitionEventController extends Controller
@@ -74,7 +77,7 @@ class CompetitionEventController extends Controller
     /**
      * Crear un evento.
      */
-    public function store(Request $request)
+    public function store(Request $request, CompetitionStageGeneratorService $stageGenerator)
     {
         $validated = $request->validate([
             'championship_discipline_id' => [
@@ -137,14 +140,59 @@ class CompetitionEventController extends Controller
                 'required',
                 'in:individual,team',
             ],
+
+            'competition_format' => [
+                'required',
+                'in:single_final,qualifying_final,qualifying_semifinal_final,custom',
+            ],
         ]);
 
-        $event = CompetitionEvent::create($validated);
+        $event = DB::transaction(function () use (
+            $validated,
+            $stageGenerator
+        ) {
+            $event = CompetitionEvent::create([
+                'championship_discipline_id' =>
+                    $validated['championship_discipline_id'],
+
+                'category_id' =>
+                    $validated['category_id'],
+
+                'name' =>
+                    $validated['name'],
+
+                'event_type' =>
+                    $validated['event_type'],
+
+                'participation_type' =>
+                    $validated['participation_type'],
+
+                'competition_format' =>
+                    $validated['competition_format'],
+
+                'date' =>
+                    $validated['date'],
+
+                'start_time' =>
+                    $validated['start_time'] ?? null,
+
+                'venue_id' =>
+                    $validated['venue_id'] ?? null,
+
+                'status' =>
+                    $validated['status'] ?? 'programado',
+            ]);
+
+            $stageGenerator->generate($event);
+
+            return $event;
+        });
 
         $event->load([
             'championshipDiscipline.discipline',
             'category',
             'venue',
+            'stages',
         ]);
 
         return response()->json([
@@ -276,6 +324,7 @@ class CompetitionEventController extends Controller
             'championshipDiscipline.discipline',
             'category',
             'venue',
+            'stages'
         ]);
 
         return response()->json([

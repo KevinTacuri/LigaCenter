@@ -21,6 +21,8 @@ class CompetitionEvent extends Model
         'start_time',
         'venue_id',
         'status',
+        'competition_format',
+        'result_aggregation',
     ];
 
     protected $casts = [

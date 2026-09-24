@@ -14,7 +14,22 @@ class CompetitionEventStage extends Model
         'qualifiers_count',
         'qualification_method',
         'status',
+        'rounds_count',
+        'result_aggregation',
+        'qualifiers_per_group',
+        'podium_places',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'stage_number' => 'integer',
+            'rounds_count' => 'integer',
+            'qualifiers_count' => 'integer',
+            'qualifiers_per_group' => 'integer',
+            'podium_places' => 'integer',
+        ];
+    }
 
     public function event()
     {
