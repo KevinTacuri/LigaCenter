@@ -1,4 +1,10 @@
 import axios, { type AxiosResponse } from 'axios';
+import type {
+  CrearEventoCompetencia,
+  CrearParticipanteEvento,
+  EventoCompetencia,
+  ParticipanteEvento,
+} from '../types/CompetitionEvent';
 
 // URL base para la API del backend
 const URL_BASE_API = __VITE_API_URL__ || 'http://127.0.0.1:8000/api';
@@ -798,16 +804,7 @@ export const serviciosFixture = {
 // Servicios de eventos y programacion de competencias (para disciplinas de atletismo, natación, etc.)
 export const serviciosEventosCompetencia = {
   // crear evento de competencia
-  crearEvento: async (datos: {
-    championship_discipline_id: number;
-    category_id: number;
-    name: string;
-    event_type: 'carrera' | 'salto' | 'lanzamiento' | 'puntaje';
-    date: string;
-    start_time: string | null;
-    venue_id: number | null;
-    status: string;
-  }): Promise<RespuestaApi<any>> => {
+  crearEvento: async (datos: CrearEventoCompetencia): Promise<RespuestaApi<EventoCompetencia>> => {
     const res = await clienteApi.post('/competition-events', datos);
     return res.data;
   },
@@ -817,7 +814,7 @@ export const serviciosEventosCompetencia = {
     category_id?: number;
     date?: string;
     status?: string;
-  }): Promise<RespuestaApi<any>> => {
+  }): Promise<RespuestaApi<EventoCompetencia[]>> => {
     const response = await clienteApi.get('/competition-events', {
       params
     });
@@ -825,7 +822,7 @@ export const serviciosEventosCompetencia = {
     return response.data;
   },
 
-  obtenerParticipantes: async (eventoId: number): Promise<RespuestaApi<any>> => {
+  obtenerParticipantes: async (eventoId: number): Promise<RespuestaApi<ParticipanteEvento[]>> => {
     const response = await clienteApi.get(
       '/competition-event-participants',
       {
@@ -838,14 +835,7 @@ export const serviciosEventosCompetencia = {
     return response.data;
   },
 
-  agregarParticipante: async (datos: {
-    competition_event_id: number;
-    championship_player_id: number;
-    championship_team_id?: number | null;
-    lane?: number | null;
-    start_order?: number | null;
-    status?: string;
-  }): Promise<RespuestaApi<any>> => {
+  agregarParticipante: async (datos: CrearParticipanteEvento): Promise<RespuestaApi<any>> => {
     const response = await clienteApi.post(
       '/competition-event-participants',
       datos
