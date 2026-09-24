@@ -209,3 +209,17 @@ export interface DatosGrupoEtapaEvento {
   venue_id: string;
   status: EventStatus;
 }
+
+export interface ParticipanteGrupoEvento {
+  id: number;
+  competition_event_group_id: number;
+  competition_event_participant_id: number;
+  lane: number | null;
+  start_order: number | null;
+}
+
+export interface CrearParticipanteGrupoEvento {
+  competition_event_participant_id: number;
+  lane: number | null;
+  start_order: number | null;
+}

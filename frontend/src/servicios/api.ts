@@ -8,6 +8,8 @@ import type {
   GuardarEtapaEvento,
   GrupoEtapaEvento,
   GuardarGrupoEtapaEvento,
+  ParticipanteGrupoEvento,
+  CrearParticipanteGrupoEvento,
 } from '../types/CompetitionEvent';
 
 // URL base para la API del backend
@@ -985,6 +987,54 @@ export const serviciosEventosCompetencia = {
   ): Promise<RespuestaApi<null>> => {
     const response = await clienteApi.delete(
       `/competition-event-groups/${grupoId}`
+    );
+
+    return response.data;
+  },
+
+  // Consultas api relacionadas a participantes de grupos y series
+  obtenerParticipantesGrupo: async (
+    grupoId: number
+  ): Promise<RespuestaApi<ParticipanteGrupoEvento[]>> => {
+    const response = await clienteApi.get(
+      `/competition-event-groups/${grupoId}/participants`
+    );
+
+    return response.data;
+  },
+
+  agregarParticipanteGrupo: async (
+    grupoId: number,
+    datos: CrearParticipanteGrupoEvento
+  ): Promise<RespuestaApi<ParticipanteGrupoEvento>> => {
+    const response = await clienteApi.post(
+      `/competition-event-groups/${grupoId}/participants`,
+      datos
+    );
+
+    return response.data;
+  },
+
+  actualizarParticipanteGrupo: async (
+    participanteGrupoId: number,
+    datos: {
+      lane: number | null;
+      start_order: number | null;
+    }
+  ): Promise<RespuestaApi<ParticipanteGrupoEvento>> => {
+    const response = await clienteApi.put(
+      `/competition-event-group-participants/${participanteGrupoId}`,
+      datos
+    );
+
+    return response.data;
+  },
+
+  eliminarParticipanteGrupo: async (
+    participanteGrupoId: number
+  ): Promise<RespuestaApi<null>> => {
+    const response = await clienteApi.delete(
+      `/competition-event-group-participants/${participanteGrupoId}`
     );
 
     return response.data;
