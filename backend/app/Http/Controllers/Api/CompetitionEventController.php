@@ -7,6 +7,9 @@ use App\Models\CompetitionEvent;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Events\CompetitionEventUpdated;
+use App\Services\CompetitionEventLifecycleService;
+use App\Services\CompetitionEventStandingService;
+use RuntimeException;
 
 class CompetitionEventController extends Controller
 {
@@ -21,10 +24,19 @@ class CompetitionEventController extends Controller
             'venue',
         ]);
 
-        if ($request->filled('championship_discipline_id')) {
-            $query->where(
-                'championship_discipline_id',
-                $request->championship_discipline_id
+        if ($request->filled('championship_id')) {
+            $championshipId = $request->integer(
+                'championship_id'
+            );
+
+            $query->whereHas(
+                'championshipDiscipline',
+                function ($q) use ($championshipId) {
+                    $q->where(
+                        'championship_id',
+                        $championshipId
+                    );
+                }
             );
         }
 
@@ -35,12 +47,17 @@ class CompetitionEventController extends Controller
             );
         }
 
-        if ($request->filled('date')) {
-            $query->whereDate('date', $request->date);
+        // Filtrar por disciplina de campeonato a través de la relación championshipDiscipline
+        if ($request->filled('discipline_id')) {
+            $disciplineId = $request->integer('discipline_id');
+
+            $query->whereHas('championshipDiscipline', function ($q) use ($disciplineId) {
+                $q->where('discipline_id', $disciplineId);
+            });
         }
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $query->where('status', $request->query('status'));
         }
 
         $events = $query
@@ -115,6 +132,11 @@ class CompetitionEventController extends Controller
                     'cancelado',
                 ]),
             ],
+
+            'participation_type' => [
+                'required',
+                'in:individual,team',
+            ],
         ]);
 
         $event = CompetitionEvent::create($validated);
@@ -143,7 +165,14 @@ class CompetitionEventController extends Controller
             'venue',
             'participants.championshipPlayer',
             'participants.championshipTeam',
-            'participants.result.attempts',
+            'participants.members.championshipPlayer',
+
+            'stages.groups.venue',
+
+            'stages.groups.participants.participant.championshipPlayer',
+            'stages.groups.participants.participant.championshipTeam',
+            'stages.groups.participants.participant.members.championshipPlayer',
+            'stages.groups.participants.result.attempts.member.championshipPlayer',
         ]);
 
         return response()->json([
@@ -215,7 +244,25 @@ class CompetitionEventController extends Controller
                     'cancelado',
                 ]),
             ],
+
+            'participation_type' => [
+                'sometimes',
+                'in:individual,team',
+            ],
         ]);
+
+        if (
+            isset($validated['participation_type'])
+            && $validated['participation_type']
+                !== $competitionEvent->participation_type
+            && $competitionEvent->participants()->exists()
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' =>
+                    'No se puede cambiar el tipo de participación porque el evento ya tiene participantes.',
+            ], 422);
+        }
 
         $competitionEvent->update($validated);
 
@@ -252,41 +299,48 @@ class CompetitionEventController extends Controller
     }
 
 
-    public function standings(CompetitionEvent $competitionEvent)
+    public function standings(CompetitionEvent $competitionEvent, CompetitionEventStandingService $standingService)
     {
-        $competitionEvent->load([
-            'championshipDiscipline.discipline',
-            'category',
-            'venue',
-        ]);
-
-        $results = $competitionEvent
-            ->participants()
-            ->with([
-                'championshipPlayer',
-                'championshipTeam',
-                'result.attempts',
-            ])
-            ->whereHas('result', function ($query) {
-                $query
-                    ->whereNotNull('result_value')
-                    ->where('status', '!=', 'anulado');
-            })
-            ->get()
-            ->map(function ($participant) {
-                return $participant->result;
-            })
-            ->sortBy(function ($result) use ($competitionEvent) {
-                return $result->position ?? PHP_INT_MAX;
-            })
-            ->values();
+        $standings = $standingService
+            ->getStandings($competitionEvent);
 
         return response()->json([
             'success' => true,
             'data' => [
-                'event' => $competitionEvent,
-                'results' => $results,
+                'event' => [
+                    'id' => $competitionEvent->id,
+                    'name' => $competitionEvent->name,
+                    'event_type' =>
+                        $competitionEvent->event_type,
+                    'participation_type' =>
+                        $competitionEvent->participation_type,
+                    'status' =>
+                        $competitionEvent->status,
+                ],
+
+                'standings' => $standings,
             ],
         ]);
+    }
+
+    public function finish(
+        CompetitionEvent $competitionEvent,
+        CompetitionEventLifecycleService $service
+    ) {
+        try {
+            $event = $service->finishEvent($competitionEvent);
+
+            return response()->json([
+                'success' => true,
+                'message' =>
+                    'Evento finalizado correctamente.',
+                'data' => $event,
+            ]);
+        } catch (RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 }
