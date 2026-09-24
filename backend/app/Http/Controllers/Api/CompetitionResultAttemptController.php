@@ -5,30 +5,26 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CompetitionResult;
 use App\Models\CompetitionResultAttempt;
+use App\Services\CompetitionResultService;
+use App\Models\CompetitionEventParticipantMember;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class CompetitionResultAttemptController extends Controller
 {
+    public function __construct(
+        private CompetitionResultService $resultService
+    ) {}
     /**
      * Listar intentos.
      */
-    public function index(Request $request)
+    public function index(CompetitionResult $competitionResult)
     {
-        $query = CompetitionResultAttempt::with([
-            'result.participant.championshipPlayer',
-            'result.participant.event',
-        ]);
-
-        if ($request->filled('competition_result_id')) {
-            $query->where(
-                'competition_result_id',
-                $request->competition_result_id
-            );
-        }
-
-        $attempts = $query
-            ->orderBy('competition_result_id')
+        $attempts = $competitionResult
+            ->attempts()
+            ->with([
+                'member.championshipPlayer',
+            ])
             ->orderBy('attempt_number')
             ->get();
 
@@ -41,13 +37,20 @@ class CompetitionResultAttemptController extends Controller
     /**
      * Registrar intento.
      */
-    public function store(Request $request)
+    public function store(Request $request, CompetitionResult $competitionResult)
     {
+        if ($competitionResult->status === 'oficializado') {
+            return response()->json([
+                'success' => false,
+                'message' =>
+                    'No se pueden agregar intentos a un resultado oficializado.',
+            ], 422);
+        }
+
         $validated = $request->validate([
-            'competition_result_id' => [
-                'required',
-                'integer',
-                'exists:competition_results,id',
+            'competition_event_participant_member_id' => [
+                'nullable',
+                'exists:competition_event_participant_members,id',
             ],
 
             'attempt_number' => [
@@ -62,63 +65,125 @@ class CompetitionResultAttemptController extends Controller
             ],
         ]);
 
-        $result = CompetitionResult::findOrFail(
-            $validated['competition_result_id']
-        );
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDAR MIEMBRO
+        |--------------------------------------------------------------------------
+        */
+        if (!empty(
+            $validated[
+                'competition_event_participant_member_id'
+            ]
+        )) {
+            $member =
+                CompetitionEventParticipantMember::findOrFail(
+                    $validated[
+                        'competition_event_participant_member_id'
+                    ]
+                );
 
-        if ($result->status === 'oficializado') {
-            throw ValidationException::withMessages([
-                'competition_result_id' =>
-                    'No se pueden agregar intentos a un resultado oficializado.',
-            ]);
+            $eventParticipantId =
+                $competitionResult
+                    ->groupParticipant
+                    ->competition_event_participant_id;
+
+            if (
+                $member->competition_event_participant_id
+                !== $eventParticipantId
+            ) {
+                return response()->json([
+                    'success' => false,
+                    'message' =>
+                        'El miembro no pertenece al participante de este resultado.',
+                ], 422);
+            }
         }
 
-        $alreadyExists = CompetitionResultAttempt::where(
+        /*
+        |--------------------------------------------------------------------------
+        | EVITAR INTENTO DUPLICADO
+        |--------------------------------------------------------------------------
+        */
+        $query = CompetitionResultAttempt::where(
             'competition_result_id',
-            $validated['competition_result_id']
+            $competitionResult->id
         )
             ->where(
                 'attempt_number',
                 $validated['attempt_number']
-            )
-            ->exists();
+            );
 
-        if ($alreadyExists) {
-            throw ValidationException::withMessages([
-                'attempt_number' =>
-                    'El número de intento ya existe para este resultado.',
-            ]);
+        if (
+            !empty(
+                $validated[
+                    'competition_event_participant_member_id'
+                ]
+            )
+        ) {
+            $query->where(
+                'competition_event_participant_member_id',
+                $validated[
+                    'competition_event_participant_member_id'
+                ]
+            );
+        } else {
+            $query->whereNull(
+                'competition_event_participant_member_id'
+            );
         }
 
-        $attempt = CompetitionResultAttempt::create($validated);
+        if ($query->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' =>
+                    'Ese número de intento ya fue registrado.',
+            ], 422);
+        }
 
-        $attempt->load([
-            'result.participant.championshipPlayer',
-            'result.participant.event',
-        ]);
+        $attempt = $competitionResult
+            ->attempts()
+            ->create([
+                'competition_event_participant_member_id' =>
+                    $validated[
+                        'competition_event_participant_member_id'
+                    ] ?? null,
+
+                'attempt_number' =>
+                    $validated['attempt_number'],
+
+                'value' =>
+                    $validated['value'] ?? null,
+            ]);
+        
+        $this->resultService->syncResult($competitionResult);
+
+        $attempt->load(
+            'member.championshipPlayer'
+        );
 
         return response()->json([
             'success' => true,
-            'message' => 'Intento registrado correctamente.',
+            'message' =>
+                'Intento registrado correctamente.',
             'data' => $attempt,
         ], 201);
+
     }
 
     /**
      * Mostrar intento.
      */
     public function show(
-        CompetitionResultAttempt $competitionResultAttempt
+        CompetitionResultAttempt $attempt
     ) {
-        $competitionResultAttempt->load([
-            'result.participant.championshipPlayer',
-            'result.participant.championshipTeam',
-            'result.participant.event',
+        $attempt->load([
+            'result.groupParticipant.group.stage.event',
+            'member.championshipPlayer',
         ]);
 
         return response()->json([
             'success' => true,
-            'data' => $competitionResultAttempt,
+            'data' => $attempt,
         ]);
     }
 
@@ -127,24 +192,19 @@ class CompetitionResultAttemptController extends Controller
      */
     public function update(
         Request $request,
-        CompetitionResultAttempt $competitionResultAttempt
+        CompetitionResultAttempt $attempt
     ) {
-        if (
-            $competitionResultAttempt->result->status === 'oficializado'
-        ) {
-            throw ValidationException::withMessages([
-                'result' =>
+        $attempt->load('result');
+
+        if ($attempt->result->status === 'oficializado') {
+            return response()->json([
+                'success' => false,
+                'message' =>
                     'No se puede modificar un intento de un resultado oficializado.',
-            ]);
+            ], 422);
         }
 
         $validated = $request->validate([
-            'attempt_number' => [
-                'sometimes',
-                'integer',
-                'min:1',
-            ],
-
             'value' => [
                 'sometimes',
                 'nullable',
@@ -152,59 +212,38 @@ class CompetitionResultAttemptController extends Controller
             ],
         ]);
 
-        if (
-            isset($validated['attempt_number'])
-            && CompetitionResultAttempt::where(
-                'competition_result_id',
-                $competitionResultAttempt->competition_result_id
-            )
-                ->where(
-                    'attempt_number',
-                    $validated['attempt_number']
-                )
-                ->where(
-                    'id',
-                    '!=',
-                    $competitionResultAttempt->id
-                )
-                ->exists()
-        ) {
-            throw ValidationException::withMessages([
-                'attempt_number' =>
-                    'El número de intento ya existe para este resultado.',
-            ]);
-        }
+        $attempt->update($validated);
 
-        $competitionResultAttempt->update($validated);
-
-        $competitionResultAttempt->load([
-            'result.participant.championshipPlayer',
-            'result.participant.event',
-        ]);
+        $this->resultService->syncResult($attempt->result);
 
         return response()->json([
             'success' => true,
-            'message' => 'Intento actualizado correctamente.',
-            'data' => $competitionResultAttempt,
+            'message' =>
+                'Intento actualizado correctamente.',
+            'data' => $attempt,
         ]);
+
     }
 
     /**
      * Eliminar intento.
      */
     public function destroy(
-        CompetitionResultAttempt $competitionResultAttempt
+        CompetitionResultAttempt $attempt
     ) {
-        if (
-            $competitionResultAttempt->result->status === 'oficializado'
-        ) {
-            throw ValidationException::withMessages([
-                'result' =>
+        $attempt->load('result');
+
+        if ($attempt->result->status === 'oficializado') {
+            return response()->json([
+                'success' => false,
+                'message' =>
                     'No se puede eliminar un intento de un resultado oficializado.',
-            ]);
+            ], 422);
         }
 
-        $competitionResultAttempt->delete();
+        $attempt->delete();
+
+        $this->resultService->syncResult($attempt->result);
 
         return response()->json([
             'success' => true,

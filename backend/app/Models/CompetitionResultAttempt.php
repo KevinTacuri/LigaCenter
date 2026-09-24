@@ -12,6 +12,7 @@ class CompetitionResultAttempt extends Model
 
     protected $fillable = [
         'competition_result_id',
+        'competition_event_participant_member_id',
         'attempt_number',
         'value',
     ];
@@ -26,6 +27,14 @@ class CompetitionResultAttempt extends Model
         return $this->belongsTo(
             CompetitionResult::class,
             'competition_result_id'
+        );
+    }
+
+    public function member(): BelongsTo
+    {
+        return $this->belongsTo(
+            CompetitionEventParticipantMember::class,
+            'competition_event_participant_member_id'
         );
     }
 }

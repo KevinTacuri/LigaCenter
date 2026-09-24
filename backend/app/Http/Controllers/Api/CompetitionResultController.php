@@ -3,53 +3,39 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\CompetitionEventParticipant;
+use App\Models\CompetitionEventGroupParticipant;
 use App\Models\CompetitionResult;
 use App\Services\CompetitionResultService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class CompetitionResultController extends Controller
 {
     public function __construct(
-        private CompetitionResultService $competitionResultService
+        private CompetitionResultService $resultService
     ) {
     }
 
     public function index(Request $request)
     {
-        $query = CompetitionResult::with([
-            'participant.championshipPlayer',
-            'participant.championshipTeam',
-            'participant.event',
-            'attempts',
+        $validated = $request->validate([
+            'competition_event_group_id' => [
+                'required',
+                'exists:competition_event_groups,id',
+            ],
         ]);
 
-        if ($request->filled('competition_event_id')) {
-            $query->whereHas('participant', function ($q) use ($request) {
-                $q->where(
-                    'competition_event_id',
-                    $request->competition_event_id
-                );
-            });
-        }
-
-        if ($request->filled('competition_event_participant_id')) {
-            $query->where(
-                'competition_event_participant_id',
-                $request->competition_event_participant_id
-            );
-        }
-
-        if ($request->filled('position')) {
-            $query->where(
-                'position',
-                $request->position
-            );
-        }
-
-        $results = $query
+        $results = CompetitionResult::with([
+            'groupParticipant.participant.championshipPlayer',
+            'groupParticipant.participant.championshipTeam',
+            'groupParticipant.participant.members.championshipPlayer',
+            'attempts.member.championshipPlayer',
+        ])
+            ->whereHas('groupParticipant', fn ($query) =>
+                $query->where(
+                    'competition_event_group_id',
+                    $validated['competition_event_group_id']
+                )
+            )
             ->orderBy('position')
             ->get();
 
@@ -62,10 +48,9 @@ class CompetitionResultController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'competition_event_participant_id' => [
+            'competition_event_group_participant_id' => [
                 'required',
-                'integer',
-                'exists:competition_event_participants,id',
+                'exists:competition_event_group_participants,id',
             ],
             'result_value' => [
                 'nullable',
@@ -83,43 +68,49 @@ class CompetitionResultController extends Controller
             ],
         ]);
 
-        $participant = CompetitionEventParticipant::with([
-            'event',
-            'result',
-        ])->findOrFail(
-            $validated['competition_event_participant_id']
+        $groupParticipant = CompetitionEventGroupParticipant::findOrFail(
+            $validated[
+                'competition_event_group_participant_id'
+            ]
         );
 
-        if ($participant->result) {
-            throw ValidationException::withMessages([
-                'competition_event_participant_id' =>
+        $exists = CompetitionResult::where(
+            'competition_event_group_participant_id',
+            $groupParticipant->id
+        )->exists();
+
+        if ($exists) {
+            return response()->json([
+                'success' => false,
+                'message' =>
                     'Este participante ya tiene un resultado registrado.',
-            ]);
+            ], 422);
         }
 
-        if ($participant->event->status === 'cancelado') {
-            throw ValidationException::withMessages([
-                'competition_event_participant_id' =>
-                    'No se puede registrar un resultado en un evento cancelado.',
-            ]);
-        }
+        $result = CompetitionResult::create([
+            'competition_event_group_participant_id' =>
+                $groupParticipant->id,
 
-        $result = DB::transaction(function () use (
-            $validated,
-            $participant
-        ) {
-            $result = CompetitionResult::create($validated);
+            'result_value' =>
+                $validated['result_value'] ?? null,
 
-            $this->competitionResultService
-                ->recalculatePositions($participant->event);
+            'result_unit' =>
+                $validated['result_unit'] ?? null,
 
-            return $result;
-        });
+            'position' => null,
+
+            'status' =>
+                $validated['status'] ?? 'registrado',
+        ]);
+
+        $this->resultService->recalculatePositions(
+            $groupParticipant->competition_event_group_id
+        );
 
         $result->load([
-            'participant.championshipPlayer',
-            'participant.championshipTeam',
-            'participant.event',
+            'groupParticipant.participant.championshipPlayer',
+            'groupParticipant.participant.championshipTeam',
+            'groupParticipant.participant.members.championshipPlayer',
             'attempts',
         ]);
 
@@ -133,11 +124,11 @@ class CompetitionResultController extends Controller
     public function show(CompetitionResult $competitionResult)
     {
         $competitionResult->load([
-            'participant.championshipPlayer',
-            'participant.championshipTeam',
-            'participant.event.championshipDiscipline.discipline',
-            'participant.event.category',
-            'attempts',
+            'groupParticipant.group.stage.event',
+            'groupParticipant.participant.championshipPlayer',
+            'groupParticipant.participant.championshipTeam',
+            'groupParticipant.participant.members.championshipPlayer',
+            'attempts.member.championshipPlayer',
         ]);
 
         return response()->json([
@@ -151,10 +142,11 @@ class CompetitionResultController extends Controller
         CompetitionResult $competitionResult
     ) {
         if ($competitionResult->status === 'oficializado') {
-            throw ValidationException::withMessages([
-                'result' =>
+            return response()->json([
+                'success' => false,
+                'message' =>
                     'No se puede modificar un resultado oficializado.',
-            ]);
+            ], 422);
         }
 
         $validated = $request->validate([
@@ -176,26 +168,19 @@ class CompetitionResultController extends Controller
             ],
         ]);
 
-        $event = $competitionResult
-            ->participant
-            ->event;
+        $competitionResult->update($validated);
 
-        DB::transaction(function () use (
-            $competitionResult,
-            $validated,
-            $event
-        ) {
-            $competitionResult->update($validated);
-
-            $this->competitionResultService
-                ->recalculatePositions($event);
-        });
+        $this->resultService->recalculatePositions(
+            $competitionResult
+                ->groupParticipant
+                ->competition_event_group_id
+        );
 
         $competitionResult->load([
-            'participant.championshipPlayer',
-            'participant.championshipTeam',
-            'participant.event',
-            'attempts',
+            'groupParticipant.participant.championshipPlayer',
+            'groupParticipant.participant.championshipTeam',
+            'groupParticipant.participant.members.championshipPlayer',
+            'attempts.member.championshipPlayer',
         ]);
 
         return response()->json([
@@ -208,25 +193,22 @@ class CompetitionResultController extends Controller
     public function destroy(CompetitionResult $competitionResult)
     {
         if ($competitionResult->status === 'oficializado') {
-            throw ValidationException::withMessages([
-                'result' =>
+            return response()->json([
+                'success' => false,
+                'message' =>
                     'No se puede eliminar un resultado oficializado.',
-            ]);
+            ], 422);
         }
 
-        $event = $competitionResult
-            ->participant
-            ->event;
+        $groupId = $competitionResult
+            ->groupParticipant
+            ->competition_event_group_id;
 
-        DB::transaction(function () use (
-            $competitionResult,
-            $event
-        ) {
-            $competitionResult->delete();
+        $competitionResult->delete();
 
-            $this->competitionResultService
-                ->recalculatePositions($event);
-        });
+        $this->resultService->recalculatePositions(
+            $groupId
+        );
 
         return response()->json([
             'success' => true,

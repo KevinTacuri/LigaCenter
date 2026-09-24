@@ -12,7 +12,7 @@ class CompetitionResult extends Model
     use HasFactory;
 
     protected $fillable = [
-        'competition_event_participant_id',
+        'competition_event_group_participant_id',
         'result_value',
         'result_unit',
         'position',
@@ -24,11 +24,11 @@ class CompetitionResult extends Model
         'position' => 'integer',
     ];
 
-    public function participant(): BelongsTo
+    public function groupParticipant(): BelongsTo
     {
         return $this->belongsTo(
-            CompetitionEventParticipant::class,
-            'competition_event_participant_id'
+            CompetitionEventGroupParticipant::class,
+            'competition_event_group_participant_id'
         );
     }
 
@@ -36,6 +36,6 @@ class CompetitionResult extends Model
     {
         return $this->hasMany(
             CompetitionResultAttempt::class
-        );
+        )->orderBy('attempt_number');
     }
 }

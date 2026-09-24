@@ -2,72 +2,178 @@
 
 namespace App\Services;
 
-use App\Events\CompetitionEventStandingsUpdated;
-use App\Models\CompetitionEvent;
 use App\Models\CompetitionResult;
 use Illuminate\Support\Collection;
 
 class CompetitionResultService
 {
     public function recalculatePositions(
-        CompetitionEvent $event
-    ): Collection {
-        $results = CompetitionResult::with([
-            'participant',
-        ])
-            ->whereHas('participant', function ($query) use ($event) {
-                $query->where(
-                    'competition_event_id',
-                    $event->id
-                );
-            })
-            ->whereNotNull('result_value')
-            ->where('status', '!=', 'anulado')
+        int $groupId
+    ): void {
+        $results = CompetitionResult::query()
+            ->with([
+                'groupParticipant.group.stage.event',
+            ])
+            ->whereHas(
+                'groupParticipant',
+                function ($query) use ($groupId) {
+                    $query->where(
+                        'competition_event_group_id',
+                        $groupId
+                    );
+                }
+            )
             ->get();
 
-        $results = $this->sortResults(
-            $results,
-            $event->event_type
-        );
+        if ($results->isEmpty()) {
+            return;
+        }
 
+        $eventType = $results
+            ->first()
+            ->groupParticipant
+            ->group
+            ->stage
+            ->event
+            ->event_type;
+
+        /*
+        |--------------------------------------------------------------------------
+        | QUITAR POSICIÓN A RESULTADOS NO VÁLIDOS
+        |--------------------------------------------------------------------------
+        */
+        foreach ($results as $result) {
+            if (
+                $result->result_value === null
+                || $result->status === 'anulado'
+            ) {
+                $result->updateQuietly([
+                    'position' => null,
+                ]);
+            }
+        }
+
+        $validResults = $results
+            ->filter(
+                fn ($result) =>
+                    $result->result_value !== null
+                    && $result->status !== 'anulado'
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | ORDEN
+        |--------------------------------------------------------------------------
+        */
+        if ($eventType === 'carrera') {
+            // menor tiempo gana
+            $validResults = $validResults
+                ->sortBy('result_value');
+        } else {
+            // mayor distancia / puntaje gana
+            $validResults = $validResults
+                ->sortByDesc('result_value');
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | POSICIONES
+        |--------------------------------------------------------------------------
+        */
         $position = 1;
 
-        foreach ($results as $result) {
-            $result->update([
+        foreach ($validResults as $result) {
+            $result->updateQuietly([
                 'position' => $position,
             ]);
 
             $position++;
         }
-
-        event(
-            new CompetitionEventStandingsUpdated(
-                $event->fresh(),
-                'updated'
-            )
-        );
-
-        return $results;
     }
 
-    private function sortResults(
-        Collection $results,
-        string $eventType
-    ): Collection {
-        return match ($eventType) {
-            'carrera' => $results
-                ->sortBy('result_value')
-                ->values(),
+    public function syncResult(
+        CompetitionResult $result
+    ): void {
+        $result->loadMissing([
+            'groupParticipant.group.stage.event',
+            'attempts',
+        ]);
 
-            'salto',
-            'lanzamiento',
-            'puntaje' => $results
-                ->sortByDesc('result_value')
-                ->values(),
+        $this->recalculateResultValue($result);
 
-            default => $results
-                ->sortBy('result_value')
-                ->values(),
-        };
+        $this->recalculatePositions(
+            $result
+                ->groupParticipant
+                ->competition_event_group_id
+        );
+    }
+    
+    public function recalculateResultValue(
+        CompetitionResult $result
+    ): void {
+        $eventType = $result
+            ->groupParticipant
+            ->group
+            ->stage
+            ->event
+            ->event_type;
+
+        /*
+        |--------------------------------------------------------------------------
+        | CARRERA
+        |--------------------------------------------------------------------------
+        | El tiempo se registra directamente en result_value.
+        */
+        if ($eventType === 'carrera') {
+            return;
+        }
+
+        $values = $result
+            ->attempts
+            ->whereNotNull('value')
+            ->pluck('value');
+
+        if ($values->isEmpty()) {
+            $result->updateQuietly([
+                'result_value' => null,
+            ]);
+
+            return;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | SALTO / LANZAMIENTO
+        |--------------------------------------------------------------------------
+        | Se toma el mejor intento.
+        */
+        if (
+            $eventType === 'salto'
+            || $eventType === 'lanzamiento'
+        ) {
+            $result->updateQuietly([
+                'result_value' => $values->max(),
+            ]);
+
+            return;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | PUNTAJE
+        |--------------------------------------------------------------------------
+        | Se suman todos los intentos.
+        |
+        | Individual:
+        | Juan = 20 + 50 + 30
+        |
+        | Equipo:
+        | Juan + Pedro + Carlos = total del equipo
+        */
+        if ($eventType === 'puntaje') {
+            $result->updateQuietly([
+                'result_value' => $values->sum(),
+            ]);
+        }
     }
 }
