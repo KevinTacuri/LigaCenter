@@ -119,28 +119,6 @@ class CompetitionEventGroupParticipantController extends Controller
                 $validated['start_order'] ?? null,
         ]);
 
-        $alreadyAssignedInStage =
-            CompetitionEventGroupParticipant::where(
-                'competition_event_participant_id',
-                $participant->id
-            )
-                ->whereHas(
-                    'group',
-                    fn ($query) => $query->where(
-                        'competition_event_stage_id',
-                        $group->competition_event_stage_id
-                    )
-                )
-                ->exists();
-
-        if ($alreadyAssignedInStage) {
-            return response()->json([
-                'success' => false,
-                'message' =>
-                    'El participante ya está asignado a una serie o grupo de esta etapa.',
-            ], 422);
-        }
-
         return response()->json([
             'success' => true,
             'message' =>
