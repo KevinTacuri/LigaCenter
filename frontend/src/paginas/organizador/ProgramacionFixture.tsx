@@ -16,8 +16,22 @@ import type {
   Partido,
   Disciplina,
   Categoria,
-  Jugador
+  Jugador,
+  Equipo,
 } from '../../servicios/api';
+
+import FormularioEvento from '../../componentes/programacion/eventos/FormularioEvento';
+import ListaParticipantesEvento from '../../componentes/programacion/eventos/ListaParticipantesEvento';
+import ModalParticipantesEvento from '../../componentes/programacion/eventos/ModalParticipantesEvento';
+import ListaEventos from '../../componentes/programacion/eventos/ListaEventos';
+import ModalEditarEvento from '../../componentes/programacion/eventos/ModalEditarEvento';
+
+import type {
+  DatosEvento,
+  DatosEdicionEvento,
+  EventoCompetencia,
+  ParticipanteEvento,
+} from '../../types/CompetitionEvent';
 
 type TabType = 'escenarios' | 'generar' | 'programar' | 'partidos' | 'eventos';
 
@@ -91,46 +105,40 @@ export const ProgramacionFixture: React.FC = () => {
   const [generarMode, setGenerarMode] =
   useState<GenerarMode>('fixture');
 
-  // type event_type
-  type EventType = 'carrera' | 'salto' | 'lanzamiento' | 'puntaje';
-
   // Datos para generar eventos
-  const [datosEvento, setDatosEvento] = useState({
+  const [datosEvento, setDatosEvento] = useState<DatosEvento>({
     discipline_id: '',
     category_id: '',
     name: '',
-    event_type: 'carrera' as EventType,
+    event_type: 'carrera',
+    participation_type: 'individual',
     date: '',
     start_time: '',
     venue_id: '',
   });
 
   // Eventos de competencia (para disciplinas de atletismo, natación, etc.)
-  const [eventosCompetencia, setEventosCompetencia] = useState<any[]>([]);
+  const [eventosCompetencia, setEventosCompetencia] = useState<EventoCompetencia[]>([]);
 
   // estados
-  const [eventoGestionado, setEventoGestionado] = useState<any | null>(null);
-  const [participantesEvento, setParticipantesEvento] = useState<any[]>([]);
+  const [eventoGestionado, setEventoGestionado] = useState<EventoCompetencia | null>(null);
+  const [participantesEvento, setParticipantesEvento] = useState<ParticipanteEvento[]>([]);
   const [cargandoParticipantes, setCargandoParticipantes] = useState(false);
 
   // estados para editar eventos
-  const [eventoEditando, setEventoEditando] = useState<any | null>(null);
+  const [eventoEditando, setEventoEditando] = useState<EventoCompetencia | null>(null);
 
-  const [datosEdicionEvento, setDatosEdicionEvento] = useState({
+  const [datosEdicionEvento, setDatosEdicionEvento] = useState<DatosEdicionEvento>({
     name: '',
-    event_type: 'carrera' as EventType,
+    event_type: 'carrera',
     date: '',
     start_time: '',
     venue_id: '',
-    status: 'programado' as
-      | 'programado'
-      | 'en_curso'
-      | 'finalizado'
-      | 'cancelado',
+    status: 'programado',
   });
 
   // Abrir modal de edición de evento
-  const abrirEdicionEvento = (evento: any) => {
+  const abrirEdicionEvento = (evento: EventoCompetencia) => {
     setEventoEditando(evento);
 
     setDatosEdicionEvento({
@@ -216,100 +224,136 @@ export const ProgramacionFixture: React.FC = () => {
 
   // estados para agregar participantes a un evento
   const [modalParticipante, setModalParticipante] = useState(false);
+  const [jugadoresDisponibles, setJugadoresDisponibles] =
+    useState<Jugador[]>([]);
+  const [equiposDisponibles, setEquiposDisponibles] =
+    useState<Equipo[]>([]);
+  const [busquedaParticipante, setBusquedaParticipante] =
+    useState('');
 
-  const [jugadoresDisponibles, setJugadoresDisponibles] = useState<any[]>([]);
-  const [busquedaJugador, setBusquedaJugador] = useState('');
-  const [cargandoJugadores, setCargandoJugadores] = useState(false);
+  const [
+    participantesSeleccionados,
+    setParticipantesSeleccionados,
+  ] = useState<number[]>([]);
 
-  // estados para editar participantes de un evento
-  const [participanteEditando, setParticipanteEditando] =
-  useState<number | null>(null);
+  const [
+    cargandoOpcionesParticipantes,
+    setCargandoOpcionesParticipantes,
+  ] = useState(false);
 
-  const [datosEdicionParticipante, setDatosEdicionParticipante] = useState({
-    lane: '',
-    start_order: '',
-  });
-
-  const [jugadoresSeleccionados, setJugadoresSeleccionados] =
-  useState<number[]>([]);
-
-  const iniciarEdicionParticipante = (participante: any) => {
-    setParticipanteEditando(participante.id);
-
-    setDatosEdicionParticipante({
-      lane:
-        participante.lane !== null &&
-        participante.lane !== undefined
-          ? participante.lane.toString()
-          : '',
-
-      start_order:
-        participante.start_order !== null &&
-        participante.start_order !== undefined
-          ? participante.start_order.toString()
-          : '',
-    });
-  };
-
-  const guardarEdicionParticipante = async (
-    participanteId: number
-  ) => {
-    if (!eventoGestionado) return;
-
-    try {
-      const res =
-        await serviciosEventosCompetencia.actualizarParticipante(
-          participanteId,
-          {
-            lane: datosEdicionParticipante.lane
-              ? parseInt(datosEdicionParticipante.lane)
-              : null,
-
-            start_order:
-              datosEdicionParticipante.start_order
-                ? parseInt(
-                    datosEdicionParticipante.start_order
-                  )
-                : null,
-          }
-        );
-
-      if (res.success) {
-        mostrarMensaje(
-          'Participante actualizado correctamente.'
-        );
-
-        setParticipanteEditando(null);
-
-        await gestionarEvento(eventoGestionado);
-      }
-    } catch (err: any) {
-      mostrarMensaje(
-        err.response?.data?.message ||
-          'Error al actualizar participante.',
-        true
-      );
-    }
-  };
-
-  const toggleJugadorEvento = (id: number) => {
-    setJugadoresSeleccionados((prev) =>
+  const toggleParticipanteEvento = (id: number) => {
+    setParticipantesSeleccionados((prev) =>
       prev.includes(id)
-        ? prev.filter((jugadorId) => jugadorId !== id)
+        ? prev.filter((participanteId) =>
+            participanteId !== id
+          )
         : [...prev, id]
     );
   };
 
-  const seleccionarTodosJugadores = () => {
+  const seleccionarTodosParticipantes = () => {
+    if (!eventoGestionado) return;
+
+    const opciones =
+      eventoGestionado.participation_type === 'team'
+        ? equiposDisponibles
+        : jugadoresDisponibles;
+
     if (
-      jugadoresSeleccionados.length ===
-      jugadoresDisponibles.length
+      participantesSeleccionados.length ===
+      opciones.length
     ) {
-      setJugadoresSeleccionados([]);
+      setParticipantesSeleccionados([]);
     } else {
-      setJugadoresSeleccionados(
-        jugadoresDisponibles.map((j) => j.id)
+      setParticipantesSeleccionados(
+        opciones.map((opcion) => opcion.id)
       );
+    }
+  };
+
+  const cargarOpcionesParticipantesEvento = async (
+    search: string = ''
+  ) => {
+    if (!eventoGestionado) return;
+
+    setCargandoOpcionesParticipantes(true);
+
+    try {
+      if (
+        eventoGestionado.participation_type ===
+        'individual'
+      ) {
+        const res =
+          await serviciosParticipantes
+            .obtenerJugadoresPorCampeonato({
+              category_id:
+                eventoGestionado.category_id,
+
+              available_for_event_id:
+                eventoGestionado.id,
+
+              search: search || undefined,
+              per_page: 50,
+            });
+
+        if (res.success) {
+          const data = res.data as {
+            players?: Jugador[];
+          };
+
+          setJugadoresDisponibles(
+            data.players ?? []
+          );
+
+          setEquiposDisponibles([]);
+        }
+      } else {
+        const res =
+          await serviciosParticipantes
+            .obtenerEquipos(
+              { category_id: eventoGestionado.category_id }
+            );
+
+        if (res.success) {
+          const equiposYaInscritos = new Set(
+            participantesEvento
+              .map(
+                (participante) =>
+                  participante.championship_team_id
+              )
+              .filter(
+                (id): id is number =>
+                  id !== null
+              )
+          );
+
+          const termino =
+            search.trim().toLowerCase();
+
+          const disponibles = res.data.teams.filter(
+            (equipo: Equipo) =>
+              !equiposYaInscritos.has(equipo.id) &&
+              (
+                !termino ||
+                equipo.name
+                  .toLowerCase()
+                  .includes(termino)
+              )
+          );
+
+          setEquiposDisponibles(disponibles);
+          setJugadoresDisponibles([]);
+        }
+      }
+    } catch {
+      mostrarMensaje(
+        eventoGestionado.participation_type === 'team'
+          ? 'Error al cargar los equipos.'
+          : 'Error al cargar los jugadores.',
+        true
+      );
+    } finally {
+      setCargandoOpcionesParticipantes(false);
     }
   };
 
@@ -320,38 +364,37 @@ export const ProgramacionFixture: React.FC = () => {
 
     if (!eventoGestionado) return;
 
-    if (jugadoresSeleccionados.length === 0) {
+    if (participantesSeleccionados.length === 0) {
       mostrarMensaje(
-        'Selecciona al menos un jugador.',
+        eventoGestionado.participation_type === 'team'
+          ? 'Selecciona al menos un equipo.'
+          : 'Selecciona al menos un jugador.',
         true
       );
+
       return;
     }
 
     try {
-      const jugadoresARegistrar =
-        jugadoresDisponibles.filter((jugador) =>
-          jugadoresSeleccionados.includes(jugador.id)
-        );
+      const esPorEquipos =
+        eventoGestionado.participation_type ===
+        'team';
 
       const respuestas = await Promise.all(
-        jugadoresARegistrar.map((jugador, index) =>
-          serviciosEventosCompetencia.agregarParticipante({
-            competition_event_id:
-              eventoGestionado.id,
+        participantesSeleccionados.map((id) =>
+          serviciosEventosCompetencia
+            .agregarParticipante({
+              competition_event_id:
+                eventoGestionado.id,
 
-            championship_player_id:
-              jugador.id,
+              championship_player_id:
+                esPorEquipos ? null : id,
 
-            championship_team_id:
-              jugador.team_id,
+              championship_team_id:
+                esPorEquipos ? id : null,
 
-            lane: null,
-
-            start_order: index + 1,
-
-            status: 'inscrito',
-          })
+              status: 'inscrito',
+            })
         )
       );
 
@@ -360,50 +403,23 @@ export const ProgramacionFixture: React.FC = () => {
       ).length;
 
       mostrarMensaje(
-        `${registrados} participante(s) agregados correctamente.`
+        `${registrados} ${
+          esPorEquipos
+            ? 'equipo(s)'
+            : 'participante(s)'
+        } agregados correctamente.`
       );
 
-      setJugadoresSeleccionados([]);
+      setParticipantesSeleccionados([]);
       setModalParticipante(false);
 
       await gestionarEvento(eventoGestionado);
-
     } catch (err: any) {
       mostrarMensaje(
         err.response?.data?.message ||
           'Error al agregar participantes.',
         true
       );
-    }
-  };
-
-  // Cargar jugadores disponibles para agregar a un evento
-  const cargarJugadoresEvento = async (search: string = '') => {
-    if (!eventoGestionado) return;
-
-    setCargandoJugadores(true);
-
-    try {
-      const res =
-        await serviciosParticipantes.obtenerJugadoresPorCampeonato({
-          category_id: eventoGestionado.category_id,
-          available_for_event_id: eventoGestionado.id,
-          search: search || undefined,
-          per_page: 50,
-        });
-
-      if (res.success) {
-        const data: any = res.data;
-        const lista = data.players ?? [];
-        setJugadoresDisponibles(lista);
-      }
-    } catch {
-      mostrarMensaje(
-        'Error al cargar los jugadores.',
-        true
-      );
-    } finally {
-      setCargandoJugadores(false);
     }
   };
 
@@ -418,6 +434,18 @@ export const ProgramacionFixture: React.FC = () => {
     } catch (err) {
       console.error('Error al cargar eventos:', err);
     }
+  };
+
+  const abrirModalParticipantes = () => {
+    setParticipantesSeleccionados([]);
+    setBusquedaParticipante('');
+
+    setJugadoresDisponibles([]);
+    setEquiposDisponibles([]);
+
+    setModalParticipante(true);
+
+    cargarOpcionesParticipantesEvento();
   };
 
   // Manejo de creación de eventos
@@ -446,6 +474,8 @@ export const ProgramacionFixture: React.FC = () => {
         name: datosEvento.name,
 
         event_type: datosEvento.event_type,
+        
+        participation_type: datosEvento.participation_type,
 
         date: datosEvento.date,
 
@@ -469,6 +499,7 @@ export const ProgramacionFixture: React.FC = () => {
           date: '',
           start_time: '',
           venue_id: '',
+          participation_type: 'individual',
         });
 
         cargarEventosCompetencia();
@@ -483,7 +514,7 @@ export const ProgramacionFixture: React.FC = () => {
   };
 
   // Manejo de gestión de eventos (ver participantes)
-  const gestionarEvento = async (evento: any) => {
+  const gestionarEvento = async (evento: EventoCompetencia) => {
     setEventoGestionado(evento);
     setCargandoParticipantes(true);
 
@@ -1349,200 +1380,15 @@ export const ProgramacionFixture: React.FC = () => {
               </div>
               )}
               {generarMode === 'eventos' && (
-                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs max-w-2xl mx-auto">
-                  <form
-                    onSubmit={manejarCrearEvento}
-                    className="space-y-5"
-                  >
-                    {/* Disciplina / Categoría */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 block">
-                          Disciplina *
-                        </label>
-
-                        <select
-                          required
-                          value={datosEvento.discipline_id}
-                          onChange={(e) =>
-                            setDatosEvento({
-                              ...datosEvento,
-                              discipline_id: e.target.value,
-                              category_id: '',
-                            })
-                          }
-                          className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
-                        >
-                          <option value="">Seleccionar Disciplina</option>
-
-                          {disciplinas.map((d) => (
-                            <option key={d.id} value={d.id}>
-                              {d.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 block">
-                          Categoría *
-                        </label>
-
-                        <select
-                          required
-                          value={datosEvento.category_id}
-                          onChange={(e) =>
-                            setDatosEvento({
-                              ...datosEvento,
-                              category_id: e.target.value,
-                            })
-                          }
-                          className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
-                        >
-                          <option value="">Seleccionar Categoría</option>
-
-                          {categorias
-                            .filter(
-                              (c) =>
-                                !datosEvento.discipline_id ||
-                                c.championship_discipline?.discipline_id ===
-                                  parseInt(datosEvento.discipline_id)
-                            )
-                            .map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.name}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Nombre / Tipo */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 block">
-                          Evento *
-                        </label>
-
-                        <input
-                          type="text"
-                          required
-                          placeholder="Ej: 100 metros planos"
-                          value={datosEvento.name}
-                          onChange={(e) =>
-                            setDatosEvento({
-                              ...datosEvento,
-                              name: e.target.value,
-                            })
-                          }
-                          className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 block">
-                          Tipo *
-                        </label>
-
-                        <select
-                          required
-                          value={datosEvento.event_type}
-                          onChange={(e) =>
-                            setDatosEvento({
-                              ...datosEvento,
-                              event_type: e.target.value as
-                                | 'carrera'
-                                | 'salto'
-                                | 'lanzamiento'
-                                | 'puntaje',
-                            })
-                          }
-                          className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
-                        >
-                          <option value="carrera">Carrera</option>
-                          <option value="salto">Salto</option>
-                          <option value="lanzamiento">Lanzamiento</option>
-                          <option value="puntaje">Puntaje</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Fecha / Hora */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 block">
-                          Fecha *
-                        </label>
-
-                        <input
-                          type="date"
-                          required
-                          value={datosEvento.date}
-                          onChange={(e) =>
-                            setDatosEvento({
-                              ...datosEvento,
-                              date: e.target.value,
-                            })
-                          }
-                          className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 block">
-                          Hora
-                        </label>
-
-                        <input
-                          type="time"
-                          value={datosEvento.start_time}
-                          onChange={(e) =>
-                            setDatosEvento({
-                              ...datosEvento,
-                              start_time: e.target.value,
-                            })
-                          }
-                          className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Escenario */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 block">
-                        Escenario
-                      </label>
-
-                      <select
-                        value={datosEvento.venue_id}
-                        onChange={(e) =>
-                          setDatosEvento({
-                            ...datosEvento,
-                            venue_id: e.target.value,
-                          })
-                        }
-                        className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
-                      >
-                        <option value="">Sin escenario</option>
-
-                        {escenarios.map((esc) => (
-                          <option key={esc.id} value={esc.id}>
-                            {esc.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-3 rounded-lg text-sm transition-all cursor-pointer"
-                    >
-                      Programar Evento
-                    </button>
-                  </form>
-                </div>
+                <FormularioEvento
+                  datosEvento={datosEvento}
+                  setDatosEvento={setDatosEvento}
+                  disciplinas={disciplinas}
+                  categorias={categorias}
+                  escenarios={escenarios}
+                  onSubmit={manejarCrearEvento}
+                 />
               )}
-
             </div>
 
           </div>
@@ -1791,130 +1637,13 @@ export const ProgramacionFixture: React.FC = () => {
         {tabActiva === 'eventos' && (
           <>
           {!eventoGestionado ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-
-              <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900 mb-4 border-b border-slate-100 pb-2">
-                Eventos Programados
-              </h2>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-                      <th className="p-3 pl-4">Evento</th>
-                      <th className="p-3">Disciplina</th>
-                      <th className="p-3">Categoría</th>
-                      <th className="p-3">Fecha</th>
-                      <th className="p-3">Escenario</th>
-                      <th className="p-3">Estado</th>
-                      <th className="p-3 pr-4 text-right">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-slate-100 text-sm">
-
-                    {eventosCompetencia.map((evento) => (
-                      <tr
-                        key={evento.id}
-                        className="hover:bg-slate-50/40"
-                      >
-                        <td className="p-3 pl-4">
-                          <div className="font-bold text-slate-900">
-                            {evento.name}
-                          </div>
-
-                          <div className="text-[10px] text-slate-400 uppercase font-bold">
-                            {evento.event_type}
-                          </div>
-                        </td>
-
-                        <td className="p-3 text-slate-600">
-                          {evento.championship_discipline
-                            ?.discipline?.name || '-'}
-                        </td>
-
-                        <td className="p-3 text-slate-600">
-                          {evento.category?.name || '-'}
-                        </td>
-
-                        <td className="p-3 text-slate-600 text-xs">
-                          {formatearFecha(evento.date)}
-                          {evento.start_time && (
-                            <>
-                              {' | '}
-                              {evento.start_time}
-                            </>
-                          )}
-                        </td>
-
-                        <td className="p-3 text-slate-600">
-                          {evento.venue?.name || 'Sin escenario'}
-                        </td>
-
-                        <td className="p-3">
-                          <span
-                            className={`inline-flex px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${
-                              evento.status === 'finalizado'
-                                ? 'bg-slate-100 text-slate-600 border-slate-200'
-                                : evento.status === 'en_curso'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                : evento.status === 'cancelado'
-                                ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                : 'bg-amber-50 text-amber-700 border-amber-200'
-                            }`}
-                          >
-                            {evento.status}
-                          </span>
-                        </td>
-
-                        <td className="p-3 pr-4 text-right space-x-3">
-                          <div className="flex justify-end gap-3">
-                            <button
-                              type="button"
-                              onClick={() => gestionarEvento(evento)}
-                              className="text-xs font-bold text-primary hover:underline cursor-pointer"
-                            >
-                              Gestionar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => abrirEdicionEvento(evento)}
-                              className="text-xs font-bold text-primary hover:underline cursor-pointer"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                eliminarEventoCompetencia(evento.id)
-                              }
-                              className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
-                            >
-                              Eliminar
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-
-                    {eventosCompetencia.length === 0 && (
-                      <tr>
-                        <td
-                          colSpan={7}
-                          className="p-10 text-center text-slate-500 text-xs"
-                        >
-                          No hay eventos programados.
-                        </td>
-                      </tr>
-                    )}
-
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <ListaEventos
+              eventos={eventosCompetencia}
+              onGestionar={gestionarEvento}
+              onEditar={abrirEdicionEvento}
+              onEliminar={eliminarEventoCompetencia}
+              formatearFecha={formatearFecha}
+            />
           ) : (
             <div className="space-y-5">
 
@@ -1976,214 +1705,14 @@ export const ProgramacionFixture: React.FC = () => {
               </div>
 
               {/* Participantes de Evento */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+              <ListaParticipantesEvento
+                evento={eventoGestionado}
+                participantes={participantesEvento}
+                cargando={cargandoParticipantes}
+                onAgregar={abrirModalParticipantes}
+                onQuitar={quitarParticipanteEvento}
+              />
 
-                <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-                  <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-900">
-                    Participantes
-                  </h3>
-
-                  <button
-                    type="button"
-                    className="bg-secondary hover:bg-secondary-container text-white font-bold px-4 py-2 rounded-lg text-xs transition-all cursor-pointer"
-                    onClick={() => {
-                      setModalParticipante(true);
-                      setJugadoresSeleccionados([]);
-                      setBusquedaJugador('');
-                      cargarJugadoresEvento();
-                    }}
-                  >
-                    Agregar participante
-                  </button>
-                </div>
-
-                {cargandoParticipantes ? (
-                  <div className="py-10 text-center text-xs text-slate-500">
-                    Cargando participantes...
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-
-                    <table className="w-full text-left border-collapse">
-
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-                          <th className="p-3 pl-4">
-                            Participante
-                          </th>
-
-                          <th className="p-3">
-                            Equipo
-                          </th>
-
-                          <th className="p-3">
-                            Carril
-                          </th>
-
-                          <th className="p-3">
-                            Orden
-                          </th>
-
-                          <th className="p-3">
-                            Estado
-                          </th>
-
-                          <th className="p-3 pr-4 text-right">
-                            Acciones
-                          </th>
-                        </tr>
-                      </thead>
-
-                      <tbody className="divide-y divide-slate-100 text-sm">
-
-                        {participantesEvento.map((participante) => (
-                          <tr
-                            key={participante.id}
-                            className="hover:bg-slate-50/40"
-                          >
-
-                            <td className="p-3 pl-4 font-bold text-slate-900">
-                              {participante
-                                  .championship_player
-                                  ?.name
-                                ??
-                                'Jugador'}
-                            </td>
-
-                            <td className="p-3 text-slate-600">
-                              {participante
-                                  .championship_team
-                                  ?.name
-                                ??
-                                '-'}
-                            </td>
-
-                            <td className="p-3 text-slate-600">
-                              {participanteEditando === participante.id ? (
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={datosEdicionParticipante.lane}
-                                  onChange={(e) =>
-                                    setDatosEdicionParticipante({
-                                      ...datosEdicionParticipante,
-                                      lane: e.target.value,
-                                    })
-                                  }
-                                  className="w-20 text-xs border border-slate-200 rounded-lg px-2 py-1.5 outline-hidden"
-                                />
-                              ) : (
-                                participante.lane ?? '-'
-                              )}
-                            </td>
-
-                            <td className="p-3 text-slate-600">
-                              {participanteEditando === participante.id ? (
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={
-                                    datosEdicionParticipante.start_order
-                                  }
-                                  onChange={(e) =>
-                                    setDatosEdicionParticipante({
-                                      ...datosEdicionParticipante,
-                                      start_order: e.target.value,
-                                    })
-                                  }
-                                  className="w-20 text-xs border border-slate-200 rounded-lg px-2 py-1.5 outline-hidden"
-                                />
-                              ) : (
-                                participante.start_order ?? '-'
-                              )}
-                            </td>
-
-                            <td className="p-3">
-                              <span className="inline-flex px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
-                                {participante.status}
-                              </span>
-                            </td>
-                            {/* Acciones participante evento */}
-                            <td className="p-3 pr-4 text-right">
-                              {participanteEditando === participante.id ? (
-                                <div className="flex justify-end gap-3">
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      guardarEdicionParticipante(
-                                        participante.id
-                                      )
-                                    }
-                                    className="text-xs font-bold text-primary hover:underline cursor-pointer"
-                                  >
-                                    Guardar
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setParticipanteEditando(null)
-                                    }
-                                    className="text-xs font-bold text-slate-500 hover:underline cursor-pointer"
-                                  >
-                                    Cancelar
-                                  </button>
-
-                                </div>
-                              ) : (
-                                <div className="flex justify-end gap-3">
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      iniciarEdicionParticipante(
-                                        participante
-                                      )
-                                    }
-                                    className="text-xs font-bold text-primary hover:underline cursor-pointer"
-                                  >
-                                    Editar
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      quitarParticipanteEvento(
-                                        participante.id
-                                      )
-                                    }
-                                    className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
-                                  >
-                                    Quitar
-                                  </button>
-
-                                </div>
-                              )}
-
-                            </td>
-
-                          </tr>
-                        ))}
-
-                        {participantesEvento.length === 0 && (
-                          <tr>
-                            <td
-                              colSpan={6}
-                              className="p-10 text-center text-slate-500 text-xs"
-                            >
-                              No hay participantes registrados.
-                            </td>
-                          </tr>
-                        )}
-
-                      </tbody>
-                    </table>
-
-                  </div>
-                )}
-
-              </div>
             </div>
           )}
           </>
@@ -2282,354 +1811,52 @@ export const ProgramacionFixture: React.FC = () => {
       )}
 
       {/* Modal agregar participante a evento */}
-      {modalParticipante && eventoGestionado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <ModalParticipantesEvento
+        abierto={modalParticipante}
+        evento={eventoGestionado}
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-lg">
+        jugadores={jugadoresDisponibles}
+        equipos={equiposDisponibles}
 
-            {/* Cabecera */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        seleccionados={participantesSeleccionados}
 
-              <div>
-                <h3 className="font-extrabold text-sm text-slate-900">
-                  Agregar participante
-                </h3>
+        busqueda={busquedaParticipante}
+        cargando={cargandoOpcionesParticipantes}
 
-                <p className="text-[10px] text-slate-500 mt-0.5">
-                  {eventoGestionado.name}
-                </p>
-              </div>
+        onCerrar={() =>
+          setModalParticipante(false)
+        }
 
-              <button
-                type="button"
-                onClick={() => setModalParticipante(false)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-sm">
-                  close
-                </span>
-              </button>
+        onCambiarBusqueda={
+          setBusquedaParticipante
+        }
 
-            </div>
+        onBuscar={() =>
+          cargarOpcionesParticipantesEvento(
+            busquedaParticipante
+          )
+        }
 
-            <form
-              onSubmit={agregarParticipantesEvento}
-              className="p-6 space-y-4"
-            >
+        onToggle={toggleParticipanteEvento}
 
-              {/* Buscar */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">
-                  Buscar jugador
-                </label>
+        onSeleccionarTodos={
+          seleccionarTodosParticipantes
+        }
 
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Nombre o DNI"
-                    value={busquedaJugador}
-                    onChange={(e) =>
-                      setBusquedaJugador(e.target.value)
-                    }
-                    className="flex-1 text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      cargarJugadoresEvento(busquedaJugador)
-                    }
-                    className="px-4 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 cursor-pointer"
-                  >
-                    Buscar
-                  </button>
-                </div>
-              </div>
-
-              {/* Jugador */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-700">
-                    Jugadores *
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={seleccionarTodosJugadores}
-                    className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
-                  >
-                    {jugadoresSeleccionados.length === jugadoresDisponibles.length
-                      ? 'Deseleccionar todos'
-                      : 'Seleccionar todos'}
-                  </button>
-                </div>
-
-                <div className="border border-slate-200 rounded-xl max-h-64 overflow-y-auto divide-y divide-slate-100">
-                  {jugadoresDisponibles.map((jugador) => {
-                    const seleccionado =
-                      jugadoresSeleccionados.includes(jugador.id);
-                      const nombre = jugador.name;
-                      const equipo =
-                        jugador.team?.name ??
-                        'Sin equipo';
-
-                      const documento =
-                        jugador.dni;
-
-                      const numero =
-                        jugador.number;
-
-                    return (
-                      <label
-                        key={jugador.id}
-                        className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${
-                          seleccionado
-                            ? 'bg-secondary/5'
-                            : 'hover:bg-slate-50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={seleccionado}
-                          onChange={() =>
-                            toggleJugadorEvento(jugador.id)
-                          }
-                          className="rounded border-slate-300 text-secondary focus:ring-secondary"
-                        />
-
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-bold text-slate-800">
-                            {nombre}
-                          </div>
-                          <div className="text-[10px] text-slate-500 mt-0.5">
-                            {equipo}
-
-                            {documento && (
-                              <>
-                                {' · '}
-                                DNI {documento}
-                              </>
-                            )}
-
-                            {numero && (
-                              <>
-                                {' · '}
-                                #{numero}
-                              </>
-                            )}
-                          </div>
-                          </div>
-                      </label>
-                    );
-                  })}
-
-                  {jugadoresDisponibles.length === 0 && (
-                    <div className="p-8 text-center text-xs text-slate-500">
-                      No hay jugadores disponibles.
-                    </div>
-                  )}
-                </div>
-
-                <div className="text-[10px] text-slate-500 font-semibold">
-                  {jugadoresSeleccionados.length} seleccionados
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={jugadoresSeleccionados.length === 0}
-                className="w-full bg-secondary hover:bg-secondary-container disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer"
-              >
-                Agregar participantes ({jugadoresSeleccionados.length})
-              </button>
-
-            </form>
-          </div>
-        </div>
-      )}
+        onSubmit={agregarParticipantesEvento}
+      />
 
       {/* Modal para editar un evento */}
-      {eventoEditando && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-lg">
-
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-
-              <h3 className="font-extrabold text-sm text-slate-900">
-                Editar evento
-              </h3>
-
-              <button
-                type="button"
-                onClick={() => setEventoEditando(null)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-sm">
-                  close
-                </span>
-              </button>
-
-            </div>
-
-            <form
-              onSubmit={guardarEdicionEvento}
-              className="p-6 space-y-4"
-            >
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">
-                  Nombre *
-                </label>
-
-                <input
-                  required
-                  type="text"
-                  value={datosEdicionEvento.name}
-                  onChange={(e) =>
-                    setDatosEdicionEvento({
-                      ...datosEdicionEvento,
-                      name: e.target.value,
-                    })
-                  }
-                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">
-                    Tipo
-                  </label>
-
-                  <select
-                    value={datosEdicionEvento.event_type}
-                    onChange={(e) =>
-                      setDatosEdicionEvento({
-                        ...datosEdicionEvento,
-                        event_type: e.target.value as any,
-                      })
-                    }
-                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer"
-                  >
-                    <option value="carrera">Carrera</option>
-                    <option value="salto">Salto</option>
-                    <option value="lanzamiento">
-                      Lanzamiento
-                    </option>
-                    <option value="puntaje">Puntaje</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">
-                    Estado
-                  </label>
-
-                  <select
-                    value={datosEdicionEvento.status}
-                    onChange={(e) =>
-                      setDatosEdicionEvento({
-                        ...datosEdicionEvento,
-                        status: e.target.value as any,
-                      })
-                    }
-                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer"
-                  >
-                    <option value="programado">
-                      Programado
-                    </option>
-                    <option value="en_curso">
-                      En curso
-                    </option>
-                    <option value="finalizado">
-                      Finalizado
-                    </option>
-                    <option value="cancelado">
-                      Cancelado
-                    </option>
-                  </select>
-                </div>
-
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">
-                    Fecha
-                  </label>
-
-                  <input
-                    type="date"
-                    value={datosEdicionEvento.date}
-                    onChange={(e) =>
-                      setDatosEdicionEvento({
-                        ...datosEdicionEvento,
-                        date: e.target.value,
-                      })
-                    }
-                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">
-                    Hora
-                  </label>
-
-                  <input
-                    type="time"
-                    value={datosEdicionEvento.start_time}
-                    onChange={(e) =>
-                      setDatosEdicionEvento({
-                        ...datosEdicionEvento,
-                        start_time: e.target.value,
-                      })
-                    }
-                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5"
-                  />
-                </div>
-
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">
-                  Escenario
-                </label>
-
-                <select
-                  value={datosEdicionEvento.venue_id}
-                  onChange={(e) =>
-                    setDatosEdicionEvento({
-                      ...datosEdicionEvento,
-                      venue_id: e.target.value,
-                    })
-                  }
-                  className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer"
-                >
-                  <option value="">Sin escenario</option>
-
-                  {escenarios.map((esc) => (
-                    <option key={esc.id} value={esc.id}>
-                      {esc.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer"
-              >
-                Guardar cambios
-              </button>
-
-            </form>
-          </div>
-        </div>
-      )}
+      <ModalEditarEvento
+        evento={eventoEditando}
+        datos={datosEdicionEvento}
+        setDatos={setDatosEdicionEvento}
+        escenarios={escenarios}
+        onCerrar={() =>
+          setEventoEditando(null)
+        }
+        onSubmit={guardarEdicionEvento}
+      />
 
       {/* Botón Flotante de Ayuda */}
       <button
