@@ -96,3 +96,43 @@ export type CrearParticipanteEvento = Omit<
   | 'championship_player'
   | 'championship_team'
 >;
+
+// 
+export type EventStageType =
+  | 'qualifying'
+  | 'semifinal'
+  | 'final'
+  | 'round';
+
+export type QualificationMethod =
+  | 'best_overall'
+  | 'all';
+
+export interface EtapaEvento {
+  id: number;
+  competition_event_id: number;
+  name: string;
+  stage_type: EventStageType;
+  stage_number: number;
+  qualifiers_count: number | null;
+  qualification_method: QualificationMethod | null;
+  status: EventStatus;
+}
+
+export interface GuardarEtapaEvento {
+  name: string;
+  stage_type: EventStageType;
+  stage_number: number;
+  qualifiers_count: number | null;
+  qualification_method: QualificationMethod | null;
+  status: EventStatus;
+}
+
+export interface DatosEtapaEvento {
+  name: string;
+  stage_type: EventStageType;
+  stage_number: string;
+  qualifiers_count: string;
+  qualification_method: QualificationMethod | '';
+  status: EventStatus;
+}

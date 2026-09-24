@@ -25,12 +25,17 @@ import ListaParticipantesEvento from '../../componentes/programacion/eventos/Lis
 import ModalParticipantesEvento from '../../componentes/programacion/eventos/ModalParticipantesEvento';
 import ListaEventos from '../../componentes/programacion/eventos/ListaEventos';
 import ModalEditarEvento from '../../componentes/programacion/eventos/ModalEditarEvento';
+import ListaEtapasEvento from '../../componentes/programacion/eventos/ListaEtapasEvento';
+import ModalEtapaEvento from '../../componentes/programacion/eventos/ModalEtapaEvento';
 
 import type {
   DatosEvento,
   DatosEdicionEvento,
   EventoCompetencia,
   ParticipanteEvento,
+  EtapaEvento,
+  DatosEtapaEvento,
+  GuardarEtapaEvento,
 } from '../../types/CompetitionEvent';
 
 type TabType = 'escenarios' | 'generar' | 'programar' | 'partidos' | 'eventos';
@@ -136,6 +141,212 @@ export const ProgramacionFixture: React.FC = () => {
     venue_id: '',
     status: 'programado',
   });
+
+  // estados para manejar etapas de un evento
+  const [etapasEvento, setEtapasEvento] =
+  useState<EtapaEvento[]>([]);
+
+  const [cargandoEtapas, setCargandoEtapas] =
+    useState(false);
+
+  const [modalEtapa, setModalEtapa] =
+    useState(false);
+
+  const [etapaEditando, setEtapaEditando] =
+    useState<EtapaEvento | null>(null);
+
+  const [datosEtapa, setDatosEtapa] =
+    useState<DatosEtapaEvento>({
+      name: '',
+      stage_type: 'qualifying',
+      stage_number: '1',
+      qualifiers_count: '',
+      qualification_method: '',
+      status: 'programado',
+    });
+
+  const cargarEtapasEvento = async (
+    eventoId: number
+  ) => {
+    setCargandoEtapas(true);
+
+    try {
+      const res =
+        await serviciosEventosCompetencia
+          .obtenerEtapas(eventoId);
+
+      if (res.success) {
+        setEtapasEvento(res.data);
+      }
+    } catch {
+      mostrarMensaje(
+        'Error al cargar las etapas del evento.',
+        true
+      );
+    } finally {
+      setCargandoEtapas(false);
+    }
+  };
+
+  const abrirNuevaEtapa = () => {
+    setEtapaEditando(null);
+
+    setDatosEtapa({
+      name: '',
+      stage_type: 'qualifying',
+
+      stage_number:
+        String(etapasEvento.length + 1),
+
+      qualifiers_count: '',
+
+      qualification_method: '',
+
+      status: 'programado',
+    });
+
+    setModalEtapa(true);
+  };
+
+  const abrirEdicionEtapa = (
+    etapa: EtapaEvento
+  ) => {
+    setEtapaEditando(etapa);
+
+    setDatosEtapa({
+      name: etapa.name,
+
+      stage_type:
+        etapa.stage_type,
+
+      stage_number:
+        etapa.stage_number.toString(),
+
+      qualifiers_count:
+        etapa.qualifiers_count
+          ?.toString() ?? '',
+
+      qualification_method:
+        etapa.qualification_method ?? '',
+
+      status:
+        etapa.status,
+    });
+
+    setModalEtapa(true);
+  };
+
+  const guardarEtapaEvento = async (
+    e: React.FormEvent
+  ) => {
+    e.preventDefault();
+
+    if (!eventoGestionado) {
+      return;
+    }
+
+    const payload: GuardarEtapaEvento = {
+      name: datosEtapa.name.trim(),
+
+      stage_type: datosEtapa.stage_type,
+
+      stage_number: parseInt(datosEtapa.stage_number),
+
+      qualifiers_count:
+        datosEtapa.qualifiers_count
+          ? parseInt(
+              datosEtapa.qualifiers_count
+            )
+          : null,
+
+      qualification_method:
+        datosEtapa.qualification_method || null,
+
+      status: datosEtapa.status,
+    };
+
+    try {
+      const res = etapaEditando
+        ? await serviciosEventosCompetencia
+            .actualizarEtapa(
+              etapaEditando.id,
+              payload
+            )
+        : await serviciosEventosCompetencia
+            .crearEtapa(
+              eventoGestionado.id,
+              payload
+            );
+
+      if (res.success) {
+        mostrarMensaje(
+          etapaEditando
+            ? 'Etapa actualizada correctamente.'
+            : 'Etapa creada correctamente.'
+        );
+
+        setModalEtapa(false);
+        setEtapaEditando(null);
+
+        await cargarEtapasEvento(
+          eventoGestionado.id
+        );
+      }
+    } catch (err: any) {
+      mostrarMensaje(
+        err.response?.data?.message ||
+          'Error al guardar la etapa.',
+        true
+      );
+    }
+  };
+
+  const eliminarEtapaEvento = async (
+    etapaId: number
+  ) => {
+    if (!eventoGestionado) return;
+
+    const confirmado = await confirm({
+      title: 'Eliminar etapa',
+
+      description:
+        '¿Está seguro de eliminar esta etapa?',
+
+      confirmText: 'Eliminar',
+
+      cancelText: 'Cancelar',
+
+      confirmButton: {
+        variant: 'destructive',
+      },
+    });
+
+    if (!confirmado) {
+      return;
+    }
+
+    try {
+      const res =
+        await serviciosEventosCompetencia
+          .eliminarEtapa(etapaId);
+
+      if (res.success) {
+        mostrarMensaje(
+          'Etapa eliminada correctamente.'
+        );
+
+        await cargarEtapasEvento(
+          eventoGestionado.id
+        );
+      }
+    } catch (err: any) {
+      mostrarMensaje(
+        err.response?.data?.message ||
+          'Error al eliminar la etapa.',
+        true
+      );
+    }
+  };
 
   // Abrir modal de edición de evento
   const abrirEdicionEvento = (evento: EventoCompetencia) => {
@@ -517,23 +728,34 @@ export const ProgramacionFixture: React.FC = () => {
   const gestionarEvento = async (evento: EventoCompetencia) => {
     setEventoGestionado(evento);
     setCargandoParticipantes(true);
+    setCargandoEtapas(true);
 
     try {
-      const res =
-        await serviciosEventosCompetencia.obtenerParticipantes(
-          evento.id
-        );
+      const [
+        resParticipantes,
+        resEtapas,
+      ] = await Promise.all([
+        serviciosEventosCompetencia.obtenerParticipantes(evento.id),
+        serviciosEventosCompetencia.obtenerEtapas(evento.id),
+      ])
 
-      if (res.success) {
-        setParticipantesEvento(res.data);
+      if (resParticipantes.success) {
+        setParticipantesEvento(
+          resParticipantes.data
+        );
+      }
+
+      if (resEtapas.success) {
+        setEtapasEvento(resEtapas.data);
       }
     } catch (err) {
       mostrarMensaje(
-        'Error al cargar los participantes del evento.',
+        'Error al cargar la información del evento',
         true
       );
     } finally {
       setCargandoParticipantes(false);
+      setCargandoEtapas(false);
     }
   };
 
@@ -1712,6 +1934,14 @@ export const ProgramacionFixture: React.FC = () => {
                 onAgregar={abrirModalParticipantes}
                 onQuitar={quitarParticipanteEvento}
               />
+              {/* Etapas de un evento */}
+              <ListaEtapasEvento
+                etapas={etapasEvento}
+                cargando={cargandoEtapas}
+                onAgregar={abrirNuevaEtapa}
+                onEditar={abrirEdicionEtapa}
+                onEliminar={eliminarEtapaEvento}
+              />
 
             </div>
           )}
@@ -1856,6 +2086,18 @@ export const ProgramacionFixture: React.FC = () => {
           setEventoEditando(null)
         }
         onSubmit={guardarEdicionEvento}
+      />
+
+      <ModalEtapaEvento
+        abierto={modalEtapa}
+        etapaEditando={etapaEditando}
+        datos={datosEtapa}
+        setDatos={setDatosEtapa}
+        onCerrar={() => {
+          setModalEtapa(false);
+          setEtapaEditando(null);
+        }}
+        onSubmit={guardarEtapaEvento}
       />
 
       {/* Botón Flotante de Ayuda */}

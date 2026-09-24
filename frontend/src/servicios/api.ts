@@ -4,6 +4,8 @@ import type {
   CrearParticipanteEvento,
   EventoCompetencia,
   ParticipanteEvento,
+  EtapaEvento,
+  GuardarEtapaEvento,
 } from '../types/CompetitionEvent';
 
 // URL base para la API del backend
@@ -892,6 +894,50 @@ export const serviciosEventosCompetencia = {
   eliminarEvento: async (id: number): Promise<RespuestaApi<any>> => {
     const response = await clienteApi.delete(
       `/competition-events/${id}`
+    );
+
+    return response.data;
+  },
+
+  obtenerEtapas: async (
+    eventoId: number
+  ): Promise<RespuestaApi<EtapaEvento[]>> => {
+    const response = await clienteApi.get(
+      `/competition-events/${eventoId}/stages`
+    );
+
+    return response.data;
+  },
+
+  crearEtapa: async (
+    eventoId: number,
+    datos: GuardarEtapaEvento
+  ): Promise<RespuestaApi<EtapaEvento>> => {
+    const response = await clienteApi.post(
+      `/competition-events/${eventoId}/stages`,
+      datos
+    );
+
+    return response.data;
+  },
+
+  actualizarEtapa: async (
+    etapaId: number,
+    datos: GuardarEtapaEvento
+  ): Promise<RespuestaApi<EtapaEvento>> => {
+    const response = await clienteApi.put(
+      `/competition-event-stages/${etapaId}`,
+      datos
+    );
+
+    return response.data;
+  },
+
+  eliminarEtapa: async (
+    etapaId: number
+  ): Promise<RespuestaApi<null>> => {
+    const response = await clienteApi.delete(
+      `/competition-event-stages/${etapaId}`
     );
 
     return response.data;
