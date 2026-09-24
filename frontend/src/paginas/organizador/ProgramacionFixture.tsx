@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { sileo } from 'sileo';
 import { useAutenticacion } from '../../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../../contexto/ContextoCampeonato';
 import { BarraLateral } from '../../componentes/BarraLateral';
 import { CabeceraEstandar } from '../../componentes/CabeceraEstandar';
+import { Paginador } from '../../componentes/Paginador';
+import { InsigniaEstado } from '../../componentes/InsigniaEstado';
+import { EstadoVacio } from '../../componentes/EstadoVacio';
 import { useConfirm } from '@omit/react-confirm-dialog';
 import {
   serviciosFixture,
@@ -113,6 +117,8 @@ export const ProgramacionFixture: React.FC = () => {
   const [filtroEquipoPartidos, setFiltroEquipoPartidos] = useState<number | null>(null);
   const [filtroEstadoPartidos, setFiltroEstadoPartidos] = useState<string>('todos');
   const [filtroCanchaPartidos, setFiltroCanchaPartidos] = useState<number | null>(null);
+  const [paginaPartidosProg, setPaginaPartidosProg] = useState<number>(1);
+  const itemsPorPaginaPartidos = 10;
 
   // Cambio entre ui para generar fixture (partidos como futbol, básquetbol, etc.) o eventos (natacion, atletismo, etc.)
   type GenerarMode = 'fixture' | 'eventos';
@@ -1311,7 +1317,14 @@ export const ProgramacionFixture: React.FC = () => {
     return `${day}/${month}/${year}`;
   };
 
-  // Estados de formularios
+  // Estados de formularios escenarios
+  const [modalCrearEsc, setModalCrearEsc] = useState(false);
+  const [guardandoEscenario, setGuardandoEscenario] = useState(false);
+  const [filtroTextoEsc, setFiltroTextoEsc] = useState('');
+  const [filtroTipoEsc, setFiltroTipoEsc] = useState('todos');
+  const [paginaEscenarios, setPaginaEscenarios] = useState(1);
+  const itemsPorPaginaEscenarios = 6;
+
   const [nuevoEsc, setNuevoEsc] = useState({ name: '', venue_type: 'cancha', location: '', capacity: '', status: 'active' });
   const [modalEditarEsc, setModalEditarEsc] = useState<{ abierto: boolean; id: number | null; name: string; venue_type: string; location: string; capacity: string; status: string; guardando: boolean }>({
     abierto: false, id: null, name: '', venue_type: 'cancha', location: '', capacity: '', status: 'active', guardando: false
@@ -1403,8 +1416,11 @@ export const ProgramacionFixture: React.FC = () => {
   const guardarEscenario = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevoEsc.name || !nuevoEsc.location || !nuevoEsc.venue_type) return;
+    setGuardandoEscenario(true);
     try {
+      const champId = campeonatoActivo?.id || parseInt(localStorage.getItem('campeonato_activo_id') || '1');
       const res = await serviciosFixture.crearEscenario({
+        championship_id: champId,
         name: nuevoEsc.name,
         venue_type: nuevoEsc.venue_type,
         location: nuevoEsc.location,
@@ -1414,10 +1430,13 @@ export const ProgramacionFixture: React.FC = () => {
       if (res.success) {
         mostrarMensaje('Escenario registrado con éxito.');
         setNuevoEsc({ name: '', venue_type: 'cancha', location: '', capacity: '', status: 'active' });
+        setModalCrearEsc(false);
         cargarDatos();
       }
     } catch (err) {
       mostrarMensaje('Error al crear escenario.', true);
+    } finally {
+      setGuardandoEscenario(false);
     }
   };
 
@@ -1754,6 +1773,19 @@ export const ProgramacionFixture: React.FC = () => {
     return coincideRonda && coincideEquipo && coincideEstado && coincideCancha;
   });
 
+  const totalPaginasPartidosProg = Math.max(1, Math.ceil(partidosFiltradosProg.length / itemsPorPaginaPartidos));
+  const partidosPaginadosProg = partidosFiltradosProg.slice((paginaPartidosProg - 1) * itemsPorPaginaPartidos, paginaPartidosProg * itemsPorPaginaPartidos);
+
+  const escenariosFiltrados = escenarios.filter(e => {
+    const coincideTexto = !filtroTextoEsc.trim() ||
+      e.name?.toLowerCase().includes(filtroTextoEsc.toLowerCase()) ||
+      e.location?.toLowerCase().includes(filtroTextoEsc.toLowerCase());
+    const coincideTipo = filtroTipoEsc === 'todos' || e.venue_type === filtroTipoEsc;
+    return coincideTexto && coincideTipo;
+  });
+  const totalPaginasEscenarios = Math.max(1, Math.ceil(escenariosFiltrados.length / itemsPorPaginaEscenarios));
+  const escenariosPaginados = escenariosFiltrados.slice((paginaEscenarios - 1) * itemsPorPaginaEscenarios, paginaEscenarios * itemsPorPaginaEscenarios);
+
   const hayFiltrosPartidosActivos = !!(filtroRondaPartidos || filtroEquipoPartidos || filtroEstadoPartidos !== 'todos' || filtroCanchaPartidos);
 
   const limpiarFiltrosPartidos = () => {
@@ -1761,6 +1793,7 @@ export const ProgramacionFixture: React.FC = () => {
     setFiltroEquipoPartidos(null);
     setFiltroEstadoPartidos('todos');
     setFiltroCanchaPartidos(null);
+    setPaginaPartidosProg(1);
   };
 
   return (
@@ -1857,83 +1890,73 @@ export const ProgramacionFixture: React.FC = () => {
 
         {/* Tab content logic */}
         {tabActiva === 'escenarios' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs h-fit">
-              <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900 mb-4 border-b border-slate-100 pb-2">Registrar Cancha/Escenario</h2>
-              <form onSubmit={guardarEscenario} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Nombre del Escenario *</label>
-                  <input
-                    type="text" required placeholder="Ej: Cancha Principal, Campo B"
-                    value={nuevoEsc.name} onChange={(e) => setNuevoEsc({ ...nuevoEsc, name: e.target.value })}
-                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
-                  />
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
+                <div>
+                  <h2 className="font-extrabold text-base uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-xl">stadium</span>
+                    Gestión de Escenarios Deportivos
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    Administra las canchas, estadios y coliseos disponibles para la programación de encuentros.
+                  </p>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Tipo *</label>
-                    <select
-                      required
-                      value={nuevoEsc.venue_type}
-                      onChange={(e) => setNuevoEsc({ ...nuevoEsc, venue_type: e.target.value })}
-                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
-                    >
-                      <option value="cancha">Cancha</option>
-                      <option value="estadio">Estadio</option>
-                      <option value="coliseo">Coliseo</option>
-                      <option value="gimnasio">Gimnasio</option>
-                      <option value="otro">Otro</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Capacidad</label>
+                <div className="flex items-center gap-3">
+                  <div className="relative">
                     <input
-                      type="number" placeholder="Ej: 50" min="0"
-                      value={nuevoEsc.capacity} onChange={(e) => setNuevoEsc({ ...nuevoEsc, capacity: e.target.value })}
-                      className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
+                      type="text"
+                      placeholder="Buscar escenario..."
+                      value={filtroTextoEsc}
+                      onChange={(e) => {
+                        setFiltroTextoEsc(e.target.value);
+                        setPaginaEscenarios(1);
+                      }}
+                      className="text-xs border border-slate-200 rounded-xl pl-8 pr-3 py-2 bg-slate-50 outline-none w-48 sm:w-64"
                     />
+                    <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                      search
+                    </span>
                   </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Ubicación *</label>
-                  <input
-                    type="text" required placeholder="Ej: Complejo Deportivo Norte"
-                    value={nuevoEsc.location} onChange={(e) => setNuevoEsc({ ...nuevoEsc, location: e.target.value })}
-                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Estado *</label>
-                  <select
-                    value={nuevoEsc.status} onChange={(e) => setNuevoEsc({ ...nuevoEsc, status: e.target.value })}
-                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer"
+                  <button
+                    type="button"
+                    onClick={() => setModalCrearEsc(true)}
+                    className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:opacity-95 shadow-md shadow-primary/20 transition-all flex items-center gap-2 cursor-pointer shrink-0"
                   >
-                    <option value="active">Disponible / Activo</option>
-                    <option value="inactive">No Disponible</option>
-                  </select>
+                    <span className="material-symbols-outlined text-sm">add_circle</span>
+                    <span>Registrar Escenario</span>
+                  </button>
                 </div>
-                <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-2.5 rounded-lg text-xs transition-all cursor-pointer">
-                  Guardar Escenario
-                </button>
-              </form>
-            </div>
-            
-            <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-              <h2 className="font-extrabold text-sm uppercase tracking-wider text-slate-900 mb-4 border-b border-slate-100 pb-2">Lista de Escenarios</h2>
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-                      <th className="p-3 pl-4">Nombre Escenario</th>
+                      <th className="p-3 pl-4">Escenario</th>
+                      <th className="p-3">Tipo</th>
                       <th className="p-3">Ubicación</th>
+                      <th className="p-3">Capacidad</th>
+                      <th className="p-3">Estado</th>
                       <th className="p-3 pr-4 text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-sm">
-                    {escenarios.map((esc) => (
-                      <tr key={esc.id} className="hover:bg-slate-50/40">
+                    {escenariosPaginados.map((esc) => (
+                      <tr key={esc.id} className="hover:bg-slate-50/40 transition-colors">
                         <td className="p-3 pl-4 font-bold text-slate-900">{esc.name}</td>
-                        <td className="p-3 text-slate-600">{esc.location || 'No especificada'}</td>
+                        <td className="p-3 text-slate-600 text-xs capitalize">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold border border-slate-200">
+                            {esc.venue_type || 'Cancha'}
+                          </span>
+                        </td>
+                        <td className="p-3 text-slate-600 text-xs">{esc.location || 'No especificada'}</td>
+                        <td className="p-3 text-slate-600 text-xs font-semibold">
+                          {esc.capacity ? `${esc.capacity} personas` : 'Sin aforo especificado'}
+                        </td>
+                        <td className="p-3">
+                          <InsigniaEstado estado={esc.is_available ? 'activo' : 'inactivo'} tipo="general" />
+                        </td>
                         <td className="p-3 pr-4 text-right space-x-3">
                           <button onClick={() => abrirModalEditarEsc(esc)} className="text-xs font-bold text-primary hover:underline cursor-pointer">Editar</button>
                           <button onClick={() => eliminarEscenario(esc.id)} className="text-xs font-bold text-rose-600 hover:underline cursor-pointer">Eliminar</button>
@@ -1942,12 +1965,39 @@ export const ProgramacionFixture: React.FC = () => {
                     ))}
                     {escenarios.length === 0 && (
                       <tr>
-                        <td colSpan={3} className="p-10 text-center text-slate-500 text-xs">No hay escenarios registrados.</td>
+                        <td colSpan={6} className="p-4 text-center">
+                          <EstadoVacio
+                            icono="stadium"
+                            titulo="No hay escenarios registrados"
+                            descripcion="Registra las canchas o estadios donde se jugarán los partidos del campeonato."
+                            textoBoton="Registrar Primer Escenario"
+                            onAccion={() => setModalCrearEsc(true)}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                    {escenarios.length > 0 && escenariosFiltrados.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="p-4 text-center">
+                          <EstadoVacio
+                            icono="search_off"
+                            titulo="Sin resultados para la búsqueda"
+                            descripcion="No se encontraron escenarios que coincidan con el término ingresado."
+                          />
+                        </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
+
+              <Paginador
+                paginaActual={paginaEscenarios}
+                totalPaginas={totalPaginasEscenarios}
+                totalRegistros={escenariosFiltrados.length}
+                onCambiarPagina={setPaginaEscenarios}
+                etiqueta="escenarios"
+              />
             </div>
           </div>
         )}
@@ -2311,7 +2361,7 @@ export const ProgramacionFixture: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
-                  {partidosFiltradosProg.map((part) => (
+                  {partidosPaginadosProg.map((part) => (
                     <tr key={part.id} className="hover:bg-slate-50/40">
                       <td className="p-3 pl-4 font-bold text-slate-700">Fecha {part.round}</td>
                       <td className="p-3">
@@ -2326,11 +2376,7 @@ export const ProgramacionFixture: React.FC = () => {
                         {part.venue?.name || 'Por definir'}
                       </td>
                       <td className="p-3">
-                        <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                          part.status === 'finalizado' ? 'bg-slate-100 text-slate-600 border border-slate-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
-                        }`}>
-                          {part.status}
-                        </span>
+                        <InsigniaEstado estado={part.status} tipo="partido" />
                       </td>
                       {!esDelegado && (
                         <td className="p-3 pr-4 text-right">
@@ -2345,17 +2391,37 @@ export const ProgramacionFixture: React.FC = () => {
                   ))}
                   {partidos.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-10 text-center text-slate-500 text-xs">No hay partidos cargados. Genera el fixture primero.</td>
+                      <td colSpan={6} className="p-4 text-center">
+                        <EstadoVacio
+                          icono="event_busy"
+                          titulo="No hay partidos programados"
+                          descripcion="Genera el fixture automático o agrega encuentros desde la pestaña 'Generar Fixture'."
+                        />
+                      </td>
                     </tr>
                   )}
                   {partidos.length > 0 && partidosFiltradosProg.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-10 text-center text-slate-500 text-xs">No hay partidos con los filtros seleccionados.</td>
+                      <td colSpan={6} className="p-4 text-center">
+                        <EstadoVacio
+                          icono="filter_alt_off"
+                          titulo="Sin partidos para este filtro"
+                          descripcion="No se encontraron encuentros que coincidan con la fecha, equipo o estado seleccionados."
+                        />
+                      </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
+
+            <Paginador
+              paginaActual={paginaPartidosProg}
+              totalPaginas={totalPaginasPartidosProg}
+              totalRegistros={partidosFiltradosProg.length}
+              onCambiarPagina={setPaginaPartidosProg}
+              etiqueta="partidos"
+            />
           </div>
         )}
         {tabActiva === 'eventos' && (
@@ -2629,9 +2695,100 @@ export const ProgramacionFixture: React.FC = () => {
 
       </main>
 
+      {/* Modal Crear Escenario (Formulario Emergente) */}
+      {modalCrearEsc && createPortal(
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+              <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">add_business</span>
+                Registrar Nuevo Escenario
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalCrearEsc(false)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+            <form onSubmit={guardarEscenario} className="p-6 space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Nombre del Escenario *</label>
+                <input
+                  type="text" required placeholder="Ej: Estadio Lusail, Cancha Principal 1"
+                  value={nuevoEsc.name} onChange={(e) => setNuevoEsc({ ...nuevoEsc, name: e.target.value })}
+                  className="w-full text-sm border border-slate-200 rounded-xl p-2.5 outline-none focus:border-primary transition-all"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Tipo *</label>
+                  <select
+                    required
+                    value={nuevoEsc.venue_type}
+                    onChange={(e) => setNuevoEsc({ ...nuevoEsc, venue_type: e.target.value })}
+                    className="w-full text-sm border border-slate-200 bg-white rounded-xl p-2.5 outline-none focus:border-primary transition-all cursor-pointer"
+                  >
+                    <option value="cancha">Cancha</option>
+                    <option value="estadio">Estadio</option>
+                    <option value="coliseo">Coliseo</option>
+                    <option value="gimnasio">Gimnasio</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Capacidad Aprox.</label>
+                  <input
+                    type="number" placeholder="Ej: 500" min="0"
+                    value={nuevoEsc.capacity} onChange={(e) => setNuevoEsc({ ...nuevoEsc, capacity: e.target.value })}
+                    className="w-full text-sm border border-slate-200 rounded-xl p-2.5 outline-none focus:border-primary transition-all"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Ubicación / Dirección *</label>
+                <input
+                  type="text" required placeholder="Ej: Av. Independencia S/N, Complejo UNAS"
+                  value={nuevoEsc.location} onChange={(e) => setNuevoEsc({ ...nuevoEsc, location: e.target.value })}
+                  className="w-full text-sm border border-slate-200 rounded-xl p-2.5 outline-none focus:border-primary transition-all"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Estado Inicial *</label>
+                <select
+                  value={nuevoEsc.status} onChange={(e) => setNuevoEsc({ ...nuevoEsc, status: e.target.value })}
+                  className="w-full text-sm border border-slate-200 bg-white rounded-xl p-2.5 outline-none focus:border-primary transition-all cursor-pointer"
+                >
+                  <option value="active">Disponible / Activo</option>
+                  <option value="inactive">No Disponible</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setModalCrearEsc(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={guardandoEscenario}
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:opacity-90 transition-all cursor-pointer shadow-md shadow-primary/20 disabled:opacity-50"
+                >
+                  {guardandoEscenario ? 'Guardando...' : 'Guardar Escenario'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* Modal Editar Escenario */}
-      {modalEditarEsc.abierto && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+      {modalEditarEsc.abierto && createPortal(
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
               <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Editar Escenario</h3>
@@ -2716,7 +2873,8 @@ export const ProgramacionFixture: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal agregar participante a evento */}

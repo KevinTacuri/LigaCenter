@@ -50,6 +50,11 @@ export const EquipoDetalle: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [paginaJugadores, setPaginaJugadores] = useState(1);
+  const jugadoresPorPagina = 6;
+  const totalPaginasJugadores = data ? Math.max(1, Math.ceil((data.players || []).length / jugadoresPorPagina)) : 1;
+  const jugadoresPaginados = data ? (data.players || []).slice((paginaJugadores - 1) * jugadoresPorPagina, paginaJugadores * jugadoresPorPagina) : [];
+
   useEffect(() => {
     if (!id) return;
     setLoading(true);
@@ -151,29 +156,53 @@ export const EquipoDetalle: React.FC = () => {
               {data.players.length === 0 ? (
                 <p className="text-slate-500 text-sm">No hay jugadores registrados.</p>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {data.players.map((player) => (
-                    <Link
-                      key={player.id}
-                      to={`/jugadores/${player.id}`}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-[#171a26] border border-slate-800 hover:border-indigo-500/50 transition-all"
-                    >
-                      {player.photo ? (
-                        <img src={player.photo} alt={player.name} className="w-8 h-8 rounded-full object-cover" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-500">
-                          {player.jersey_number ?? '—'}
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-white truncate">{player.name}</p>
-                        {player.jersey_number != null && (
-                          <span className="text-xs font-black text-indigo-400 shrink-0">#{player.jersey_number}</span>
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {jugadoresPaginados.map((player) => (
+                      <Link
+                        key={player.id}
+                        to={`/jugadores/${player.id}`}
+                        className="flex items-center gap-3 p-3 rounded-lg bg-[#171a26] border border-slate-800 hover:border-indigo-500/50 transition-all"
+                      >
+                        {player.photo ? (
+                          <img src={player.photo} alt={player.name} className="w-8 h-8 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                            {player.jersey_number ?? '—'}
+                          </div>
                         )}
-                      </div>
-                    </Link>
-                  ))}
-                </div>
+                        <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-white truncate">{player.name}</p>
+                          {player.jersey_number != null && (
+                            <span className="text-xs font-black text-indigo-400 shrink-0">#{player.jersey_number}</span>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+
+                  {totalPaginasJugadores > 1 && (
+                    <div className="mt-4 flex items-center justify-between text-xs pt-3 border-t border-slate-800">
+                      <button
+                        disabled={paginaJugadores === 1}
+                        onClick={() => setPaginaJugadores(p => p - 1)}
+                        className="px-3 py-1 bg-[#171a26] border border-slate-800 text-slate-300 font-semibold rounded-lg hover:bg-slate-800 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Anterior
+                      </button>
+                      <span className="text-slate-500 font-medium">
+                        Página {paginaJugadores} de {totalPaginasJugadores} ({data.players.length} jugadores)
+                      </span>
+                      <button
+                        disabled={paginaJugadores === totalPaginasJugadores}
+                        onClick={() => setPaginaJugadores(p => p + 1)}
+                        className="px-3 py-1 bg-[#171a26] border border-slate-800 text-slate-300 font-semibold rounded-lg hover:bg-slate-800 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Siguiente
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
