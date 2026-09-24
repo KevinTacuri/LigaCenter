@@ -25,6 +25,11 @@ return new class extends Migration
             // semifinal
             // final
             // round
+            $table->unsignedInteger('qualifiers_count')
+                ->nullable();
+
+            $table->string('qualification_method', 30)
+                ->nullable();
 
             $table->unsignedInteger('stage_number');
 
