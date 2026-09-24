@@ -111,27 +111,27 @@ class CompetitionResultService
     public function recalculateResultValue(
         CompetitionResult $result
     ): void {
-        $eventType = $result
+        $result->loadMissing([
+            'groupParticipant.group.stage.event',
+            'attempts',
+        ]);
+
+        $stage = $result
             ->groupParticipant
             ->group
-            ->stage
+            ->stage;
+
+        $eventType = $stage
             ->event
             ->event_type;
-
-        /*
-        |--------------------------------------------------------------------------
-        | CARRERA
-        |--------------------------------------------------------------------------
-        | El tiempo se registra directamente en result_value.
-        */
-        if ($eventType === 'carrera') {
-            return;
-        }
 
         $values = $result
             ->attempts
             ->whereNotNull('value')
-            ->pluck('value');
+            ->pluck('value')
+            ->map(
+                fn ($value) => (float) $value
+            );
 
         if ($values->isEmpty()) {
             $result->updateQuietly([
@@ -141,39 +141,27 @@ class CompetitionResultService
             return;
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | SALTO / LANZAMIENTO
-        |--------------------------------------------------------------------------
-        | Se toma el mejor intento.
-        */
-        if (
-            $eventType === 'salto'
-            || $eventType === 'lanzamiento'
+        $resultValue = match (
+            $stage->result_aggregation
         ) {
-            $result->updateQuietly([
-                'result_value' => $values->max(),
-            ]);
+            'sum' =>
+                $values->sum(),
 
-            return;
-        }
+            'average' =>
+                $values->avg(),
 
-        /*
-        |--------------------------------------------------------------------------
-        | PUNTAJE
-        |--------------------------------------------------------------------------
-        | Se suman todos los intentos.
-        |
-        | Individual:
-        | Juan = 20 + 50 + 30
-        |
-        | Equipo:
-        | Juan + Pedro + Carlos = total del equipo
-        */
-        if ($eventType === 'puntaje') {
-            $result->updateQuietly([
-                'result_value' => $values->sum(),
-            ]);
-        }
+            'best' =>
+                $eventType === 'carrera'
+                    ? $values->min()
+                    : $values->max(),
+
+            default =>
+                null,
+        };
+
+        $result->updateQuietly([
+            'result_value' => $resultValue,
+        ]);
+
     }
 }

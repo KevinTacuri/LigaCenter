@@ -52,10 +52,6 @@ class CompetitionResultController extends Controller
                 'required',
                 'exists:competition_event_group_participants,id',
             ],
-            'result_value' => [
-                'nullable',
-                'numeric',
-            ],
             'result_unit' => [
                 'nullable',
                 'string',
@@ -91,8 +87,7 @@ class CompetitionResultController extends Controller
             'competition_event_group_participant_id' =>
                 $groupParticipant->id,
 
-            'result_value' =>
-                $validated['result_value'] ?? null,
+            'result_value' => null,
 
             'result_unit' =>
                 $validated['result_unit'] ?? null,
@@ -150,11 +145,6 @@ class CompetitionResultController extends Controller
         }
 
         $validated = $request->validate([
-            'result_value' => [
-                'sometimes',
-                'nullable',
-                'numeric',
-            ],
             'result_unit' => [
                 'sometimes',
                 'nullable',

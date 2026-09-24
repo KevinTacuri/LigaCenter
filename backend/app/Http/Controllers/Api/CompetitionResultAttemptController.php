@@ -8,7 +8,6 @@ use App\Models\CompetitionResultAttempt;
 use App\Services\CompetitionResultService;
 use App\Models\CompetitionEventParticipantMember;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 class CompetitionResultAttemptController extends Controller
 {
@@ -64,6 +63,26 @@ class CompetitionResultAttemptController extends Controller
                 'numeric',
             ],
         ]);
+
+        $competitionResult->loadMissing(
+            'groupParticipant.group.stage'
+        );
+
+        $stage = $competitionResult
+            ->groupParticipant
+            ->group
+            ->stage;
+
+        if (
+            $validated['attempt_number'] >
+            $stage->rounds_count
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' =>
+                    "Esta etapa solo permite {$stage->rounds_count} ronda(s).",
+            ], 422);
+        }
 
         /*
         |--------------------------------------------------------------------------
