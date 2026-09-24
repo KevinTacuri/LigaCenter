@@ -29,6 +29,7 @@ import ListaEtapasEvento from '../../componentes/programacion/eventos/ListaEtapa
 import ModalEtapaEvento from '../../componentes/programacion/eventos/ModalEtapaEvento';
 import ListaGruposEtapaEvento from '../../componentes/programacion/eventos/ListaGruposEtapaEvento';
 import ModalGrupoEtapaEvento from '../../componentes/programacion/eventos/ModalGrupoEtapaEvento';
+import NavegacionEventoCompetencia from '../../componentes/programacion/eventos/NavegacionEventoCompetencia';
 
 import type {
   DatosEvento,
@@ -41,7 +42,10 @@ import type {
   GrupoEtapaEvento,
   DatosGrupoEtapaEvento,
   GuardarGrupoEtapaEvento,
+  ParticipanteGrupoEvento,
 } from '../../types/CompetitionEvent';
+import ListaParticipantesGrupoEvento from '../../componentes/programacion/eventos/ListaParticipantesGrupoEvento';
+import ModalParticipantesGrupoEvento from '../../componentes/programacion/eventos/ModalParticipantesGrupoEvento';
 
 type TabType = 'escenarios' | 'generar' | 'programar' | 'partidos' | 'eventos';
 
@@ -202,7 +206,225 @@ export const ProgramacionFixture: React.FC = () => {
     venue_id: '',
     status: 'programado',
   });
+
+  type VistaGestionEvento =
+    | 'estructura'
+    | 'participantes';
+
+  const [vistaGestionEvento, setVistaGestionEvento] =
+    useState<VistaGestionEvento>('estructura');
+
+  // Estados para gestionar participantes de un grupo o serie
+  const [grupoGestionado, setGrupoGestionado] =
+  useState<GrupoEtapaEvento | null>(null);
+
+  const [
+    participantesGrupo,
+    setParticipantesGrupo,
+  ] = useState<ParticipanteGrupoEvento[]>([]);
+
+  const [
+    cargandoParticipantesGrupo,
+    setCargandoParticipantesGrupo,
+  ] = useState(false);
+
+  const [
+    modalParticipantesGrupo,
+    setModalParticipantesGrupo,
+  ] = useState(false);
+
+  const [
+    participantesGrupoSeleccionados,
+    setParticipantesGrupoSeleccionados,
+  ] = useState<number[]>([]);
+
+  const cargarParticipantesGrupo = async (
+    grupoId: number
+  ) => {
+    setCargandoParticipantesGrupo(true);
+
+    try {
+      const res =
+        await serviciosEventosCompetencia
+          .obtenerParticipantesGrupo(grupoId);
+
+      if (res.success) {
+        setParticipantesGrupo(res.data);
+      }
+    } catch {
+      mostrarMensaje(
+        'Error al cargar los participantes del grupo.',
+        true
+      );
+    } finally {
+      setCargandoParticipantesGrupo(false);
+    }
+  };
+
+  const gestionarGrupo = async (
+    grupo: GrupoEtapaEvento
+  ) => {
+    setVistaGestionEvento('estructura');
+    setGrupoGestionado(grupo);
+    setParticipantesGrupo([]);
+
+    await cargarParticipantesGrupo(
+      grupo.id
+    );
+  };
   
+  const obtenerParticipantesAsignadosEtapa = async () => {
+    if (!etapaGestionada) {
+      return new Set<number>();
+    }
+
+    const respuestas = await Promise.all(
+      gruposEtapa.map((grupo) =>
+        serviciosEventosCompetencia
+          .obtenerParticipantesGrupo(grupo.id)
+      )
+    );
+
+    const ids = respuestas
+      .filter((res) => res.success)
+      .flatMap((res) => res.data)
+      .map(
+        (participante) =>
+          participante
+            .competition_event_participant_id
+      );
+
+    return new Set(ids);
+  };
+
+  const abrirModalParticipantesGrupo = async () => {
+    if (!grupoGestionado) return;
+
+    const ids = await obtenerParticipantesAsignadosEtapa();
+
+    setIdsAsignadosEtapa(ids);
+    setParticipantesGrupoSeleccionados([]);
+    setModalParticipantesGrupo(true);
+  };
+
+  const agregarParticipantesAlGrupo = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!grupoGestionado) return;
+
+    if (
+      participantesGrupoSeleccionados.length === 0
+    ) {
+      mostrarMensaje(
+        'Selecciona al menos un participante.',
+        true
+      );
+
+      return;
+    }
+
+    try {
+      await Promise.all(
+        participantesGrupoSeleccionados.map(
+          (
+            competitionEventParticipantId,
+            index
+          ) =>
+            serviciosEventosCompetencia
+              .agregarParticipanteGrupo(
+                grupoGestionado.id,
+                {
+                  competition_event_participant_id:
+                    competitionEventParticipantId,
+
+                  lane: null,
+
+                  start_order:
+                    participantesGrupo.length +
+                    index +
+                    1,
+                }
+              )
+        )
+      );
+
+      mostrarMensaje(
+        'Participantes asignados correctamente.'
+      );
+
+      setModalParticipantesGrupo(false);
+
+      setParticipantesGrupoSeleccionados([]);
+
+      await cargarParticipantesGrupo(
+        grupoGestionado.id
+      );
+    } catch (err: any) {
+      mostrarMensaje(
+        err.response?.data?.message ||
+          'Error al asignar participantes.',
+        true
+      );
+    }
+  };
+
+  const quitarParticipanteGrupo = async (
+    participanteGrupoId: number
+  ) => {
+    if (!grupoGestionado) return;
+
+    try {
+      const res =
+        await serviciosEventosCompetencia
+          .eliminarParticipanteGrupo(
+            participanteGrupoId
+          );
+
+      if (res.success) {
+        mostrarMensaje(
+          'Participante retirado del grupo.'
+        );
+
+        await cargarParticipantesGrupo(
+          grupoGestionado.id
+        );
+      }
+    } catch (err: any) {
+      mostrarMensaje(
+        err.response?.data?.message ||
+          'Error al retirar participante.',
+        true
+      );
+    }
+  };
+
+  const toggleParticipanteGrupo = (
+    participanteId: number
+  ) => {
+    setParticipantesGrupoSeleccionados(
+      (prev) =>
+        prev.includes(participanteId)
+          ? prev.filter(
+              (id) =>
+                id !== participanteId
+            )
+          : [
+              ...prev,
+              participanteId,
+            ]
+    );
+  };
+
+  const [idsAsignadosEtapa, setIdsAsignadosEtapa] = useState<Set<number>>(
+    new Set()
+  );
+
+  const participantesDisponiblesGrupo = participantesEvento.filter((participante) =>
+    !idsAsignadosEtapa.has(
+      participante.id
+    )
+  );
+
   const cargarGruposEtapa = async (
     etapaId: number
   ) => {
@@ -229,7 +451,10 @@ export const ProgramacionFixture: React.FC = () => {
   const gestionarEtapa = async (
     etapa: EtapaEvento
   ) => {
+    setVistaGestionEvento('estructura');
     setEtapaGestionada(etapa);
+    setGrupoGestionado(null);
+    setParticipantesGrupo([]);
     setGruposEtapa([]);
 
     await cargarGruposEtapa(etapa.id);
@@ -998,6 +1223,12 @@ export const ProgramacionFixture: React.FC = () => {
   // Manejo de gestión de eventos (ver participantes)
   const gestionarEvento = async (evento: EventoCompetencia) => {
     setEventoGestionado(evento);
+
+    setVistaGestionEvento('estructura');
+
+    setEtapaGestionada(null);
+    setGrupoGestionado(null);
+
     setCargandoParticipantes(true);
     setCargandoEtapas(true);
 
@@ -2197,38 +2428,199 @@ export const ProgramacionFixture: React.FC = () => {
                 </div>
               </div>
 
-              {/* Participantes de Evento */}
-              <ListaParticipantesEvento
-                evento={eventoGestionado}
-                participantes={participantesEvento}
-                cargando={cargandoParticipantes}
-                onAgregar={abrirModalParticipantes}
-                onQuitar={quitarParticipanteEvento}
-              />
-              {/* Etapas de un evento */}
-              <ListaEtapasEvento
-                etapas={etapasEvento}
-                cargando={cargandoEtapas}
-                onAgregar={abrirNuevaEtapa}
-                onEditar={abrirEdicionEtapa}
-                onEliminar={eliminarEtapaEvento}
-                onGestionar={gestionarEtapa}
-              />
+              <div className="grid grid-cols-1 lg:grid-cols-[250px_minmax(0,1fr)] gap-5 items-start">
 
-              {etapaGestionada && (
-                <ListaGruposEtapaEvento
-                  etapa={etapaGestionada}
-                  grupos={gruposEtapa}
-                  cargando={cargandoGrupos}
-                  onAgregar={abrirNuevoGrupo}
-                  onEditar={abrirEdicionGrupo}
-                  onEliminar={eliminarGrupoEtapa}
-                  onCerrar={() => {
+                {/* Navegación izquierda */}
+                <NavegacionEventoCompetencia
+                  vista={vistaGestionEvento}
+
+                  etapas={etapasEvento}
+
+                  etapaSeleccionada={
+                    etapaGestionada
+                  }
+
+                  gruposEtapa={
+                    gruposEtapa
+                  }
+
+                  grupoSeleccionado={
+                    grupoGestionado
+                  }
+
+                  cantidadParticipantes={
+                    participantesEvento.length
+                  }
+
+                  onParticipantes={() => {
+                    setVistaGestionEvento(
+                      'participantes'
+                    );
+
                     setEtapaGestionada(null);
-                    setGruposEtapa([]);
+                    setGrupoGestionado(null);
                   }}
+
+                  onEstructura={() => {
+                    setVistaGestionEvento(
+                      'estructura'
+                    );
+
+                    setEtapaGestionada(null);
+                    setGrupoGestionado(null);
+                  }}
+
+                  onEtapa={
+                    gestionarEtapa
+                  }
+
+                  onGrupo={
+                    gestionarGrupo
+                  }
                 />
-              )}
+
+                {/* Panel derecho */}
+                <div className="min-w-0">
+
+                  {/* PARTICIPANTES GENERALES */}
+                  {vistaGestionEvento ===
+                    'participantes' && (
+                    <ListaParticipantesEvento
+                      evento={eventoGestionado}
+
+                      participantes={
+                        participantesEvento
+                      }
+
+                      cargando={
+                        cargandoParticipantes
+                      }
+
+                      onAgregar={
+                        abrirModalParticipantes
+                      }
+
+                      onQuitar={
+                        quitarParticipanteEvento
+                      }
+                    />
+                  )}
+
+                  {/* ESTRUCTURA GENERAL */}
+                  {vistaGestionEvento ===
+                    'estructura' &&
+                    !etapaGestionada && (
+                      <ListaEtapasEvento
+                        etapas={etapasEvento}
+
+                        cargando={
+                          cargandoEtapas
+                        }
+
+                        onAgregar={
+                          abrirNuevaEtapa
+                        }
+
+                        onGestionar={
+                          gestionarEtapa
+                        }
+
+                        onEditar={
+                          abrirEdicionEtapa
+                        }
+
+                        onEliminar={
+                          eliminarEtapaEvento
+                        }
+                      />
+                    )}
+
+                  {/* ETAPA SELECCIONADA */}
+                  {vistaGestionEvento ===
+                    'estructura' &&
+                    etapaGestionada &&
+                    !grupoGestionado && (
+                      <ListaGruposEtapaEvento
+                        etapa={
+                          etapaGestionada
+                        }
+
+                        grupos={
+                          gruposEtapa
+                        }
+
+                        cargando={
+                          cargandoGrupos
+                        }
+
+                        onAgregar={
+                          abrirNuevoGrupo
+                        }
+
+                        onGestionar={
+                          gestionarGrupo
+                        }
+
+                        onEditar={
+                          abrirEdicionGrupo
+                        }
+
+                        onEliminar={
+                          eliminarGrupoEtapa
+                        }
+
+                        onCerrar={() => {
+                          setEtapaGestionada(
+                            null
+                          );
+
+                          setGruposEtapa([]);
+                        }}
+                      />
+                    )}
+
+                  {/* GRUPO SELECCIONADO */}
+                  {vistaGestionEvento ===
+                    'estructura' &&
+                    grupoGestionado && (
+                      <ListaParticipantesGrupoEvento
+                        grupo={
+                          grupoGestionado
+                        }
+
+                        participantesGrupo={
+                          participantesGrupo
+                        }
+
+                        participantesEvento={
+                          participantesEvento
+                        }
+
+                        cargando={
+                          cargandoParticipantesGrupo
+                        }
+
+                        onAgregar={
+                          abrirModalParticipantesGrupo
+                        }
+
+                        onQuitar={
+                          quitarParticipanteGrupo
+                        }
+
+                        onCerrar={() => {
+                          setGrupoGestionado(
+                            null
+                          );
+
+                          setParticipantesGrupo(
+                            []
+                          );
+                        }}
+                      />
+                    )}
+                </div>
+              </div>
 
             </div>
           )}
@@ -2399,6 +2791,36 @@ export const ProgramacionFixture: React.FC = () => {
         }}
 
         onSubmit={guardarGrupoEtapa}
+      />
+
+      <ModalParticipantesGrupoEvento
+        abierto={modalParticipantesGrupo}
+
+        grupo={grupoGestionado}
+
+        participantes={
+          participantesDisponiblesGrupo
+        }
+
+        seleccionados={
+          participantesGrupoSeleccionados
+        }
+
+        onToggle={
+          toggleParticipanteGrupo
+        }
+
+        onCerrar={() => {
+          setModalParticipantesGrupo(false);
+
+          setParticipantesGrupoSeleccionados(
+            []
+          );
+        }}
+
+        onSubmit={
+          agregarParticipantesAlGrupo
+        }
       />
 
       {/* Botón Flotante de Ayuda */}
