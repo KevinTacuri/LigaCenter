@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CompetitionEvent;
 use App\Models\CompetitionEventParticipant;
 use App\Models\ChampionshipPlayer;
+use App\Models\ChampionshipTeam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -18,36 +19,23 @@ class CompetitionEventParticipantController extends Controller
      */
     public function index(Request $request)
     {
-        $query = CompetitionEventParticipant::with([
-            'championshipPlayer',
-            'championshipTeam',
-            'result.attempts',
+        $request->validate([
+            'competition_event_id' => [
+                'required',
+                'exists:competition_events,id'  ,
+            ]
         ]);
 
-        if ($request->filled('competition_event_id')) {
-            $query->where(
+        $participants = CompetitionEventParticipant::with([
+            'championshipPlayer.player',
+            'championshipTeam.team',
+            'members.championshipPlayer.player',
+        ])
+            ->where(
                 'competition_event_id',
                 $request->competition_event_id
-            );
-        }
-
-        if ($request->filled('championship_player_id')) {
-            $query->where(
-                'championship_player_id',
-                $request->championship_player_id
-            );
-        }
-
-        if ($request->filled('championship_team_id')) {
-            $query->where(
-                'championship_team_id',
-                $request->championship_team_id
-            );
-        }
-
-        $participants = $query
-            ->orderBy('start_order')
-            ->orderBy('lane')
+            )
+            ->orderBy('id')
             ->get();
 
         return response()->json([
@@ -69,7 +57,7 @@ class CompetitionEventParticipantController extends Controller
             ],
 
             'championship_player_id' => [
-                'required',
+                'nullable',
                 'integer',
                 'exists:championship_players,id',
             ],
@@ -80,18 +68,6 @@ class CompetitionEventParticipantController extends Controller
                 'exists:championship_teams,id',
             ],
 
-            'lane' => [
-                'nullable',
-                'integer',
-                'min:1',
-            ],
-
-            'start_order' => [
-                'nullable',
-                'integer',
-                'min:1',
-            ],
-
             'status' => [
                 'nullable',
                 'string',
@@ -100,89 +76,34 @@ class CompetitionEventParticipantController extends Controller
         ]);
 
         $event = CompetitionEvent::with(
+            'category',
             'championshipDiscipline'
         )->findOrFail($validated['competition_event_id']);
 
-        /*
-         * Verificar que el jugador pertenece al campeonato
-         * del evento.
-         */
-        $championshipId = $event
-            ->championshipDiscipline
-            ->championship_id;
+        $participant = match ($event->participation_type) {
+            'individual' => $this->registerIndividual(
+                $event,
+                $validated
+            ),
 
-        $playerBelongsToChampionship = ChampionshipPlayer::query()
-            ->where('id', $validated['championship_player_id'])
-            ->whereHas('championshipTeam.championshipDiscipline', function ($query) use ($championshipId) {
-                $query->where('championship_id', $championshipId);
-            })
-            ->exists();
+            'team' => $this->registerTeam(
+                $event,
+                $validated
+            ),
 
-        if (!$playerBelongsToChampionship) {
-            throw ValidationException::withMessages([
-                'championship_player_id' =>
-                    'El jugador no pertenece al campeonato del evento.',
-            ]);
-        }
-
-        /*
-         * Si se especifica equipo, verificar que pertenece
-         * al mismo campeonato.
-         */
-        if (!empty($validated['championship_team_id'])) {
-            $teamBelongsToChampionship = $event
-                ->championshipDiscipline
-                ->championship
-                ->teams()
-                ->where(
-                    'championship_teams.id',
-                    $validated['championship_team_id']
-                )
-                ->exists();
-
-            if (!$teamBelongsToChampionship) {
-                throw ValidationException::withMessages([
-                    'championship_team_id' =>
-                        'El equipo no pertenece al campeonato del evento.',
-                ]);
-            }
-        }
-
-        /*
-         * Evitar registrar dos veces al mismo jugador
-         * en el mismo evento.
-         */
-        $alreadyRegistered = CompetitionEventParticipant::where(
-            'competition_event_id',
-            $validated['competition_event_id']
-        )
-            ->where(
-                'championship_player_id',
-                $validated['championship_player_id']
-            )
-            ->exists();
-
-        if ($alreadyRegistered) {
-            throw ValidationException::withMessages([
-                'championship_player_id' =>
-                    'El jugador ya está registrado en este evento.',
-            ]);
-        }
-
-        $participant = DB::transaction(function () use ($validated) {
-            return CompetitionEventParticipant::create($validated);
-        });
+            default => abort(422, 'Tipo de participación no válido.'),
+        };
 
         $participant->load([
-            'championshipPlayer',
-            'championshipTeam',
-            'event',
+            'championshipPlayer.player',
+            'championshipTeam.team',
+            'members.championshipPlayer.player',
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Participante registrado correctamente.',
-            'data' => $participant,
+            'data' => new CompetitionEventParticipantResource($participant),
         ], 201);
     }
 
@@ -214,32 +135,7 @@ class CompetitionEventParticipantController extends Controller
         CompetitionEventParticipant $competitionEventParticipant
     ) {
         $validated = $request->validate([
-            'championship_player_id' => [
-                'sometimes',
-                'integer',
-                'exists:championship_players,id',
-            ],
-
-            'championship_team_id' => [
-                'nullable',
-                'integer',
-                'exists:championship_teams,id',
-            ],
-
-            'lane' => [
-                'nullable',
-                'integer',
-                'min:1',
-            ],
-
-            'start_order' => [
-                'nullable',
-                'integer',
-                'min:1',
-            ],
-
             'status' => [
-                'sometimes',
                 'string',
                 'in:inscrito,confirmado,no_presento,retirado',
             ],
@@ -247,16 +143,16 @@ class CompetitionEventParticipantController extends Controller
 
         $competitionEventParticipant->update($validated);
 
-        $competitionEventParticipant->load([
-            'championshipPlayer',
-            'championshipTeam',
-            'event',
-        ]);
-
         return response()->json([
             'success' => true,
             'message' => 'Participante actualizado correctamente.',
-            'data' => $competitionEventParticipant,
+            'data' => new CompetitionEventParticipantResource(
+                $competitionEventParticipant->load([
+                    'championshipPlayer.player',
+                    'championshipTeam.team',
+                    'members.championshipPlayer.player',
+                ])
+            ),
         ]);
     }
 
@@ -271,6 +167,89 @@ class CompetitionEventParticipantController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Participante eliminado correctamente.',
+        ]);
+    }
+
+    // Additional methods for managing group participations can be added here.
+    private function registerIndividual(
+        CompetitionEvent $event,
+        array $validated
+    ): CompetitionEventParticipant {
+
+        if (empty($validated['championship_player_id'])) {
+            abort(422, 'Debe seleccionar un jugador.');
+        }
+
+        $player = ChampionshipPlayer::with('championshipTeam')
+            ->findOrFail($validated['championship_player_id']);
+
+        if (
+            $player->championshipTeam?->category_id
+            !== $event->category_id
+        ) {
+            abort(
+                422,
+                'El jugador no pertenece a la categoría del evento.'
+            );
+        }
+
+        $exists = CompetitionEventParticipant::where([
+            'competition_event_id' => $event->id,
+            'championship_player_id' => $player->id,
+        ])->exists();
+
+        if ($exists) {
+            abort(
+                422,
+                'El jugador ya está inscrito en este evento.'
+            );
+        }
+
+        return CompetitionEventParticipant::create([
+            'competition_event_id' => $event->id,
+            'championship_player_id' => $player->id,
+            'championship_team_id' => null,
+            'status' => $validated['status'] ?? 'inscrito',
+        ]);
+    }
+
+    private function registerTeam(
+        CompetitionEvent $event,
+        array $validated
+    ): CompetitionEventParticipant {
+
+        if (empty($validated['championship_team_id'])) {
+            abort(422, 'Debe seleccionar un equipo.');
+        }
+
+        $team = ChampionshipTeam::findOrFail(
+            $validated['championship_team_id']
+        );
+
+        if ($team->category_id !== $event->category_id) {
+            abort(
+                422,
+                'El equipo no pertenece a la categoría del evento.'
+            );
+        }
+
+        $exists = CompetitionEventParticipant::where([
+            'competition_event_id' => $event->id,
+            'championship_team_id' => $team->id,
+        ])->exists();
+
+        if ($exists) {
+            abort(
+                422,
+                'El equipo ya está inscrito en este evento.'
+            );
+        }
+
+        return CompetitionEventParticipant::create([
+            'competition_event_id' => $event->id,
+            'championship_player_id' => null,
+            'championship_team_id' => $team->id,
+            'status' => $validated['status'] ?? 'inscrito',
         ]);
     }
 }

@@ -18,10 +18,6 @@ class CompetitionEventParticipantResource extends JsonResource
 
             'championship_team_id' => $this->championship_team_id,
 
-            'lane' => $this->lane,
-
-            'start_order' => $this->start_order,
-
             'status' => $this->status,
 
             'championship_player' => $this->whenLoaded(
@@ -38,23 +34,9 @@ class CompetitionEventParticipantResource extends JsonResource
                 }
             ),
 
-            'result' => $this->whenLoaded(
-                'result',
-                function () {
-                    return $this->result
-                        ? [
-                            'id' => $this->result->id,
-                            'result_value' => $this->result->result_value,
-                            'result_unit' => $this->result->result_unit,
-                            'position' => $this->result->position,
-                            'status' => $this->result->status,
-                        ]
-                        : null;
-                }
+            'members' => CompetitionEventParticipantMemberResource::collection(
+                $this->whenLoaded('members')
             ),
-
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
         ];
     }
 }

@@ -15,8 +15,6 @@ class CompetitionEventParticipant extends Model
         'competition_event_id',
         'championship_player_id',
         'championship_team_id',
-        'lane',
-        'start_order',
         'status',
     ];
 
@@ -48,6 +46,20 @@ class CompetitionEventParticipant extends Model
     {
         return $this->hasOne(
             CompetitionResult::class
+        );
+    }
+
+    public function members()
+    {
+        return $this->hasMany(
+            CompetitionEventParticipantMember::class
+        );
+    }
+
+    public function groupParticipations()
+    {
+        return $this->hasMany(
+            CompetitionEventGroupParticipant::class
         );
     }
 }
