@@ -43,6 +43,21 @@ return new class extends Migration
             $table->string('participation_type', 20)
                 ->default('individual');
 
+            $table->enum('competition_format', [
+                'single_final',
+                'qualifying_final',
+                'qualifying_semifinal_final',
+                'custom',
+            ])
+            ->default('custom');
+
+            $table->enum('result_aggregation', [
+                'sum',
+                'best',
+                'average',
+            ])
+            ->nullable();
+
             $table->timestamps();
         });
     }

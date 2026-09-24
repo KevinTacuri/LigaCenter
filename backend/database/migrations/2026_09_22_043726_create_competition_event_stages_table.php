@@ -35,6 +35,22 @@ return new class extends Migration
 
             $table->string('status', 30)
                 ->default('programado');
+            
+            $table->unsignedInteger('rounds_count')
+                ->default(1);
+
+            $table->enum('result_aggregation', [
+                'sum',
+                'best',
+                'average',
+            ])
+            ->default('sum');
+
+            $table->unsignedInteger('qualifiers_per_group')
+                ->nullable();
+
+            $table->unsignedInteger('podium_places')
+                ->nullable();
 
             $table->timestamps();
 
