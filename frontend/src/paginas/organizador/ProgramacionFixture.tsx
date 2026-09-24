@@ -27,6 +27,8 @@ import ListaEventos from '../../componentes/programacion/eventos/ListaEventos';
 import ModalEditarEvento from '../../componentes/programacion/eventos/ModalEditarEvento';
 import ListaEtapasEvento from '../../componentes/programacion/eventos/ListaEtapasEvento';
 import ModalEtapaEvento from '../../componentes/programacion/eventos/ModalEtapaEvento';
+import ListaGruposEtapaEvento from '../../componentes/programacion/eventos/ListaGruposEtapaEvento';
+import ModalGrupoEtapaEvento from '../../componentes/programacion/eventos/ModalGrupoEtapaEvento';
 
 import type {
   DatosEvento,
@@ -36,6 +38,9 @@ import type {
   EtapaEvento,
   DatosEtapaEvento,
   GuardarEtapaEvento,
+  GrupoEtapaEvento,
+  DatosGrupoEtapaEvento,
+  GuardarGrupoEtapaEvento,
 } from '../../types/CompetitionEvent';
 
 type TabType = 'escenarios' | 'generar' | 'programar' | 'partidos' | 'eventos';
@@ -117,6 +122,9 @@ export const ProgramacionFixture: React.FC = () => {
     name: '',
     event_type: 'carrera',
     participation_type: 'individual',
+    competition_format: 'single_final',
+    rounds_count: '2',
+    result_aggregation: 'sum',
     date: '',
     start_time: '',
     venue_id: '',
@@ -161,9 +169,244 @@ export const ProgramacionFixture: React.FC = () => {
       stage_type: 'qualifying',
       stage_number: '1',
       qualifiers_count: '',
-      qualification_method: '',
+      qualification_method: 'best_overall',
+      status: 'programado',
+      qualifiers_per_group: '',
+      podium_places: '',
+      rounds_count: '',
+      result_aggregation: 'sum',
+    });
+
+  // Gestion de etapas
+  const [etapaGestionada, setEtapaGestionada] =
+  useState<EtapaEvento | null>(null);
+
+  const [gruposEtapa, setGruposEtapa] =
+    useState<GrupoEtapaEvento[]>([]);
+
+  const [cargandoGrupos, setCargandoGrupos] =
+    useState(false);
+
+  const [modalGrupo, setModalGrupo] =
+    useState(false);
+
+  const [grupoEditando, setGrupoEditando] =
+    useState<GrupoEtapaEvento | null>(null);
+
+  const [datosGrupo, setDatosGrupo] = useState<DatosGrupoEtapaEvento>({
+    name: '',
+    group_type: 'series',
+    group_number: '1',
+    date: '',
+    start_time: '',
+    venue_id: '',
+    status: 'programado',
+  });
+  
+  const cargarGruposEtapa = async (
+    etapaId: number
+  ) => {
+    setCargandoGrupos(true);
+
+    try {
+      const res =
+        await serviciosEventosCompetencia
+          .obtenerGruposEtapa(etapaId);
+
+      if (res.success) {
+        setGruposEtapa(res.data);
+      }
+    } catch {
+      mostrarMensaje(
+        'Error al cargar los grupos de la etapa.',
+        true
+      );
+    } finally {
+      setCargandoGrupos(false);
+    }
+  };
+
+  const gestionarEtapa = async (
+    etapa: EtapaEvento
+  ) => {
+    setEtapaGestionada(etapa);
+    setGruposEtapa([]);
+
+    await cargarGruposEtapa(etapa.id);
+  };
+
+  const abrirNuevoGrupo = () => {
+    if (!etapaGestionada) {
+      return;
+    }
+
+    setGrupoEditando(null);
+
+    setDatosGrupo({
+      name: '',
+      group_type: 'series',
+
+      group_number:
+        String(gruposEtapa.length + 1),
+
+      date: '',
+      start_time: '',
+      venue_id: '',
+
       status: 'programado',
     });
+
+    setModalGrupo(true);
+  };
+
+  const abrirEdicionGrupo = (
+    grupo: GrupoEtapaEvento
+  ) => {
+    setGrupoEditando(grupo);
+
+    setDatosGrupo({
+      name: grupo.name,
+
+      group_type:
+        grupo.group_type,
+
+      group_number:
+        grupo.group_number.toString(),
+
+      date:
+        grupo.date?.substring(0, 10) ?? '',
+
+      start_time:
+        grupo.start_time?.substring(0, 5) ?? '',
+
+      venue_id:
+        grupo.venue_id?.toString() ?? '',
+
+      status:
+        grupo.status,
+    });
+
+    setModalGrupo(true);
+  };
+
+  const guardarGrupoEtapa = async (
+    e: React.FormEvent
+  ) => {
+    e.preventDefault();
+
+    if (!etapaGestionada) {
+      return;
+    }
+
+    const payload: GuardarGrupoEtapaEvento = {
+      name:
+        datosGrupo.name.trim(),
+
+      group_type:
+        datosGrupo.group_type,
+
+      group_number:
+        parseInt(datosGrupo.group_number),
+
+      date:
+        datosGrupo.date || null,
+
+      start_time:
+        datosGrupo.start_time || null,
+
+      venue_id:
+        datosGrupo.venue_id
+          ? parseInt(datosGrupo.venue_id)
+          : null,
+
+      status:
+        datosGrupo.status,
+    };
+
+    try {
+      const res = grupoEditando
+        ? await serviciosEventosCompetencia
+            .actualizarGrupoEtapa(
+              grupoEditando.id,
+              payload
+            )
+        : await serviciosEventosCompetencia
+            .crearGrupoEtapa(
+              etapaGestionada.id,
+              payload
+            );
+
+      if (res.success) {
+        mostrarMensaje(
+          grupoEditando
+            ? 'Grupo actualizado correctamente.'
+            : 'Grupo creado correctamente.'
+        );
+
+        setModalGrupo(false);
+        setGrupoEditando(null);
+
+        await cargarGruposEtapa(
+          etapaGestionada.id
+        );
+      }
+    } catch (err: any) {
+      mostrarMensaje(
+        err.response?.data?.message ||
+          'Error al guardar el grupo.',
+        true
+      );
+    }
+  };
+
+  const eliminarGrupoEtapa = async (
+    grupoId: number
+  ) => {
+    if (!etapaGestionada) {
+      return;
+    }
+
+    const confirmado = await confirm({
+      title: 'Eliminar grupo',
+
+      description:
+        '¿Está seguro de eliminar este grupo o serie?',
+
+      confirmText: 'Eliminar',
+
+      cancelText: 'Cancelar',
+
+      confirmButton: {
+        variant: 'destructive',
+      },
+    });
+
+    if (!confirmado) {
+      return;
+    }
+
+    try {
+      const res =
+        await serviciosEventosCompetencia
+          .eliminarGrupoEtapa(grupoId);
+
+      if (res.success) {
+        mostrarMensaje(
+          'Grupo eliminado correctamente.'
+        );
+
+        await cargarGruposEtapa(
+          etapaGestionada.id
+        );
+      }
+    } catch (err: any) {
+      mostrarMensaje(
+        err.response?.data?.message ||
+          'Error al eliminar el grupo.',
+        true
+      );
+    }
+  };
 
   const cargarEtapasEvento = async (
     eventoId: number
@@ -194,15 +437,14 @@ export const ProgramacionFixture: React.FC = () => {
     setDatosEtapa({
       name: '',
       stage_type: 'qualifying',
-
-      stage_number:
-        String(etapasEvento.length + 1),
-
+      stage_number: String(etapasEvento.length + 1),
+      rounds_count: '1',
+      result_aggregation: 'sum',
       qualifiers_count: '',
-
-      qualification_method: '',
-
+      qualification_method: 'best_overall',
       status: 'programado',
+      qualifiers_per_group: '',
+      podium_places: '',
     });
 
     setModalEtapa(true);
@@ -228,6 +470,11 @@ export const ProgramacionFixture: React.FC = () => {
 
       qualification_method:
         etapa.qualification_method ?? '',
+      
+      podium_places: etapa.podium_places?.toString() ?? '',
+      result_aggregation: etapa.result_aggregation,
+      rounds_count: etapa.rounds_count?.toString(),
+      qualifiers_per_group: etapa.qualifiers_per_group?.toString() ?? '',
 
       status:
         etapa.status,
@@ -244,6 +491,7 @@ export const ProgramacionFixture: React.FC = () => {
     if (!eventoGestionado) {
       return;
     }
+    const esFinal = datosEtapa.stage_type === 'final';
 
     const payload: GuardarEtapaEvento = {
       name: datosEtapa.name.trim(),
@@ -252,7 +500,13 @@ export const ProgramacionFixture: React.FC = () => {
 
       stage_number: parseInt(datosEtapa.stage_number),
 
+      rounds_count: parseInt(datosEtapa.rounds_count),
+      result_aggregation: datosEtapa.result_aggregation,
+
       qualifiers_count:
+        !esFinal &&
+        datosEtapa.qualification_method ===
+          'best_overall' &&
         datosEtapa.qualifiers_count
           ? parseInt(
               datosEtapa.qualifiers_count
@@ -260,7 +514,28 @@ export const ProgramacionFixture: React.FC = () => {
           : null,
 
       qualification_method:
-        datosEtapa.qualification_method || null,
+        esFinal
+        ? 'none'
+        : datosEtapa.qualification_method ||
+          null,
+      
+      qualifiers_per_group:
+        !esFinal &&
+        datosEtapa.qualification_method ===
+          'best_per_group' &&
+        datosEtapa.qualifiers_per_group
+          ? parseInt(
+              datosEtapa.qualifiers_per_group
+            )
+          : null,
+
+      podium_places:
+        esFinal &&
+          datosEtapa.podium_places
+            ? parseInt(
+                datosEtapa.podium_places
+              )
+            : null,
 
       status: datosEtapa.status,
     };
@@ -677,26 +952,19 @@ export const ProgramacionFixture: React.FC = () => {
 
     try {
       const res = await serviciosEventosCompetencia.crearEvento({
-        championship_discipline_id:
-          categoria.championship_discipline.id,
-
+        championship_discipline_id: categoria.championship_discipline.id,
         category_id: parseInt(datosEvento.category_id),
-
         name: datosEvento.name,
-
         event_type: datosEvento.event_type,
-        
         participation_type: datosEvento.participation_type,
-
         date: datosEvento.date,
-
         start_time: datosEvento.start_time || null,
-
         venue_id: datosEvento.venue_id
           ? parseInt(datosEvento.venue_id)
           : null,
 
         status: 'programado',
+        competition_format: datosEvento.competition_format,
       });
 
       if (res.success) {
@@ -711,6 +979,9 @@ export const ProgramacionFixture: React.FC = () => {
           start_time: '',
           venue_id: '',
           participation_type: 'individual',
+          competition_format: 'single_final',
+          rounds_count: '2',
+          result_aggregation: 'sum',
         });
 
         cargarEventosCompetencia();
@@ -1941,7 +2212,23 @@ export const ProgramacionFixture: React.FC = () => {
                 onAgregar={abrirNuevaEtapa}
                 onEditar={abrirEdicionEtapa}
                 onEliminar={eliminarEtapaEvento}
+                onGestionar={gestionarEtapa}
               />
+
+              {etapaGestionada && (
+                <ListaGruposEtapaEvento
+                  etapa={etapaGestionada}
+                  grupos={gruposEtapa}
+                  cargando={cargandoGrupos}
+                  onAgregar={abrirNuevoGrupo}
+                  onEditar={abrirEdicionGrupo}
+                  onEliminar={eliminarGrupoEtapa}
+                  onCerrar={() => {
+                    setEtapaGestionada(null);
+                    setGruposEtapa([]);
+                  }}
+                />
+              )}
 
             </div>
           )}
@@ -2098,6 +2385,20 @@ export const ProgramacionFixture: React.FC = () => {
           setEtapaEditando(null);
         }}
         onSubmit={guardarEtapaEvento}
+      />
+
+      <ModalGrupoEtapaEvento
+        abierto={modalGrupo}
+        grupoEditando={grupoEditando}
+        datos={datosGrupo}
+        setDatos={setDatosGrupo}
+        escenarios={escenarios}
+        onCerrar={() => {
+          setModalGrupo(false);
+          setGrupoEditando(null);
+        }}
+
+        onSubmit={guardarGrupoEtapa}
       />
 
       {/* Botón Flotante de Ayuda */}

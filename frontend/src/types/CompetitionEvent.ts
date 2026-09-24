@@ -34,18 +34,28 @@ export interface EventoCompetencia {
 
   status: EventStatus;
 
+  competition_format: CompetitionFormat;
+  result_aggregation: | ResultAggregation | null;
+
   championship_discipline?: ChampionshipDiscipline;
   category?: Categoria;
   venue?: Escenario;
 }
 
-export type CrearEventoCompetencia = Omit<
-  EventoCompetencia,
-  | 'id'
-  | 'championship_discipline'
-  | 'category'
-  | 'venue'
->;
+export type CrearEventoCompetencia = {
+  championship_discipline_id: number;
+  category_id: number;
+  name: string;
+  event_type: EventType;
+  participation_type: ParticipationType;
+  competition_format: CompetitionFormat;
+  rounds_count?: number | null;
+  result_aggregation?: ResultAggregation | null;
+  date: string;
+  start_time?: string | null;
+  venue_id?: number | null;
+  status: EventStatus;
+};
 
 export interface DatosEvento {
   discipline_id: string;
@@ -60,6 +70,9 @@ export interface DatosEvento {
   start_time: string;
 
   venue_id: string;
+  competition_format: CompetitionFormat;
+  rounds_count: string;
+  result_aggregation: ResultAggregation;
 }
 
 export interface DatosEdicionEvento {
@@ -97,16 +110,27 @@ export type CrearParticipanteEvento = Omit<
   | 'championship_team'
 >;
 
-// 
 export type EventStageType =
   | 'qualifying'
   | 'semifinal'
   | 'final'
-  | 'round';
 
 export type QualificationMethod =
   | 'best_overall'
-  | 'all';
+  | 'best_per_group'
+  | 'all'
+  | 'none';
+
+export type CompetitionFormat =
+  | 'single_final'
+  | 'qualifying_final'
+  | 'qualifying_semifinal_final'
+  | 'custom';
+
+export type ResultAggregation =
+  | 'sum'
+  | 'best'
+  | 'average';
 
 export interface EtapaEvento {
   id: number;
@@ -114,8 +138,12 @@ export interface EtapaEvento {
   name: string;
   stage_type: EventStageType;
   stage_number: number;
+  rounds_count: number;
+  result_aggregation: ResultAggregation;
   qualifiers_count: number | null;
+  qualifiers_per_group: number | null;
   qualification_method: QualificationMethod | null;
+  podium_places: number | null;
   status: EventStatus;
 }
 
@@ -123,8 +151,12 @@ export interface GuardarEtapaEvento {
   name: string;
   stage_type: EventStageType;
   stage_number: number;
+  rounds_count: number;
+  result_aggregation: ResultAggregation;
   qualifiers_count: number | null;
   qualification_method: QualificationMethod | null;
+  qualifiers_per_group: number | null;
+  podium_places: number | null;
   status: EventStatus;
 }
 
@@ -132,7 +164,48 @@ export interface DatosEtapaEvento {
   name: string;
   stage_type: EventStageType;
   stage_number: string;
-  qualifiers_count: string;
+  rounds_count: string;
+  result_aggregation: ResultAggregation;
   qualification_method: QualificationMethod | '';
+  qualifiers_count: string;
+  qualifiers_per_group: string;
+  podium_places: string;
+  status: EventStatus;
+}
+
+export type EventGroupType =
+  | 'series'
+  | 'group';
+
+export interface GrupoEtapaEvento {
+  id: number;
+  competition_event_stage_id: number;
+  name: string;
+  group_type: EventGroupType;
+  group_number: number;
+  date: string | null;
+  start_time: string | null;
+  venue_id: number | null;
+  status: EventStatus;
+  venue?: Escenario | null;
+}
+
+export interface GuardarGrupoEtapaEvento {
+  name: string;
+  group_type: EventGroupType;
+  group_number: number;
+  date: string | null;
+  start_time: string | null;
+  venue_id: number | null;
+  status: EventStatus;
+}
+
+export interface DatosGrupoEtapaEvento {
+  name: string;
+  group_type: EventGroupType;
+  group_number: string;
+  date: string;
+  start_time: string;
+  venue_id: string;
   status: EventStatus;
 }

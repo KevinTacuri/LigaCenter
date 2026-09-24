@@ -12,6 +12,8 @@ interface Props {
   onEditar: (etapa: EtapaEvento) => void;
 
   onEliminar: (etapaId: number) => void;
+
+  onGestionar: (etapa: EtapaEvento) => void;
 }
 
 const obtenerTipoEtapa = (
@@ -26,9 +28,6 @@ const obtenerTipoEtapa = (
 
     case 'final':
       return 'Final';
-
-    case 'round':
-      return 'Ronda';
 
     default:
       return tipo;
@@ -46,6 +45,10 @@ const obtenerMetodoClasificacion = (
     return 'Mejores generales';
   }
 
+  if (metodo === 'best_per_group') {
+    return 'Mejores por grupo';
+  }
+
   if (metodo === 'all') {
     return 'Todos';
   }
@@ -57,6 +60,7 @@ const ListaEtapasEvento = ({
   etapas,
   cargando,
   onAgregar,
+  onGestionar,
   onEditar,
   onEliminar,
 }: Props) => {
@@ -159,6 +163,13 @@ const ListaEtapasEvento = ({
 
                   <td className="p-3 pr-4">
                     <div className="flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => onGestionar(etapa)}
+                        className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                        >
+                        Gestionar grupos
+                      </button>
                       <button
                         type="button"
                         onClick={() =>

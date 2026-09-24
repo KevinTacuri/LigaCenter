@@ -10,6 +10,7 @@ import type {
   EventStageType,
   EventStatus,
   QualificationMethod,
+  ResultAggregation,
 } from '../../../types/CompetitionEvent';
 
 interface Props {
@@ -120,10 +121,6 @@ const ModalEtapaEvento = ({
                 <option value="final">
                   Final
                 </option>
-
-                <option value="round">
-                  Ronda
-                </option>
               </select>
             </div>
 
@@ -147,23 +144,21 @@ const ModalEtapaEvento = ({
                 className="w-full text-sm border border-slate-200 rounded-lg p-2.5"
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 block">
-                Cantidad que clasifica
+                Número de rondas *
               </label>
 
               <input
+                required
                 type="number"
                 min="1"
-                placeholder="Ej: 8"
-                value={datos.qualifiers_count}
+                value={datos.rounds_count}
                 onChange={(e) =>
                   setDatos((prev) => ({
                     ...prev,
-                    qualifiers_count:
+                    rounds_count:
                       e.target.value,
                   }))
                 }
@@ -173,35 +168,150 @@ const ModalEtapaEvento = ({
 
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 block">
-                Método de clasificación
+                Cálculo de resultados *
               </label>
 
               <select
-                value={datos.qualification_method}
+                value={datos.result_aggregation}
                 onChange={(e) =>
                   setDatos((prev) => ({
                     ...prev,
-                    qualification_method:
-                      e.target.value as
-                        | QualificationMethod
-                        | '',
+                    result_aggregation:
+                      e.target.value as ResultAggregation,
                   }))
                 }
                 className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer"
               >
-                <option value="">
-                  Sin método
+                <option value="sum">
+                  Sumar resultados
                 </option>
 
-                <option value="best_overall">
-                  Mejores generales
+                <option value="best">
+                  Mejor resultado
                 </option>
 
-                <option value="all">
-                  Todos
+                <option value="average">
+                  Promedio
                 </option>
               </select>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {datos.stage_type !== 'final' && (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">
+                  Método de clasificación
+                </label>
+
+                <select
+                  value={datos.qualification_method}
+                  onChange={(e) =>
+                    setDatos((prev) => ({
+                      ...prev,
+                      qualification_method:
+                        e.target.value as
+                          | QualificationMethod
+                          | '',
+                      qualifiers_count: '',
+                      qualifiers_per_group: '',
+                    }))
+                  }
+                  className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer"
+                >
+                  <option value="best_overall">
+                    Mejores generales
+                  </option>
+                  <option value="best_per_group">
+                    Mejores por grupo
+                  </option>
+                  <option value="all">
+                    Todos Clasifican
+                  </option>
+                </select>
+              </div>
+
+              {datos.qualification_method ===
+              'best_overall' && (
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">
+                  Cantidad de clasificados
+                </label>
+
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={
+                    datos.qualifiers_count
+                  }
+                  onChange={(e) =>
+                    setDatos((prev) => ({
+                      ...prev,
+                      qualifiers_count:
+                        e.target.value,
+                    }))
+                  }
+                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5"
+                />
+              </div>
+            )}
+
+            {datos.qualification_method ===
+              'best_per_group' && (
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">
+                  Clasificados por grupo
+                </label>
+
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={
+                    datos.qualifiers_per_group
+                  }
+                  onChange={(e) =>
+                    setDatos((prev) => ({
+                      ...prev,
+                      qualifiers_per_group:
+                        e.target.value,
+                    }))
+                  }
+                  className="w-full text-sm border border-slate-200 rounded-lg p-2.5"
+                />
+              </div>
+            )}
+          </div>
+          )}
+        
+          {datos.stage_type === 'final' && (
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700 block">
+                Cantidad de puestos premiados *
+              </label>
+
+              <input
+                required
+                type="number"
+                min="1"
+                value={datos.podium_places}
+                onChange={(e) =>
+                  setDatos((prev) => ({
+                    ...prev,
+                    podium_places:
+                      e.target.value,
+                  }))
+                }
+                className="w-full text-sm border border-slate-200 rounded-lg p-2.5"
+              />
+
+              <p className="text-[10px] text-slate-500">
+                Ejemplo: 3 para primer, segundo y tercer lugar.
+              </p>
+            </div>
+          )}
           </div>
 
           <div className="space-y-1">

@@ -1,18 +1,11 @@
 import type {
+  CompetitionFormat,
   EventType,
   ParticipationType,
 } from '../../../types/CompetitionEvent';
 
-interface DatosEvento {
-  discipline_id: string;
-  category_id: string;
-  name: string;
-  event_type: EventType;
-  participation_type: ParticipationType;
-  date: string;
-  start_time: string;
-  venue_id: string;
-}
+import type { DatosEvento } from '../../../types/CompetitionEvent';
+
 
 interface Props {
   datosEvento: DatosEvento;
@@ -202,6 +195,40 @@ export default function FormularioEvento({
 
             <option value="team">
               Por equipos
+            </option>
+          </select>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-slate-700 block">
+            Formato de competencia *
+          </label>
+
+          <select
+            value={datosEvento.competition_format}
+            onChange={(e) =>
+              setDatosEvento((prev) => ({
+                ...prev,
+                competition_format:
+                  e.target.value as CompetitionFormat,
+              }))
+            }
+            className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer"
+          >
+            <option value="single_final">
+              Final directa
+            </option>
+
+            <option value="qualifying_final">
+              Clasificatoria + Final
+            </option>
+
+            <option value="qualifying_semifinal_final">
+              Clasificatoria + Semifinal + Final
+            </option>
+
+            <option value="custom">
+              Personalizado
             </option>
           </select>
         </div>

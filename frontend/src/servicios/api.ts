@@ -6,6 +6,8 @@ import type {
   ParticipanteEvento,
   EtapaEvento,
   GuardarEtapaEvento,
+  GrupoEtapaEvento,
+  GuardarGrupoEtapaEvento,
 } from '../types/CompetitionEvent';
 
 // URL base para la API del backend
@@ -938,6 +940,51 @@ export const serviciosEventosCompetencia = {
   ): Promise<RespuestaApi<null>> => {
     const response = await clienteApi.delete(
       `/competition-event-stages/${etapaId}`
+    );
+
+    return response.data;
+  },
+
+  // Consultas api relacionadas a grupos y series en etapas
+  obtenerGruposEtapa: async (
+    etapaId: number
+  ): Promise<RespuestaApi<GrupoEtapaEvento[]>> => {
+    const response = await clienteApi.get(
+      `/competition-event-stages/${etapaId}/groups`
+    );
+
+    return response.data;
+  },
+
+  crearGrupoEtapa: async (
+    etapaId: number,
+    datos: GuardarGrupoEtapaEvento
+  ): Promise<RespuestaApi<GrupoEtapaEvento>> => {
+    const response = await clienteApi.post(
+      `/competition-event-stages/${etapaId}/groups`,
+      datos
+    );
+
+    return response.data;
+  },
+
+  actualizarGrupoEtapa: async (
+    grupoId: number,
+    datos: GuardarGrupoEtapaEvento
+  ): Promise<RespuestaApi<GrupoEtapaEvento>> => {
+    const response = await clienteApi.put(
+      `/competition-event-groups/${grupoId}`,
+      datos
+    );
+
+    return response.data;
+  },
+
+  eliminarGrupoEtapa: async (
+    grupoId: number
+  ): Promise<RespuestaApi<null>> => {
+    const response = await clienteApi.delete(
+      `/competition-event-groups/${grupoId}`
     );
 
     return response.data;
