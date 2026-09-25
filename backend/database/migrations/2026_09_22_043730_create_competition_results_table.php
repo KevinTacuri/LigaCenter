@@ -30,6 +30,8 @@ return new class extends Migration
 
             $table->unsignedInteger('position')->nullable();
 
+            $table->unsignedInteger('tiebreak_order')->nullable();
+
             $table->string('status', 30)->default('registrado');
 
             $table->timestamps();

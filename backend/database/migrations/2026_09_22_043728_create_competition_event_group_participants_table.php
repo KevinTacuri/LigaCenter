@@ -30,8 +30,8 @@ return new class extends Migration
                 $table->unsignedInteger('start_order')
                     ->nullable();
 
-                $table->string('status', 30)
-                    ->default('programado');
+                $table->string('status', 20)
+                    ->default('activo');
 
                 $table->timestamps();
 
