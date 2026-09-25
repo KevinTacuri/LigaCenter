@@ -17,7 +17,7 @@ class CompetitionQualificationService
     ): array {
         return DB::transaction(
             function () use ($stage) {
-
+                $stage->loadMissing('event');
                 /*
                 |--------------------------------------------------------------------------
                 | VALIDAR ETAPA
@@ -320,6 +320,14 @@ class CompetitionQualificationService
                             $targetGroup->id
                         )
                         ->max('start_order');
+                    
+                    // Asignar Carril
+                    // Solo las competencias de tipo carril usan carriles
+                    $lane = null;
+
+                    if ($stage->event->event_type === 'carrera') {
+                        $lane = $this->nextAvailableLane($targetGroup->id);
+                    }
 
                     CompetitionEventGroupParticipant::create([
                         'competition_event_group_id' =>
@@ -328,7 +336,7 @@ class CompetitionQualificationService
                         'competition_event_participant_id' =>
                             $participantId,
 
-                        'lane' => null,
+                        'lane' => $lane,
 
                         'start_order' =>
                             ($nextStartOrder ?? 0) + 1,
@@ -468,10 +476,7 @@ class CompetitionQualificationService
             $quantity,
         );
 
-        return $this
-            ->orderTies(
-                $ordered,
-            )
+        return $ordered
             ->take(
                 $quantity
             )
@@ -843,39 +848,6 @@ class CompetitionQualificationService
         }
     }
 
-    private function orderTies(
-        $results
-    ) {
-        return $results->sort(
-            function ($a, $b) {
-                /*
-                * Si la marca es diferente,
-                * conservamos el orden
-                * que ya recibió la colección.
-                */
-                if (
-                    (float)
-                    $a->result_value
-                    !==
-                    (float)
-                    $b->result_value
-                ) {
-                    return 0;
-                }
-
-                /*
-                * Misma marca:
-                * usa desempate.
-                */
-                return ($a->tiebreak_order ?? PHP_INT_MAX)
-                    <=> (
-                        $b->tiebreak_order ?? PHP_INT_MAX
-                    );
-            }
-        )
-        ->values();
-    }
-
     public function getTiebreakInfo(
         CompetitionEventStage $stage
     ): array {
@@ -1229,5 +1201,36 @@ class CompetitionQualificationService
                     ->values()
                     ->all(),
         ];
+    }
+
+    private function nextAvailableLane(
+        int $groupId
+    ): int {
+        $usedLanes =
+            CompetitionEventGroupParticipant::where(
+                'competition_event_group_id',
+                $groupId
+            )
+            ->whereNotNull('lane')
+            ->pluck('lane')
+            ->map(
+                fn ($lane) =>
+                    (int) $lane
+            )
+            ->all();
+
+        $lane = 1;
+
+        while (
+            in_array(
+                $lane,
+                $usedLanes,
+                true
+            )
+        ) {
+            $lane++;
+        }
+
+        return $lane;
     }
 }

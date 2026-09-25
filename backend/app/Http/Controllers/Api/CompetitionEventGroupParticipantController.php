@@ -36,12 +36,6 @@ class CompetitionEventGroupParticipantController extends Controller
                 'exists:competition_event_participants,id',
             ],
 
-            'lane' => [
-                'nullable',
-                'integer',
-                'min:1',
-            ],
-
             'start_order' => [
                 'nullable',
                 'integer',
@@ -54,7 +48,7 @@ class CompetitionEventGroupParticipantController extends Controller
         );
 
         // Verificar que el participante pertenezca al mismo evento que el grupo
-        $group->load('stage');
+        $group->load('stage.event');
 
         if ($participant->competition_event_id !== $group->stage->competition_event_id) {
             return response()->json([
@@ -104,6 +98,20 @@ class CompetitionEventGroupParticipantController extends Controller
             ], 422);
         }
 
+        $usesLanes = $group
+            ->stage->event ->event_type === 'carrera';
+
+        $lane = $usesLanes
+            ? $this->nextAvailableLane(
+                $group->id
+            )
+            : null;
+
+        $startOrder = $validated['start_order']
+            ?? $this->nextStartOrder(
+                $group->id
+            );
+
         // Crear la asignación del participante al grupo
         $groupParticipant = CompetitionEventGroupParticipant::create([
             'competition_event_group_id' =>
@@ -112,11 +120,9 @@ class CompetitionEventGroupParticipantController extends Controller
             'competition_event_participant_id' =>
                 $participant->id,
 
-            'lane' =>
-                $validated['lane'] ?? null,
+            'lane' => $lane,
 
-            'start_order' =>
-                $validated['start_order'] ?? null,
+            'start_order' => $startOrder,
         ]);
 
         return response()->json([
@@ -146,6 +152,34 @@ class CompetitionEventGroupParticipantController extends Controller
                 'min:1',
             ],
         ]);
+
+        if ($groupParticipant->group ->status === 'finalizado') {
+            return response()->json([
+                'success' => false,
+                'message' =>
+                    'No se puede modificar un participante de un grupo finalizado.',
+            ], 422);
+        }
+
+        if (
+            array_key_exists('lane', $validated) &&
+            $validated['lane'] !== null
+        ) {
+            $laneExists = CompetitionEventGroupParticipant::where(
+                'competition_event_group_id',
+                $groupParticipant->competition_event_group_id
+            )
+                ->where('lane', $validated['lane'])
+                ->where('id', '!=', $groupParticipant->id)
+                ->exists();
+
+            if ($laneExists) {return response()->json([
+                    'success' => false,
+                    'message' =>
+                        'Ese carril ya está ocupado en este grupo.',
+                ], 422);
+            }
+        }
 
         $groupParticipant->update($validated);
 
@@ -205,5 +239,49 @@ class CompetitionEventGroupParticipantController extends Controller
             'data' =>
                 $groupParticipant->fresh(),
         ]);
+    }
+
+    private function nextAvailableLane(
+        int $groupId
+    ): int {
+        $usedLanes =
+            CompetitionEventGroupParticipant::where(
+                'competition_event_group_id',
+                $groupId
+            )
+            ->whereNotNull('lane')
+            ->pluck('lane')
+            ->map(
+                fn ($lane) =>
+                    (int) $lane
+            )
+            ->all();
+
+        $lane = 1;
+
+        while (
+            in_array(
+                $lane,
+                $usedLanes,
+                true
+            )
+        ) {
+            $lane++;
+        }
+
+        return $lane;
+    }
+
+    private function nextStartOrder(
+        int $groupId
+    ): int {
+        $currentMax =
+            CompetitionEventGroupParticipant::where(
+                'competition_event_group_id',
+                $groupId
+            )
+            ->max('start_order');
+
+        return ($currentMax ?? 0) + 1;
     }
 }
