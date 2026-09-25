@@ -252,4 +252,29 @@ class CompetitionEventParticipantController extends Controller
             'status' => $validated['status'] ?? 'inscrito',
         ]);
     }
+
+    public function updateStatus(
+        Request $request,
+        CompetitionEventParticipant $competitionEventParticipant
+    ) {
+        $validated = $request->validate([
+            'status' => [
+                'required',
+                'string',
+                'in:inscrito,confirmado,no_presento,retirado',
+            ],
+        ]);
+
+        $competitionEventParticipant->update([
+            'status' => $validated['status'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' =>
+                'Estado del participante actualizado correctamente.',
+            'data' =>
+                $competitionEventParticipant->fresh(),
+        ]);
+    }
 }

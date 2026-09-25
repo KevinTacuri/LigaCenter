@@ -401,4 +401,19 @@ class CompetitionEventStageController extends Controller
                     ),
         ]);
     }
+
+    public function tiebreak(
+        CompetitionEventStage $competitionEventStage,
+        CompetitionQualificationService $qualificationService
+    ) {
+        return response()->json([
+            'success' => true,
+
+            'data' =>
+                $qualificationService
+                    ->getTiebreakInfo(
+                        $competitionEventStage
+                    ),
+        ]);
+    }
 }

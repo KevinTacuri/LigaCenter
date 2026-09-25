@@ -168,4 +168,42 @@ class CompetitionEventGroupParticipantController extends Controller
                 'Participante retirado del grupo correctamente.',
         ]);
     }
+
+    public function updateStatus(
+        Request $request,
+        CompetitionEventGroupParticipant $groupParticipant
+    ) {
+        $groupParticipant->loadMissing('group');
+
+        if (
+            $groupParticipant->group->status ===
+            'finalizado'
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' =>
+                    'No se puede modificar un grupo finalizado.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'status' => [
+                'required',
+                'in:activo,no_presento,retirado',
+            ],
+        ]);
+
+        $groupParticipant->update([
+            'status' =>
+                $validated['status'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' =>
+                'Estado actualizado correctamente.',
+            'data' =>
+                $groupParticipant->fresh(),
+        ]);
+    }
 }

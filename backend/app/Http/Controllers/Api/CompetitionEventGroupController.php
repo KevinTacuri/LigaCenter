@@ -305,10 +305,12 @@ class CompetitionEventGroupController extends Controller
                 ->rounds_count;
 
         $participants =
-            CompetitionEventGroupParticipant::where(
-                'competition_event_group_id',
-                $competitionEventGroup->id
-            )->get();
+            CompetitionEventGroupParticipant::with('participant')
+                ->where(
+                    'competition_event_group_id',
+                    $competitionEventGroup->id
+                )
+                ->get();
 
         if ($participants->isEmpty()) {
             return response()->json([
@@ -339,6 +341,11 @@ class CompetitionEventGroupController extends Controller
                 $results->get(
                     $participant->id
                 );
+
+            // No se presentó o se retiró
+            if (in_array($participant->status, ['no_presento', 'retirado'], true)) {
+                continue;
+            }
 
             /*
             |--------------------------------------------------------------------------
@@ -429,8 +436,7 @@ class CompetitionEventGroupController extends Controller
                         $result->status !== 'anulado'
                     ) {
                         $result->update([
-                            'status' =>
-                                'oficializado',
+                            'status' => 'oficializado',
                         ]);
                     }
                 }

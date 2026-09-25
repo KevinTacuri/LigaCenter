@@ -205,4 +205,31 @@ class CompetitionResultController extends Controller
             'message' => 'Resultado eliminado correctamente.',
         ]);
     }
+
+
+    public function updateTiebreak(
+        Request $request,
+        CompetitionResult $competitionResult
+    ) {
+        $validated = $request->validate([
+            'tiebreak_order' => [
+                'nullable',
+                'integer',
+                'min:1',
+            ],
+        ]);
+
+        $competitionResult->update([
+            'tiebreak_order' =>
+                $validated['tiebreak_order'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' =>
+                'Desempate actualizado correctamente.',
+            'data' =>
+                $competitionResult->fresh(),
+        ]);
+    }
 }

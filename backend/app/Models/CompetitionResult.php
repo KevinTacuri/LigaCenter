@@ -16,12 +16,14 @@ class CompetitionResult extends Model
         'result_value',
         'result_unit',
         'position',
+        'tiebreak_order',
         'status',
     ];
 
     protected $casts = [
         'result_value' => 'decimal:4',
         'position' => 'integer',
+        'tiebreak_order' => 'integer',
     ];
 
     public function groupParticipant(): BelongsTo
