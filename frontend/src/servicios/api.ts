@@ -11,6 +11,8 @@ import type {
   ParticipanteGrupoEvento,
   CrearParticipanteGrupoEvento,
   ResultadoEvento,
+  IntentoResultadoEvento,
+  ResumenEtapaEvento
 } from '../types/CompetitionEvent';
 
 // URL base para la API del backend
@@ -1048,6 +1050,103 @@ export const serviciosEventosCompetencia = {
   > => {
     const res = await clienteApi.get(
       `/competition-results?competition_event_group_id=${grupoId}`
+    );
+
+    return res.data;
+  },
+
+  crearResultado: async (
+    datos: {
+      competition_event_group_participant_id: number;
+      result_unit?: string | null;
+      status?: 'registrado' | 'oficializado' | 'anulado';
+    }
+  ): Promise<RespuestaApi<ResultadoEvento>> => {
+    const res = await clienteApi.post(
+      '/competition-results',
+      datos
+    );
+
+    return res.data;
+  },
+
+  crearIntentoResultado: async (
+    resultadoId: number,
+    datos: {
+      attempt_number: number;
+      value: number | null;
+      competition_event_participant_member_id?: number | null;
+    }
+  ): Promise<RespuestaApi<IntentoResultadoEvento>> => {
+    const res = await clienteApi.post(
+      `/competition-results/${resultadoId}/attempts`,
+      datos
+    );
+
+    return res.data;
+  },
+
+  actualizarIntentoResultado: async (
+    intentoId: number,
+    datos: {
+      value: number | null;
+    }
+  ): Promise<RespuestaApi<IntentoResultadoEvento>> => {
+    const res = await clienteApi.put(
+      `/competition-result-attempts/${intentoId}`,
+      datos
+    );
+
+    return res.data;
+  },
+
+  eliminarIntentoResultado: async (
+    intentoId: number
+  ): Promise<RespuestaApi<null>> => {
+    const res = await clienteApi.delete(
+      `/competition-result-attempts/${intentoId}`
+    );
+
+    return res.data;
+  },
+
+  iniciarGrupo: async (
+    grupoId: number
+  ): Promise<RespuestaApi<GrupoEtapaEvento>> => {
+    const res = await clienteApi.post(
+      `/competition-event-groups/${grupoId}/start`
+    );
+
+    return res.data;
+  },
+
+  finalizarGrupo: async (
+    grupoId: number
+  ): Promise<RespuestaApi<GrupoEtapaEvento>> => {
+    const res = await clienteApi.post(
+      `/competition-event-groups/${grupoId}/finish`
+    );
+
+    return res.data;
+  },
+
+  finalizarEtapa: async (
+    etapaId: number
+  ): Promise<RespuestaApi<any>> => {
+    const res = await clienteApi.post(
+      `/competition-event-stages/${etapaId}/finish`
+    );
+
+    return res.data;
+  },
+
+  obtenerResumenEtapa: async (
+    etapaId: number
+  ): Promise<
+    RespuestaApi<ResumenEtapaEvento>
+  > => {
+    const res = await clienteApi.get(
+      `/competition-event-stages/${etapaId}/summary`
     );
 
     return res.data;

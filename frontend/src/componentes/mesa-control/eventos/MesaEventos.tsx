@@ -5,6 +5,10 @@ import React, {
 } from 'react';
 
 import {
+  useConfirm,
+} from '@omit/react-confirm-dialog';
+
+import {
   serviciosEventosCompetencia,
 } from '../../../servicios/api';
 
@@ -14,6 +18,7 @@ import type {
   EventoCompetencia,
   EtapaEvento,
   GrupoEtapaEvento,
+  ResumenEtapaEvento,
 } from '../../../types/CompetitionEvent';
 
 interface GrupoControlSeleccionado {
@@ -26,6 +31,125 @@ interface GrupoControlSeleccionado {
 const MesaEventos: React.FC = () => {
 
   const [ grupoControl, setGrupoControl, ] = useState<GrupoControlSeleccionado | null>(null);
+  const confirm = useConfirm();
+  const [
+    resumenesEtapa,
+    setResumenesEtapa,
+  ] = useState<
+    Record<
+      number,
+      ResumenEtapaEvento
+    >
+  >({});
+
+  const finalizarEtapa = async (
+    etapa: EtapaEvento
+  ) => {
+    if (!eventoSeleccionado) {
+      return;
+    }
+
+    const esFinal = etapa.stage_type ==='final';
+
+    const confirmado =
+      await confirm({
+        title: esFinal
+          ? 'Finalizar competencia'
+          : `Finalizar ${etapa.name}`,
+
+        description: esFinal
+          ? 'Se cerrará la etapa final y el evento quedará finalizado.'
+          : 'Se calcularán los clasificados y serán promovidos automáticamente a la siguiente etapa.',
+
+        confirmText: esFinal
+          ? 'Finalizar competencia'
+          : 'Finalizar etapa',
+
+        cancelText:
+          'Cancelar',
+
+        confirmButton: {
+          variant:
+            'destructive',
+        },
+      });
+
+    if (!confirmado) {
+      return;
+    }
+
+    try {
+      const res =
+        await serviciosEventosCompetencia
+          .finalizarEtapa(
+            etapa.id
+          );
+
+      if (res.success) {
+        /*
+        * Recargar evento →
+        * etapas →
+        * grupos.
+        */
+        await seleccionarEvento(
+          eventoSeleccionado
+        );
+
+        await cargarEventos();
+      }
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message ||
+          'No se pudo finalizar la etapa.'
+      );
+    }
+  };
+
+  const formatearResultado =
+  (
+    valor:
+      | string
+      | number
+      | null
+  ) => {
+    if (
+      valor === null ||
+      valor === undefined
+    ) {
+      return '-';
+    }
+
+    const numero =
+      Number(valor);
+
+    if (
+      eventoSeleccionado
+        ?.event_type ===
+      'carrera'
+    ) {
+      const minutos =
+        Math.floor(
+          numero / 60
+        );
+
+      const segundos =
+        numero % 60;
+
+      return `${minutos
+        .toString()
+        .padStart(
+          2,
+          '0'
+        )}:${segundos
+        .toFixed(2)
+        .padStart(
+          5,
+          '0'
+        )}`;
+    }
+
+    return numero.toLocaleString();
+  };
 
   const [
     eventos,
@@ -166,6 +290,67 @@ const MesaEventos: React.FC = () => {
 
       setEtapas(etapasOrdenadas);
 
+      const etapasFinalizadas =
+        etapasOrdenadas.filter(
+          (etapa) =>
+            etapa.status ===
+            'finalizado'
+        );
+
+      const respuestasResumen =
+        await Promise.all(
+          etapasFinalizadas.map(
+            async (etapa) => {
+              try {
+                const res =
+                  await serviciosEventosCompetencia
+                    .obtenerResumenEtapa(
+                      etapa.id
+                    );
+
+                return {
+                  etapaId:
+                    etapa.id,
+
+                  resumen:
+                    res.success
+                      ? res.data
+                      : null,
+                };
+              } catch {
+                return {
+                  etapaId:
+                    etapa.id,
+
+                  resumen:
+                    null,
+                };
+              }
+            }
+          )
+        );
+
+      const mapaResumenes: Record<
+        number,
+        ResumenEtapaEvento
+      > = {};
+
+      respuestasResumen.forEach(
+        ({
+          etapaId,
+          resumen,
+        }) => {
+          if (resumen) {
+            mapaResumenes[
+              etapaId
+            ] = resumen;
+          }
+        }
+      );
+
+      setResumenesEtapa(
+        mapaResumenes
+      );
       /*
       |--------------------------------------------------------------------------
       | GRUPOS DE CADA ETAPA
@@ -384,8 +569,14 @@ const MesaEventos: React.FC = () => {
         evento={grupoControl.evento}
         etapa={grupoControl.etapa}
         grupo={grupoControl.grupo}
-        onVolver={() =>
-          setGrupoControl(null)
+        onVolver={async () => {
+            setGrupoControl(null);
+            if (eventoSeleccionado) {
+              await seleccionarEvento(
+                eventoSeleccionado
+              );
+            }
+          }
         }
       />
     );
@@ -719,10 +910,21 @@ const MesaEventos: React.FC = () => {
               etapa,
               index
             ) => {
+              const resumen = resumenesEtapa[etapa.id];
               const grupos =
                 gruposPorEtapa[
                   etapa.id
                 ] ?? [];
+
+                const todosGruposFinalizados =
+                  grupos.length > 0 &&
+                  grupos.every(
+                    (grupo) =>
+                      grupo.status ===
+                      'finalizado'
+                  );
+
+                const etapaFinalizada = etapa.status === 'finalizado';
 
               return (
                 <div
@@ -914,6 +1116,241 @@ const MesaEventos: React.FC = () => {
                             </div>
                           )
                         )}
+
+                      </div>
+                    )}
+                    {/* ETAPA TODAVÍA NO FINALIZADA */}
+                    {!etapaFinalizada && (
+                      <div className="mt-5 pt-4 border-t border-slate-900">
+
+                        {todosGruposFinalizados ? (
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                                <span className="material-symbols-outlined text-sm text-emerald-400">
+                                  check_circle
+                                </span>
+                              </span>
+
+                              <div>
+                                <p className="font-bold text-slate-300">
+                                  Todos los grupos están finalizados
+                                </p>
+
+                                <p className="text-[9px] text-slate-500 mt-0.5">
+                                  La etapa está lista para cerrarse.
+                                </p>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                finalizarEtapa(
+                                  etapa
+                                )
+                              }
+                              className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                                etapa.stage_type ===
+                                'final'
+                                  ? 'bg-emerald-700 hover:bg-emerald-600 text-white'
+                                  : 'bg-[#800f2f] hover:bg-[#a4133c] text-white'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-sm">
+                                {etapa.stage_type ===
+                                'final'
+                                  ? 'emoji_events'
+                                  : 'double_arrow'}
+                              </span>
+
+                              {etapa.stage_type ===
+                              'final'
+                                ? 'Finalizar competencia'
+                                : 'Finalizar etapa'}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-[10px] text-slate-600">
+                            <span className="material-symbols-outlined text-sm">
+                              info
+                            </span>
+
+                            Finalice todos los grupos para cerrar esta etapa.
+                          </div>
+                        )}
+
+                      </div>
+                    )}
+                    {/* ETAPA YA FINALIZADA */}
+                    {etapaFinalizada && (
+                      <div className="mt-5 pt-4 border-t border-slate-900">
+                        <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
+                          <span className="material-symbols-outlined text-sm">
+                            verified
+                          </span>
+                          Etapa finalizada
+                        </div>
+                      </div>
+                    )}
+
+                    {etapa.status ==='finalizado' &&resumen?.type ==='qualified' && (
+                      <div className="mt-5 pt-5 border-t border-slate-900">
+
+                        <div className="flex items-center justify-between gap-3 mb-4">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="material-symbols-outlined text-emerald-400 text-lg">
+                                how_to_reg
+                              </span>
+
+                              <h4 className="text-xs font-black uppercase tracking-wider text-white">
+                                Clasificados
+                              </h4>
+                            </div>
+
+                            <p className="text-[9px] text-slate-500 mt-1">
+                              Participantes promovidos
+                              a la siguiente etapa.
+                            </p>
+                          </div>
+
+                          <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-black">
+                            {
+                              resumen
+                                .participants
+                                .length
+                            }{' '}
+                            clasificados
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
+                          {resumen.participants.map(
+                            (participante) => (
+                              <div
+                                key={
+                                  participante
+                                    .competition_event_participant_id
+                                }
+                                className="flex items-center gap-3 bg-[#07080c] border border-slate-900 rounded-xl p-3"
+                              >
+                                <div className="w-8 h-8 shrink-0 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                                  <span className="material-symbols-outlined text-sm text-emerald-400">
+                                    check
+                                  </span>
+                                </div>
+
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-slate-200 truncate">
+                                    {
+                                      participante.name
+                                    }
+                                  </p>
+
+                                  <p className="text-[9px] text-slate-600 mt-0.5 truncate">
+                                    {participante.group_name ??
+                                      'Etapa'}
+                                    {participante.source_position
+                                      ? ` · #${participante.source_position}`
+                                      : ''}
+                                  </p>
+                                </div>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {etapa.status ==='finalizado' && resumen?.type === 'podium' && (
+                      <div className="mt-5 pt-5 border-t border-slate-900">
+
+                        <div className="flex items-center gap-2 mb-4">
+                          <span className="material-symbols-outlined text-amber-400 text-lg">
+                            emoji_events
+                          </span>
+
+                          <div>
+                            <h4 className="text-xs font-black uppercase tracking-wider text-white">
+                              Podio final
+                            </h4>
+
+                            <p className="text-[9px] text-slate-500 mt-1">
+                              Resultados oficiales
+                              de la competencia.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {resumen.participants.map(
+                            (
+                              participante,
+                              index
+                            ) => {
+                              const posicion =
+                                participante.rank ??
+                                index + 1;
+
+                              return (
+                                <div
+                                  key={
+                                    participante
+                                      .competition_event_participant_id
+                                  }
+                                  className={`relative overflow-hidden rounded-2xl border p-4 ${
+                                    posicion === 1
+                                      ? 'bg-amber-500/10 border-amber-500/30'
+                                      : posicion === 2
+                                        ? 'bg-slate-400/10 border-slate-400/20'
+                                        : 'bg-orange-700/10 border-orange-700/20'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between gap-3">
+
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div
+                                        className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${
+                                          posicion === 1
+                                            ? 'bg-amber-500/20 text-amber-400'
+                                            : posicion === 2
+                                              ? 'bg-slate-400/20 text-slate-300'
+                                              : 'bg-orange-700/20 text-orange-400'
+                                        }`}
+                                      >
+                                        {posicion}
+                                      </div>
+
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-extrabold text-white truncate">
+                                          {
+                                            participante.name
+                                          }
+                                        </p>
+
+                                        <p className="text-[9px] text-slate-500 mt-0.5">
+                                          {posicion === 1
+                                            ? 'Campeón'
+                                            : posicion === 2
+                                              ? 'Segundo puesto'
+                                              : 'Tercer puesto'}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <span className="font-mono text-sm font-black text-white">
+                                      {formatearResultado(
+                                        participante.result_value
+                                      )}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            }
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

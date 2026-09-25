@@ -5,6 +5,10 @@ import React, {
 } from 'react';
 
 import {
+  useConfirm,
+} from '@omit/react-confirm-dialog';
+
+import {
   serviciosEventosCompetencia,
 } from '../../../servicios/api';
 
@@ -25,12 +29,26 @@ interface Props {
   onVolver: () => void;
 }
 
+
 const MesaGrupoEvento: React.FC<Props> = ({
   evento,
   etapa,
   grupo,
   onVolver,
 }) => {
+
+  const [ estadoGrupo, setEstadoGrupo ] = useState(grupo.status);
+  const confirm = useConfirm();
+
+  useEffect(() => {
+    setEstadoGrupo(grupo.status);
+  }, [
+    grupo.id,
+    grupo.status,
+  ]);
+
+
+
   const [
     participantesGrupo,
     setParticipantesGrupo,
@@ -64,11 +82,252 @@ const MesaGrupoEvento: React.FC<Props> = ({
     null
   );
 
+  const [
+    guardandoCelda,
+    setGuardandoCelda,
+  ] = useState<string | null>(null);
+
   /*
   |--------------------------------------------------------------------------
   | CARGAR MESA
   |--------------------------------------------------------------------------
   */
+
+  const recargarResultados = async () => {
+    const res =
+      await serviciosEventosCompetencia
+        .obtenerResultadosGrupo(
+          grupo.id
+        );
+
+    if (res.success) {
+      setResultados(res.data);
+    }
+  };
+
+  const convertirTiempoASegundos = (
+    texto: string
+  ): number | null => {
+    const valor = texto.trim();
+
+    if (!valor) {
+      return null;
+    }
+
+    if (!valor.includes(':')) {
+      const segundos = Number(valor);
+
+      return Number.isNaN(segundos)
+        ? null
+        : segundos;
+    }
+
+    const partes = valor.split(':');
+
+    if (partes.length !== 2) {
+      return null;
+    }
+
+    const minutos = Number(
+      partes[0]
+    );
+
+    const segundos = Number(
+      partes[1]
+    );
+
+    if (
+      Number.isNaN(minutos) ||
+      Number.isNaN(segundos)
+    ) {
+      return null;
+    }
+
+    return (
+      minutos * 60 +
+      segundos
+    );
+  };
+
+  const guardarResultadoRonda = async (
+    asignacion: ParticipanteGrupoEvento,
+    numeroRonda: number,
+    valorTexto: string
+  ) => {
+    const clave =
+      `${asignacion.id}-${numeroRonda}`;
+
+    setGuardandoCelda(clave);
+    setError(null);
+
+    try {
+      let resultado =
+        obtenerResultado(
+          asignacion.id
+        );
+
+      const intentoExistente =
+        obtenerIntento(
+          resultado,
+          numeroRonda
+        );
+
+      /*
+      |--------------------------------------------------------------------------
+      | CONVERTIR VALOR
+      |--------------------------------------------------------------------------
+      */
+
+      let valor: number | null;
+
+      if (
+        valorTexto.trim() === ''
+      ) {
+        valor = null;
+      } else if (
+        evento.event_type ===
+        'carrera'
+      ) {
+        valor =
+          convertirTiempoASegundos(
+            valorTexto
+          );
+
+        if (valor === null) {
+          setError(
+            'Ingrese un tiempo válido. Ejemplo: 27.43 o 00:27.43.'
+          );
+
+          return;
+        }
+      } else {
+        const numero =
+          Number(valorTexto);
+
+        if (
+          Number.isNaN(numero)
+        ) {
+          setError(
+            'Ingrese un valor numérico válido.'
+          );
+
+          return;
+        }
+
+        valor = numero;
+      }
+
+      /*
+      |--------------------------------------------------------------------------
+      | BORRAR INTENTO
+      |--------------------------------------------------------------------------
+      */
+
+      if (
+        valor === null &&
+        intentoExistente
+      ) {
+        await serviciosEventosCompetencia
+          .eliminarIntentoResultado(
+            intentoExistente.id
+          );
+
+        await recargarResultados();
+
+        return;
+      }
+
+      if (valor === null) {
+        return;
+      }
+
+      /*
+      |--------------------------------------------------------------------------
+      | CREAR RESULTADO BASE
+      |--------------------------------------------------------------------------
+      */
+
+      if (!resultado) {
+        const resResultado =
+          await serviciosEventosCompetencia
+            .crearResultado({
+              competition_event_group_participant_id:
+                asignacion.id,
+
+              result_unit:
+                evento.event_type ===
+                'carrera'
+                  ? 'segundos'
+                  : evento.event_type ===
+                      'puntaje'
+                    ? 'puntos'
+                    : null,
+
+              status:
+                'registrado',
+            });
+
+        if (
+          !resResultado.success
+        ) {
+          return;
+        }
+
+        resultado =
+          resResultado.data;
+      }
+
+      /*
+      |--------------------------------------------------------------------------
+      | CREAR / ACTUALIZAR INTENTO
+      |--------------------------------------------------------------------------
+      */
+
+      if (intentoExistente) {
+        await serviciosEventosCompetencia
+          .actualizarIntentoResultado(
+            intentoExistente.id,
+            {
+              value: valor,
+            }
+          );
+      } else {
+        await serviciosEventosCompetencia
+          .crearIntentoResultado(
+            resultado.id,
+            {
+              attempt_number:
+                numeroRonda,
+
+              value: valor,
+
+              competition_event_participant_member_id:
+                null,
+            }
+          );
+      }
+
+      /*
+      |--------------------------------------------------------------------------
+      | RECARGAR TOTAL + POSICIONES
+      |--------------------------------------------------------------------------
+      */
+
+      await recargarResultados();
+    } catch (err: any) {
+      console.error(
+        'Error guardando resultado:',
+        err
+      );
+
+      setError(
+        err.response?.data?.message ||
+          'No se pudo guardar el resultado.'
+      );
+    } finally {
+      setGuardandoCelda(null);
+    }
+  };
 
   const cargarMesa = async () => {
     setCargando(true);
@@ -223,6 +482,144 @@ const MesaGrupoEvento: React.FC<Props> = ({
     return 'Participante';
   };
 
+  const cantidadCompletos =
+    participantesGrupo.filter(
+      (asignacion) => {
+        const resultado =
+          obtenerResultado(
+            asignacion.id
+          );
+
+        if (!resultado) {
+          return false;
+        }
+
+        /*
+        * Un anulado cuenta como resuelto.
+        */
+        if (
+          resultado.status ===
+          'anulado'
+        ) {
+          return true;
+        }
+
+        return rondas.every(
+          (numeroRonda) => {
+            const intento =
+              obtenerIntento(
+                resultado,
+                numeroRonda
+              );
+
+            return (
+              intento &&
+              intento.value !== null &&
+              intento.value !== undefined
+            );
+          }
+        );
+      }
+    ).length;
+
+  const totalParticipantes =
+    participantesGrupo.length;
+
+  const porcentajeCompletado =
+    totalParticipantes > 0
+      ? Math.round(
+          (
+            cantidadCompletos /
+            totalParticipantes
+          ) * 100
+        )
+      : 0;
+
+  const grupoCompleto =
+    totalParticipantes > 0 &&
+    cantidadCompletos ===
+      totalParticipantes;
+  
+  const iniciarGrupo = async () => {
+    setError(null);
+
+    try {
+      const res =
+        await serviciosEventosCompetencia
+          .iniciarGrupo(
+            grupo.id
+          );
+
+      if (res.success) {
+        setEstadoGrupo(
+          'en_curso'
+        );
+      }
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message ||
+          'No se pudo iniciar el grupo.'
+      );
+    }
+  };
+
+  const finalizarGrupo = async () => {
+    if (!grupoCompleto) {
+      setError(
+        `Faltan resultados. Actualmente hay ${cantidadCompletos} de ${totalParticipantes} participantes completos.`
+      );
+
+      return;
+    }
+
+    const confirmado =
+      await confirm({
+        title:
+          'Finalizar grupo',
+
+        description:
+          'Los resultados serán oficializados y ya no podrán modificarse.',
+
+        confirmText:
+          'Finalizar',
+
+        cancelText:
+          'Cancelar',
+
+        confirmButton: {
+          variant:
+            'destructive',
+        },
+      });
+
+    if (!confirmado) {
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const res =
+        await serviciosEventosCompetencia
+          .finalizarGrupo(
+            grupo.id
+          );
+
+      if (res.success) {
+        setEstadoGrupo(
+          'finalizado'
+        );
+
+        await recargarResultados();
+      }
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message ||
+          'No se pudo finalizar el grupo.'
+      );
+    }
+  };
+
   /*
   |--------------------------------------------------------------------------
   | FORMATEAR RESULTADOS
@@ -338,432 +735,582 @@ const MesaGrupoEvento: React.FC<Props> = ({
     <div className="space-y-6">
 
       {/* CABECERA */}
-
       <div className="flex items-start gap-3">
-        <button
-          type="button"
-          onClick={onVolver}
-          className="w-9 h-9 rounded-lg flex items-center justify-center border border-slate-800 hover:bg-[#171a26] text-slate-300 cursor-pointer shrink-0"
-        >
-          <span className="material-symbols-outlined text-sm">
-            arrow_back
-          </span>
-        </button>
+          <button
+              type="button"
+              onClick={onVolver}
+              className="w-9 h-9 rounded-lg flex items-center justify-center border border-slate-800 hover:bg-[#171a26] text-slate-300 cursor-pointer shrink-0"
+          >
+              <span className="material-symbols-outlined text-sm">
+              arrow_back
+              </span>
+          </button>
 
-        <div className="flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-xl font-extrabold text-white">
-              {evento.name}
-            </h2>
+          <div className="flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl font-extrabold text-white">
+                  {evento.name}
+              </h2>
 
-            <span className="px-2 py-1 rounded-md text-[9px] uppercase font-bold bg-[#800f2f]/20 text-[#c9244b] border border-[#800f2f]/30">
-              {etapa.name}
-            </span>
+              <span className="px-2 py-1 rounded-md text-[9px] uppercase font-bold bg-[#800f2f]/20 text-[#c9244b] border border-[#800f2f]/30">
+                  {etapa.name}
+              </span>
 
-            <span className="px-2 py-1 rounded-md text-[9px] uppercase font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              {grupo.name}
-            </span>
+              <span className="px-2 py-1 rounded-md text-[9px] uppercase font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  {grupo.name}
+              </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[10px] text-slate-500 font-medium">
+              <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-xs">
+                  groups
+                  </span>
+
+                  {participantesGrupo.length} participantes
+              </span>
+
+              <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-xs">
+                  repeat
+                  </span>
+
+                  {etapa.rounds_count}{' '}
+                  {etapa.rounds_count === 1
+                  ? 'ronda'
+                  : 'rondas'}
+              </span>
+
+              <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-xs">
+                  calculate
+                  </span>
+
+                  {etapa.result_aggregation === 'sum'
+                  ? 'Suma'
+                  : etapa.result_aggregation === 'best'
+                      ? 'Mejor resultado'
+                      : 'Promedio'}
+              </span>
+              </div>
           </div>
 
-          <p className="text-xs text-slate-400 mt-1">
-            Registro y control de
-            resultados
-          </p>
-        </div>
+          <div className="flex items-center gap-2 pt-1">
+              <span
+              className={`w-2.5 h-2.5 rounded-full ${
+                  estadoGrupo === 'en_curso'
+                  ? 'bg-emerald-500 animate-pulse'
+                  : estadoGrupo === 'finalizado'
+                      ? 'bg-slate-500'
+                      : 'bg-amber-500'
+              }`}
+              />
+
+              <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400">
+              {estadoGrupo === 'en_curso'
+                  ? 'En curso'
+                  : estadoGrupo === 'finalizado'
+                  ? 'Finalizado'
+                  : 'Programado'}
+              </span>
+          </div>
       </div>
 
       {error && (
-        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
-          {error}
-        </div>
+          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
+              {error}
+          </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* ================================
+              TABLA PRINCIPAL
+          ================================= */}
 
-        {/* ================================
-            TABLA PRINCIPAL
-        ================================= */}
-
-        <div className="lg:col-span-2">
+          <div className="lg:col-span-2">
           <div className="bg-[#11131c] rounded-2xl border border-slate-900 overflow-hidden">
 
-            <div className="p-5 border-b border-slate-900 flex items-center justify-between">
+              <div className="p-5 border-b border-slate-900 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-extrabold uppercase tracking-wider text-white">
+                  <h3 className="text-sm font-extrabold uppercase tracking-wider text-white">
                   Planilla de
                   resultados
-                </h3>
+                  </h3>
 
-                <p className="text-[10px] text-slate-500 mt-1">
+                  <p className="text-[10px] text-slate-500 mt-1">
                   {
-                    participantesGrupo.length
+                      participantesGrupo.length
                   }{' '}
                   participantes
-                </p>
+                  </p>
               </div>
 
               <span
-                className={`px-2.5 py-1 rounded-lg text-[9px] uppercase font-bold border ${
-                  grupo.status ===
+                  className={`px-2.5 py-1 rounded-lg text-[9px] uppercase font-bold border ${
+                  estadoGrupo ===
                   'en_curso'
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                    : grupo.status ===
-                        'finalizado'
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      : estadoGrupo ===
+                          'finalizado'
                       ? 'bg-slate-500/10 text-slate-400 border-slate-500/20'
                       : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                }`}
+                  }`}
               >
-                {grupo.status}
+                  {estadoGrupo}
               </span>
-            </div>
-
-            {participantesOrdenados.length ===
-            0 ? (
-              <div className="py-16 text-center text-xs text-slate-500">
-                Este grupo no tiene
-                participantes.
               </div>
-            ) : (
+
+              {participantesOrdenados.length ===
+              0 ? (
+              <div className="py-16 text-center text-xs text-slate-500">
+                  Este grupo no tiene
+                  participantes.
+              </div>
+              ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                  <table className="w-full text-xs">
                   <thead>
-                    <tr className="bg-[#07080c] border-b border-slate-900 text-slate-500 uppercase text-[9px]">
+                      <tr className="bg-[#07080c] border-b border-slate-900 text-slate-500 uppercase text-[9px]">
 
                       {evento.event_type ===
-                        'carrera' && (
-                        <th className="text-center p-3 w-16">
+                          'carrera' && (
+                          <th className="text-center p-3 w-16">
                           Carril
-                        </th>
+                          </th>
                       )}
 
                       <th className="text-left p-3">
-                        Participante
+                          Participante
                       </th>
 
                       {rondas.map(
-                        (
+                          (
                           ronda
-                        ) => (
+                          ) => (
                           <th
-                            key={
+                              key={
                               ronda
-                            }
-                            className="text-center p-3 min-w-[100px]"
+                              }
+                              className="text-center p-3 min-w-[100px]"
                           >
-                            {evento.event_type ===
+                              {evento.event_type ===
                               'carrera' &&
-                            etapa.rounds_count ===
+                              etapa.rounds_count ===
                               1
                               ? 'Tiempo'
                               : `R${ronda}`}
                           </th>
-                        )
+                          )
                       )}
 
                       <th className="text-center p-3">
-                        {evento.event_type ===
-                        'carrera'
+                          {evento.event_type ===
+                          'carrera'
                           ? 'Mejor'
                           : 'Total'}
                       </th>
 
                       <th className="text-center p-3 w-16">
-                        Pos.
+                          Pos.
                       </th>
-                    </tr>
+                      </tr>
                   </thead>
 
                   <tbody className="divide-y divide-slate-900">
-                    {participantesOrdenados.map(
+                      {participantesOrdenados.map(
                       (
-                        asignacion
+                          asignacion
                       ) => {
-                        const participante =
+                          const participante =
                           obtenerParticipante(
-                            asignacion
+                              asignacion
                           );
 
-                        const resultado =
+                          const resultado =
                           obtenerResultado(
-                            asignacion.id
+                              asignacion.id
                           );
 
-                        return (
+                          return (
                           <tr
-                            key={
+                              key={
                               asignacion.id
-                            }
-                            className="hover:bg-[#171a26]/40 transition-colors"
+                              }
+                              className="hover:bg-[#171a26]/40 transition-colors"
                           >
-                            {evento.event_type ===
+                              {evento.event_type ===
                               'carrera' && (
                               <td className="p-3 text-center">
-                                <span className="inline-flex w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 items-center justify-center font-black">
+                                  <span className="inline-flex w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 items-center justify-center font-black">
                                   {asignacion.lane ??
-                                    '-'}
-                                </span>
+                                      '-'}
+                                  </span>
                               </td>
-                            )}
+                              )}
 
-                            <td className="p-3">
+                              <td className="p-3">
                               <div className="font-bold text-slate-200">
-                                {obtenerNombreParticipante(
+                                  {obtenerNombreParticipante(
                                   participante
-                                )}
+                                  )}
                               </div>
 
                               {asignacion.start_order && (
-                                <div className="text-[9px] text-slate-600 mt-0.5">
+                                  <div className="text-[9px] text-slate-600 mt-0.5">
                                   Orden #
                                   {
-                                    asignacion.start_order
+                                      asignacion.start_order
                                   }
-                                </div>
+                                  </div>
                               )}
-                            </td>
+                              </td>
 
-                            {rondas.map(
+                              {rondas.map(
                               (
-                                ronda
+                                  ronda
                               ) => {
-                                const intento =
+                                  const intento =
                                   obtenerIntento(
-                                    resultado,
-                                    ronda
+                                      resultado,
+                                      ronda
                                   );
 
-                                return (
+                                  return (
                                   <td
-                                    key={
+                                      key={
                                       ronda
-                                    }
-                                    className="p-3 text-center"
+                                      }
+                                      className="p-3 text-center"
                                   >
-                                    <span className="font-mono font-bold text-slate-300">
-                                      {formatearValor(
-                                        intento?.value
-                                      )}
-                                    </span>
+
+                                  <input
+                                    type={
+                                      evento.event_type ===
+                                      'carrera'
+                                        ? 'text'
+                                        : 'number'
+                                    }
+
+                                    step="any"
+
+                                    defaultValue={
+                                      intento?.value != null
+                                        ? evento.event_type ===
+                                          'carrera'
+                                          ? formatearTiempo(
+                                              intento.value
+                                            )
+                                          : Number(
+                                              intento.value
+                                            )
+                                        : ''
+                                    }
+
+                                    placeholder={
+                                      evento.event_type ===
+                                      'carrera'
+                                        ? '00:00.00'
+                                        : '0'
+                                    }
+
+                                    disabled={
+                                      estadoGrupo !==
+                                        'en_curso' ||
+                                      resultado?.status ===
+                                        'oficializado' ||
+                                      guardandoCelda ===
+                                        `${asignacion.id}-${ronda}`
+                                    }
+
+                                    onBlur={(e) =>
+                                      guardarResultadoRonda(
+                                        asignacion,
+                                        ronda,
+                                        e.target.value
+                                      )
+                                    }
+
+                                    onKeyDown={(e) => {
+                                      if (
+                                        e.key === 'Enter'
+                                      ) {
+                                        e.preventDefault();
+
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+
+                                    className={`w-[95px] text-center font-mono font-bold rounded-lg px-2 py-2 outline-none border transition-all ${
+                                      guardandoCelda ===
+                                      `${asignacion.id}-${ronda}`
+                                        ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300'
+                                        : 'bg-[#07080c] border-slate-800 text-slate-200 focus:border-[#800f2f] focus:ring-1 focus:ring-[#800f2f]/30'
+                                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                    />
+
                                   </td>
-                                );
+                                  );
                               }
-                            )}
+                              )}
 
-                            <td className="p-3 text-center">
-                              <span className="font-black text-white">
-                                {formatearValor(
-                                  resultado?.result_value
-                                )}
-                              </span>
-                            </td>
+                              <td className="p-3 text-center">
+                                  <div className="inline-flex min-w-[72px] justify-center bg-primary/10 border border-primary/20 text-primary px-3 py-2 rounded-xl font-black">
+                                      {formatearValor(
+                                      resultado?.result_value
+                                      )}
+                                  </div>
+                              </td>
 
-                            <td className="p-3 text-center">
+                              <td className="p-3 text-center">
                               {resultado?.position ? (
-                                <span className="inline-flex w-7 h-7 rounded-full bg-[#800f2f]/20 text-[#c9244b] border border-[#800f2f]/30 items-center justify-center font-black">
+                                  <span className="inline-flex w-7 h-7 rounded-full bg-[#800f2f]/20 text-[#c9244b] border border-[#800f2f]/30 items-center justify-center font-black">
                                   {
-                                    resultado.position
+                                      resultado.position
                                   }
-                                </span>
+                                  </span>
                               ) : (
-                                <span className="text-slate-600">
+                                  <span className="text-slate-600">
                                   -
-                                </span>
+                                  </span>
                               )}
-                            </td>
+                              </td>
                           </tr>
-                        );
+                          );
                       }
-                    )}
+                      )}
                   </tbody>
-                </table>
+                  </table>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* ================================
-            PANEL DERECHO
-        ================================= */}
-
-        <div className="space-y-6">
-
-          <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-5 space-y-4">
-            <h3 className="font-extrabold text-sm uppercase tracking-wider text-white border-b border-slate-900 pb-3">
-              Control del grupo
-            </h3>
-
-            <div className="space-y-3 text-xs">
-
-              <div className="flex justify-between gap-3">
-                <span className="text-slate-500">
-                  Etapa
-                </span>
-
-                <span className="font-bold text-slate-200">
-                  {etapa.name}
-                </span>
-              </div>
-
-              <div className="flex justify-between gap-3">
-                <span className="text-slate-500">
-                  Grupo / Serie
-                </span>
-
-                <span className="font-bold text-slate-200">
-                  {grupo.name}
-                </span>
-              </div>
-
-              <div className="flex justify-between gap-3">
-                <span className="text-slate-500">
-                  Rondas
-                </span>
-
-                <span className="font-bold text-slate-200">
-                  {
-                    etapa.rounds_count
-                  }
-                </span>
-              </div>
-
-              <div className="flex justify-between gap-3">
-                <span className="text-slate-500">
-                  Cálculo
-                </span>
-
-                <span className="font-bold text-slate-200">
-                  {etapa.result_aggregation ===
-                  'sum'
-                    ? 'Suma'
-                    : etapa.result_aggregation ===
-                        'best'
-                      ? 'Mejor resultado'
-                      : 'Promedio'}
-                </span>
-              </div>
-
-              <div className="flex justify-between gap-3">
-                <span className="text-slate-500">
-                  Participantes
-                </span>
-
-                <span className="font-bold text-slate-200">
-                  {
-                    participantesGrupo.length
-                  }
-                </span>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-slate-900">
-              {grupo.status ===
-              'programado' ? (
-                <button
-                  type="button"
-                  className="w-full bg-indigo-650 hover:bg-indigo-600 text-white py-2.5 rounded-xl text-xs font-black cursor-pointer transition-all"
-                >
-                  Iniciar grupo
-                </button>
-              ) : grupo.status ===
-                'en_curso' ? (
-                <button
-                  type="button"
-                  className="w-full bg-[#800f2f] hover:bg-[#a4133c] text-white py-2.5 rounded-xl text-xs font-black cursor-pointer transition-all"
-                >
-                  Finalizar grupo
-                </button>
-              ) : (
-                <div className="text-center text-xs font-bold text-slate-500 py-2">
-                  Grupo finalizado
-                </div>
               )}
+          </div>
+          </div>
+
+          {/* ================================
+              PANEL DERECHO
+          ================================= */}
+
+          <div className="space-y-6">
+
+            <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-900 pb-3">
+                <h3 className="font-extrabold text-sm uppercase tracking-wider text-white">
+                  Control del grupo
+                </h3>
+
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      estadoGrupo ===
+                      'en_curso'
+                        ? 'bg-emerald-500 animate-pulse'
+                        : estadoGrupo ===
+                            'finalizado'
+                          ? 'bg-slate-500'
+                          : 'bg-amber-500'
+                    }`}
+                  />
+
+                  <span className="text-[9px] uppercase font-bold text-slate-500">
+                    {estadoGrupo ===
+                    'en_curso'
+                      ? 'En curso'
+                      : estadoGrupo ===
+                          'finalizado'
+                        ? 'Finalizado'
+                        : 'Programado'}
+                  </span>
+                </div>
+              </div>
+
+              {/* PROGRESO */}
+
+              <div className="bg-[#07080c] border border-slate-900 rounded-xl p-4">
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <span className="text-[9px] uppercase font-bold tracking-wider text-slate-500">
+                      Resultados completos
+                    </span>
+
+                    <div className="mt-1">
+                      <span className="text-2xl font-black text-white">
+                        {cantidadCompletos}
+                      </span>
+
+                      <span className="text-sm font-bold text-slate-600">
+                        {' / '}
+                        {totalParticipantes}
+                      </span>
+                    </div>
+                  </div>
+
+                  <span
+                    className={`text-xs font-black ${
+                      grupoCompleto
+                        ? 'text-emerald-400'
+                        : 'text-slate-400'
+                    }`}
+                  >
+                    {porcentajeCompletado}%
+                  </span>
+                </div>
+
+                <div className="h-2 bg-[#171a26] rounded-full overflow-hidden mt-3">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ${
+                      grupoCompleto
+                        ? 'bg-emerald-500'
+                        : 'bg-[#800f2f]'
+                    }`}
+                    style={{
+                      width:
+                        `${porcentajeCompletado}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* ACCIÓN */}
+
+              <div className="pt-1">
+                {estadoGrupo ===
+                'programado' ? (
+                  <button
+                    type="button"
+                    onClick={
+                      iniciarGrupo
+                    }
+                    className="w-full flex items-center justify-center gap-2 bg-indigo-650 hover:bg-indigo-600 text-white py-2.5 rounded-xl text-xs font-black cursor-pointer transition-all"
+                  >
+                    <span className="material-symbols-outlined text-sm">
+                      play_arrow
+                    </span>
+
+                    Iniciar grupo
+                  </button>
+                ) : estadoGrupo ===
+                  'en_curso' ? (
+                  <button
+                    type="button"
+                    onClick={
+                      finalizarGrupo
+                    }
+                    disabled={
+                      !grupoCompleto
+                    }
+                    className="w-full flex items-center justify-center gap-2 bg-[#800f2f] hover:bg-[#a4133c] disabled:bg-slate-800 disabled:text-slate-500 text-white py-2.5 rounded-xl text-xs font-black cursor-pointer disabled:cursor-not-allowed transition-all"
+                  >
+                    <span className="material-symbols-outlined text-sm">
+                      lock
+                    </span>
+
+                    Finalizar grupo
+                  </button>
+                ) : (
+                  <div className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">
+                    <span className="material-symbols-outlined text-sm">
+                      verified
+                    </span>
+
+                    Resultados oficializados
+                  </div>
+                )}
+              </div>
+
+              {estadoGrupo ===
+                'en_curso' &&
+                !grupoCompleto && (
+                  <p className="text-[9px] leading-relaxed text-slate-500 text-center">
+                    Complete los resultados de
+                    todos los participantes para
+                    habilitar el cierre.
+                  </p>
+                )}
+            </div>
+
+            {/* RANKING */}
+
+            <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-5">
+                <h3 className="font-extrabold text-sm uppercase tracking-wider text-white border-b border-slate-900 pb-3 mb-3">
+                Ranking actual
+                </h3>
+
+                {resultados.filter(
+                (r) =>
+                    r.position !==
+                    null
+                ).length === 0 ? (
+                <p className="text-xs text-slate-500 text-center py-5">
+                    Aún no hay resultados
+                    registrados.
+                </p>
+                ) : (
+                <div className="space-y-1">
+                    {[...resultados]
+                    .filter(
+                        (r) =>
+                        r.position !==
+                        null
+                    )
+                    .sort(
+                        (a, b) =>
+                        (a.position ??
+                            999) -
+                        (b.position ??
+                            999)
+                    )
+                    .map(
+                        (
+                        resultado
+                        ) => {
+                        const asignacion =
+                            participantesGrupo.find(
+                            (p) =>
+                                p.id ===
+                                resultado
+                                .competition_event_group_participant_id
+                            );
+
+                        const participante =
+                            asignacion
+                            ? obtenerParticipante(
+                                asignacion
+                                )
+                            : undefined;
+
+                        return (
+                            <div
+                            key={
+                                resultado.id
+                            }
+                            className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-[#171a26]"
+                            >
+                            <div className="flex items-center gap-3 min-w-0">
+                                <span className="w-6 h-6 rounded-full bg-[#07080c] border border-slate-800 flex items-center justify-center text-[9px] font-black text-slate-300 shrink-0">
+                                {
+                                    resultado.position
+                                }
+                                </span>
+
+                                <span className="text-xs font-bold text-slate-300 truncate">
+                                {obtenerNombreParticipante(
+                                    participante
+                                )}
+                                </span>
+                            </div>
+
+                            <span className="font-mono text-[10px] font-bold text-slate-400">
+                                {formatearValor(
+                                resultado.result_value
+                                )}
+                            </span>
+                            </div>
+                        );
+                        }
+                    )}
+                </div>
+                )}
             </div>
           </div>
-
-          {/* RANKING */}
-
-          <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-5">
-            <h3 className="font-extrabold text-sm uppercase tracking-wider text-white border-b border-slate-900 pb-3 mb-3">
-              Ranking actual
-            </h3>
-
-            {resultados.filter(
-              (r) =>
-                r.position !==
-                null
-            ).length === 0 ? (
-              <p className="text-xs text-slate-500 text-center py-5">
-                Aún no hay resultados
-                registrados.
-              </p>
-            ) : (
-              <div className="space-y-1">
-                {[...resultados]
-                  .filter(
-                    (r) =>
-                      r.position !==
-                      null
-                  )
-                  .sort(
-                    (a, b) =>
-                      (a.position ??
-                        999) -
-                      (b.position ??
-                        999)
-                  )
-                  .map(
-                    (
-                      resultado
-                    ) => {
-                      const asignacion =
-                        participantesGrupo.find(
-                          (p) =>
-                            p.id ===
-                            resultado
-                              .competition_event_group_participant_id
-                        );
-
-                      const participante =
-                        asignacion
-                          ? obtenerParticipante(
-                              asignacion
-                            )
-                          : undefined;
-
-                      return (
-                        <div
-                          key={
-                            resultado.id
-                          }
-                          className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-[#171a26]"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span className="w-6 h-6 rounded-full bg-[#07080c] border border-slate-800 flex items-center justify-center text-[9px] font-black text-slate-300 shrink-0">
-                              {
-                                resultado.position
-                              }
-                            </span>
-
-                            <span className="text-xs font-bold text-slate-300 truncate">
-                              {obtenerNombreParticipante(
-                                participante
-                              )}
-                            </span>
-                          </div>
-
-                          <span className="font-mono text-[10px] font-bold text-slate-400">
-                            {formatearValor(
-                              resultado.result_value
-                            )}
-                          </span>
-                        </div>
-                      );
-                    }
-                  )}
-              </div>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   );

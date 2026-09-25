@@ -248,3 +248,38 @@ export interface ResultadoEvento {
 
   attempts: IntentoResultadoEvento[];
 }
+
+export interface ParticipanteResumenEtapa {
+  competition_event_participant_id: number;
+
+  name: string;
+
+  group_name: string | null;
+
+  result_value:
+    | string
+    | number
+    | null;
+
+  result_unit:
+    | string
+    | null;
+
+  source_position:
+    | number
+    | null;
+
+  rank:
+    | number
+    | null;
+}
+
+export interface ResumenEtapaEvento {
+  type:
+    | 'pending'
+    | 'qualified'
+    | 'podium';
+
+  participants:
+    ParticipanteResumenEtapa[];
+}
