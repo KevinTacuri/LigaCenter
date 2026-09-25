@@ -122,9 +122,36 @@ const ListaEtapasEvento = ({
 
                       {etapa.qualification_method ===
                         'best_per_group' && (
-                        <span className="px-2 py-1 rounded-md bg-slate-100 text-[9px] font-bold text-slate-600">
+                        <span className="px-2 py-1 rounded-md bg-emerald-50 text-[9px] font-bold text-emerald-700">
                           {etapa.qualifiers_per_group}{' '}
                           por grupo
+                        </span>
+                      )}
+
+                      {etapa.qualification_method ===
+                        'best_overall' && (
+                        <span className="px-2 py-1 rounded-md bg-emerald-50 text-[9px] font-bold text-emerald-700">
+                          Clasifican{' '}
+                          {etapa.qualifiers_count ?? '-'}
+                        </span>
+                      )}
+
+                      {etapa.qualification_method === 'none' && etapa.stage_type !== 'final' && (
+                        <span className="px-2 py-1 rounded-md bg-slate-100 text-[9px] font-bold text-slate-600">
+                          Sin clasificación
+                        </span>
+                      )}
+
+                      {etapa.stage_type !== 'final' && etapa.qualification_method === null && (
+                          <span className="px-2 py-1 rounded-md bg-slate-100 text-[9px] font-bold text-slate-500 border border-slate-200">
+                            Sin configurar
+                          </span>
+                      )}
+
+                      {etapa.qualification_method ===
+                        'all' && (
+                        <span className="px-2 py-1 rounded-md bg-emerald-50 text-[9px] font-bold text-emerald-700">
+                          Clasifican todos
                         </span>
                       )}
 
@@ -149,6 +176,16 @@ const ListaEtapasEvento = ({
                     className="text-xs font-bold text-slate-500 hover:text-primary cursor-pointer"
                   >
                     Editar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onEliminar(etapa.id)
+                    }
+                    className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+                  >
+                    Eliminar
                   </button>
 
                   <button

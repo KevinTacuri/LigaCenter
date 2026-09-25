@@ -115,6 +115,19 @@ const ListaGruposEtapaEvento = ({
                 </span>
               )}
 
+            {etapa.stage_type !== 'final' &&
+              etapa.qualification_method === null && (
+                <span className="px-2 py-1 rounded-md bg-slate-100 text-[9px] font-bold text-slate-500 border border-slate-200">
+                  Sin configurar
+                </span>
+            )}
+
+            {etapa.qualification_method === 'all' && (
+                <span className="px-2 py-1 rounded-md bg-emerald-50 text-[9px] font-bold text-emerald-700">
+                  Clasifican todos
+                </span>
+              )}
+
             {etapa.stage_type ===
               'final' &&
               etapa.podium_places && (
