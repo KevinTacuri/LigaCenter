@@ -58,6 +58,14 @@ return new class extends Migration
                     ],
                     'group_participant_unique'
                 );
+
+                $table->unique(
+                    [
+                        'competition_event_group_id',
+                        'lane',
+                    ],
+                    'competition_group_lane_unique'
+                );
             }
         );
     }
