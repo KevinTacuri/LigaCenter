@@ -195,4 +195,40 @@ Route::middleware(['auth:sanctum', 'championship.access'])->group(function () {
         ]
     );
 
+    // Servicio para actualizar el estado de un participante de evento de competencia
+    Route::patch(
+        '/competition-event-participants/{competitionEventParticipant}/status',
+        [
+            CompetitionEventParticipantController::class,
+            'updateStatus',
+        ]
+    );
+
+    // Servicio para actualizar tiebreak_order de un resultado de competencia
+    // Donde tiebreak_order es un número entero que indica el orden de desempate de los participantes que tienen el mismo resultado.
+    Route::patch(
+        '/competition-results/{competitionResult}/tiebreak',
+        [
+            CompetitionResultController::class,
+            'updateTiebreak',
+        ]
+    );
+
+    // Servicio para actualizar el estado de un participante de grupo de evento de competencia
+    Route::patch(
+        '/competition-event-group-participants/{groupParticipant}/status',
+        [
+            CompetitionEventGroupParticipantController::class,
+            'updateStatus',
+        ]
+    );
+
+    //Servicio para obtener la información de desempate de una etapa de evento de competencia
+    Route::get(
+        '/competition-event-stages/{competitionEventStage}/tiebreak',
+        [
+            CompetitionEventStageController::class,
+            'tiebreak',
+        ]
+    );
 });
