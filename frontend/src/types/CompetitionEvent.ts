@@ -216,6 +216,10 @@ export interface ParticipanteGrupoEvento {
   competition_event_participant_id: number;
   lane: number | null;
   start_order: number | null;
+  status: 
+    | 'activo'
+    | 'no_presento'
+    | 'retirado';
 }
 
 export interface CrearParticipanteGrupoEvento {
@@ -247,6 +251,7 @@ export interface ResultadoEvento {
     | 'anulado';
 
   attempts: IntentoResultadoEvento[];
+  tiebreak_order: number | null;
 }
 
 export interface ParticipanteResumenEtapa {
@@ -282,4 +287,33 @@ export interface ResumenEtapaEvento {
 
   participants:
     ParticipanteResumenEtapa[];
+}
+
+export interface ParticipanteDesempate {
+  result_id: number;
+  name: string;
+  group_name: string | null;
+  result_value: string | number;
+  tiebreak_order: number | null;
+}
+
+export interface GrupoDesempate {
+  scope:
+    | 'overall'
+    | 'group'
+    | 'podium';
+
+  group_name: string | null;
+
+  result_value:
+    | string
+    | number;
+
+  participants:
+    ParticipanteDesempate[];
+}
+
+export interface InfoDesempateEtapa {
+  required: boolean;
+  ties: GrupoDesempate[];
 }

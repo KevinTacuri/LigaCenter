@@ -12,7 +12,8 @@ import type {
   CrearParticipanteGrupoEvento,
   ResultadoEvento,
   IntentoResultadoEvento,
-  ResumenEtapaEvento
+  ResumenEtapaEvento,
+  InfoDesempateEtapa
 } from '../types/CompetitionEvent';
 
 // URL base para la API del backend
@@ -1148,6 +1149,94 @@ export const serviciosEventosCompetencia = {
     const res = await clienteApi.get(
       `/competition-event-stages/${etapaId}/summary`
     );
+
+    return res.data;
+  },
+
+  // Actualizar el estado de un participante en un evento
+  actualizarEstadoParticipanteEvento: async (
+    participanteId: number,
+    status:
+      | 'inscrito'
+      | 'confirmado'
+      | 'no_presento'
+      | 'retirado'
+  ): Promise<RespuestaApi<ParticipanteEvento>> => {
+    const res = await clienteApi.patch(
+      `/competition-event-participants/${participanteId}/status`,
+      {
+        status,
+      }
+    );
+
+    return res.data;
+  },
+
+  // Actualizar el resultado de un participante en un evento
+  actualizarResultado: async (
+    resultadoId: number,
+    datos: {
+      result_value?: number | null;
+      result_unit?: string | null;
+      status?:
+        | 'registrado'
+        | 'oficializado'
+        | 'anulado';
+    }
+  ): Promise<RespuestaApi<ResultadoEvento>> => {
+    const res = await clienteApi.put(
+      `/competition-results/${resultadoId}`,
+      datos
+    );
+
+    return res.data;
+  },
+
+  // Actualizar el orden de desempate de un resultado
+  actualizarDesempateResultado: async (
+    resultadoId: number,
+    tiebreakOrder: number | null
+  ): Promise<RespuestaApi<ResultadoEvento>> => {
+    const res = await clienteApi.patch(
+      `/competition-results/${resultadoId}/tiebreak`,
+      {
+        tiebreak_order:
+          tiebreakOrder,
+      }
+    );
+
+    return res.data;
+  },
+
+  actualizarEstadoParticipanteGrupo: async (
+    participanteGrupoId: number,
+    status:
+      | 'activo'
+      | 'no_presento'
+      | 'retirado'
+  ): Promise<
+    RespuestaApi<ParticipanteGrupoEvento>
+  > => {
+    const res =
+      await clienteApi.patch(
+        `/competition-event-group-participants/${participanteGrupoId}/status`,
+        {
+          status,
+        }
+      );
+
+    return res.data;
+  },
+
+  obtenerDesempatesEtapa: async (
+    etapaId: number
+  ): Promise<
+    RespuestaApi<InfoDesempateEtapa>
+  > => {
+    const res =
+      await clienteApi.get(
+        `/competition-event-stages/${etapaId}/tiebreak`
+      );
 
     return res.data;
   },
