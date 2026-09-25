@@ -28,6 +28,23 @@ interface GrupoControlSeleccionado {
   grupo: GrupoEtapaEvento;
 }
 
+const formatearFecha = (
+  fecha?: string | null
+) => {
+  if (!fecha) {
+    return '-';
+  }
+
+  const [
+    year,
+    month,
+    day,
+  ] = fecha
+    .substring(0, 10)
+    .split('-');
+
+  return `${day}/${month}/${year}`;
+};
 
 const MesaEventos: React.FC = () => {
 
@@ -1111,9 +1128,8 @@ const MesaEventos: React.FC = () => {
                                     <span className="material-symbols-outlined text-xs">
                                       calendar_today
                                     </span>
-
                                     {
-                                      grupo.date
+                                      formatearFecha(grupo.date)
                                     }
                                   </div>
                                 )}

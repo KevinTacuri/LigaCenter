@@ -1022,8 +1022,8 @@ export const serviciosEventosCompetencia = {
   actualizarParticipanteGrupo: async (
     participanteGrupoId: number,
     datos: {
-      lane: number | null;
-      start_order: number | null;
+      lane?: number | null;
+      start_order?: number | null;
     }
   ): Promise<RespuestaApi<ParticipanteGrupoEvento>> => {
     const response = await clienteApi.put(

@@ -2,7 +2,11 @@ import type {
   GrupoEtapaEvento,
   ParticipanteEvento,
   ParticipanteGrupoEvento,
-} from '../../../types/CompetitionEvent';
+}  from '../../../types/CompetitionEvent';
+
+import {
+  useState,
+} from 'react';
 
 interface Props {
   grupo: GrupoEtapaEvento;
@@ -18,6 +22,13 @@ interface Props {
   onQuitar: (participanteGrupoId: number) => void;
 
   onCerrar: () => void;
+  onEditar: (
+    participanteGrupoId: number,
+    datos: {
+      lane: number | null;
+      start_order: number | null;
+    }
+  ) => Promise<void>;
 }
 
 const ListaParticipantesGrupoEvento = ({
@@ -27,8 +38,74 @@ const ListaParticipantesGrupoEvento = ({
   cargando,
   onAgregar,
   onQuitar,
+  onEditar,
   onCerrar,
 }: Props) => {
+
+  const [
+    participanteEditandoId,
+    setParticipanteEditandoId,
+  ] = useState<number | null>(
+    null
+  );
+
+  const [
+    datosEdicion,
+    setDatosEdicion,
+  ] = useState({
+    lane: '',
+    start_order: '',
+  });
+
+  const iniciarEdicion = (
+    participanteGrupo:
+      ParticipanteGrupoEvento
+  ) => {
+    setParticipanteEditandoId(
+      participanteGrupo.id
+    );
+
+    setDatosEdicion({
+      lane:
+        participanteGrupo.lane
+          ?.toString() ?? '',
+
+      start_order:
+        participanteGrupo.start_order
+          ?.toString() ?? '',
+    });
+  };
+
+  const guardarEdicion = async (participanteGrupo: ParticipanteGrupoEvento ) => {
+    await onEditar(
+      participanteGrupo.id,
+      {
+        lane:
+          datosEdicion.lane
+            ? Number(
+                datosEdicion.lane
+              )
+            : null,
+
+        start_order:
+          datosEdicion.start_order
+            ? Number(
+                datosEdicion.start_order
+              )
+            : null,
+      }
+    );
+
+    setParticipanteEditandoId(
+      null
+    );
+
+    setDatosEdicion({
+      lane: '',
+      start_order: '',
+    });
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
       <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
@@ -112,8 +189,27 @@ const ListaParticipantesGrupoEvento = ({
                       className="hover:bg-slate-50/40"
                     >
                       <td className="p-3 pl-4 font-bold text-slate-900">
-                        {participanteGrupo.start_order ??
-                          '-'}
+                        {participanteEditandoId ===
+                        participanteGrupo.id ? (
+                          <input
+                            type="number"
+                            min="1"
+                            value={
+                              datosEdicion.start_order
+                            }
+                            onChange={(e) =>
+                              setDatosEdicion({
+                                ...datosEdicion,
+                                start_order:
+                                  e.target.value,
+                              })
+                            }
+                            className="w-20 text-xs border border-slate-200 rounded-lg px-2 py-1.5 outline-none"
+                          />
+                        ) : (
+                          participanteGrupo.start_order ??
+                          '-'
+                        )}
                       </td>
 
                       <td className="p-3 font-bold text-slate-900">
@@ -121,22 +217,86 @@ const ListaParticipantesGrupoEvento = ({
                       </td>
 
                       <td className="p-3 text-slate-600">
-                        {participanteGrupo.lane ??
-                          '-'}
+                        {participanteEditandoId ===
+                        participanteGrupo.id ? (
+                          <input
+                            type="number"
+                            min="1"
+                            value={datosEdicion.lane}
+                            onChange={(e) =>
+                              setDatosEdicion({
+                                ...datosEdicion,
+                                lane: e.target.value,
+                              })
+                            }
+                            className="w-20 text-xs border border-slate-200 rounded-lg px-2 py-1.5 outline-none"
+                          />
+                        ) : (
+                          participanteGrupo.lane ??
+                          '-'
+                        )}
                       </td>
 
                       <td className="p-3 pr-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onQuitar(
-                              participanteGrupo.id
-                            )
-                          }
-                          className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
-                        >
-                          Quitar
-                        </button>
+                        {participanteEditandoId ===
+                        participanteGrupo.id ? (
+                          <div className="flex justify-end gap-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                guardarEdicion(
+                                  participanteGrupo
+                                )
+                              }
+                              className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                            >
+                              Guardar
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setParticipanteEditandoId(
+                                  null
+                                );
+
+                                setDatosEdicion({
+                                  lane: '',
+                                  start_order: '',
+                                });
+                              }}
+                              className="text-xs font-bold text-slate-500 hover:underline cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex justify-end gap-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                iniciarEdicion(
+                                  participanteGrupo
+                                )
+                              }
+                              className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                            >
+                              Editar
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onQuitar(
+                                  participanteGrupo.id
+                                )
+                              }
+                              className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );

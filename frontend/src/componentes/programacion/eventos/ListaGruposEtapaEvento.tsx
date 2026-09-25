@@ -20,6 +20,24 @@ interface Props {
   onGestionar: (grupo: GrupoEtapaEvento) => void;
 }
 
+const formatearFecha = (
+  fecha?: string | null
+) => {
+  if (!fecha) {
+    return '-';
+  }
+
+  const [
+    year,
+    month,
+    day,
+  ] = fecha
+    .substring(0, 10)
+    .split('-');
+
+  return `${day}/${month}/${year}`;
+};
+
 const ListaGruposEtapaEvento = ({
   etapa,
   grupos,
@@ -193,7 +211,7 @@ const ListaGruposEtapaEvento = ({
                   </span>
 
                   <span>
-                    {grupo.date ??
+                    {grupo.date? formatearFecha(grupo.date) :
                       'Sin fecha'}
                   </span>
                 </div>

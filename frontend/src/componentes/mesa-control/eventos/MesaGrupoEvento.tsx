@@ -45,6 +45,8 @@ const MesaGrupoEvento: React.FC<Props> = ({
 
   const [ estadoGrupo, setEstadoGrupo ] = useState(grupo.status);
   const confirm = useConfirm();
+  const [ carrilEditandoId,setCarrilEditandoId,] = useState<number | null>(null);
+  const [ carrilEditando, setCarrilEditando, ] = useState('');
 
   useEffect(() => {
     setEstadoGrupo(grupo.status);
@@ -658,6 +660,65 @@ const MesaGrupoEvento: React.FC<Props> = ({
       }
   };
 
+  const guardarCarril = async (asignacion: ParticipanteGrupoEvento) => {
+    const nuevoCarril =
+      carrilEditando.trim() === ''
+        ? null
+        : Number(carrilEditando);
+
+    if (
+      nuevoCarril !== null &&
+      (
+        Number.isNaN(nuevoCarril) ||
+        nuevoCarril < 1
+      )
+    ) {
+      setError(
+        'El carril debe ser un número mayor o igual a 1.'
+      );
+
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const res =
+        await serviciosEventosCompetencia
+          .actualizarParticipanteGrupo(
+            asignacion.id,
+            {
+              lane: nuevoCarril,
+            }
+          );
+
+      if (res.success) {
+        setParticipantesGrupo(
+          (actuales) =>
+            actuales.map(
+              (participante) =>
+                participante.id ===
+                asignacion.id
+                  ? {
+                      ...participante,
+                      lane:
+                        res.data.lane,
+                    }
+                  : participante
+            )
+        );
+
+        setCarrilEditandoId(null);
+        setCarrilEditando('');
+      }
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message ||
+          'No se pudo actualizar el carril.'
+      );
+    }
+  };
+
   const obtenerParticipante = (
     asignacion: ParticipanteGrupoEvento
   ) => {
@@ -1192,14 +1253,122 @@ const MesaGrupoEvento: React.FC<Props> = ({
                               className="hover:bg-[#171a26]/40 transition-colors"
                           >
                               {evento.event_type ===
-                              'carrera' && (
-                              <td className="p-3 text-center">
-                                  <span className="inline-flex w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 items-center justify-center font-black">
-                                  {asignacion.lane ??
-                                      '-'}
-                                  </span>
-                              </td>
+                                'carrera' && (
+                                <td className="p-3 text-center">
+                                  {carrilEditandoId ===
+                                  asignacion.id ? (
+                                    <div className="flex items-center justify-center gap-1">
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        autoFocus
+                                        value={carrilEditando}
+                                        onChange={(e) =>
+                                          setCarrilEditando(
+                                            e.target.value
+                                          )
+                                        }
+                                        className="
+                                          w-14 h-8 px-2
+                                          rounded-lg
+                                          bg-[#151822]
+                                          border border-indigo-500/60
+                                          text-center text-sm font-black text-white
+                                          caret-indigo-400
+                                          outline-none
+                                          focus:ring-2 focus:ring-indigo-500/20
+                                          focus:border-indigo-400
+
+                                          [&::-webkit-inner-spin-button]:appearance-none
+                                          [&::-webkit-outer-spin-button]:appearance-none
+                                        "
+                                      />
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          guardarCarril(
+                                            asignacion
+                                          )
+                                        }
+                                        className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center cursor-pointer"
+                                        title="Guardar carril"
+                                      >
+                                        <span className="material-symbols-outlined text-sm">
+                                          check
+                                        </span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setCarrilEditandoId(
+                                            null
+                                          );
+
+                                          setCarrilEditando('');
+                                        }}
+                                        className="w-7 h-7 rounded-lg bg-slate-500/10 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+                                        title="Cancelar"
+                                      >
+                                        <span className="material-symbols-outlined text-sm">
+                                          close
+                                        </span>
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        estadoGrupo !==
+                                        'programado'
+                                      }
+                                      onClick={() => {
+                                        setCarrilEditandoId(
+                                          asignacion.id
+                                        );
+
+                                        setCarrilEditando(
+                                          asignacion.lane
+                                            ?.toString() ??
+                                            ''
+                                        );
+                                      }}
+                                      className="
+                                        inline-flex
+                                        w-8 h-8
+                                        rounded-lg
+                                        bg-indigo-500/10
+                                        border
+                                        border-indigo-500/20
+                                        text-indigo-400
+                                        items-center
+                                        justify-center
+                                        font-black
+                                        hover:bg-indigo-500/20
+                                        hover:border-indigo-500/40
+                                        disabled:hover:bg-indigo-500/10
+                                        disabled:cursor-default
+                                        cursor-pointer
+                                        transition-color
+                                      "
+                                      title={
+                                        estadoGrupo ===
+                                        'finalizado'
+                                          ? undefined
+                                          : 'Editar carril'
+                                      }
+                                    >
+                                      <span className="inline-flex w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 items-center justify-center font-black">
+                                        {asignacion.lane ??
+                                          '-'}
+                                      </span>
+
+                                    </button>
+                                  )}
+                                </td>
                               )}
+
 
                               <td className="p-3">
                               <div className="font-bold text-slate-200">

@@ -244,6 +244,43 @@ export const ProgramacionFixture: React.FC = () => {
     setParticipantesGrupoSeleccionados,
   ] = useState<number[]>([]);
 
+  const editarParticipanteGrupo = async (
+    participanteGrupoId: number,
+    datos: {
+      lane: number | null;
+      start_order: number | null;
+    }
+  ) => {
+    if (!grupoGestionado) {
+      return;
+    }
+
+    try {
+      const res =
+        await serviciosEventosCompetencia
+          .actualizarParticipanteGrupo(
+            participanteGrupoId,
+            datos
+          );
+
+      if (res.success) {
+        mostrarMensaje(
+          'Participante actualizado correctamente.'
+        );
+
+        await cargarParticipantesGrupo(
+          grupoGestionado.id
+        );
+      }
+    } catch (err: any) {
+      mostrarMensaje(
+        err.response?.data?.message ||
+          'Error al actualizar participante.',
+        true
+      );
+    }
+  };
+
   const cargarParticipantesGrupo = async (
     grupoId: number
   ) => {
@@ -2673,6 +2710,8 @@ export const ProgramacionFixture: React.FC = () => {
                         onQuitar={
                           quitarParticipanteGrupo
                         }
+
+                        onEditar={editarParticipanteGrupo}
 
                         onCerrar={() => {
                           setGrupoGestionado(
