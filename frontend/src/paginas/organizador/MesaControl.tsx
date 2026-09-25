@@ -19,6 +19,12 @@ import type {
   Incidencia,
   Jugador
 } from '../../servicios/api';
+import MesaEventos from '../../componentes/mesa-control/eventos/MesaEventos';
+
+type ModoMesaControl =
+  | 'partidos'
+  | 'eventos';
+
 
 interface IncidentTypeConfig {
   type: 'goal' | 'yellow_card' | 'red_card' | 'foul' | 'injury' | 'exclusion';
@@ -154,6 +160,8 @@ export const MesaControl: React.FC = () => {
   const [configDisciplinas, setConfigDisciplinas] = useState<any[]>([]);
   const [configCategorias, setConfigCategorias] = useState<any[]>([]);
   const [configCargandoDisciplinas, setConfigCargandoDisciplinas] = useState(false);
+
+  const [modoMesa, setModoMesa] = useState<ModoMesaControl>('partidos');
 
   const minutosPorTiempoRef = useRef(minutosPorTiempo);
 
@@ -1061,9 +1069,27 @@ export const MesaControl: React.FC = () => {
       <BarraLateral rol={usuario?.roles?.[0] || 'usuario_publico'} />
       <div className="lg:ml-64 flex flex-col min-h-screen relative z-10">
       <CabeceraEstandar
-        titulo={partidoSeleccionado ? `${partidoSeleccionado.local_team?.name} vs ${partidoSeleccionado.visitor_team?.name}` : 'Mesa de Control'}
-        subtitulo={partidoSeleccionado ? `${partidoSeleccionado.discipline?.name || 'Deporte'} - Jornada ${partidoSeleccionado.round} (${partidoSeleccionado.match_date ? new Date(partidoSeleccionado.match_date).toLocaleDateString() : ''})` : 'Registro de Resultados y Planillaje Oficial'}
-        leftElement={partidoSeleccionado && (
+        titulo={
+          modoMesa == 'partidos' &&
+          partidoSeleccionado ?
+            `${partidoSeleccionado.local_team?.name} vs ${partidoSeleccionado.visitor_team?.name}` : 'Mesa de Control'
+        }
+        subtitulo={
+          modoMesa === 'partidos' &&
+          partidoSeleccionado
+            ? `${partidoSeleccionado.discipline?.name || 'Deporte'} - Jornada ${partidoSeleccionado.round} ${
+                partidoSeleccionado.match_date
+                  ? `(${new Date(
+                      partidoSeleccionado.match_date
+                    ).toLocaleDateString()})`
+                  : ''
+              }`
+            : modoMesa === 'eventos'
+              ? 'Control y registro de resultados de eventos'
+              : 'Registro de Resultados y Planillaje Oficial'
+        }
+        leftElement={
+          modoMesa === 'partidos' && partidoSeleccionado && (
           <button
             onClick={() => setPartidoSeleccionado(null)}
             className="w-10 h-10 rounded-lg flex items-center justify-center border border-slate-800 hover:bg-[#171a26] transition-all cursor-pointer mr-2"
@@ -1089,611 +1115,659 @@ export const MesaControl: React.FC = () => {
           </div>
         )}
 
-        {!partidoSeleccionado ? (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h2 className="text-xl font-extrabold text-white">Partidos Programados</h2>
-                <p className="text-xs text-slate-400 font-medium">Seleccione un partido para abrir su mesa de control y comenzar a planillar el encuentro.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setConfigMinutosTiempo(45);
-                  setConfigDisciplinaId(null);
-                  setConfigCategoriaId(null);
-                  setConfigCategorias([]);
-                  cargarDisciplinasConfig();
-                  setMostrarConfigModal(true);
-                }}
-                className="text-[10px] font-bold bg-[#800f2f]/20 hover:bg-[#800f2f]/30 text-[#c9244b] border border-[#800f2f]/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-all"
-              >
-                <span className="material-symbols-outlined text-xs">settings</span>
-                Configurar Partido
-              </button>
-            </div>
+        {!partidoSeleccionado && (
+          <div className="flex items-center gap-1 bg-[#11131c] border border-slate-900 rounded-xl p-1 w-fit">
 
-            <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-5 space-y-4 shadow-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-2.5 text-xs text-slate-500">search</span>
-                  <input
-                    type="text"
-                    value={filtroTexto}
-                    onChange={(e) => setFiltroTexto(e.target.value)}
-                    placeholder="Buscar equipo..."
-                    className="w-full bg-[#171a26] border border-slate-850 text-xs text-white pl-9 pr-4 py-2 rounded-xl focus:border-indigo-650 focus:outline-hidden transition-all"
-                  />
-                </div>
+            <button
+              type="button"
+              onClick={() =>
+                setModoMesa('partidos')
+              }
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                modoMesa === 'partidos'
+                  ? 'bg-[#800f2f] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-[#171a26]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-sm">
+                scoreboard
+              </span>
 
-                <div>
-                  <select
-                    value={filtroDisciplina}
-                    onChange={(e) => setFiltroDisciplina(e.target.value)}
-                    className="w-full bg-[#171a26] border border-slate-850 text-xs text-slate-300 px-3 py-2 rounded-xl focus:border-indigo-650 focus:outline-hidden transition-all cursor-pointer"
-                  >
-                    <option value="todas">Todas las Disciplinas</option>
-                    {disciplinasUnicas.map((disc) => (
-                      <option key={disc.id} value={disc.id.toString()}>{disc.name}</option>
-                    ))}
-                  </select>
-                </div>
+              Partidos
+            </button>
 
-                <div>
-                  <select
-                    value={filtroCategoria}
-                    onChange={(e) => setFiltroCategoria(e.target.value)}
-                    className="w-full bg-[#171a26] border border-slate-850 text-xs text-slate-300 px-3 py-2 rounded-xl focus:border-indigo-650 focus:outline-hidden transition-all cursor-pointer"
-                  >
-                    <option value="todas">Todas las Categorías</option>
-                    {categoriasUnicas.map((cat) => (
-                      <option key={cat.id} value={cat.id.toString()}>{cat.name}</option>
-                    ))}
-                  </select>
-                </div>
+            <button
+              type="button"
+              onClick={() =>
+                setModoMesa('eventos')
+              }
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                modoMesa === 'eventos'
+                  ? 'bg-[#800f2f] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-[#171a26]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-sm">
+                emoji_events
+              </span>
 
-                <div>
-                  <select
-                    value={filtroEstado}
-                    onChange={(e) => setFiltroEstado(e.target.value)}
-                    className="w-full bg-[#171a26] border border-slate-850 text-xs text-slate-300 px-3 py-2 rounded-xl focus:border-indigo-650 focus:outline-hidden transition-all cursor-pointer"
-                  >
-                    <option value="todos">Todos los Estados</option>
-                    <option value="pendiente">Pendiente</option>
-                    <option value="en_curso">En Juego</option>
-                    <option value="finalizado">Finalizado</option>
-                    <option value="cancelado">Cancelado</option>
-                  </select>
-                </div>
+              Eventos
+            </button>
 
-                <div>
-                  <input
-                    type="date"
-                    value={filtroFecha}
-                    onChange={(e) => setFiltroFecha(e.target.value)}
-                    className="w-full bg-[#171a26] border border-slate-850 text-xs text-slate-350 px-3 py-2 rounded-xl focus:border-indigo-650 focus:outline-hidden transition-all cursor-pointer"
-                  />
-                </div>
-              </div>
+          </div>
+        )}
 
-              {(filtroTexto !== '' || filtroDisciplina !== 'todas' || filtroCategoria !== 'todas' || filtroEstado !== 'todos' || filtroFecha !== '') && (
-                <div className="flex justify-end pt-1">
+        {modoMesa === 'partidos' ? (
+          <>
+            {!partidoSeleccionado ? (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <h2 className="text-xl font-extrabold text-white">Partidos Programados</h2>
+                    <p className="text-xs text-slate-400 font-medium">Seleccione un partido para abrir su mesa de control y comenzar a planillar el encuentro.</p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => {
-                      setFiltroTexto('');
-                      setFiltroDisciplina('todas');
-                      setFiltroCategoria('todas');
-                      setFiltroEstado('todos');
-                      setFiltroFecha('');
+                      setConfigMinutosTiempo(45);
+                      setConfigDisciplinaId(null);
+                      setConfigCategoriaId(null);
+                      setConfigCategorias([]);
+                      cargarDisciplinasConfig();
+                      setMostrarConfigModal(true);
                     }}
-                    className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer transition-colors"
+                    className="text-[10px] font-bold bg-[#800f2f]/20 hover:bg-[#800f2f]/30 text-[#c9244b] border border-[#800f2f]/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-all"
                   >
-                    <span className="material-symbols-outlined text-xs font-bold">filter_alt_off</span>
-                    <span>Limpiar filtros</span>
+                    <span className="material-symbols-outlined text-xs">settings</span>
+                    Configurar Partido
                   </button>
                 </div>
-              )}
-            </div>
 
-            {cargando ? (
-              <div className="py-20 text-center text-sm text-slate-400 font-bold animate-pulse">
-                Cargando partidos de la mesa de control...
+                <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-5 space-y-4 shadow-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                    <div className="relative">
+                      <span className="material-symbols-outlined absolute left-3 top-2.5 text-xs text-slate-500">search</span>
+                      <input
+                        type="text"
+                        value={filtroTexto}
+                        onChange={(e) => setFiltroTexto(e.target.value)}
+                        placeholder="Buscar equipo..."
+                        className="w-full bg-[#171a26] border border-slate-850 text-xs text-white pl-9 pr-4 py-2 rounded-xl focus:border-indigo-650 focus:outline-hidden transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <select
+                        value={filtroDisciplina}
+                        onChange={(e) => setFiltroDisciplina(e.target.value)}
+                        className="w-full bg-[#171a26] border border-slate-850 text-xs text-slate-300 px-3 py-2 rounded-xl focus:border-indigo-650 focus:outline-hidden transition-all cursor-pointer"
+                      >
+                        <option value="todas">Todas las Disciplinas</option>
+                        {disciplinasUnicas.map((disc) => (
+                          <option key={disc.id} value={disc.id.toString()}>{disc.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <select
+                        value={filtroCategoria}
+                        onChange={(e) => setFiltroCategoria(e.target.value)}
+                        className="w-full bg-[#171a26] border border-slate-850 text-xs text-slate-300 px-3 py-2 rounded-xl focus:border-indigo-650 focus:outline-hidden transition-all cursor-pointer"
+                      >
+                        <option value="todas">Todas las Categorías</option>
+                        {categoriasUnicas.map((cat) => (
+                          <option key={cat.id} value={cat.id.toString()}>{cat.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <select
+                        value={filtroEstado}
+                        onChange={(e) => setFiltroEstado(e.target.value)}
+                        className="w-full bg-[#171a26] border border-slate-850 text-xs text-slate-300 px-3 py-2 rounded-xl focus:border-indigo-650 focus:outline-hidden transition-all cursor-pointer"
+                      >
+                        <option value="todos">Todos los Estados</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="en_curso">En Juego</option>
+                        <option value="finalizado">Finalizado</option>
+                        <option value="cancelado">Cancelado</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <input
+                        type="date"
+                        value={filtroFecha}
+                        onChange={(e) => setFiltroFecha(e.target.value)}
+                        className="w-full bg-[#171a26] border border-slate-850 text-xs text-slate-350 px-3 py-2 rounded-xl focus:border-indigo-650 focus:outline-hidden transition-all cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  {(filtroTexto !== '' || filtroDisciplina !== 'todas' || filtroCategoria !== 'todas' || filtroEstado !== 'todos' || filtroFecha !== '') && (
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFiltroTexto('');
+                          setFiltroDisciplina('todas');
+                          setFiltroCategoria('todas');
+                          setFiltroEstado('todos');
+                          setFiltroFecha('');
+                        }}
+                        className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-xs font-bold">filter_alt_off</span>
+                        <span>Limpiar filtros</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {cargando ? (
+                  <div className="py-20 text-center text-sm text-slate-400 font-bold animate-pulse">
+                    Cargando partidos de la mesa de control...
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {partidosPaginadosMesa.map((part) => {
+                        const homeScore = part.report?.local_score ?? 0;
+                        const awayScore = part.report?.visitor_score ?? 0;
+                        return (
+                          <div
+                            key={part.id}
+                            onClick={() => seleccionarPartido(part)}
+                            className={`bg-primary-container rounded-2xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-4 group border text-on-surface ${
+                              part.status === 'en_curso' 
+                                ? 'border-emerald-500/50 shadow-lg shadow-emerald-500/10 hover:border-emerald-500 animate-pulse' 
+                                : 'border-outline hover:border-primary/60'
+                            }`}
+                          >
+                            <div className="flex justify-between items-center text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                              <span>Jornada {part.round}</span>
+                              <InsigniaEstado estado={part.status} tipo="partido" />
+                            </div>
+
+                              <div className="space-y-3 my-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-extrabold text-on-surface text-sm group-hover:text-primary transition-colors">{part.local_team?.name}</span>
+                                  {part.status === 'finalizado' || part.status === 'en_curso' ? (
+                                    <span className="font-black text-on-surface text-xs bg-surface px-2.5 py-1 rounded-md border border-outline shadow-2xs">
+                                      {homeScore}
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <div className="flex items-center justify-between border-t border-outline pt-2">
+                                  <span className="font-extrabold text-on-surface text-sm group-hover:text-primary transition-colors">{part.visitor_team?.name}</span>
+                                  {part.status === 'finalizado' || part.status === 'en_curso' ? (
+                                    <span className="font-black text-on-surface text-xs bg-surface px-2.5 py-1 rounded-md border border-outline shadow-2xs">
+                                      {awayScore}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              </div>
+
+                            <div className="border-t border-outline pt-3 flex items-center justify-between text-[10px] text-on-surface-variant font-medium">
+                              <div className="flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[13px] text-on-surface-variant">calendar_today</span>
+                                <span>{part.match_date ? new Date(part.match_date).toLocaleDateString() : 'N/A'} - {part.match_time || 'N/A'}</span>
+                              </div>
+                              <div className="flex items-center gap-1 max-w-[120px] truncate" title={part.venue?.name}>
+                                <span className="material-symbols-outlined text-[13px] text-on-surface-variant">location_on</span>
+                                <span className="truncate">{part.venue?.name || 'N/A'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {partidosFiltrados.length === 0 && (
+                        <div className="col-span-full">
+                          <EstadoVacio
+                            icono="scoreboard"
+                            titulo="No hay partidos programados"
+                            descripcion={partidos.length === 0 
+                              ? 'No hay encuentros registrados en este torneo actualmente.' 
+                              : 'No se encontraron partidos que coincidan con la búsqueda o filtro seleccionado.'}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <Paginador
+                      paginaActual={paginaPartidosMesa}
+                      totalPaginas={totalPaginasPartidosMesa}
+                      totalRegistros={partidosFiltrados.length}
+                      onCambiarPagina={setPaginaPartidosMesa}
+                      etiqueta="partidos"
+                      className="mt-6 rounded-2xl border border-outline"
+                    />
+                  </>
+                )}
               </div>
             ) : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {partidosPaginadosMesa.map((part) => {
-                    const homeScore = part.report?.local_score ?? 0;
-                    const awayScore = part.report?.visitor_score ?? 0;
-                    return (
-                      <div
-                        key={part.id}
-                        onClick={() => seleccionarPartido(part)}
-                        className={`bg-primary-container rounded-2xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-4 group border text-on-surface ${
-                          part.status === 'en_curso' 
-                            ? 'border-emerald-500/50 shadow-lg shadow-emerald-500/10 hover:border-emerald-500 animate-pulse' 
-                            : 'border-outline hover:border-primary/60'
-                        }`}
-                      >
-                        <div className="flex justify-between items-center text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                          <span>Jornada {part.round}</span>
-                          <InsigniaEstado estado={part.status} tipo="partido" />
-                        </div>
-
-                          <div className="space-y-3 my-2">
-                            <div className="flex items-center justify-between">
-                              <span className="font-extrabold text-on-surface text-sm group-hover:text-primary transition-colors">{part.local_team?.name}</span>
-                              {part.status === 'finalizado' || part.status === 'en_curso' ? (
-                                <span className="font-black text-on-surface text-xs bg-surface px-2.5 py-1 rounded-md border border-outline shadow-2xs">
-                                  {homeScore}
-                                </span>
-                              ) : null}
-                            </div>
-                            <div className="flex items-center justify-between border-t border-outline pt-2">
-                              <span className="font-extrabold text-on-surface text-sm group-hover:text-primary transition-colors">{part.visitor_team?.name}</span>
-                              {part.status === 'finalizado' || part.status === 'en_curso' ? (
-                                <span className="font-black text-on-surface text-xs bg-surface px-2.5 py-1 rounded-md border border-outline shadow-2xs">
-                                  {awayScore}
-                                </span>
-                              ) : null}
-                            </div>
-                          </div>
-
-                        <div className="border-t border-outline pt-3 flex items-center justify-between text-[10px] text-on-surface-variant font-medium">
-                          <div className="flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[13px] text-on-surface-variant">calendar_today</span>
-                            <span>{part.match_date ? new Date(part.match_date).toLocaleDateString() : 'N/A'} - {part.match_time || 'N/A'}</span>
-                          </div>
-                          <div className="flex items-center gap-1 max-w-[120px] truncate" title={part.venue?.name}>
-                            <span className="material-symbols-outlined text-[13px] text-on-surface-variant">location_on</span>
-                            <span className="truncate">{part.venue?.name || 'N/A'}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {partidosFiltrados.length === 0 && (
-                    <div className="col-span-full">
-                      <EstadoVacio
-                        icono="scoreboard"
-                        titulo="No hay partidos programados"
-                        descripcion={partidos.length === 0 
-                          ? 'No hay encuentros registrados en este torneo actualmente.' 
-                          : 'No se encontraron partidos que coincidan con la búsqueda o filtro seleccionado.'}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <Paginador
-                  paginaActual={paginaPartidosMesa}
-                  totalPaginas={totalPaginasPartidosMesa}
-                  totalRegistros={partidosFiltrados.length}
-                  onCambiarPagina={setPaginaPartidosMesa}
-                  etiqueta="partidos"
-                  className="mt-6 rounded-2xl border border-outline"
-                />
-              </>
-            )}
-          </div>
-        ) : (
-          <form onSubmit={guardarProgresoActa} className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="bg-primary-container rounded-2xl border border-outline p-6 shadow-xs space-y-5 text-on-surface">
-                <div className="border-b border-outline pb-2 flex justify-between items-center">
-                  <h2 className="font-extrabold text-sm uppercase tracking-wider text-on-surface">Acta de Partido Oficial</h2>
-                  {acta?.is_locked && (
-                    <span className="bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wider">Acta Cerrada</span>
-                  )}
-                </div>
-
-                <div className="bg-surface-dim border border-outline text-on-surface p-6 rounded-2xl flex flex-col items-center justify-center gap-4 relative overflow-hidden shadow-md">
-                  <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                    <span className={`w-2.5 h-2.5 rounded-full ${subEstadoPartido === 'jugando' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                    <span className="text-[9px] uppercase font-bold text-on-surface-variant tracking-widest">
-                      {subEstadoPartido === 'jugando' ? 'EN JUEGO' : 
-                       subEstadoPartido === 'descanso' ? 'EN DESCANSO' : 
-                       subEstadoPartido === 'suspendido' ? 'SUSPENDIDO' : 'PROGRAMADO'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-3 bg-surface border border-outline px-4 py-2 rounded-xl mt-4 z-10 text-on-surface">
-                    <button
-                      type="button"
-                      disabled={periodoActualIdx === 0 || (periodoActualIdx > 0 && segundosTranscurridos > 0)}
-                      onClick={() => cambiarPeriodo(periodoActualIdx - 1)}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-dim border border-outline hover:bg-surface-bright disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold text-xs text-on-surface"
-                      title={`Ver ${obtenerNormasDeporte().periodLabel} anterior`}
-                    >
-                      ◀
-                    </button>
-                    <div className="text-center px-2 min-w-[100px]">
-                      <span className="text-[9px] text-on-surface-variant font-bold uppercase tracking-wider block mb-0.5">
-                        {obtenerNormasDeporte().periodLabel}
-                      </span>
-                      <span className="font-extrabold text-sm text-on-surface">
-                        {obtenerNormasDeporte().periods[periodoActualIdx]?.name || `Periodo ${periodoActualIdx + 1}`}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={periodoActualIdx === obtenerNormasDeporte().periods.length - 1}
-                      onClick={() => cambiarPeriodo(periodoActualIdx + 1)}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-dim border border-outline hover:bg-surface-bright disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold text-xs text-on-surface"
-                      title={`Ver ${obtenerNormasDeporte().periodLabel} siguiente`}
-                    >
-                      ▶
-                    </button>
-                  </div>
-
-                  {obtenerNormasDeporte().hasTimer ? (
-                    <div className="flex flex-col items-center gap-2 z-10">
-                      <div className="text-4xl sm:text-5xl font-mono font-black tracking-widest text-on-surface">
-                        {formatearTiempo(segundosTranscurridos)}
-                      </div>
-
-                      {!acta?.is_locked && subEstadoPartido !== 'finalizado' && subEstadoPartido !== 'suspendido' && (
-                        <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
-                          <div className="flex gap-1">
-                            {!cronometroActivo ? (
-                              <button
-                                type="button"
-                                onClick={() => cambiarEstadoPartidoMesa('jugando')}
-                                className="flex items-center gap-1 bg-indigo-650 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-lg hover:shadow-indigo-650/25"
-                              >
-                                <span className="material-symbols-outlined text-sm">play_arrow</span>
-                                Iniciar
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setCronometroActivo(false);
-                                  const currentTime = segundosTranscurridos;
-                                  setBaseElapsedTime(currentTime);
-                                  setTimerStartedAt(null);
-                                  sincronizarTimerConBackend(currentTime, periodoActualIdx, 'paused');
-                                }}
-                                className="flex items-center gap-1 bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-lg"
-                              >
-                                <span className="material-symbols-outlined text-sm">pause</span>
-                                Pausar
-                              </button>
-                            )}
-                            {subEstadoPartido === 'jugando' && (
-                              <button
-                                type="button"
-                                onClick={() => cambiarEstadoPartidoMesa('descanso')}
-                                className="flex items-center gap-1 bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer"
-                              >
-                                <span className="material-symbols-outlined text-sm">coffee</span>
-                                Descanso
-                              </button>
-                            )}
-                            {(subEstadoPartido === 'jugando' || subEstadoPartido === 'descanso') && (
-                              <button
-                                type="button"
-                                onClick={() => cambiarEstadoPartidoMesa('suspendido')}
-                                className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                              >
-                                <span className="material-symbols-outlined text-sm">block</span>
-                                Suspender
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {subEstadoPartido === 'finalizado' && (
-                        <div className="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-lg mt-2">
-                          Partido finalizado - No se puede modificar el timer
-                        </div>
-                      )}
-
-                      {!acta?.is_locked && subEstadoPartido !== 'finalizado' && subEstadoPartido !== 'suspendido' && (
-                        <div className="mt-3 border-t border-slate-800 pt-3 w-full">
-                          <div className="flex flex-wrap items-center justify-center gap-4">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Tiempo extra:</span>
-                              <div className="flex items-center gap-0.5">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const nuevo = Math.max(0, extraTimeMinutes - 1);
-                                    setExtraTimeMinutes(nuevo);
-                                    setHasExtraTime(nuevo > 0);
-                                  }}
-                                  className="w-6 h-6 rounded-md bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                                  disabled={extraTimeMinutes === 0}
-                                >
-                                  -
-                                </button>
-                                <span className="w-8 text-center text-xs font-bold text-white">
-                                  {extraTimeMinutes}'
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const nuevo = Math.min(maxExtraTime, extraTimeMinutes + 1);
-                                    setExtraTimeMinutes(nuevo);
-                                    setHasExtraTime(nuevo > 0);
-                                  }}
-                                  className="w-6 h-6 rounded-md bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                                  disabled={extraTimeMinutes >= maxExtraTime}
-                                >
-                                  +
-                                </button>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={guardarTiempoExtra}
-                                className="px-2 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 text-[9px] font-bold transition-colors cursor-pointer"
-                              >
-                                Guardar
-                              </button>
-                            </div>
-                          </div>
-                        </div>
+              <form onSubmit={guardarProgresoActa} className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="bg-primary-container rounded-2xl border border-outline p-6 shadow-xs space-y-5 text-on-surface">
+                    <div className="border-b border-outline pb-2 flex justify-between items-center">
+                      <h2 className="font-extrabold text-sm uppercase tracking-wider text-on-surface">Acta de Partido Oficial</h2>
+                      {acta?.is_locked && (
+                        <span className="bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wider">Acta Cerrada</span>
                       )}
                     </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 z-10 py-2">
-                      <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Estado del Encuentro</span>
-                      {!acta?.is_locked && subEstadoPartido !== 'finalizado' && subEstadoPartido !== 'suspendido' && (
-                        <div className="flex gap-2">
-                          {subEstadoPartido !== 'jugando' && (
-                            <button
-                              type="button"
-                              onClick={() => cambiarEstadoPartidoMesa('jugando')}
-                              className="flex items-center gap-1 bg-indigo-650 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer"
-                            >
-                              Iniciar Juego
-                            </button>
-                          )}
-                          {subEstadoPartido === 'jugando' && (
-                            <button
-                              type="button"
-                              onClick={() => cambiarEstadoPartidoMesa('descanso')}
-                              className="flex items-center gap-1 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer"
-                            >
-                              Fin de Set / Descanso
-                            </button>
-                          )}
-                          {(subEstadoPartido === 'jugando' || subEstadoPartido === 'descanso') && (
-                            <button
-                              type="button"
-                              onClick={() => cambiarEstadoPartidoMesa('suspendido')}
-                              className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                            >
-                              <span className="material-symbols-outlined text-sm">block</span>
-                              Suspender
-                            </button>
-                          )}
-                        </div>
-                      )}
-                      {subEstadoPartido === 'finalizado' && (
-                        <div className="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-lg mt-2">
-                          Partido finalizado - No se puede modificar el timer
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
 
-                <div className="grid grid-cols-3 gap-4 bg-surface-dim border border-outline p-6 rounded-2xl items-center text-center text-on-surface">
-                  <div className="font-extrabold text-sm text-on-surface truncate">{partidoSeleccionado.local_team?.name}</div>
-                  <div className="flex flex-col items-center justify-center gap-1">
-                    <div className="flex items-center justify-center gap-3">
-                      <input
-                        type="text"
-                        readOnly
-                        value={golesHome}
-                        className="w-14 text-center text-2xl font-black border border-outline bg-surface text-on-surface rounded-lg p-2 outline-hidden cursor-not-allowed select-none shadow-xs"
-                        title="El marcador se calcula automáticamente a partir de las incidencias registradas"
-                      />
-                      <span className="font-black text-on-surface-variant text-lg">-</span>
-                      <input
-                        type="text"
-                        readOnly
-                        value={golesAway}
-                        className="w-14 text-center text-2xl font-black border border-outline bg-surface text-on-surface rounded-lg p-2 outline-hidden cursor-not-allowed select-none shadow-xs"
-                        title="El marcador se calcula automáticamente a partir de las incidencias registradas"
-                      />
-                    </div>
-                    <span className="text-[9px] text-slate-450 font-bold uppercase tracking-widest mt-1 block">
-                      {obtenerNormasDeporte().scoreLabel}
-                    </span>
-                  </div>
-                  <div className="font-extrabold text-sm text-slate-200 truncate">{partidoSeleccionado.visitor_team?.name}</div>
-                </div>
-
-                {!acta?.is_locked && subEstadoPartido === 'programado' && (
-                  <div className="bg-[#07080c] border border-slate-900 p-4 rounded-2xl space-y-3 animate-fadeIn">
-                    <h4 className="text-[10px] font-bold text-amber-500 uppercase tracking-wider flex items-center gap-1.5 font-sans">
-                      <span className="material-symbols-outlined text-xs font-bold">gavel</span>
-                      Declarar Incomparecencia (Walkover / W.O.)
-                    </h4>
-                    <p className="text-[10px] text-slate-400 font-sans">
-                      Si uno de los equipos no se presentó al encuentro, puedes registrar el marcador reglamentario (3-0 para Fútbol, 20-0 para Básquetbol, 3-0 para Vóley) de manera directa.
-                    </p>
-                    <div className="grid grid-cols-2 gap-3 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => manejarWalkover(partidoSeleccionado.local_team_id || (partidoSeleccionado as any).home_team_id)}
-                        className="bg-rose-950/30 hover:bg-rose-900 border border-rose-500/20 text-rose-350 text-[10px] font-bold py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 font-sans"
-                      >
-                        <span className="material-symbols-outlined text-xs">cancel</span>
-                        W.O. Local Inasistente
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => manejarWalkover(partidoSeleccionado.visitor_team_id || (partidoSeleccionado as any).away_team_id)}
-                        className="bg-rose-950/30 hover:bg-rose-900 border border-rose-500/20 text-rose-350 text-[10px] font-bold py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 font-sans"
-                      >
-                        <span className="material-symbols-outlined text-xs">cancel</span>
-                        W.O. Visita Inasistente
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {!acta?.is_locked && (
-                  <div className="p-4 bg-[#07080c] border border-slate-900 rounded-2xl space-y-3 shadow-xs">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-1.5 border-b border-slate-900 pb-2">
-                      <h3 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
-                        Registrar Evento Rápido ({partidoSeleccionado.discipline?.name || 'Deporte General'})
-                      </h3>
-                      {subEstadoPartido !== 'jugando' && (
-                        <span className="bg-amber-500/10 text-amber-400 text-[8px] font-bold px-1.5 py-0.5 rounded border border-amber-500/20">
-                          Reloj detenido (capturará {formatearTiempo(segundosTranscurridos)})
+                    <div className="bg-surface-dim border border-outline text-on-surface p-6 rounded-2xl flex flex-col items-center justify-center gap-4 relative overflow-hidden shadow-md">
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                        <span className={`w-2.5 h-2.5 rounded-full ${subEstadoPartido === 'jugando' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                        <span className="text-[9px] uppercase font-bold text-on-surface-variant tracking-widest">
+                          {subEstadoPartido === 'jugando' ? 'EN JUEGO' : 
+                          subEstadoPartido === 'descanso' ? 'EN DESCANSO' : 
+                          subEstadoPartido === 'suspendido' ? 'SUSPENDIDO' : 'PROGRAMADO'}
                         </span>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2 border-r border-slate-900 pr-2">
-                        <span className="text-[10px] font-bold text-slate-200 block text-center truncate">{partidoSeleccionado.local_team?.name}</span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
-                          {obtenerTiposIncidenciaDeporte().map((inc) => (
-                            <button
-                              key={inc.type}
-                              type="button"
-                              onClick={() => abrirRegistroRapido(partidoSeleccionado.local_team_id || (partidoSeleccionado as any).home_team_id, partidoSeleccionado.local_team?.name || 'Local', inc.type)}
-                              className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-xl text-[9px] font-bold cursor-pointer transition-all hover:scale-102 hover:brightness-105 active:scale-98 ${inc.colorClass}`}
-                            >
-                              <span className="material-symbols-outlined text-[12px]">{inc.icon}</span>
-                              {inc.label}
-                            </button>
-                          ))}
-                        </div>
                       </div>
 
-                      <div className="space-y-2 pl-2">
-                        <span className="text-[10px] font-bold text-slate-200 block text-center truncate">{partidoSeleccionado.visitor_team?.name}</span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
-                          {obtenerTiposIncidenciaDeporte().map((inc) => (
-                            <button
-                              key={inc.type}
-                              type="button"
-                              onClick={() => abrirRegistroRapido(partidoSeleccionado.visitor_team_id || (partidoSeleccionado as any).away_team_id, partidoSeleccionado.visitor_team?.name || 'Visita', inc.type)}
-                              className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-xl text-[9px] font-bold cursor-pointer transition-all hover:scale-102 hover:brightness-105 active:scale-98 ${inc.colorClass}`}
-                            >
-                              <span className="material-symbols-outlined text-[12px]">{inc.icon}</span>
-                              {inc.label}
-                            </button>
-                          ))}
+                      <div className="flex items-center gap-3 bg-surface border border-outline px-4 py-2 rounded-xl mt-4 z-10 text-on-surface">
+                        <button
+                          type="button"
+                          disabled={periodoActualIdx === 0 || (periodoActualIdx > 0 && segundosTranscurridos > 0)}
+                          onClick={() => cambiarPeriodo(periodoActualIdx - 1)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-dim border border-outline hover:bg-surface-bright disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold text-xs text-on-surface"
+                          title={`Ver ${obtenerNormasDeporte().periodLabel} anterior`}
+                        >
+                          ◀
+                        </button>
+                        <div className="text-center px-2 min-w-[100px]">
+                          <span className="text-[9px] text-on-surface-variant font-bold uppercase tracking-wider block mb-0.5">
+                            {obtenerNormasDeporte().periodLabel}
+                          </span>
+                          <span className="font-extrabold text-sm text-on-surface">
+                            {obtenerNormasDeporte().periods[periodoActualIdx]?.name || `Periodo ${periodoActualIdx + 1}`}
+                          </span>
                         </div>
+                        <button
+                          type="button"
+                          disabled={periodoActualIdx === obtenerNormasDeporte().periods.length - 1}
+                          onClick={() => cambiarPeriodo(periodoActualIdx + 1)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center bg-surface-dim border border-outline hover:bg-surface-bright disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold text-xs text-on-surface"
+                          title={`Ver ${obtenerNormasDeporte().periodLabel} siguiente`}
+                        >
+                          ▶
+                        </button>
                       </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
 
-            <div className="lg:col-span-1 space-y-6">
-              <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-6 shadow-xs space-y-4">
-                <h3 className="font-extrabold text-sm uppercase tracking-wider text-white border-b border-slate-900 pb-2">Firmas y Cierre</h3>
-                
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-300 block font-sans">Firma Árbitro Principal</label>
-                    <input
-                      type="text" placeholder="Firma / Nombre" disabled={acta?.is_locked}
-                      value={firmaArbitro} onChange={(e) => setFirmaArbitro(e.target.value)}
-                      className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 placeholder:text-slate-600 font-sans"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-350 block font-sans uppercase">Delegado Mesa</label>
-                      <input
-                        type="text" placeholder="Nombre" disabled={acta?.is_locked}
-                        value={firmaDelegadoMesa} onChange={(e) => setFirmaDelegadoMesa(e.target.value)}
-                        className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 placeholder:text-slate-600 font-sans"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-355 block font-sans uppercase">Delegado Local</label>
-                      <input
-                        type="text" placeholder="Nombre" disabled={acta?.is_locked}
-                        value={firmaDelegadoLocal} onChange={(e) => setFirmaDelegadoLocal(e.target.value)}
-                        className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 placeholder:text-slate-600 font-sans"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-355 block font-sans uppercase">Delegado Visita</label>
-                      <input
-                        type="text" placeholder="Nombre" disabled={acta?.is_locked}
-                        value={firmaDelegadoVisita} onChange={(e) => setFirmaDelegadoVisita(e.target.value)}
-                        className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 placeholder:text-slate-600 font-sans"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-300 block">Observaciones del Encuentro</label>
-                  <textarea
-                    placeholder="Ej: Retraso por clima, incidencias fuera del campo..." disabled={acta?.is_locked}
-                    value={observaciones} onChange={(e) => setObservaciones(e.target.value)}
-                    className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 min-h-[60px] placeholder:text-slate-600"
-                  />
-                </div>
-
-                {!acta?.is_locked && (
-                  <div className="flex flex-col gap-2 pt-2">
-                    <button type="submit" className="w-full bg-[#1c1f2e] hover:bg-[#282d42] border border-slate-900 text-white font-bold py-2.5 rounded-lg text-xs cursor-pointer transition-all">
-                      Guardar Marcador y Firmas
-                    </button>
-                    <button
-                      type="button" onClick={bloquearActaFinal}
-                      className="w-full bg-[#800f2f] hover:bg-[#a4133c] text-white font-bold py-2.5 rounded-lg text-xs cursor-pointer transition-all"
-                    >
-                      Cerrar y Bloquear Acta
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-6 shadow-xs space-y-4">
-                <h2 className="font-extrabold text-sm uppercase tracking-wider text-white border-b border-slate-900 pb-2">Historial de Sucesos</h2>
-                
-                {incidencias.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic p-4 text-center">No hay incidencias registradas en este encuentro.</p>
-                ) : (
-                  <div className="divide-y divide-slate-900 border border-slate-900 rounded-xl overflow-hidden bg-[#11131c] max-h-[300px] overflow-y-auto">
-                    {incidencias.map((i) => {
-                      const config = obtenerEtiquetaIncidencia(i.incidence_type, i.description);
-                      return (
-                        <div key={i.id} className="p-3 text-xs flex justify-between items-center hover:bg-[#171a26]/30">
-                          <div className="min-w-0 flex-1 pr-2">
-                            <span className="font-bold text-secondary mr-2 shrink-0">
-                              {i.minute}' {i.second !== undefined && i.second !== null && i.second > 0 ? `${i.second.toString().padStart(2, '0')}"` : ''}
-                            </span>
-                            <span className="font-semibold text-slate-200 truncate inline-block max-w-[120px] align-middle" title={i.player?.name}>
-                              {i.player?.name || 'Jugador no especificado'}
-                            </span>
-                            <span className="text-slate-700 mx-1.5">|</span>
-                            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border align-middle ${config.color}`}>
-                              <span className="material-symbols-outlined text-[9px] shrink-0">
-                                {config.icon}
-                              </span>
-                              {config.label}
-                            </span>
+                      {obtenerNormasDeporte().hasTimer ? (
+                        <div className="flex flex-col items-center gap-2 z-10">
+                          <div className="text-4xl sm:text-5xl font-mono font-black tracking-widest text-on-surface">
+                            {formatearTiempo(segundosTranscurridos)}
                           </div>
-                          {!acta?.is_locked && (
-                            <button type="button" onClick={() => eliminarIncidencia(i.id)} className="text-[10px] text-rose-450 font-bold hover:underline cursor-pointer shrink-0 ml-2">
-                              Quitar
-                            </button>
+
+                          {!acta?.is_locked && subEstadoPartido !== 'finalizado' && subEstadoPartido !== 'suspendido' && (
+                            <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+                              <div className="flex gap-1">
+                                {!cronometroActivo ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => cambiarEstadoPartidoMesa('jugando')}
+                                    className="flex items-center gap-1 bg-indigo-650 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-lg hover:shadow-indigo-650/25"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">play_arrow</span>
+                                    Iniciar
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setCronometroActivo(false);
+                                      const currentTime = segundosTranscurridos;
+                                      setBaseElapsedTime(currentTime);
+                                      setTimerStartedAt(null);
+                                      sincronizarTimerConBackend(currentTime, periodoActualIdx, 'paused');
+                                    }}
+                                    className="flex items-center gap-1 bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-lg"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">pause</span>
+                                    Pausar
+                                  </button>
+                                )}
+                                {subEstadoPartido === 'jugando' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => cambiarEstadoPartidoMesa('descanso')}
+                                    className="flex items-center gap-1 bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">coffee</span>
+                                    Descanso
+                                  </button>
+                                )}
+                                {(subEstadoPartido === 'jugando' || subEstadoPartido === 'descanso') && (
+                                  <button
+                                    type="button"
+                                    onClick={() => cambiarEstadoPartidoMesa('suspendido')}
+                                    className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">block</span>
+                                    Suspender
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {subEstadoPartido === 'finalizado' && (
+                            <div className="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-lg mt-2">
+                              Partido finalizado - No se puede modificar el timer
+                            </div>
+                          )}
+
+                          {!acta?.is_locked && subEstadoPartido !== 'finalizado' && subEstadoPartido !== 'suspendido' && (
+                            <div className="mt-3 border-t border-slate-800 pt-3 w-full">
+                              <div className="flex flex-wrap items-center justify-center gap-4">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Tiempo extra:</span>
+                                  <div className="flex items-center gap-0.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const nuevo = Math.max(0, extraTimeMinutes - 1);
+                                        setExtraTimeMinutes(nuevo);
+                                        setHasExtraTime(nuevo > 0);
+                                      }}
+                                      className="w-6 h-6 rounded-md bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                      disabled={extraTimeMinutes === 0}
+                                    >
+                                      -
+                                    </button>
+                                    <span className="w-8 text-center text-xs font-bold text-white">
+                                      {extraTimeMinutes}'
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const nuevo = Math.min(maxExtraTime, extraTimeMinutes + 1);
+                                        setExtraTimeMinutes(nuevo);
+                                        setHasExtraTime(nuevo > 0);
+                                      }}
+                                      className="w-6 h-6 rounded-md bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                      disabled={extraTimeMinutes >= maxExtraTime}
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={guardarTiempoExtra}
+                                    className="px-2 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 text-[9px] font-bold transition-colors cursor-pointer"
+                                  >
+                                    Guardar
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
                           )}
                         </div>
-                      );
-                    })}
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 z-10 py-2">
+                          <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Estado del Encuentro</span>
+                          {!acta?.is_locked && subEstadoPartido !== 'finalizado' && subEstadoPartido !== 'suspendido' && (
+                            <div className="flex gap-2">
+                              {subEstadoPartido !== 'jugando' && (
+                                <button
+                                  type="button"
+                                  onClick={() => cambiarEstadoPartidoMesa('jugando')}
+                                  className="flex items-center gap-1 bg-indigo-650 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer"
+                                >
+                                  Iniciar Juego
+                                </button>
+                              )}
+                              {subEstadoPartido === 'jugando' && (
+                                <button
+                                  type="button"
+                                  onClick={() => cambiarEstadoPartidoMesa('descanso')}
+                                  className="flex items-center gap-1 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer"
+                                >
+                                  Fin de Set / Descanso
+                                </button>
+                              )}
+                              {(subEstadoPartido === 'jugando' || subEstadoPartido === 'descanso') && (
+                                <button
+                                  type="button"
+                                  onClick={() => cambiarEstadoPartidoMesa('suspendido')}
+                                  className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                >
+                                  <span className="material-symbols-outlined text-sm">block</span>
+                                  Suspender
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          {subEstadoPartido === 'finalizado' && (
+                            <div className="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-lg mt-2">
+                              Partido finalizado - No se puede modificar el timer
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4 bg-surface-dim border border-outline p-6 rounded-2xl items-center text-center text-on-surface">
+                      <div className="font-extrabold text-sm text-on-surface truncate">{partidoSeleccionado.local_team?.name}</div>
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        <div className="flex items-center justify-center gap-3">
+                          <input
+                            type="text"
+                            readOnly
+                            value={golesHome}
+                            className="w-14 text-center text-2xl font-black border border-outline bg-surface text-on-surface rounded-lg p-2 outline-hidden cursor-not-allowed select-none shadow-xs"
+                            title="El marcador se calcula automáticamente a partir de las incidencias registradas"
+                          />
+                          <span className="font-black text-on-surface-variant text-lg">-</span>
+                          <input
+                            type="text"
+                            readOnly
+                            value={golesAway}
+                            className="w-14 text-center text-2xl font-black border border-outline bg-surface text-on-surface rounded-lg p-2 outline-hidden cursor-not-allowed select-none shadow-xs"
+                            title="El marcador se calcula automáticamente a partir de las incidencias registradas"
+                          />
+                        </div>
+                        <span className="text-[9px] text-slate-450 font-bold uppercase tracking-widest mt-1 block">
+                          {obtenerNormasDeporte().scoreLabel}
+                        </span>
+                      </div>
+                      <div className="font-extrabold text-sm text-slate-200 truncate">{partidoSeleccionado.visitor_team?.name}</div>
+                    </div>
+
+                    {!acta?.is_locked && subEstadoPartido === 'programado' && (
+                      <div className="bg-[#07080c] border border-slate-900 p-4 rounded-2xl space-y-3 animate-fadeIn">
+                        <h4 className="text-[10px] font-bold text-amber-500 uppercase tracking-wider flex items-center gap-1.5 font-sans">
+                          <span className="material-symbols-outlined text-xs font-bold">gavel</span>
+                          Declarar Incomparecencia (Walkover / W.O.)
+                        </h4>
+                        <p className="text-[10px] text-slate-400 font-sans">
+                          Si uno de los equipos no se presentó al encuentro, puedes registrar el marcador reglamentario (3-0 para Fútbol, 20-0 para Básquetbol, 3-0 para Vóley) de manera directa.
+                        </p>
+                        <div className="grid grid-cols-2 gap-3 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => manejarWalkover(partidoSeleccionado.local_team_id || (partidoSeleccionado as any).home_team_id)}
+                            className="bg-rose-950/30 hover:bg-rose-900 border border-rose-500/20 text-rose-350 text-[10px] font-bold py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 font-sans"
+                          >
+                            <span className="material-symbols-outlined text-xs">cancel</span>
+                            W.O. Local Inasistente
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => manejarWalkover(partidoSeleccionado.visitor_team_id || (partidoSeleccionado as any).away_team_id)}
+                            className="bg-rose-950/30 hover:bg-rose-900 border border-rose-500/20 text-rose-350 text-[10px] font-bold py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 font-sans"
+                          >
+                            <span className="material-symbols-outlined text-xs">cancel</span>
+                            W.O. Visita Inasistente
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {!acta?.is_locked && (
+                      <div className="p-4 bg-[#07080c] border border-slate-900 rounded-2xl space-y-3 shadow-xs">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-1.5 border-b border-slate-900 pb-2">
+                          <h3 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                            Registrar Evento Rápido ({partidoSeleccionado.discipline?.name || 'Deporte General'})
+                          </h3>
+                          {subEstadoPartido !== 'jugando' && (
+                            <span className="bg-amber-500/10 text-amber-400 text-[8px] font-bold px-1.5 py-0.5 rounded border border-amber-500/20">
+                              Reloj detenido (capturará {formatearTiempo(segundosTranscurridos)})
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2 border-r border-slate-900 pr-2">
+                            <span className="text-[10px] font-bold text-slate-200 block text-center truncate">{partidoSeleccionado.local_team?.name}</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
+                              {obtenerTiposIncidenciaDeporte().map((inc) => (
+                                <button
+                                  key={inc.type}
+                                  type="button"
+                                  onClick={() => abrirRegistroRapido(partidoSeleccionado.local_team_id || (partidoSeleccionado as any).home_team_id, partidoSeleccionado.local_team?.name || 'Local', inc.type)}
+                                  className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-xl text-[9px] font-bold cursor-pointer transition-all hover:scale-102 hover:brightness-105 active:scale-98 ${inc.colorClass}`}
+                                >
+                                  <span className="material-symbols-outlined text-[12px]">{inc.icon}</span>
+                                  {inc.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="space-y-2 pl-2">
+                            <span className="text-[10px] font-bold text-slate-200 block text-center truncate">{partidoSeleccionado.visitor_team?.name}</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
+                              {obtenerTiposIncidenciaDeporte().map((inc) => (
+                                <button
+                                  key={inc.type}
+                                  type="button"
+                                  onClick={() => abrirRegistroRapido(partidoSeleccionado.visitor_team_id || (partidoSeleccionado as any).away_team_id, partidoSeleccionado.visitor_team?.name || 'Visita', inc.type)}
+                                  className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-xl text-[9px] font-bold cursor-pointer transition-all hover:scale-102 hover:brightness-105 active:scale-98 ${inc.colorClass}`}
+                                >
+                                  <span className="material-symbols-outlined text-[12px]">{inc.icon}</span>
+                                  {inc.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
-          </form>
+                </div>
+
+                <div className="lg:col-span-1 space-y-6">
+                  <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-6 shadow-xs space-y-4">
+                    <h3 className="font-extrabold text-sm uppercase tracking-wider text-white border-b border-slate-900 pb-2">Firmas y Cierre</h3>
+                    
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-300 block font-sans">Firma Árbitro Principal</label>
+                        <input
+                          type="text" placeholder="Firma / Nombre" disabled={acta?.is_locked}
+                          value={firmaArbitro} onChange={(e) => setFirmaArbitro(e.target.value)}
+                          className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 placeholder:text-slate-600 font-sans"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-350 block font-sans uppercase">Delegado Mesa</label>
+                          <input
+                            type="text" placeholder="Nombre" disabled={acta?.is_locked}
+                            value={firmaDelegadoMesa} onChange={(e) => setFirmaDelegadoMesa(e.target.value)}
+                            className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 placeholder:text-slate-600 font-sans"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-355 block font-sans uppercase">Delegado Local</label>
+                          <input
+                            type="text" placeholder="Nombre" disabled={acta?.is_locked}
+                            value={firmaDelegadoLocal} onChange={(e) => setFirmaDelegadoLocal(e.target.value)}
+                            className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 placeholder:text-slate-600 font-sans"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-355 block font-sans uppercase">Delegado Visita</label>
+                          <input
+                            type="text" placeholder="Nombre" disabled={acta?.is_locked}
+                            value={firmaDelegadoVisita} onChange={(e) => setFirmaDelegadoVisita(e.target.value)}
+                            className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 placeholder:text-slate-600 font-sans"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-300 block">Observaciones del Encuentro</label>
+                      <textarea
+                        placeholder="Ej: Retraso por clima, incidencias fuera del campo..." disabled={acta?.is_locked}
+                        value={observaciones} onChange={(e) => setObservaciones(e.target.value)}
+                        className="w-full text-xs border border-slate-900 bg-[#171a26] text-white rounded-lg p-2 min-h-[60px] placeholder:text-slate-600"
+                      />
+                    </div>
+
+                    {!acta?.is_locked && (
+                      <div className="flex flex-col gap-2 pt-2">
+                        <button type="submit" className="w-full bg-[#1c1f2e] hover:bg-[#282d42] border border-slate-900 text-white font-bold py-2.5 rounded-lg text-xs cursor-pointer transition-all">
+                          Guardar Marcador y Firmas
+                        </button>
+                        <button
+                          type="button" onClick={bloquearActaFinal}
+                          className="w-full bg-[#800f2f] hover:bg-[#a4133c] text-white font-bold py-2.5 rounded-lg text-xs cursor-pointer transition-all"
+                        >
+                          Cerrar y Bloquear Acta
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-[#11131c] rounded-2xl border border-slate-900 p-6 shadow-xs space-y-4">
+                    <h2 className="font-extrabold text-sm uppercase tracking-wider text-white border-b border-slate-900 pb-2">Historial de Sucesos</h2>
+                    
+                    {incidencias.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic p-4 text-center">No hay incidencias registradas en este encuentro.</p>
+                    ) : (
+                      <div className="divide-y divide-slate-900 border border-slate-900 rounded-xl overflow-hidden bg-[#11131c] max-h-[300px] overflow-y-auto">
+                        {incidencias.map((i) => {
+                          const config = obtenerEtiquetaIncidencia(i.incidence_type, i.description);
+                          return (
+                            <div key={i.id} className="p-3 text-xs flex justify-between items-center hover:bg-[#171a26]/30">
+                              <div className="min-w-0 flex-1 pr-2">
+                                <span className="font-bold text-secondary mr-2 shrink-0">
+                                  {i.minute}' {i.second !== undefined && i.second !== null && i.second > 0 ? `${i.second.toString().padStart(2, '0')}"` : ''}
+                                </span>
+                                <span className="font-semibold text-slate-200 truncate inline-block max-w-[120px] align-middle" title={i.player?.name}>
+                                  {i.player?.name || 'Jugador no especificado'}
+                                </span>
+                                <span className="text-slate-700 mx-1.5">|</span>
+                                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border align-middle ${config.color}`}>
+                                  <span className="material-symbols-outlined text-[9px] shrink-0">
+                                    {config.icon}
+                                  </span>
+                                  {config.label}
+                                </span>
+                              </div>
+                              {!acta?.is_locked && (
+                                <button type="button" onClick={() => eliminarIncidencia(i.id)} className="text-[10px] text-rose-450 font-bold hover:underline cursor-pointer shrink-0 ml-2">
+                                  Quitar
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </form>
+            )}
+          </>
+        ) : (
+          <MesaEventos/>
         )}
 
       </main>

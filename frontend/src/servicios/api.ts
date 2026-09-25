@@ -10,6 +10,7 @@ import type {
   GuardarGrupoEtapaEvento,
   ParticipanteGrupoEvento,
   CrearParticipanteGrupoEvento,
+  ResultadoEvento,
 } from '../types/CompetitionEvent';
 
 // URL base para la API del backend
@@ -1038,6 +1039,18 @@ export const serviciosEventosCompetencia = {
     );
 
     return response.data;
+  },
+
+  obtenerResultadosGrupo: async (
+    grupoId: number
+  ): Promise<
+    RespuestaApi<ResultadoEvento[]>
+  > => {
+    const res = await clienteApi.get(
+      `/competition-results?competition_event_group_id=${grupoId}`
+    );
+
+    return res.data;
   },
 }
 

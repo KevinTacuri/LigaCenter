@@ -223,3 +223,28 @@ export interface CrearParticipanteGrupoEvento {
   lane: number | null;
   start_order: number | null;
 }
+
+export interface IntentoResultadoEvento {
+  id: number;
+  competition_result_id: number;
+  competition_event_participant_member_id: number | null;
+  attempt_number: number;
+  value: string | number | null;
+}
+
+export interface ResultadoEvento {
+  id: number;
+  competition_event_group_participant_id: number;
+
+  result_value: string | number | null;
+  result_unit: string | null;
+
+  position: number | null;
+
+  status:
+    | 'registrado'
+    | 'oficializado'
+    | 'anulado';
+
+  attempts: IntentoResultadoEvento[];
+}
