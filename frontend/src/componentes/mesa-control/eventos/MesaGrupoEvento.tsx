@@ -29,6 +29,12 @@ interface Props {
   onVolver: () => void;
 }
 
+type EstadoOperativo =
+  | 'compitiendo'
+  | 'no_presento'
+  | 'retirado'
+  | 'descalificado';
+
 
 const MesaGrupoEvento: React.FC<Props> = ({
   evento,
@@ -419,6 +425,239 @@ const MesaGrupoEvento: React.FC<Props> = ({
   |--------------------------------------------------------------------------
   */
 
+  const obtenerEstadoOperativo = (
+    asignacion:
+      | ParticipanteGrupoEvento,
+    resultado:
+      | ResultadoEvento
+      | undefined
+  ) => {
+    if (
+      asignacion?.status ===
+      'no_presento'
+    ) {
+      return 'no_presento';
+    }
+
+    if (
+      asignacion?.status ===
+      'retirado'
+    ) {
+      return 'retirado';
+    }
+
+    if (
+      resultado?.status ===
+      'anulado'
+    ) {
+      return 'descalificado';
+    }
+
+    return 'compitiendo';
+  };
+
+  const obtenerOCrearResultado = async ( asignacion: ParticipanteGrupoEvento ): Promise<ResultadoEvento | undefined> => {
+    const existente =
+      obtenerResultado(
+        asignacion.id
+      );
+
+    if (existente) {
+      return existente;
+    }
+
+    const res =
+      await serviciosEventosCompetencia
+        .crearResultado({
+          competition_event_group_participant_id:
+            asignacion.id,
+
+          result_unit:
+            evento.event_type ===
+            'carrera'
+              ? 'segundos'
+              : evento.event_type ===
+                  'puntaje'
+                ? 'puntos'
+                : null,
+
+          status:
+            'registrado',
+        });
+
+    return res.success
+      ? res.data
+      : undefined;
+  };
+
+  const cambiarEstadoOperativo = async (
+      asignacion: ParticipanteGrupoEvento,
+      nuevoEstado: EstadoOperativo
+    ) => {
+      setError(null);
+
+      try {
+        let resultado =
+          obtenerResultado(
+            asignacion.id
+          );
+
+        /*
+        |--------------------------------------------------------------------------
+        | COMPITIENDO
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+          nuevoEstado ===
+          'compitiendo'
+        ) {
+          await serviciosEventosCompetencia
+            .actualizarEstadoParticipanteGrupo(
+              asignacion.id,
+              'activo'
+            );
+
+          if (
+            resultado?.status ===
+            'anulado'
+          ) {
+            await serviciosEventosCompetencia
+              .actualizarResultado(
+                resultado.id,
+                {
+                  status:
+                    'registrado',
+                }
+              );
+          }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | NO PRESENTÓ
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+          nuevoEstado ===
+          'no_presento'
+        ) {
+          await serviciosEventosCompetencia
+            .actualizarEstadoParticipanteGrupo(
+              asignacion.id,
+              'no_presento'
+            );
+
+          resultado =
+            await obtenerOCrearResultado(
+              asignacion
+            );
+
+          if (
+            resultado &&
+            resultado.status !==
+              'anulado'
+          ) {
+            await serviciosEventosCompetencia
+              .actualizarResultado(
+                resultado.id,
+                {
+                  status:
+                    'anulado',
+                }
+              );
+          }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | RETIRADO
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+          nuevoEstado ===
+          'retirado'
+        ) {
+          await serviciosEventosCompetencia
+            .actualizarEstadoParticipanteGrupo(
+              asignacion.id,
+              'retirado'
+            );
+
+          resultado =
+            await obtenerOCrearResultado(
+              asignacion
+            );
+
+          if (
+            resultado &&
+            resultado.status !==
+              'anulado'
+          ) {
+            await serviciosEventosCompetencia
+              .actualizarResultado(
+                resultado.id,
+                {
+                  status:
+                    'anulado',
+                }
+              );
+          }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | DESCALIFICADO
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+          nuevoEstado ===
+          'descalificado'
+        ) {
+          /*
+          * La descalificación pertenece
+          * al resultado de este grupo.
+          */
+
+          await serviciosEventosCompetencia
+            .actualizarEstadoParticipanteGrupo(
+              asignacion.id,
+              'activo'
+            );
+
+          resultado =
+            await obtenerOCrearResultado(
+              asignacion
+            );
+
+          if (
+            resultado &&
+            resultado.status !==
+              'anulado'
+          ) {
+            await serviciosEventosCompetencia
+              .actualizarResultado(
+                resultado.id,
+                {
+                  status:
+                    'anulado',
+                }
+              );
+          }
+        }
+
+        await cargarMesa();
+      } catch (err: any) {
+        setError(
+          err.response?.data?.message ||
+            'No se pudo cambiar el estado del participante.'
+        );
+      }
+  };
+
   const obtenerParticipante = (
     asignacion: ParticipanteGrupoEvento
   ) => {
@@ -490,18 +729,25 @@ const MesaGrupoEvento: React.FC<Props> = ({
             asignacion.id
           );
 
-        if (!resultado) {
-          return false;
-        }
-
         /*
-        * Un anulado cuenta como resuelto.
+        * No presentó o retirado
+        */
+
+        if (asignacion?.status == 'no_presento' || asignacion?.status === 'retirado') {
+          return true;
+        }
+        /*
+        * Descalificado
         */
         if (
-          resultado.status ===
+          resultado?.status ===
           'anulado'
         ) {
           return true;
+        }
+
+        if (!resultado) {
+          return false;
         }
 
         return rondas.every(
@@ -883,6 +1129,10 @@ const MesaGrupoEvento: React.FC<Props> = ({
                           Participante
                       </th>
 
+                      <th className="text-left p-3 min-w-[135px]">
+                        Estado
+                      </th>
+
                       {rondas.map(
                           (
                           ronda
@@ -921,14 +1171,17 @@ const MesaGrupoEvento: React.FC<Props> = ({
                       (
                           asignacion
                       ) => {
-                          const participante =
-                          obtenerParticipante(
+                          const participante = obtenerParticipante(
                               asignacion
                           );
 
-                          const resultado =
-                          obtenerResultado(
+                          const resultado = obtenerResultado(
                               asignacion.id
+                          );
+
+                          const estadoOperativo = obtenerEstadoOperativo(
+                            asignacion,
+                            resultado
                           );
 
                           return (
@@ -963,6 +1216,65 @@ const MesaGrupoEvento: React.FC<Props> = ({
                                   }
                                   </div>
                               )}
+                              </td>
+
+                              <td className="p-3">
+                                <select
+                                  value={
+                                    estadoOperativo
+                                  }
+                                  disabled={
+                                    estadoGrupo !==
+                                    'en_curso'
+                                  }
+                                  onChange={(e) =>
+                                    cambiarEstadoOperativo(
+                                      asignacion,
+                                      e.target
+                                        .value as EstadoOperativo
+                                    )
+                                  }
+                                  className={`w-full min-w-[125px] text-[10px] font-bold rounded-lg px-2 py-2 border outline-none cursor-pointer disabled:cursor-not-allowed ${
+                                    estadoOperativo ===
+                                    'compitiendo'
+                                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                      : estadoOperativo ===
+                                          'no_presento'
+                                        ? 'bg-slate-500/10 border-slate-500/20 text-slate-400'
+                                        : estadoOperativo ===
+                                            'retirado'
+                                          ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                                          : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                                  }`}
+                                >
+                                  <option
+                                    value="compitiendo"
+                                    className="bg-[#11131c]"
+                                  >
+                                    Compitiendo
+                                  </option>
+
+                                  <option
+                                    value="no_presento"
+                                    className="bg-[#11131c]"
+                                  >
+                                    No se presentó
+                                  </option>
+
+                                  <option
+                                    value="retirado"
+                                    className="bg-[#11131c]"
+                                  >
+                                    Retirado
+                                  </option>
+
+                                  <option
+                                    value="descalificado"
+                                    className="bg-[#11131c]"
+                                  >
+                                    Descalificado
+                                  </option>
+                                </select>
                               </td>
 
                               {rondas.map(
@@ -1018,6 +1330,7 @@ const MesaGrupoEvento: React.FC<Props> = ({
                                         'en_curso' ||
                                       resultado?.status ===
                                         'oficializado' ||
+                                      estadoOperativo !== 'compitiendo' ||
                                       guardandoCelda ===
                                         `${asignacion.id}-${ronda}`
                                     }
@@ -1055,14 +1368,14 @@ const MesaGrupoEvento: React.FC<Props> = ({
 
                               <td className="p-3 text-center">
                                   <div className="inline-flex min-w-[72px] justify-center bg-primary/10 border border-primary/20 text-primary px-3 py-2 rounded-xl font-black">
-                                      {formatearValor(
-                                      resultado?.result_value
-                                      )}
+                                    {
+                                      estadoOperativo === 'compitiendo' ? formatearValor(resultado?.result_value) : '-'
+                                    }
                                   </div>
                               </td>
 
                               <td className="p-3 text-center">
-                              {resultado?.position ? (
+                              {estadoOperativo === 'compitiendo' && resultado?.position ? (
                                   <span className="inline-flex w-7 h-7 rounded-full bg-[#800f2f]/20 text-[#c9244b] border border-[#800f2f]/30 items-center justify-center font-black">
                                   {
                                       resultado.position

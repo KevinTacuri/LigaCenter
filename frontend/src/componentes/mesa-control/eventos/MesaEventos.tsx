@@ -13,6 +13,7 @@ import {
 } from '../../../servicios/api';
 
 import MesaGrupoEvento from './MesaGrupoEvento';
+import PanelDesempateEtapa from './PanelDesempateEtapa';
 
 import type {
   EventoCompetencia,
@@ -41,6 +42,17 @@ const MesaEventos: React.FC = () => {
       ResumenEtapaEvento
     >
   >({});
+
+  const [etapaAbiertaId, setEtapaAbiertaId,] = useState<number | null>(null);
+
+  const toggleEtapa = (etapaId: number) => {
+    setEtapaAbiertaId(
+      (actual) =>
+        actual === etapaId
+          ? null
+          : etapaId
+    );
+  };
 
   const finalizarEtapa = async (
     etapa: EtapaEvento
@@ -289,6 +301,19 @@ const MesaEventos: React.FC = () => {
       );
 
       setEtapas(etapasOrdenadas);
+
+      const etapaInicial =
+        etapasOrdenadas.find((etapa) =>
+            etapa.status !==
+            'finalizado'
+        ) ??
+        etapasOrdenadas[
+          etapasOrdenadas.length - 1
+        ];
+
+      setEtapaAbiertaId(
+        etapaInicial?.id ?? null
+      );
 
       const etapasFinalizadas =
         etapasOrdenadas.filter(
@@ -933,10 +958,17 @@ const MesaEventos: React.FC = () => {
                 >
                   {/* ETAPA */}
 
-                  <div className="p-5 border-b border-slate-900">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-
-                      <div className="flex items-start gap-3">
+                  <button type="button"
+                    onClick={() =>
+                      toggleEtapa(
+                        etapa.id
+                      )
+                    }
+                    className="w-full p-5 text-left hover:bg-[#151821] transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      {/* IZQUIERDA */}
+                      <div className="flex items-start gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-xl bg-[#800f2f]/20 text-[#c9244b] flex items-center justify-center font-black text-sm border border-[#800f2f]/20">
                           {
                             etapa.stage_number
@@ -986,24 +1018,41 @@ const MesaEventos: React.FC = () => {
                         </div>
                       </div>
 
-                      <span
-                        className={`px-2 py-1 rounded-md text-[9px] uppercase font-bold border w-fit ${
-                          etapa.status ===
-                          'en_curso'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            : etapa.status ===
-                                'finalizado'
-                              ? 'bg-slate-500/10 text-slate-400 border-slate-500/20'
-                              : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                        }`}
-                      >
-                        {etapa.status}
-                      </span>
+                      {/* DERECHA */}
+                      <div className="flex items-center gap-3 shrink-0">
+                        {/* ESTADO */}
+                        <span
+                          className={`px-2 py-1 rounded-md text-[9px] uppercase font-bold border w-fit ${
+                            etapa.status ===
+                            'en_curso'
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                              : etapa.status ===
+                                  'finalizado'
+                                ? 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                          }`}
+                        >
+                          {etapa.status}
+                        </span>
+
+                        {/* FLECHA */}
+                        <span className={`material-symbols-outlined text-lg text-slate-500 transition-transform duration-200 ${
+                            etapaAbiertaId ===
+                            etapa.id
+                              ? 'rotate-180'
+                              : ''
+                          }`}
+                        >
+                          expand_more
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  </button>
+
 
                   {/* GRUPOS */}
 
+                  {etapaAbiertaId === etapa.id && (
                   <div className="p-5">
                     {grupos.length ===
                     0 ? (
@@ -1124,52 +1173,60 @@ const MesaEventos: React.FC = () => {
                       <div className="mt-5 pt-4 border-t border-slate-900">
 
                         {todosGruposFinalizados ? (
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="space-y-4">
 
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                                <span className="material-symbols-outlined text-sm text-emerald-400">
-                                  check_circle
+                            <div className="flex items-center justify-between gap-4">
+
+                              <div className="flex items-center gap-2">
+                                <span className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                                  <span className="material-symbols-outlined text-sm text-emerald-400">
+                                    check
+                                  </span>
                                 </span>
-                              </span>
 
-                              <div>
-                                <p className="font-bold text-slate-300">
-                                  Todos los grupos están finalizados
-                                </p>
+                                <div>
+                                  <p className="text-xs font-bold text-slate-300">
+                                    Grupos finalizados
+                                  </p>
 
-                                <p className="text-[9px] text-slate-500 mt-0.5">
-                                  La etapa está lista para cerrarse.
-                                </p>
+                                  <p className="text-[9px] text-slate-600">
+                                    Revise los desempates antes de cerrar la etapa.
+                                  </p>
+                                </div>
                               </div>
-                            </div>
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                finalizarEtapa(
-                                  etapa
-                                )
-                              }
-                              className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                                etapa.stage_type ===
-                                'final'
-                                  ? 'bg-emerald-700 hover:bg-emerald-600 text-white'
-                                  : 'bg-[#800f2f] hover:bg-[#a4133c] text-white'
-                              }`}
-                            >
-                              <span className="material-symbols-outlined text-sm">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  finalizarEtapa(
+                                    etapa
+                                  )
+                                }
+                                className={`px-4 py-2 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-2 ${
+                                  etapa.stage_type ===
+                                  'final'
+                                    ? 'bg-emerald-700 hover:bg-emerald-600 text-white'
+                                    : 'bg-[#800f2f] hover:bg-[#a4133c] text-white'
+                                }`}
+                              >
+                                <span className="material-symbols-outlined text-sm">
+                                  {etapa.stage_type ===
+                                  'final'
+                                    ? 'emoji_events'
+                                    : 'double_arrow'}
+                                </span>
+
                                 {etapa.stage_type ===
                                 'final'
-                                  ? 'emoji_events'
-                                  : 'double_arrow'}
-                              </span>
+                                  ? 'Finalizar competencia'
+                                  : 'Finalizar etapa'}
+                              </button>
+                            </div>
 
-                              {etapa.stage_type ===
-                              'final'
-                                ? 'Finalizar competencia'
-                                : 'Finalizar etapa'}
-                            </button>
+                            <PanelDesempateEtapa
+                              etapa={etapa}
+                            />
+
                           </div>
                         ) : (
                           <div className="flex items-center gap-2 text-[10px] text-slate-600">
@@ -1354,6 +1411,7 @@ const MesaEventos: React.FC = () => {
                       </div>
                     )}
                   </div>
+                  )}
                 </div>
               );
             }
