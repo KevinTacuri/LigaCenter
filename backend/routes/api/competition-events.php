@@ -160,5 +160,39 @@ Route::middleware(['auth:sanctum', 'championship.access'])->group(function () {
         [CompetitionResultAttemptController::class, 'destroy']
     );
 
+    // Rutas para iniciar y finalizar un grupo o serie de evento de competencia
+    Route::post(
+        '/competition-event-groups/{competitionEventGroup}/start',
+        [
+            CompetitionEventGroupController::class,
+            'start',
+        ]
+    );
+
+    Route::post(
+        '/competition-event-groups/{competitionEventGroup}/finish',
+        [
+            CompetitionEventGroupController::class,
+            'finish',
+        ]
+    );
+
+    // Rutas para finalizar una etapa de evento de competencia con clasificacion a la siguiente etapa
+    Route::post(
+        '/competition-event-stages/{competitionEventStage}/finish',
+        [
+            CompetitionEventStageController::class,
+            'finish',
+        ]
+    );
+
+    // Servicio para obtener el resumen de una etapa de evento de competencia
+    Route::get(
+        '/competition-event-stages/{competitionEventStage}/summary',
+        [
+            CompetitionEventStageController::class,
+            'summary',
+        ]
+    );
 
 });
