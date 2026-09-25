@@ -8,6 +8,8 @@ use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\CompetitionStageStandingService;
+use App\Services\CompetitionQualificationService;
+use Illuminate\Validation\ValidationException;
 
 class CompetitionEventStageController extends Controller
 {
@@ -347,5 +349,56 @@ class CompetitionEventStageController extends Controller
         }
 
         return null;
+    }
+
+    public function finish(
+        CompetitionEventStage $competitionEventStage,
+        CompetitionQualificationService $qualificationService
+    ) {
+        try {
+            $data =
+                $qualificationService->finalizeStage(
+                    $competitionEventStage
+                );
+
+            return response()->json([
+                'success' => true,
+                'message' =>
+                    $competitionEventStage->stage_type === 'final'
+                        ? 'Competencia finalizada correctamente.'
+                        : 'Etapa finalizada y clasificados promovidos correctamente.',
+                'data' => $data,
+            ]);
+        } catch (
+            ValidationException $exception
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' =>
+                    collect(
+                        $exception->errors()
+                    )
+                    ->flatten()
+                    ->first()
+                    ?? 'No se pudo finalizar la etapa.',
+                'errors' =>
+                    $exception->errors(),
+            ], 422);
+        }
+    }
+
+    public function summary(
+        CompetitionEventStage $competitionEventStage,
+        CompetitionQualificationService $qualificationService
+    ) {
+        return response()->json([
+            'success' => true,
+
+            'data' =>
+                $qualificationService
+                    ->getStageSummary(
+                        $competitionEventStage
+                    ),
+        ]);
     }
 }

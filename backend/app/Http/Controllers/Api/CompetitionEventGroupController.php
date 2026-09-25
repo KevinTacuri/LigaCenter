@@ -6,6 +6,9 @@ use App\Models\CompetitionEventGroup;
 use App\Models\CompetitionEventStage;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\CompetitionEventGroupParticipant;
+use App\Models\CompetitionResult;
+use Illuminate\Support\Facades\DB;
 
 class CompetitionEventGroupController extends Controller
 {
@@ -198,6 +201,252 @@ class CompetitionEventGroupController extends Controller
             'success' => true,
             'message' =>
                 'Grupo o serie eliminado correctamente.',
+        ]);
+    }
+
+    // Iniciar un grupo o serie de evento de competencia
+    public function start(
+        CompetitionEventGroup $competitionEventGroup
+    ) {
+        if ($competitionEventGroup->status === 'finalizado') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este grupo ya fue finalizado.',
+            ], 422);
+        }
+
+        if ($competitionEventGroup->status === 'cancelado') {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se puede iniciar un grupo cancelado.',
+            ], 422);
+        }
+
+        $tieneParticipantes =
+            CompetitionEventGroupParticipant::where(
+                'competition_event_group_id',
+                $competitionEventGroup->id
+            )->exists();
+
+        if (!$tieneParticipantes) {
+            return response()->json([
+                'success' => false,
+                'message' =>
+                    'No se puede iniciar un grupo sin participantes.',
+            ], 422);
+        }
+
+        DB::transaction(
+            function () use ($competitionEventGroup) {
+                $competitionEventGroup->update([
+                    'status' => 'en_curso',
+                ]);
+
+                $competitionEventGroup->loadMissing(
+                    'stage.event'
+                );
+
+                if (
+                    $competitionEventGroup
+                        ->stage
+                        ->status === 'programado'
+                ) {
+                    $competitionEventGroup
+                        ->stage
+                        ->update([
+                            'status' => 'en_curso',
+                        ]);
+                }
+
+                if (
+                    $competitionEventGroup
+                        ->stage
+                        ->event
+                        ->status === 'programado'
+                ) {
+                    $competitionEventGroup
+                        ->stage
+                        ->event
+                        ->update([
+                            'status' => 'en_curso',
+                        ]);
+                }
+            }
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Grupo iniciado correctamente.',
+            'data' => $competitionEventGroup->fresh(),
+        ]);
+    }
+
+    // Finalizar un grupo o serie de evento de competencia
+    public function finish(
+        CompetitionEventGroup $competitionEventGroup
+    ) {
+        if (
+            $competitionEventGroup->status !== 'en_curso'
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' =>
+                    'El grupo debe estar en curso para poder finalizarlo.',
+            ], 422);
+        }
+
+        $competitionEventGroup->loadMissing(
+            'stage'
+        );
+
+        $roundsCount =
+            (int) $competitionEventGroup
+                ->stage
+                ->rounds_count;
+
+        $participants =
+            CompetitionEventGroupParticipant::where(
+                'competition_event_group_id',
+                $competitionEventGroup->id
+            )->get();
+
+        if ($participants->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' =>
+                    'El grupo no tiene participantes.',
+            ], 422);
+        }
+
+        $participantIds =
+            $participants->pluck('id');
+
+        $results =
+            CompetitionResult::with('attempts')
+                ->whereIn(
+                    'competition_event_group_participant_id',
+                    $participantIds
+                )
+                ->get()
+                ->keyBy(
+                    'competition_event_group_participant_id'
+                );
+
+        $incompletos = [];
+
+        foreach ($participants as $participant) {
+            $result =
+                $results->get(
+                    $participant->id
+                );
+
+            /*
+            |--------------------------------------------------------------------------
+            | SIN RESULTADO
+            |--------------------------------------------------------------------------
+            */
+
+            if (!$result) {
+                $incompletos[] =
+                    $participant->id;
+
+                continue;
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | ANULADO
+            |--------------------------------------------------------------------------
+            |
+            | Un resultado anulado no necesita completar rondas.
+            |
+            */
+
+            if ($result->status === 'anulado') {
+                continue;
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | VALIDAR TODAS LAS RONDAS
+            |--------------------------------------------------------------------------
+            */
+
+            $attemptNumbers =
+                $result
+                    ->attempts
+                    ->whereNotNull('value')
+                    ->pluck('attempt_number')
+                    ->unique();
+
+            for (
+                $round = 1;
+                $round <= $roundsCount;
+                $round++
+            ) {
+                if (
+                    !$attemptNumbers->contains(
+                        $round
+                    )
+                ) {
+                    $incompletos[] =
+                        $participant->id;
+
+                    break;
+                }
+            }
+        }
+
+        if (!empty($incompletos)) {
+            return response()->json([
+                'success' => false,
+                'message' =>
+                    'No se puede finalizar el grupo porque existen participantes con resultados incompletos.',
+                'data' => [
+                    'incomplete_participant_ids' =>
+                        array_values(
+                            array_unique(
+                                $incompletos
+                            )
+                        ),
+                ],
+            ], 422);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | CERRAR GRUPO
+        |--------------------------------------------------------------------------
+        */
+
+        DB::transaction(
+            function () use (
+                $competitionEventGroup,
+                $results
+            ) {
+                foreach ($results as $result) {
+                    if (
+                        $result->status !== 'anulado'
+                    ) {
+                        $result->update([
+                            'status' =>
+                                'oficializado',
+                        ]);
+                    }
+                }
+
+                $competitionEventGroup->update([
+                    'status' => 'finalizado',
+                ]);
+            }
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' =>
+                'Grupo finalizado y resultados oficializados correctamente.',
+            'data' =>
+                $competitionEventGroup->fresh(),
         ]);
     }
 }
