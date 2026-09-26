@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\CompetitionDataUpdated;
+
 use App\Http\Controllers\Controller;
 use App\Models\CompetitionEventGroupParticipant;
 use App\Models\CompetitionResult;
@@ -109,6 +111,8 @@ class CompetitionResultController extends Controller
             'attempts',
         ]);
 
+        CompetitionDataUpdated::publish($result, 'store');
+
         return response()->json([
             'success' => true,
             'message' => 'Resultado registrado correctamente.',
@@ -173,6 +177,8 @@ class CompetitionResultController extends Controller
             'attempts.member.championshipPlayer',
         ]);
 
+        CompetitionDataUpdated::publish($competitionResult, 'update');
+
         return response()->json([
             'success' => true,
             'message' => 'Resultado actualizado correctamente.',
@@ -200,6 +206,8 @@ class CompetitionResultController extends Controller
             $groupId
         );
 
+        CompetitionDataUpdated::publish($competitionResult, 'destroy');
+
         return response()->json([
             'success' => true,
             'message' => 'Resultado eliminado correctamente.',
@@ -223,6 +231,8 @@ class CompetitionResultController extends Controller
             'tiebreak_order' =>
                 $validated['tiebreak_order'],
         ]);
+
+        CompetitionDataUpdated::publish($competitionResult, 'updateTiebreak');
 
         return response()->json([
             'success' => true,

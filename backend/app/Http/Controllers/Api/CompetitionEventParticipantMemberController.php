@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\CompetitionDataUpdated;
+
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CompetitionEventParticipantMemberResource;
 use App\Models\ChampionshipPlayer;
@@ -113,6 +115,8 @@ class CompetitionEventParticipantMemberController extends Controller
             'championshipPlayer.championshipTeam.championshipUser.user',
         ]);
 
+        CompetitionDataUpdated::publish($member, 'store');
+
         return response()->json([
             'success' => true,
             'message' =>
@@ -140,6 +144,8 @@ class CompetitionEventParticipantMemberController extends Controller
         }
 
         $member->delete();
+
+        CompetitionDataUpdated::publish($member, 'destroy');
 
         return response()->json([
             'success' => true,

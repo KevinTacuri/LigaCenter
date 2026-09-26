@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\CompetitionDataUpdated;
+
 use App\Models\CompetitionEvent;
 use App\Models\CompetitionEventStage;
 use Illuminate\Validation\Rule;
@@ -115,6 +117,8 @@ class CompetitionEventStageController extends Controller
                 'status' => $validated['status'] ?? 'programado',
             ]);
 
+        CompetitionDataUpdated::publish($stage, 'store');
+
         return response()->json([
             'success' => true,
             'message' => 'Etapa creada correctamente.',
@@ -216,6 +220,8 @@ class CompetitionEventStageController extends Controller
 
         $stage->update($validated);
 
+        CompetitionDataUpdated::publish($stage, 'update');
+
         return response()->json([
             'success' => true,
             'message' => 'Etapa actualizada correctamente.',
@@ -227,6 +233,8 @@ class CompetitionEventStageController extends Controller
         CompetitionEventStage $stage
     ) {
         $stage->delete();
+
+        CompetitionDataUpdated::publish($stage, 'destroy');
 
         return response()->json([
             'success' => true,

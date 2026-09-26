@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\CompetitionDataUpdated;
+
 use App\Models\CompetitionEventGroup;
 use App\Models\CompetitionEventParticipant;
 use App\Models\CompetitionEventGroupParticipant;
@@ -125,6 +127,8 @@ class CompetitionEventGroupParticipantController extends Controller
             'start_order' => $startOrder,
         ]);
 
+        CompetitionDataUpdated::publish($groupParticipant, 'store');
+
         return response()->json([
             'success' => true,
             'message' =>
@@ -183,6 +187,8 @@ class CompetitionEventGroupParticipantController extends Controller
 
         $groupParticipant->update($validated);
 
+        CompetitionDataUpdated::publish($groupParticipant, 'update');
+
         return response()->json([
             'success' => true,
             'message' =>
@@ -195,6 +201,8 @@ class CompetitionEventGroupParticipantController extends Controller
         CompetitionEventGroupParticipant $groupParticipant
     ) {
         $groupParticipant->delete();
+
+        CompetitionDataUpdated::publish($groupParticipant, 'destroy');
 
         return response()->json([
             'success' => true,
@@ -231,6 +239,8 @@ class CompetitionEventGroupParticipantController extends Controller
             'status' =>
                 $validated['status'],
         ]);
+
+        CompetitionDataUpdated::publish($groupParticipant, 'updateStatus');
 
         return response()->json([
             'success' => true,

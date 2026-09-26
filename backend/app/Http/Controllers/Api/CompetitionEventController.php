@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\CompetitionDataUpdated;
+
 use App\Http\Controllers\Controller;
 use App\Models\CompetitionEvent;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
-use App\Events\CompetitionEventUpdated;
 use App\Services\CompetitionEventLifecycleService;
 use App\Services\CompetitionEventStandingService;
 use App\Services\CompetitionStageGeneratorService;
@@ -195,6 +196,8 @@ class CompetitionEventController extends Controller
             'stages',
         ]);
 
+        CompetitionDataUpdated::publish($event, 'store');
+
         return response()->json([
             'success' => true,
             'message' => 'Evento creado correctamente.',
@@ -314,18 +317,14 @@ class CompetitionEventController extends Controller
 
         $competitionEvent->update($validated);
 
-        event(
-            new CompetitionEventUpdated(
-                $competitionEvent->fresh()
-            )
-        );
-
         $competitionEvent->load([
             'championshipDiscipline.discipline',
             'category',
             'venue',
             'stages'
         ]);
+
+        CompetitionDataUpdated::publish($competitionEvent, 'update');
 
         return response()->json([
             'success' => true,
@@ -340,6 +339,8 @@ class CompetitionEventController extends Controller
     public function destroy(CompetitionEvent $competitionEvent)
     {
         $competitionEvent->delete();
+
+        CompetitionDataUpdated::publish($competitionEvent, 'destroy');
 
         return response()->json([
             'success' => true,

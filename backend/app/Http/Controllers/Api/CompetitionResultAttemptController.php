@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\CompetitionDataUpdated;
+
 use App\Http\Controllers\Controller;
 use App\Models\CompetitionResult;
 use App\Models\CompetitionResultAttempt;
@@ -173,12 +175,14 @@ class CompetitionResultAttemptController extends Controller
                 'value' =>
                     $validated['value'] ?? null,
             ]);
-        
+
         $this->resultService->syncResult($competitionResult);
 
         $attempt->load(
             'member.championshipPlayer'
         );
+
+        CompetitionDataUpdated::publish($attempt, 'store');
 
         return response()->json([
             'success' => true,
@@ -186,7 +190,6 @@ class CompetitionResultAttemptController extends Controller
                 'Intento registrado correctamente.',
             'data' => $attempt,
         ], 201);
-
     }
 
     /**
@@ -235,6 +238,8 @@ class CompetitionResultAttemptController extends Controller
 
         $this->resultService->syncResult($attempt->result);
 
+        CompetitionDataUpdated::publish($attempt, 'update');
+
         return response()->json([
             'success' => true,
             'message' =>
@@ -263,6 +268,8 @@ class CompetitionResultAttemptController extends Controller
         $attempt->delete();
 
         $this->resultService->syncResult($attempt->result);
+
+        CompetitionDataUpdated::publish($attempt, 'destroy');
 
         return response()->json([
             'success' => true,
