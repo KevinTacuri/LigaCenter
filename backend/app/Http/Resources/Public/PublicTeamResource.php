@@ -13,16 +13,16 @@ class PublicTeamResource extends JsonResource
         if (is_array($this->resource)) {
             return [
                 'id' => $this->resource['id'] ?? null,
-                'name' => $this->resource['name'] ?? null,
-                'logo' => $this->resource['logo'] ?? null,
+                'name' => $this->team->resource['name'] ?? null,
+                'logo' => $this->team->resource['logo'] ?? null,
             ];
         }
 
         // Si es un modelo Eloquent
         return [
             'id' => $this->id,
-            'name' => $this->name,
-            'logo' => $this->logo ?? $this->logo_url ?? null,
+            'name' => $this->name ?? $this->team->name,
+            'logo' => $this->logo ?? $this->team->logo ?? null,
         ];
     }
 }

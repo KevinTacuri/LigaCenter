@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Public;
 
 use App\Models\Championship;
 use App\Models\GameMatch;
-use App\Models\Team;
-use App\Models\Player;
+use App\Models\ChampionshipTeam;
+use App\Models\ChampionshipPlayer;
 use Illuminate\Http\Request;
 use App\Http\Resources\Public\PublicChampionshipResource;
 use App\Http\Resources\Public\PublicMatchResource;
@@ -40,9 +40,10 @@ class PublicSearchController extends PublicController
                 $q->where('is_public', true);
             })
             ->where(function ($q) use ($query) {
-                $q->whereHas('localTeam', function ($t) use ($query) {
+                $q->whereHas('localTeam.team', function ($t) use ($query) {
                     $t->where('name', 'LIKE', "%{$query}%");
-                })->orWhereHas('visitorTeam', function ($t) use ($query) {
+                })
+                ->orWhereHas('visitorTeam.team', function ($t) use ($query) {
                     $t->where('name', 'LIKE', "%{$query}%");
                 });
             })
@@ -55,11 +56,13 @@ class PublicSearchController extends PublicController
         }
 
         // Buscar equipos
-        $teams = Team::whereHas('championship', function ($q) {
+        $teams = ChampionshipTeam::whereHas('championshipDiscipline.championship', function ($q) {
                 $q->where('is_public', true);
             })
-            ->where('name', 'LIKE', "%{$query}%")
-            ->with(['championship'])
+            ->whereHas('team', function ($q) use ($query) {
+                $q->where('name', 'LIKE', "%{$query}%");
+            })
+            ->with(['team', 'championshipDiscipline.championship'])
             ->limit(5)
             ->get();
 
@@ -68,14 +71,14 @@ class PublicSearchController extends PublicController
         }
 
         // Buscar jugadores (sin DNI)
-        $players = Player::whereHas('teams.championship', function ($q) {
+        $players = ChampionshipPlayer::whereHas('championshipTeam.championshipDiscipline.championship', function ($q) {
                 $q->where('is_public', true);
             })
-            ->where(function ($q) use ($query) {
+            ->whereHas('player', function ($q) use ($query) {
                 $q->where('names', 'LIKE', "%{$query}%")
-                    ->orWhere('last_names', 'LIKE', "%{$query}%");
+                ->orWhere('last_names', 'LIKE', "%{$query}%");
             })
-            ->with(['teams'])
+            ->with(['player', 'championshipTeam.team', 'championshipTeam.championshipDiscipline.championship'])
             ->limit(5)
             ->get();
 
