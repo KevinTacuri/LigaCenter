@@ -2,7 +2,7 @@ import React from 'react';
 
 interface InsigniaEstadoProps {
   estado: string;
-  tipo?: 'partido' | 'sancion' | 'usuario' | 'general';
+  tipo?: 'partido' | 'sancion' | 'usuario' | 'general' | 'registro';
   className?: string;
 }
 
@@ -78,6 +78,34 @@ export const InsigniaEstado: React.FC<InsigniaEstadoProps> = ({
         icono: 'verified',
         animar: false,
       };
+    }
+  } else if (tipo === 'registro') {
+    switch (est) {
+      case 'aprobado':
+        config = {
+          label: 'Aprobado',
+          bg: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+          icono: 'check_circle',
+          animar: false,
+        };
+        break;
+      case 'rechazado':
+        config = {
+          label: 'Rechazado',
+          bg: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+          icono: 'cancel',
+          animar: false,
+        };
+        break;
+      case 'pendiente':
+      default:
+        config = {
+          label: 'Pendiente',
+          bg: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+          icono: 'schedule',
+          animar: false,
+        };
+        break;
     }
   } else if (tipo === 'usuario' || tipo === 'general') {
     if (est === 'activo' || est === 'active' || est === '1' || est === 'true') {
