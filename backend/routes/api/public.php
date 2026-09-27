@@ -8,6 +8,9 @@ use App\Http\Controllers\Public\PublicPlayerController;
 use App\Http\Controllers\Public\PublicSearchController;
 use App\Http\Controllers\Public\PublicTeamController;
 use App\Http\Controllers\Public\PublicChampionshipTeamController;
+use App\Http\Controllers\Public\PublicCompetitionEventController;
+use App\Http\Controllers\Public\PublicCompetitionResultController;
+
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -54,4 +57,14 @@ Route::prefix('public')->group(function () {
     // Jugadores
     Route::get('/players', [PublicPlayerController::class, 'index']);
     Route::get('/players/{id}', [PublicPlayerController::class, 'show']);
+
+
+    // Eventos
+    Route::get('/competition-events', [PublicCompetitionEventController::class, 'index']);
+    Route::get('/competition-events/highlighted', [PublicCompetitionEventController::class, 'highlighted']);
+
+    // Detalle de un evento especifico
+    Route::get('/competition-events/{id}', [PublicCompetitionEventController::class, 'show']);
+    Route::get('/competition-event-groups/{group}/results', [PublicCompetitionResultController::class, 'index']);
+
 });
