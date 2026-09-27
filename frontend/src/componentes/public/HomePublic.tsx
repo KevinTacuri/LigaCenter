@@ -9,36 +9,16 @@ import type {
   PublicCategory
 } from '../../servicios/apiPublic';
 import { publicApi } from '../../servicios/apiPublic';
+import { useEventosPublicos } from '../../hooks/public/useEventosPublicos';
+import { FilaEventoPublico } from '../../componentes/public/eventos/FilaEventoPublico';
+import { CarruselDestacados } from '../../componentes/public/CarruselDestacados';
 
-interface CategoryGroup {
-  id: string;
-  name: string;
-  discipline_id: number;
-  matches: PublicMatch[];
-  loaded: boolean;
-  loading: boolean;
-  expanded: boolean;
-}
-
-interface DisciplineGroup {
-  id: number;
-  name: string;
-  categories: {
-    [categoryId: string]: CategoryGroup;
-  };
-  expanded: boolean;
-  loaded: boolean;
-  loading: boolean;
-}
-
-interface ExpandedState {
-  [championshipId: number]: {
-    expanded: boolean;
-    disciplines: {
-      [disciplineId: number]: DisciplineGroup;
-    }
-  }
-}
+import {
+  construirEstructuraPublica,
+  type CategoryGroup,
+  type DisciplineGroup,
+  type ExpandedState,
+} from '../../utils/public/construirEstructuraPublica';
 
 export const HomePublic: React.FC = () => {
   const [highlightedMatches, setHighlightedMatches] = useState<PublicMatch[]>([]);
@@ -48,60 +28,35 @@ export const HomePublic: React.FC = () => {
   const [categories, setCategories] = useState<PublicCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDiscipline, setSelectedDiscipline] = useState<number | null>(null);
-  
+
+  const {events,highlightedEvents,} = useEventosPublicos(
+    selectedDiscipline ?? undefined
+  );
   const [expandedState, setExpandedState] = useState<ExpandedState>({});
-  
-  const [position, setPosition] = useState(0);
-  const animationRef = useRef<number | null>(null);
-  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    const nuevaEstructura = construirEstructuraPublica({
+      matches: allMatches,
+      events,
+      championships,
+      disciplines,
+      categories,
+    });
+
+    setExpandedState(nuevaEstructura);
+  }, [
+    allMatches,
+    events,
+    championships,
+    disciplines,
+    categories,
+  ]);
 
   useEffect(() => {
     loadData(true);
     const intervalo = setInterval(() => loadData(false), 20000);
     return () => clearInterval(intervalo);
   }, [selectedDiscipline]);
-
-  useEffect(() => {
-    if (highlightedMatches.length === 0 || isPaused) {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-        animationRef.current = null;
-      }
-      return;
-    }
-
-    let lastTimestamp = 0;
-    const speed = 0.5;
-
-    const animate = (timestamp: number) => {
-      if (!lastTimestamp) lastTimestamp = timestamp;
-      const delta = timestamp - lastTimestamp;
-      lastTimestamp = timestamp;
-
-      setPosition((prev) => {
-        let newPos = prev + (speed * delta) / 16;
-        const totalWidth = highlightedMatches.length * 280;
-        if (newPos >= totalWidth / 2) {
-          newPos = 0;
-        }
-        return newPos;
-      });
-
-      animationRef.current = requestAnimationFrame(animate);
-    };
-
-    animationRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-        animationRef.current = null;
-      }
-    };
-  }, [highlightedMatches, isPaused]);
-
-  const handleMouseEnter = () => setIsPaused(true);
-  const handleMouseLeave = () => setIsPaused(false);
 
   const obtenerNombreEquipo = (nombreCompleto: string | undefined): string => {
     if (!nombreCompleto) return '—';
@@ -138,110 +93,8 @@ export const HomePublic: React.FC = () => {
       const allMatchesData = allMatchesRes.data.data?.data || [];
       setAllMatches(allMatchesData);
 
-      let champData = championshipsRes.data.data?.data || [];
-
-      if (selectedDiscipline !== null) {
-        const champIdsConDisciplina = new Set<number>();
-        allMatchesData.forEach((match: PublicMatch) => {
-          const champId = match.championship?.id;
-          if (!champId) return;
-          if (match.discipline_id === selectedDiscipline) {
-            champIdsConDisciplina.add(champId);
-          }
-        });
-        champData = champData.filter((champ: PublicChampionship) => champIdsConDisciplina.has(champ.id));
-      }
-      
+      const champData = championshipsRes.data.data?.data || [];
       setChampionships(champData);
-
-      const newExpandedState: ExpandedState = {};
-      
-      const matchesPorCampeonato: { [champId: number]: PublicMatch[] } = {};
-      allMatchesData.forEach((match: PublicMatch) => {
-        const champId = match.championship?.id;
-        if (!champId) return;
-        if (!champData.some((c: PublicChampionship) => c.id === champId)) return;
-        if (!matchesPorCampeonato[champId]) {
-          matchesPorCampeonato[champId] = [];
-        }
-        matchesPorCampeonato[champId].push(match);
-      });
-
-      Object.keys(matchesPorCampeonato).forEach((champIdStr: string) => {
-        const champId = parseInt(champIdStr);
-        const champMatches = matchesPorCampeonato[champId];
-        
-        newExpandedState[champId] = {
-          expanded: false,
-          disciplines: {}
-        };
-
-        const disciplinasUnicas = new Set<number>();
-        champMatches.forEach((match: PublicMatch) => {
-          if (match.discipline_id) {
-            disciplinasUnicas.add(match.discipline_id);
-          }
-        });
-
-        disciplinasUnicas.forEach((disciplineId: number) => {
-          // USAR match.discipline_name DEL PRIMER PARTIDO QUE TENGA ESE discipline_id
-          const firstMatchWithDiscipline = champMatches.find((m: PublicMatch) => m.discipline_id === disciplineId);
-          const disciplineName = firstMatchWithDiscipline?.discipline_name || 
-                                disciplines.find((d: PublicDiscipline) => d.id === disciplineId)?.name || 
-                                `Disciplina ${disciplineId}`;
-          
-          const categoriasUnicas = new Set<number>();
-          champMatches.forEach((match: PublicMatch) => {
-            if (match.discipline_id === disciplineId && match.category_id) {
-              categoriasUnicas.add(match.category_id);
-            }
-          });
-
-          const categoriesObj: { [catId: string]: CategoryGroup } = {};
-          
-          if (categoriasUnicas.size > 0) {
-            categoriasUnicas.forEach((categoryId: number) => {
-              const firstMatchWithCategory = champMatches.find((m: PublicMatch) => m.category_id === categoryId);
-              const categoryName = firstMatchWithCategory?.category_name || 
-                                  categories.find((c: PublicCategory) => c.id === categoryId)?.name || 
-                                  `Categoría ${categoryId}`;
-              const catId = `cat-${disciplineId}-${categoryId}`;
-              categoriesObj[catId] = {
-                id: catId,
-                name: categoryName,
-                discipline_id: disciplineId,
-                matches: [],
-                loaded: false,
-                loading: false,
-                expanded: false
-              };
-            });
-          } else {
-            const catId = `cat-${disciplineId}-default`;
-            categoriesObj[catId] = {
-              id: catId,
-              name: 'Categoría Única',
-              discipline_id: disciplineId,
-              matches: [],
-              loaded: false,
-              loading: false,
-              expanded: false
-            };
-          }
-
-          newExpandedState[champId].disciplines[disciplineId] = {
-            id: disciplineId,
-            name: disciplineName,
-            categories: categoriesObj,
-            expanded: false,
-            loaded: false,
-            loading: false
-          };
-        });
-      });
-
-      setExpandedState(newExpandedState);
-
     } catch (error) {
       console.error('Error cargando datos:', error);
     } finally {
@@ -259,89 +112,57 @@ export const HomePublic: React.FC = () => {
     }));
   };
 
-  const toggleDiscipline = (championshipId: number, disciplineId: number) => {
-    const discipline = expandedState[championshipId]?.disciplines[disciplineId];
-    if (!discipline) return;
-
-    if (!discipline.expanded && !discipline.loaded) {
-      const champMatches = allMatches.filter((m: PublicMatch) => m.championship?.id === championshipId);
-      
-      const updatedCategories: { [catId: string]: CategoryGroup } = {};
-      
-      Object.keys(discipline.categories).forEach((catId: string) => {
-        const category = discipline.categories[catId];
-        const categoryId = parseInt(catId.split('-')[2]);
-        const categoryMatches = champMatches.filter((match: PublicMatch) => {
-          return match.discipline_id === disciplineId && match.category_id === categoryId;
-        });
-        
-        updatedCategories[catId] = {
-          ...category,
-          matches: categoryMatches,
-          loaded: true,
-          expanded: true
-        };
-      });
-
-      setExpandedState((prev: ExpandedState) => ({
-        ...prev,
-        [championshipId]: {
-          ...prev[championshipId],
-          disciplines: {
-            ...prev[championshipId]?.disciplines,
-            [disciplineId]: {
-              ...discipline,
-              categories: updatedCategories,
-              loaded: true,
-              expanded: true
-            }
-          }
-        }
-      }));
-      return;
-    }
-
-    setExpandedState((prev: ExpandedState) => ({
-      ...prev,
-      [championshipId]: {
-        ...prev[championshipId],
-        disciplines: {
-          ...prev[championshipId]?.disciplines,
-          [disciplineId]: {
-            ...discipline,
-            expanded: !discipline.expanded
-          }
-        }
-      }
-    }));
-  };
-
-  const toggleCategory = (championshipId: number, disciplineId: number, categoryId: string) => {
-    setExpandedState((prev: ExpandedState) => {
+  const toggleDiscipline = (championshipId: number,disciplineId: number) => {
+    setExpandedState((prev) => {
       const discipline = prev[championshipId]?.disciplines[disciplineId];
+
       if (!discipline) return prev;
-      
-      const category = discipline.categories[categoryId];
-      if (!category) return prev;
 
       return {
         ...prev,
         [championshipId]: {
           ...prev[championshipId],
           disciplines: {
-            ...prev[championshipId]?.disciplines,
+            ...prev[championshipId].disciplines,
+            [disciplineId]: {
+              ...discipline,
+              expanded: !discipline.expanded,
+            },
+          },
+        },
+      };
+    });
+  };
+
+
+  const toggleCategory = (championshipId: number, disciplineId: number, categoryId: string) => {
+    setExpandedState((prev) => {
+      const discipline =
+        prev[championshipId]?.disciplines[disciplineId];
+
+      const category =
+        discipline?.categories[categoryId];
+
+      if (!discipline || !category) return prev;
+
+      return {
+        ...prev,
+        [championshipId]: {
+          ...prev[championshipId],
+          disciplines: {
+            ...prev[championshipId].disciplines,
             [disciplineId]: {
               ...discipline,
               categories: {
                 ...discipline.categories,
                 [categoryId]: {
                   ...category,
-                  expanded: !category.expanded
-                }
-              }
-            }
-          }
-        }
+                  expanded: !category.expanded,
+                },
+              },
+            },
+          },
+        },
       };
     });
   };
@@ -367,164 +188,13 @@ export const HomePublic: React.FC = () => {
           </Link>
         </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i: number) => (
-              <div key={i} className="bg-[#11131c] rounded-xl p-4 animate-pulse h-32" />
-            ))}
-          </div>
-        ) : highlightedMatches.length === 0 ? (
-          <div className="bg-[#11131c] rounded-xl p-8 text-center border border-slate-800">
-            <p className="text-slate-400 text-sm">No hay partidos destacados en este momento</p>
-          </div>
-        ) : (
-          <div 
-            className="relative overflow-hidden rounded-xl"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
-            <div 
-              className="flex gap-4"
-              style={{
-                transform: `translateX(-${position}px)`,
-                transition: 'none',
-                width: 'max-content',
-              }}
-            >
-              {highlightedMatches.map((match: PublicMatch) => {
-                const disciplina = disciplines.find((d: PublicDiscipline) => d.id === match.discipline_id)?.name || '';
-                const categoria = categories.find((c: PublicCategory) => c.id === match.category_id)?.name || '';
-                
-                return (
-                  <Link
-                    key={match.id}
-                    to={`/partidos/${match.id}`}
-                    className="bg-[#11131c] rounded-xl p-4 border border-slate-800 hover:border-indigo-500/50 transition-all hover:scale-[1.02] min-w-[260px] max-w-[260px] flex-shrink-0"
-                  >
-                    <div className="flex justify-between items-start gap-1 mb-2">
-                      <div className="flex flex-col min-w-0 flex-1">
-                        <span className="text-[10px] text-slate-500 font-bold truncate">
-                          {match.championship?.name || 'Competición'}
-                        </span>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          {disciplina && (
-                            <span className="text-[8px] font-bold text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded truncate max-w-[80px]">
-                              {disciplina}
-                            </span>
-                          )}
-                          {categoria && (
-                            <span className="text-[8px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded truncate max-w-[80px]">
-                              {categoria}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {match.status === 'en_vivo' ? (
-                        <TiempoEnVivo elapsedTime={match.elapsed_time} status={match.status} timerStatus={match.timer_status} size="sm" />
-                      ) : (
-                        getStatusBadge(match.status)
-                      )}
-                    </div>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm text-slate-200 truncate">
-                          {obtenerNombreEquipo(match.home_team?.name)}
-                        </span>
-                        <span className="font-bold text-base text-white">
-                          {match.status === 'en_vivo' ? (match.home_score ?? 0) : (match.home_score ?? '-')}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm text-slate-200 truncate">
-                          {obtenerNombreEquipo(match.away_team?.name)}
-                        </span>
-                        <span className="font-bold text-base text-white">
-                          {match.status === 'en_vivo' ? (match.away_score ?? 0) : (match.away_score ?? '-')}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-2 text-[10px] text-slate-500 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-xs">schedule</span>
-                      {match.match_date ? new Date(match.match_date + 'T' + (match.match_time || '00:00')).toLocaleString('es-ES', {
-                        day: '2-digit',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }) : '—'}
-                    </div>
-                  </Link>
-                );
-              })}
-              {highlightedMatches.map((match: PublicMatch) => {
-                const disciplina = disciplines.find((d: PublicDiscipline) => d.id === match.discipline_id)?.name || '';
-                const categoria = categories.find((c: PublicCategory) => c.id === match.category_id)?.name || '';
-                
-                return (
-                  <Link
-                    key={`dup-${match.id}`}
-                    to={`/partidos/${match.id}`}
-                    className="bg-[#11131c] rounded-xl p-4 border border-slate-800 hover:border-indigo-500/50 transition-all hover:scale-[1.02] min-w-[260px] max-w-[260px] flex-shrink-0"
-                  >
-                    <div className="flex justify-between items-start gap-1 mb-2">
-                      <div className="flex flex-col min-w-0 flex-1">
-                        <span className="text-[10px] text-slate-500 font-bold truncate">
-                          {match.championship?.name || 'Competición'}
-                        </span>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          {disciplina && (
-                            <span className="text-[8px] font-bold text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded truncate max-w-[80px]">
-                              {disciplina}
-                            </span>
-                          )}
-                          {categoria && (
-                            <span className="text-[8px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded truncate max-w-[80px]">
-                              {categoria}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {match.status === 'en_vivo' ? (
-                        <TiempoEnVivo elapsedTime={match.elapsed_time} status={match.status} timerStatus={match.timer_status} size="sm" />
-                      ) : (
-                        getStatusBadge(match.status)
-                      )}
-                    </div>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm text-slate-200 truncate">
-                          {obtenerNombreEquipo(match.home_team?.name)}
-                        </span>
-                        <span className="font-bold text-base text-white">
-                          {match.status === 'en_vivo' ? (match.home_score ?? 0) : (match.home_score ?? '-')}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm text-slate-200 truncate">
-                          {obtenerNombreEquipo(match.away_team?.name)}
-                        </span>
-                        <span className="font-bold text-base text-white">
-                          {match.status === 'en_vivo' ? (match.away_score ?? 0) : (match.away_score ?? '-')}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-2 text-[10px] text-slate-500 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-xs">schedule</span>
-                      {match.match_date ? new Date(match.match_date + 'T' + (match.match_time || '00:00')).toLocaleString('es-ES', {
-                        day: '2-digit',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }) : '—'}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-
-            <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#0a0b10] to-transparent pointer-events-none" />
-            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#0a0b10] to-transparent pointer-events-none" />
-          </div>
-        )}
+        <CarruselDestacados
+          matches={highlightedMatches}
+          events={highlightedEvents}
+          disciplines={disciplines}
+          categories={categories}
+          loading={loading}
+        />
       </section>
 
       <section className="mb-8">
@@ -562,7 +232,7 @@ export const HomePublic: React.FC = () => {
             to="/publico"
             className="py-3 text-sm font-bold text-indigo-400 border-b-2 border-indigo-400"
           >
-            Todos los Partidos
+            Todos los Partidos/Eventos
           </Link>
           <Link
             to="/favoritos"
@@ -673,7 +343,7 @@ export const HomePublic: React.FC = () => {
                                     </span>
                                     {discipline.loaded && (
                                       <span className="text-[9px] text-slate-500 font-medium">
-                                        ({categoriesList.reduce((acc: number, cat: CategoryGroup) => acc + cat.matches.length, 0)} partidos)
+                                        ({categoriesList.reduce((acc: number, cat: CategoryGroup) => acc + cat.matches.length + cat.events.length, 0)} partidos)
                                       </span>
                                     )}
                                   </div>
@@ -694,6 +364,7 @@ export const HomePublic: React.FC = () => {
                                         {categoriesList.map((category: CategoryGroup) => {
                                           const isCatExpanded = category.expanded || false;
                                           const matchesList = category.matches || [];
+                                          const eventsList = category.events || [];
 
                                           return (
                                             <div key={`cat-${category.id}`} className="border border-slate-800/50 rounded-lg overflow-hidden">
@@ -709,16 +380,16 @@ export const HomePublic: React.FC = () => {
                                                     {category.name}
                                                   </span>
                                                   <span className="text-[9px] text-slate-500 font-medium">
-                                                    ({matchesList.length} partido{matchesList.length !== 1 ? 's' : ''})
+                                                    ({matchesList.length + eventsList.length} competencia
+                                                    {matchesList.length + eventsList.length !== 1 ? 's' : ''})
                                                   </span>
                                                 </div>
                                               </button>
-
                                               {isCatExpanded && (
                                                 <div className="px-3 pb-2 pt-1">
-                                                  {matchesList.length === 0 ? (
+                                                  {matchesList.length === 0 && eventsList.length == 0 ? (
                                                     <div className="text-center py-3 text-xs text-slate-500">
-                                                      No hay partidos programados para esta categoría
+                                                      No hay partidos/eventos programados para esta categoría
                                                     </div>
                                                   ) : (
                                                     <div className="space-y-1.5">
@@ -775,6 +446,12 @@ export const HomePublic: React.FC = () => {
                                                             )}
                                                           </div>
                                                         </Link>
+                                                      ))}
+                                                      {eventsList.map((evento) => (
+                                                        <FilaEventoPublico
+                                                          key={`event-${evento.id}`}
+                                                          evento={evento}
+                                                        />
                                                       ))}
                                                     </div>
                                                   )}

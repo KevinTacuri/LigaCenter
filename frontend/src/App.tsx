@@ -29,6 +29,7 @@ import { ResultadosBusqueda } from './paginas/public/ResultadosBusqueda';
 import { EquipoDetalle } from './paginas/public/EquipoDetalle';
 import { JugadorDetalle } from './paginas/public/JugadorDetalle';
 import { CampeonatoDetalle } from './paginas/public/CampeonatoDetalle';
+import { DetalleEventoPublico } from './componentes/public/DetalleEventoPublico';
 
 // Componente de Guardia para proteger rutas de Organizador/Admin
 const RutaProtegidaOrganizador: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -90,6 +91,7 @@ const App: React.FC = () => {
               <Route path="/restablecer-contrasenia" element={<RestablecerContrasenia />} />
               <Route path="/nosotros" element={<Nosotros />} />
               <Route path="/partidos/:id" element={<PartidoDetalle />} />
+              <Route path="/eventos/:id" element={<DetalleEventoPublico/>} />
               <Route path="/buscar" element={<ResultadosBusqueda />} />
               <Route path="/equipos/:id" element={<EquipoDetalle />} />
               <Route path="/jugadores/:id" element={<JugadorDetalle />} />
