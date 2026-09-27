@@ -50,15 +50,15 @@ export const Paginador: React.FC<PaginadorProps> = ({
   };
 
   return (
-    <div className={`p-4 border-t border-slate-800/80 bg-[#11131c]/90 backdrop-blur-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs ${className}`}>
+    <div className={`p-4 border-t border-[var(--outline)] bg-[var(--surface-container-low)]/95 backdrop-blur-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs ${className}`}>
       {/* Texto informativo */}
-      <div className="text-slate-400 font-medium flex items-center gap-1.5">
-        <span className="material-symbols-outlined text-indigo-400 text-sm">auto_awesome_motion</span>
+      <div className="text-[var(--on-surface-muted)] font-medium flex items-center gap-1.5">
+        <span className="material-symbols-outlined text-[var(--primary)] text-sm">auto_awesome_motion</span>
         <span>
-          Página <strong className="text-white font-bold">{paginaActual}</strong> de{' '}
-          <strong className="text-white font-bold">{totalPaginas}</strong>
+          Página <strong className="text-[var(--on-surface)] font-bold">{paginaActual}</strong> de{' '}
+          <strong className="text-[var(--on-surface)] font-bold">{totalPaginas}</strong>
           {totalRegistros !== undefined && (
-            <span className="ml-1 text-slate-500 font-normal">
+            <span className="ml-1 text-[var(--on-surface-variant)] font-normal">
               ({totalRegistros} {etiqueta})
             </span>
           )}
@@ -72,7 +72,7 @@ export const Paginador: React.FC<PaginadorProps> = ({
           type="button"
           disabled={paginaActual === 1}
           onClick={() => onCambiarPagina(paginaActual - 1)}
-          className="px-3 py-1.5 rounded-lg bg-[#171a26] border border-slate-800 text-slate-300 font-bold hover:bg-indigo-600 hover:text-white hover:border-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
+          className="px-3 py-1.5 rounded-lg bg-[var(--surface-container-high)] border border-[var(--outline)] text-[var(--on-surface-variant)] font-bold hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
         >
           <span className="material-symbols-outlined text-sm">chevron_left</span>
           <span>Anterior</span>
@@ -83,7 +83,7 @@ export const Paginador: React.FC<PaginadorProps> = ({
           {obtenerNumerosPagina().map((pag, index) => {
             if (typeof pag === 'string') {
               return (
-                <span key={`dots-${index}`} className="px-2 py-1 text-slate-600 font-bold">
+                <span key={`dots-${index}`} className="px-2 py-1 text-[var(--on-surface-muted)] font-bold">
                   ...
                 </span>
               );
@@ -98,8 +98,8 @@ export const Paginador: React.FC<PaginadorProps> = ({
                 onClick={() => onCambiarPagina(pag)}
                 className={`min-w-[32px] h-8 px-2 rounded-lg font-extrabold text-xs transition-all cursor-pointer ${
                   esActiva
-                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/20 border border-indigo-400/30 scale-105'
-                    : 'bg-[#171a26] border border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                    ? 'bg-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/20 border border-[var(--primary-strong)] scale-105'
+                    : 'bg-[var(--surface-container-high)] border border-[var(--outline)] text-[var(--on-surface-muted)] hover:bg-[var(--surface-container-highest)] hover:text-[var(--on-surface)]'
                 }`}
               >
                 {pag}
@@ -113,7 +113,7 @@ export const Paginador: React.FC<PaginadorProps> = ({
           type="button"
           disabled={paginaActual === totalPaginas}
           onClick={() => onCambiarPagina(paginaActual + 1)}
-          className="px-3 py-1.5 rounded-lg bg-[#171a26] border border-slate-800 text-slate-300 font-bold hover:bg-indigo-600 hover:text-white hover:border-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
+          className="px-3 py-1.5 rounded-lg bg-[var(--surface-container-high)] border border-[var(--outline)] text-[var(--on-surface-variant)] font-bold hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
         >
           <span>Siguiente</span>
           <span className="material-symbols-outlined text-sm">chevron_right</span>

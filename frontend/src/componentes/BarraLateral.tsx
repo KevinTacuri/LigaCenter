@@ -24,15 +24,15 @@ interface Props {
 }
 
 const obtenerPastelColorSidebar = (nombre: string) => {
-  if (!nombre) return { bg: 'bg-primary/20 border-primary/30', text: 'text-primary' };
+  if (!nombre) return { bg: 'bg-[var(--primary-soft)] border-[var(--outline)]', text: 'text-[var(--primary)]' };
   const hash = nombre.split('').reduce((acc, char) => char.charCodeAt(0) + acc, 0);
   const colores = [
-    { bg: 'bg-indigo-500/20 border-indigo-500/30', text: 'text-indigo-600 dark:text-indigo-400' },
-    { bg: 'bg-emerald-500/20 border-emerald-500/30', text: 'text-emerald-600 dark:text-emerald-400' },
-    { bg: 'bg-amber-500/20 border-amber-500/30', text: 'text-amber-600 dark:text-amber-400' },
-    { bg: 'bg-purple-500/20 border-purple-500/30', text: 'text-purple-600 dark:text-purple-400' },
-    { bg: 'bg-rose-500/20 border-rose-500/30', text: 'text-rose-600 dark:text-rose-400' },
-    { bg: 'bg-cyan-500/20 border-cyan-500/30', text: 'text-cyan-600 dark:text-cyan-400' },
+    { bg: 'bg-[var(--primary-soft)] border-[var(--outline)]', text: 'text-[var(--primary)]' },
+    { bg: 'bg-[var(--secondary-soft)] border-[var(--outline)]', text: 'text-[var(--secondary)]' },
+    { bg: 'bg-[var(--accent-soft)] border-[var(--outline)]', text: 'text-[var(--accent)]' },
+    { bg: 'bg-[var(--surface-container-high)] border-[var(--outline)]', text: 'text-[var(--primary)]' },
+    { bg: 'bg-[var(--primary-soft)] border-[var(--outline)]', text: 'text-[var(--secondary)]' },
+    { bg: 'bg-[var(--secondary-soft)] border-[var(--outline)]', text: 'text-[var(--primary)]' },
   ];
   return colores[hash % colores.length];
 };
@@ -266,8 +266,8 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
           onClick={manejarClic}
           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
             active
-              ? 'bg-primary/10 text-primary font-bold border border-primary/20 shadow-2xs'
-              : 'text-on-surface-variant hover:bg-surface-bright hover:text-on-surface'
+              ? 'bg-[var(--primary-soft)] text-[var(--primary)] font-bold border border-[var(--outline)] shadow-sm'
+              : 'text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]'
           } ${colapsado ? 'justify-center' : ''}`}
           title={colapsado ? item.titulo : ''}
         >
@@ -389,7 +389,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
   return (
     <>
       <aside
-        className={`hidden lg:flex flex-col bg-primary-container border-r border-outline transition-all duration-300 ease-in-out text-on-surface ${
+        className={`hidden lg:flex flex-col bg-[var(--sidebar-bg)] border-r border-[var(--outline)] transition-all duration-300 ease-in-out text-[var(--on-surface)] ${
           colapsado ? 'w-20' : 'w-64'
         } fixed left-0 top-0 h-full z-40 shadow-2xl`}
       >
@@ -536,7 +536,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
       )}
 
       <div
-        className={`lg:hidden fixed top-0 left-0 h-full w-64 bg-primary-container border-r border-outline z-50 transform transition-transform duration-300 ease-in-out text-on-surface ${
+        className={`lg:hidden fixed top-0 left-0 h-full w-64 bg-[var(--sidebar-bg)] border-r border-[var(--outline)] z-50 transform transition-transform duration-300 ease-in-out text-[var(--on-surface)] ${
           colapsado ? 'translate-x-0' : '-translate-x-full'
         } flex flex-col justify-between`}
       >

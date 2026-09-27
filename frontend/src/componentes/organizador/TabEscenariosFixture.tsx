@@ -31,10 +31,10 @@ export const TabEscenariosFixture: React.FC<TabEscenariosFixtureProps> = ({
 }) => {
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+      <div className="bg-[var(--surface-container-low)] rounded-2xl border border-[var(--outline)] p-6 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
           <div>
-            <h2 className="font-extrabold text-base uppercase tracking-wider text-slate-900 flex items-center gap-2">
+            <h2 className="font-extrabold text-base uppercase tracking-wider text-[var(--on-surface)] flex items-center gap-2">
               <span className="material-symbols-outlined text-primary text-xl">stadium</span>
               Gestión de Escenarios Deportivos
             </h2>

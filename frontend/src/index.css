@@ -2,48 +2,61 @@
 @source "../node_modules/@omit/react-confirm-dialog/dist/index.js";
 
 :root {
-  /* Default: Dark Mode */
-  --primary: #800f2f;                 /* Rojo Carmesí/Vino Premium */
-  --primary-container: #11131c;       /* Fondo de Tarjeta */
-  --on-primary-container: #f1f5f9;    /* Texto Claro Slate */
+  /* Paleta de marca LigaCenter */
+  --primary: #193b70;
+  --primary-strong: #12315d;
+  --primary-soft: #eaf3ff;
+  --primary-container: #112236;
+  --on-primary-container: #edf6ff;
   --on-primary: #ffffff;
-  
-  --secondary: #b2224d;               /* Vino/Carmesí Acento */
-  --secondary-container: #171a26;     /* Gris-Vino Oscuro */
-  --on-secondary-container: #ffffff;
 
-  --surface: #0a0b10;                 /* Fondo Oscuro Profundo */
-  --surface-dim: #07080c;             /* Sección Interna */
-  --surface-bright: #171a26;          /* Fondo Inputs */
-  --surface-container-lowest: #11131c; /* Tarjetas Base */
-  --surface-container-low: #07080c;
-  --surface-container-high: #1c1f2e;
-  --surface-container-highest: #2a2e3f;
+  --secondary: #40c2b5;
+  --secondary-strong: #26a79b;
+  --secondary-soft: #123e3d;
+  --secondary-container: #123a38;
+  --on-secondary-container: #ebfffb;
 
-  --on-surface: #f1f5f9;              /* Texto Principal */
-  --on-surface-variant: #94a3b8;      /* Texto Muted */
+  --accent: #6bcb53;
+  --accent-strong: #55b743;
+  --accent-soft: #163a22;
 
-  --outline: #1e2235;                 /* Bordes */
+  --surface: #0b1220;
+  --surface-dim: #0d1727;
+  --surface-bright: #112236;
+  --surface-container-lowest: #0f1b2c;
+  --surface-container-low: #12263f;
+  --surface-container-high: #173454;
+  --surface-container-highest: #1d3d62;
 
-  --hover-bg: #171a26;
+  --sidebar-bg: #0d1b2a;
+  --sidebar-bg-strong: #12273d;
+  --card-bg: #112236;
+  --card-bg-elevated: #16314d;
+
+  --on-surface: #edf6ff;
+  --on-surface-variant: #bfd4ee;
+  --on-surface-muted: #8ea3be;
+
+  --outline: #234665;
+  --outline-strong: #2d547c;
+
+  --hover-bg: #173454;
   --hover-text: #ffffff;
 
-  /* Redireccionar el color indigo (azul-morado) a la familia del vino/carmesí */
-  --indigo-50: #fff0f3;
-  --indigo-100: #ffccd5;
-  --indigo-200: #ffb3c1;
-  --indigo-300: #ff758f;
-  --indigo-400: #cc3965;
-  --indigo-500: #b2224d;
-  --indigo-600: #800f2f;
-  --indigo-650: #800f2f;
-  --indigo-700: #660c25;
-  --indigo-800: #590d22;
-  --indigo-900: #3f0713;
-  --indigo-950: #1a0208;
+  --indigo-50: #edf6ff;
+  --indigo-100: #dfeefc;
+  --indigo-200: #cfe0f5;
+  --indigo-300: #9ec1e8;
+  --indigo-400: #40c2b5;
+  --indigo-500: #193b70;
+  --indigo-600: #12315d;
+  --indigo-650: #193b70;
+  --indigo-700: #102847;
+  --indigo-800: #0d1d33;
+  --indigo-900: #0a1625;
+  --indigo-950: #08111c;
 
-  /* Colores de compatibilidad personalizados */
-  --rose-455: #fb7185;                /* Rosa en modo oscuro */
+  --rose-455: #fb7185;
   --slate-305: #cbd5e1;
   --slate-350: #cbd5e1;
   --slate-450: #94a3b8;
@@ -53,53 +66,65 @@
 }
 
 .light {
-  /* Light Mode - Sober, pastel, logo corporate blue synergy */
-  --primary: #193b70;                 /* Azul Corporativo (Logo) */
-  --primary-container: #ffffff;       /* Fondo de Tarjeta Blanco */
-  --on-primary-container: #0f172a;    /* Texto Oscuro Slate */
+  --primary: #193b70;
+  --primary-strong: #12315d;
+  --primary-soft: #eaf3ff;
+  --primary-container: #ffffff;
+  --on-primary-container: #102746;
   --on-primary: #ffffff;
-  
-  --secondary: #2c9b90;               /* Turquesa Logo (oscurecido para contraste) */
-  --secondary-container: #f1f5f9;     /* Fondo gris claro pastel */
-  --on-secondary-container: #0f172a;
 
-  --surface: #ffffff;                 /* Fondo Claro Minimalista Blanco */
-  --surface-dim: #f8fafc;             /* Sección Interna Clara (Slate 50) */
-  --surface-bright: #ffffff;          /* Fondo Inputs */
-  --surface-container-lowest: #ffffff; /* Tarjetas Base Blancas */
-  --surface-container-low: #ffffff;
-  --surface-container-high: #e2e8f0;
-  --surface-container-highest: #cbd5e1;
+  --secondary: #40c2b5;
+  --secondary-strong: #1d9d90;
+  --secondary-soft: #ebfaf8;
+  --secondary-container: #ebfaf8;
+  --on-secondary-container: #0f2d2a;
 
-  --on-surface: #0f172a;              /* Texto Principal Oscuro */
-  --on-surface-variant: #64748b;      /* Texto Secundario / Muted */
+  --accent: #6bcb53;
+  --accent-strong: #56af41;
+  --accent-soft: #eefce8;
 
-  --outline: #e2e8f0;                 /* Bordes Claros */
+  --surface: #f4f8fc;
+  --surface-dim: #edf4fb;
+  --surface-bright: #ffffff;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f8fbff;
+  --surface-container-high: #e3eefb;
+  --surface-container-highest: #d7e8f9;
 
-  --hover-bg: #e2e8f0;
-  --hover-text: #0f172a;
+  --sidebar-bg: #eaf3ff;
+  --sidebar-bg-strong: #dfeeff;
+  --card-bg: #ffffff;
+  --card-bg-elevated: #f8fbff;
 
-  /* Redireccionar el color indigo a la familia del azul corporativo en tema claro */
-  --indigo-50: #f0f4fa;
-  --indigo-100: #dbeafe;
-  --indigo-200: #bfdbfe;
-  --indigo-300: #93c5fd;
-  --indigo-400: #40c2b5;              /* Turquesa del logo como acento claro */
-  --indigo-500: #1d4ed8;
-  --indigo-600: #193b70;              /* Azul corporativo */
+  --on-surface: #0f172a;
+  --on-surface-variant: #52657d;
+  --on-surface-muted: #64748b;
+
+  --outline: #d9e5f0;
+  --outline-strong: #bfd1e7;
+
+  --hover-bg: #e3eefb;
+  --hover-text: #102746;
+
+  --indigo-50: #f0f5fb;
+  --indigo-100: #dfeefc;
+  --indigo-200: #cfe0f5;
+  --indigo-300: #a9c7ea;
+  --indigo-400: #40c2b5;
+  --indigo-500: #193b70;
+  --indigo-600: #193b70;
   --indigo-650: #193b70;
-  --indigo-700: #14305c;
+  --indigo-700: #12315d;
   --indigo-800: #0f2547;
   --indigo-900: #0a1a33;
-  --indigo-950: #050d1a;
+  --indigo-950: #08141f;
 
-  /* Colores de compatibilidad en modo claro - Oscurecidos para legibilidad contrastada */
-  --rose-455: #e11d48;                /* Rosa/Rojo oscuro para alta visibilidad (cerrar sesión) */
-  --slate-305: #475569;               /* Slate 600 */
-  --slate-350: #334155;               /* Slate 700 */
+  --rose-455: #e11d48;
+  --slate-305: #475569;
+  --slate-350: #334155;
   --slate-450: #475569;
   --slate-455: #475569;
-  --slate-850: #e2e8f0;               /* Slate 200 (bordes claros) */
+  --slate-850: #e2e8f0;
   --slate-905: #e2e8f0;
 }
 
@@ -215,56 +240,56 @@ body {
 
 /* 1. Backgrounds & Containers */
 :root:not(.light) body, :root:not(.light) html {
-  background-color: #0a0b10 !important;
-  color: #f1f5f9 !important;
+  background-color: var(--surface) !important;
+  color: var(--on-surface) !important;
 }
 
-:root:not(.light) .bg-\[\#f4f6f7\], 
-:root:not(.light) .bg-slate-50, 
+:root:not(.light) .bg-\[\#f4f6f7\],
+:root:not(.light) .bg-slate-50,
 :root:not(.light) .bg-slate-100 {
-  background-color: #0a0b10 !important;
+  background-color: var(--surface) !important;
 }
 
-:root:not(.light) .bg-white, 
-:root:not(.light) .bg-white\/90, 
+:root:not(.light) .bg-white,
+:root:not(.light) .bg-white\/90,
 :root:not(.light) .bg-surface-container-lowest,
 :root:not(.light) .bg-surface-bright {
-  background-color: #11131c !important;
+  background-color: var(--surface-container-low) !important;
 }
 
 :root:not(.light) .bg-slate-50\/50,
 :root:not(.light) .bg-slate-100\/60,
 :root:not(.light) .bg-\[\#07080c\] {
-  background-color: #07080c !important;
+  background-color: var(--surface-container-lowest) !important;
 }
 
 /* 2. Borders */
-:root:not(.light) .border-slate-200, 
-:root:not(.light) .border-slate-200\/80, 
-:root:not(.light) .border-slate-100, 
+:root:not(.light) .border-slate-200,
+:root:not(.light) .border-slate-200\/80,
+:root:not(.light) .border-slate-100,
 :root:not(.light) .border-slate-150,
 :root:not(.light) .border-slate-300,
 :root:not(.light) .border-outline-variant,
 :root:not(.light) .border-outline-variant\/60 {
-  border-color: #1e2235 !important;
+  border-color: var(--outline) !important;
 }
 
 /* 3. Text Colors */
-:root:not(.light) .text-slate-900, 
-:root:not(.light) .text-slate-800, 
+:root:not(.light) .text-slate-900,
+:root:not(.light) .text-slate-800,
 :root:not(.light) .text-slate-950,
 :root:not(.light) .text-slate-900:hover {
-  color: #ffffff !important;
+  color: var(--on-surface) !important;
 }
 
-:root:not(.light) .text-slate-700, 
+:root:not(.light) .text-slate-700,
 :root:not(.light) .text-slate-600 {
-  color: #cbd5e1 !important;
+  color: var(--on-surface-variant) !important;
 }
 
 :root:not(.light) .text-slate-500,
 :root:not(.light) .text-slate-400 {
-  color: #94a3b8 !important;
+  color: var(--on-surface-muted) !important;
 }
 
 /* 4. Form Controls (Inputs, Selects, Textareas) */

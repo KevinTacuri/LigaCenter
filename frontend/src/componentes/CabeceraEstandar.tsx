@@ -59,7 +59,7 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
   const esAdministrador = tieneRol('administrador');
 
   return (
-    <header className="bg-primary-container/90 backdrop-blur-md border-b border-outline px-6 h-16 sticky top-0 z-30 shadow-xs flex items-center justify-between shrink-0 text-on-surface">
+    <header className="bg-[var(--surface-container-lowest)]/95 backdrop-blur-md border-b border-[var(--outline)] px-6 h-16 sticky top-0 z-30 shadow-xs flex items-center justify-between shrink-0 text-[var(--on-surface)]">
       <div className="flex items-center gap-3">
         {leftElement}
 
@@ -98,7 +98,7 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
             <button
               type="button"
               onClick={() => navigate('/tablero/participantes?tab=planilla-jugadores')}
-              className="flex items-center gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-lg px-3 py-1.5 text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-2xs"
+              className="flex items-center gap-1.5 bg-[var(--primary-soft)] hover:bg-[var(--primary-soft)] text-[var(--primary)] border border-[var(--outline)] rounded-lg px-3 py-1.5 text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-sm"
             >
               <span className="material-symbols-outlined text-sm">person_add</span>
               <span>Registrar Jugadores</span>
@@ -107,7 +107,7 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
             <button
               type="button"
               onClick={() => navigate('/tablero/fixture?tab=partidos')}
-              className="flex items-center gap-1.5 bg-surface hover:bg-surface-bright text-on-surface border border-outline rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+              className="flex items-center gap-1.5 bg-[var(--surface)] hover:bg-[var(--surface-container-high)] text-[var(--on-surface)] border border-[var(--outline)] rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer shadow-sm"
             >
               <span className="material-symbols-outlined text-sm text-primary">calendar_month</span>
               <span>Partidos</span>

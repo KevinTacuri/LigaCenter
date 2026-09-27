@@ -1840,7 +1840,7 @@ export const ProgramacionFixture: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-[var(--surface)] text-[var(--on-surface)] font-sans relative overflow-hidden">
 
       {/* Barra lateral integrada */}
       <BarraLateral rol={usuario.roles?.[0] || 'usuario_publico'} />
@@ -1850,15 +1850,15 @@ export const ProgramacionFixture: React.FC = () => {
         <CabeceraEstandar titulo="Fixture y Programación" subtitulo="Generación de Encuentros y Asignación de Canchas" />
 
       {/* Tabs (visibles solo en móvil ya que en desktop se navega por la barra lateral) */}
-      <div className="bg-[#11131c] border-b border-slate-900 px-6 py-2 flex flex-wrap gap-2 lg:hidden">
+      <div className="bg-[var(--surface-container-low)] border-b border-[var(--outline)] px-6 py-2 flex flex-wrap gap-2 lg:hidden">
         {(!esDelegado ? (['escenarios', 'generar', 'eventos','programar', 'partidos'] as TabType[]) : (['partidos'] as TabType[])).map((tab) => (
           <button
             key={tab}
             onClick={() => setSearchParams({ tab })}
             className={`px-4 py-2 text-xs font-bold rounded-lg uppercase tracking-wide cursor-pointer transition-all ${
               tabActiva === tab
-                ? 'bg-indigo-650 text-white'
-                : 'text-slate-400 hover:bg-[#171a26] hover:text-white'
+                ? 'bg-[var(--primary)] text-white'
+                : 'text-[var(--on-surface-muted)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]'
             }`}
           >
             {tab === 'escenarios' ? 'Escenarios' : tab === 'generar' ? 'Generar Fixture' : tab === 'eventos' ? 'Eventos' : tab === 'programar' ? 'Asignar Fechas' : 'Partidos'}
@@ -1981,7 +1981,7 @@ export const ProgramacionFixture: React.FC = () => {
             <div className="space-y-5">
 
               {/* Cabecera */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+              <div className="bg-[var(--surface-container-low)] rounded-2xl border border-[var(--outline)] p-5 shadow-xs">
                 <div className="flex items-center justify-between gap-4">
 
                   <div>

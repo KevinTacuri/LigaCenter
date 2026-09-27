@@ -31,7 +31,7 @@ export const TabProgramarFechasFixture: React.FC<TabProgramarFechasFixtureProps>
   onToggleVenue,
 }) => {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs max-w-2xl mx-auto">
+    <div className="bg-[var(--surface-container-low)] rounded-2xl border border-[var(--outline)] p-6 shadow-xs max-w-2xl mx-auto">
       <h2 className="font-extrabold text-base text-slate-900 mb-4 border-b border-slate-100 pb-2">
         Asignar Horarios Automáticamente
       </h2>

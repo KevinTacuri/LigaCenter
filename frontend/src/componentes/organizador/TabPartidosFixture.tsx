@@ -49,7 +49,7 @@ export const TabPartidosFixture: React.FC<TabPartidosFixtureProps> = ({
   esDelegado,
 }) => {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+    <div className="bg-[var(--surface-container-low)] rounded-2xl border border-[var(--outline)] p-6 shadow-xs">
       <h2 className="font-extrabold text-base text-slate-900 mb-4 border-b border-slate-100 pb-2">Programación de Partidos</h2>
 
       <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 mb-4">

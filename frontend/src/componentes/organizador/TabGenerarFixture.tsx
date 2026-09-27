@@ -42,13 +42,13 @@ export const TabGenerarFixture: React.FC<TabGenerarFixtureProps> = ({
   FormularioEvento,
 }) => {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs max-w-2xl mx-auto">
+    <div className="bg-[var(--surface-container-low)] rounded-2xl border border-[var(--outline)] p-6 shadow-xs max-w-2xl mx-auto">
       <div className="flex gap-2 mb-5">
         <button
           type="button"
           onClick={() => setGenerarMode('fixture')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-            generarMode === 'fixture' ? 'bg-secondary text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            generarMode === 'fixture' ? 'bg-[var(--secondary)] text-white' : 'bg-[var(--surface-container-high)] text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-highest)]'
           }`}
         >
           <span className="material-symbols-outlined text-base">account_tree</span>
@@ -59,7 +59,7 @@ export const TabGenerarFixture: React.FC<TabGenerarFixtureProps> = ({
           type="button"
           onClick={() => setGenerarMode('eventos')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-            generarMode === 'eventos' ? 'bg-secondary text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            generarMode === 'eventos' ? 'bg-[var(--secondary)] text-white' : 'bg-[var(--surface-container-high)] text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-highest)]'
           }`}
         >
           <span className="material-symbols-outlined text-base">event</span>
