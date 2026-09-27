@@ -50,6 +50,12 @@ import type {
 } from '../../types/CompetitionEvent';
 import ListaParticipantesGrupoEvento from '../../componentes/programacion/eventos/ListaParticipantesGrupoEvento';
 import ModalParticipantesGrupoEvento from '../../componentes/programacion/eventos/ModalParticipantesGrupoEvento';
+import { TabEscenariosFixture } from '../../componentes/organizador/TabEscenariosFixture';
+import { TabPartidosFixture } from '../../componentes/organizador/TabPartidosFixture';
+import { TabGenerarFixture } from '../../componentes/organizador/TabGenerarFixture';
+import { TabProgramarFechasFixture } from '../../componentes/organizador/TabProgramarFechasFixture';
+import { ModalReprogramacionPartido } from '../../componentes/organizador/ModalReprogramacionPartido';
+import { PanelAyudaFixture } from '../../componentes/organizador/PanelAyudaFixture';
 
 type TabType = 'escenarios' | 'generar' | 'programar' | 'partidos' | 'eventos';
 
@@ -1879,587 +1885,87 @@ export const ProgramacionFixture: React.FC = () => {
         )}
 
         {/* Reprogramación Modal/Caja flotante */}
-        {partidoParaReprogramar && (
-          <div className="p-6 bg-amber-50 border border-amber-200 rounded-xl space-y-4 animate-fadeIn">
-            <div className="flex justify-between items-center border-b border-amber-200 pb-2">
-              <h3 className="font-bold text-sm text-amber-800 uppercase tracking-wide">Reprogramar Partido</h3>
-              <button onClick={() => setPartidoParaReprogramar(null)} className="text-amber-800 hover:font-bold cursor-pointer text-xs">Cerrar</button>
-            </div>
-            <p className="text-xs text-slate-700">
-              Partido: <strong>{partidoParaReprogramar.local_team?.name} vs {partidoParaReprogramar.visitor_team?.name}</strong> (Fecha {partidoParaReprogramar.round})
-            </p>
-            <form onSubmit={guardarReprogramacion} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Nueva Fecha</label>
-                <input
-                  type="date" required value={datosReprog.match_date}
-                  onChange={(e) => setDatosReprog({ ...datosReprog, match_date: e.target.value })}
-                  className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-white"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Nueva Hora</label>
-                <input
-                  type="text" required placeholder="Ej: 14:00" value={datosReprog.match_time}
-                  onChange={(e) => setDatosReprog({ ...datosReprog, match_time: e.target.value })}
-                  className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-white"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Escenario / Cancha</label>
-                <select
-                  required value={datosReprog.venue_id}
-                  onChange={(e) => setDatosReprog({ ...datosReprog, venue_id: e.target.value })}
-                  className="w-full text-xs border border-slate-200 bg-white rounded-lg p-2 cursor-pointer"
-                >
-                  <option value="">Seleccione Escenario</option>
-                  {escenarios.map((esc) => (
-                    <option key={esc.id} value={esc.id}>{esc.name}</option>
-                  ))}
-                </select>
-              </div>
-              <button type="submit" className="bg-secondary text-white font-bold py-2 rounded-lg text-xs hover:brightness-105 cursor-pointer">
-                Confirmar Reprogramación
-              </button>
-            </form>
-          </div>
-        )}
+        <ModalReprogramacionPartido
+          partido={partidoParaReprogramar}
+          datosReprog={datosReprog}
+          escenarios={escenarios}
+          onClose={() => setPartidoParaReprogramar(null)}
+          onSubmit={guardarReprogramacion}
+          onChange={setDatosReprog}
+        />
 
         {/* Tab content logic */}
         {tabActiva === 'escenarios' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
-                <div>
-                  <h2 className="font-extrabold text-base uppercase tracking-wider text-slate-900 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-xl">stadium</span>
-                    Gestión de Escenarios Deportivos
-                  </h2>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">
-                    Administra las canchas, estadios y coliseos disponibles para la programación de encuentros.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Buscar escenario..."
-                      value={filtroTextoEsc}
-                      onChange={(e) => {
-                        setFiltroTextoEsc(e.target.value);
-                        setPaginaEscenarios(1);
-                      }}
-                      className="text-xs border border-slate-200 rounded-xl pl-8 pr-3 py-2 bg-slate-50 outline-none w-48 sm:w-64"
-                    />
-                    <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                      search
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setModalCrearEsc(true)}
-                    className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:opacity-95 shadow-md shadow-primary/20 transition-all flex items-center gap-2 cursor-pointer shrink-0"
-                  >
-                    <span className="material-symbols-outlined text-sm">add_circle</span>
-                    <span>Registrar Escenario</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-                      <th className="p-3 pl-4">Escenario</th>
-                      <th className="p-3">Tipo</th>
-                      <th className="p-3">Ubicación</th>
-                      <th className="p-3">Capacidad</th>
-                      <th className="p-3">Estado</th>
-                      <th className="p-3 pr-4 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-sm">
-                    {escenariosPaginados.map((esc) => (
-                      <tr key={esc.id} className="hover:bg-slate-50/40 transition-colors">
-                        <td className="p-3 pl-4 font-bold text-slate-900">{esc.name}</td>
-                        <td className="p-3 text-slate-600 text-xs capitalize">
-                          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold border border-slate-200">
-                            {esc.venue_type || 'Cancha'}
-                          </span>
-                        </td>
-                        <td className="p-3 text-slate-600 text-xs">{esc.location || 'No especificada'}</td>
-                        <td className="p-3 text-slate-600 text-xs font-semibold">
-                          {esc.capacity ? `${esc.capacity} personas` : 'Sin aforo especificado'}
-                        </td>
-                        <td className="p-3">
-                          <InsigniaEstado estado={esc.is_available ? 'activo' : 'inactivo'} tipo="general" />
-                        </td>
-                        <td className="p-3 pr-4 text-right space-x-3">
-                          <button onClick={() => abrirModalEditarEsc(esc)} className="text-xs font-bold text-primary hover:underline cursor-pointer">Editar</button>
-                          <button onClick={() => eliminarEscenario(esc.id)} className="text-xs font-bold text-rose-600 hover:underline cursor-pointer">Eliminar</button>
-                        </td>
-                      </tr>
-                    ))}
-                    {escenarios.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="p-4 text-center">
-                          <EstadoVacio
-                            icono="stadium"
-                            titulo="No hay escenarios registrados"
-                            descripcion="Registra las canchas o estadios donde se jugarán los partidos del campeonato."
-                            textoBoton="Registrar Primer Escenario"
-                            onAccion={() => setModalCrearEsc(true)}
-                          />
-                        </td>
-                      </tr>
-                    )}
-                    {escenarios.length > 0 && escenariosFiltrados.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="p-4 text-center">
-                          <EstadoVacio
-                            icono="search_off"
-                            titulo="Sin resultados para la búsqueda"
-                            descripcion="No se encontraron escenarios que coincidan con el término ingresado."
-                          />
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              <Paginador
-                paginaActual={paginaEscenarios}
-                totalPaginas={totalPaginasEscenarios}
-                totalRegistros={escenariosFiltrados.length}
-                onCambiarPagina={setPaginaEscenarios}
-                etiqueta="escenarios"
-              />
-            </div>
-          </div>
+          <TabEscenariosFixture
+            escenariosPaginados={escenariosPaginados}
+            escenariosFiltrados={escenariosFiltrados}
+            paginaEscenarios={paginaEscenarios}
+            totalPaginasEscenarios={totalPaginasEscenarios}
+            filtroTextoEsc={filtroTextoEsc}
+            setFiltroTextoEsc={setFiltroTextoEsc}
+            setPaginaEscenarios={setPaginaEscenarios}
+            onCrearEscenario={() => setModalCrearEsc(true)}
+            onEditarEscenario={abrirModalEditarEsc}
+            onEliminarEscenario={eliminarEscenario}
+          />
         )}
 
         {tabActiva === 'generar' && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs max-w-2xl mx-auto">
-            <div>
-              {/* botones internos */}
-              <div className="flex gap-2 mb-5">
-                <button
-                  type="button"
-                  onClick={() => setGenerarMode('fixture')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    generarMode === 'fixture'
-                      ? 'bg-secondary text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-base">
-                    account_tree
-                  </span>
-                  Fixture
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setGenerarMode('eventos')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    generarMode === 'eventos'
-                      ? 'bg-secondary text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-base">
-                    event
-                  </span>
-                  Eventos
-                </button>
-              </div>
-
-              {generarMode === 'fixture' && (
-              <div>
-              <h2 className="font-extrabold text-base text-slate-900 mb-4 border-b border-slate-100 pb-2">Generar Calendario Round Robin (Todos contra Todos)</h2>
-              <form onSubmit={manejarGenerarFixture} className="space-y-5">
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Disciplina *</label>
-                    <select
-                      required value={datosFixture.discipline_id}
-                      onChange={(e) => setDatosFixture({ ...datosFixture, discipline_id: e.target.value, category_id: '' })}
-                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
-                    >
-                      <option value="">Seleccionar Disciplina</option>
-                      {disciplinas.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Categoría *</label>
-                    <select
-                      required value={datosFixture.category_id}
-                      onChange={(e) => {
-                        const catId = e.target.value;
-                        const format = categorias.find((c) => c.id === parseInt(catId))?.format || 'liga';
-                        setDatosFixture({ ...datosFixture, category_id: catId, format });
-                      }}
-                      className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
-                    >
-                      <option value="">Seleccionar Categoría</option>
-                      {categorias
-                        .filter((c) => !datosFixture.discipline_id || c.championship_discipline?.discipline_id === parseInt(datosFixture.discipline_id))
-                        .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)
-                      }
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Fecha de Inicio del Torneo *</label>
-                    <input
-                      type="date" required value={datosFixture.start_date}
-                      onChange={(e) => setDatosFixture({ ...datosFixture, start_date: e.target.value })}
-                      className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
-                    />
-                  </div>
-                  {/* Formato de Competencia */}
-                    <div className="space-y-1 border-t border-slate-105 pt-3">
-                      <label className="text-xs font-bold text-slate-700 block">Formato de Competencia</label>
-                      <select value={datosFixture.format} onChange={(e) => setDatosFixture({ ...datosFixture, format: e.target.value as any })}
-                        className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 outline-hidden cursor-pointer">
-                        <option value="liga">Liga (Todos contra todos)</option>
-                        <option value="grupos">Fase de Grupos + Eliminación</option>
-                        <option value="eliminacion_directa">Eliminación Directa</option>
-                      </select>
-                    </div>
-
-                    {/* Campos condicionales de format_settings */}
-                    {datosFixture.format === 'grupos' && (
-                      <div className="space-y-3 bg-slate-50 p-3 rounded-xl border border-slate-100 animate-fadeIn">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-slate-700 block">N° de Grupos *</label>
-                            <input type="number" min="2" placeholder="Ej: 4"
-                              value={datosFixture.num_groups} onChange={(e) => setDatosFixture({ ...datosFixture, num_groups: e.target.value })}
-                              className="w-full text-xs border border-slate-200 rounded-lg p-2 outline-hidden bg-white" />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-slate-700 block">Clasificados/Grupo *</label>
-                            <input type="number" min="1" placeholder="Ej: 2"
-                              value={datosFixture.advance_per_group} onChange={(e) => setDatosFixture({ ...datosFixture, advance_per_group: e.target.value })}
-                              className="w-full text-xs border border-slate-200 rounded-lg p-2 outline-hidden bg-white" />
-                          </div>
-                        </div>
-                        <label className="flex items-center gap-2 cursor-pointer select-none">
-                          <input type="checkbox" checked={datosFixture.third_place} onChange={(e) => setDatosFixture({ ...datosFixture, third_place: e.target.checked })}
-                            className="rounded-sm border-slate-300 text-indigo-600 outline-hidden" />
-                          <span className="text-[10px] font-bold text-slate-650 uppercase">Partido por 3° Puesto</span>
-                        </label>
-                      </div>
-                    )}
-
-                    {datosFixture.format === 'eliminacion_directa' && (
-                      <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-100 animate-fadeIn">
-                        <label className="flex items-center gap-2 cursor-pointer select-none">
-                          <input type="checkbox" checked={datosFixture.third_place} onChange={(e) => setDatosFixture({ ...datosFixture, third_place: e.target.checked })}
-                            className="rounded-sm border-slate-300 text-indigo-600 outline-hidden" />
-                          <span className="text-[10px] font-bold text-slate-650 uppercase">Partido por 3° Puesto</span>
-                        </label>
-                      </div>
-                    )}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700 block">Escenarios Disponibles para Asignar *</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 bg-slate-50 border border-slate-150 rounded-xl">
-                    {escenarios.map((esc) => (
-                      <label key={esc.id} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                        <input
-                          type="checkbox" checked={datosFixture.venue_ids.includes(esc.id)}
-                          onChange={() => manejarCambioCheckboxVenue(esc.id)}
-                          className="rounded-sm border-slate-300 text-secondary focus:ring-secondary cursor-pointer"
-                        />
-                        {esc.name}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-3 rounded-lg text-sm transition-all cursor-pointer">
-                  Generar Fixture del Campeonato
-                </button>
-              </form>
-              </div>
-              )}
-              {generarMode === 'eventos' && (
-                <FormularioEvento
-                  datosEvento={datosEvento}
-                  setDatosEvento={setDatosEvento}
-                  disciplinas={disciplinas}
-                  categorias={categorias}
-                  escenarios={escenarios}
-                  onSubmit={manejarCrearEvento}
-                 />
-              )}
-            </div>
-
-          </div>
+          <TabGenerarFixture
+            generarMode={generarMode}
+            setGenerarMode={setGenerarMode}
+            datosFixture={datosFixture}
+            setDatosFixture={setDatosFixture}
+            disciplinas={disciplinas}
+            categorias={categorias}
+            escenarios={escenarios}
+            onSubmitFixture={manejarGenerarFixture}
+            onToggleVenue={manejarCambioCheckboxVenue}
+            datosEvento={datosEvento}
+            setDatosEvento={setDatosEvento}
+            onSubmitEvento={manejarCrearEvento}
+            FormularioEvento={FormularioEvento}
+          />
         )}
 
         {tabActiva === 'programar' && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs max-w-2xl mx-auto">
-            <h2 className="font-extrabold text-base text-slate-900 mb-4 border-b border-slate-100 pb-2">Asignar Horarios Automáticamente</h2>
-            <form onSubmit={manejarProgramarFecha} className="space-y-5">
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Disciplina *</label>
-                  <select
-                    required value={datosFecha.discipline_id}
-                    onChange={(e) => setDatosFecha({ ...datosFecha, discipline_id: e.target.value, category_id: '' })}
-                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
-                  >
-                    <option value="">Seleccionar Disciplina</option>
-                    {disciplinas.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Categoría *</label>
-                  <select
-                    required value={datosFecha.category_id}
-                    onChange={(e) => setDatosFecha({ ...datosFecha, category_id: e.target.value })}
-                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
-                  >
-                    <option value="">Seleccionar Categoría</option>
-                    {categorias
-                      .filter((c) => !datosFecha.discipline_id || c.championship_discipline?.discipline_id === parseInt(datosFecha.discipline_id))
-                      .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)
-                    }
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Número de Fecha (Round) *</label>
-                  <select
-                    required value={datosFecha.round}
-                    onChange={(e) => setDatosFecha({ ...datosFecha, round: e.target.value })}
-                    className="w-full text-sm border border-slate-200 bg-white rounded-lg p-2.5 cursor-pointer outline-hidden"
-                  >
-                    <option value="">Seleccionar Fecha</option>
-                    {rondasDisponiblesProg.map((r) => (
-                      <option key={r} value={r}>Fecha {r}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Horas Disponibles * (Separadas por comas)</label>
-                  <input
-                    type="text" required placeholder="Ej: 08:00, 10:00, 12:00, 14:00" value={datosFecha.available_hours}
-                    onChange={(e) => setDatosFecha({ ...datosFecha, available_hours: e.target.value })}
-                    className="w-full text-sm border border-slate-200 rounded-lg p-2.5 outline-hidden"
-                  />
-                </div>
-              </div>
-
-              {datosFecha.category_id && datosFecha.round && (
-                <div className="space-y-1.5 bg-slate-50 border border-slate-150 rounded-xl p-3">
-                  <label className="text-xs font-bold text-slate-700 block">
-                    Partidos en esta Fecha ({partidosDeRondaSeleccionada.length})
-                  </label>
-                  {partidosDeRondaSeleccionada.length === 0 ? (
-                    <p className="text-xs text-slate-500">No hay partidos con esta categoría y ronda todavía.</p>
-                  ) : (
-                    <ul className="text-xs text-slate-700 space-y-1">
-                      {partidosDeRondaSeleccionada.map((p) => (
-                        <li key={p.id} className="flex justify-between">
-                          <span>{p.local_team?.name} vs {p.visitor_team?.name}</span>
-                          <span className="text-slate-400">{p.match_time || 'sin hora'}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 block">Escenarios Disponibles para esta Fecha *</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 bg-slate-50 border border-slate-150 rounded-xl">
-                  {escenarios.map((esc) => (
-                    <label key={esc.id} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                      <input
-                        type="checkbox" checked={datosFecha.venue_ids.includes(esc.id)}
-                        onChange={() => manejarCambioCheckboxVenueFecha(esc.id)}
-                        className="rounded-sm border-slate-300 text-secondary focus:ring-secondary cursor-pointer"
-                      />
-                      {esc.name}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <button type="submit" className="w-full bg-secondary hover:bg-secondary-container text-white font-bold py-3 rounded-lg text-sm transition-all cursor-pointer">
-                Programar Fecha Automáticamente
-              </button>
-            </form>
-          </div>
+          <TabProgramarFechasFixture
+            datosFecha={datosFecha}
+            setDatosFecha={setDatosFecha}
+            disciplinas={disciplinas}
+            categorias={categorias}
+            escenarios={escenarios}
+            rondasDisponiblesProg={rondasDisponiblesProg}
+            partidosDeRondaSeleccionada={partidosDeRondaSeleccionada}
+            onSubmit={manejarProgramarFecha}
+            onToggleVenue={manejarCambioCheckboxVenueFecha}
+          />
         )}
 
         {tabActiva === 'partidos' && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-            <h2 className="font-extrabold text-base text-slate-900 mb-4 border-b border-slate-100 pb-2">Programación de Partidos</h2>
-
-            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 mb-4">
-              {rondasDisponiblesProg.length > 0 && (
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Jornada</label>
-                  <select
-                    value={filtroRondaPartidos ?? ''}
-                    onChange={(e) => setFiltroRondaPartidos(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full sm:w-auto text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 outline-none focus:border-primary/50 cursor-pointer"
-                  >
-                    <option value="">Todas</option>
-                    {rondasDisponiblesProg.map(r => (
-                      <option key={r} value={r}>Fecha {r}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {equiposEnPartidos.length > 0 && (
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Equipo</label>
-                  <select
-                    value={filtroEquipoPartidos ?? ''}
-                    onChange={(e) => setFiltroEquipoPartidos(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full sm:w-auto text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 outline-none focus:border-primary/50 cursor-pointer"
-                  >
-                    <option value="">Todos</option>
-                    {equiposEnPartidos.map(([id, name]) => (
-                      <option key={id} value={id}>{name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Estado</label>
-                <select
-                  value={filtroEstadoPartidos}
-                  onChange={(e) => setFiltroEstadoPartidos(e.target.value)}
-                  className="w-full sm:w-auto text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 outline-none focus:border-primary/50 cursor-pointer"
-                >
-                  <option value="todos">Todos</option>
-                  <option value="programado">Programado</option>
-                  <option value="en_curso">En Curso</option>
-                  <option value="finalizado">Finalizado</option>
-                  <option value="cancelado">Cancelado</option>
-                  <option value="reprogramado">Reprogramado</option>
-                </select>
-              </div>
-
-              {escenarios.length > 0 && (
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cancha</label>
-                  <select
-                    value={filtroCanchaPartidos ?? ''}
-                    onChange={(e) => setFiltroCanchaPartidos(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full sm:w-auto text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 outline-none focus:border-primary/50 cursor-pointer"
-                  >
-                    <option value="">Todas</option>
-                    {escenarios.map(esc => (
-                      <option key={esc.id} value={esc.id}>{esc.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {hayFiltrosPartidosActivos && (
-                <button
-                  type="button"
-                  onClick={limpiarFiltrosPartidos}
-                  className="text-xs font-bold text-primary hover:underline cursor-pointer pb-2"
-                >
-                  Limpiar filtros
-                </button>
-              )}
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-                    <th className="p-3 pl-4">Fecha (Round)</th>
-                    <th className="p-3">Partido (Equipos)</th>
-                    <th className="p-3">Día y Hora</th>
-                    <th className="p-3">Cancha / Escenario</th>
-                    <th className="p-3">Estado</th>
-                    {!esDelegado && <th className="p-3 pr-4 text-right">Acciones</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
-                  {partidosPaginadosProg.map((part) => (
-                    <tr key={part.id} className="hover:bg-slate-50/40">
-                      <td className="p-3 pl-4 font-bold text-slate-700">Fecha {part.round}</td>
-                      <td className="p-3">
-                        <span className="font-semibold text-slate-900">{part.local_team?.name}</span>
-                        <span className="mx-2 text-slate-400 font-bold">VS</span>
-                        <span className="font-semibold text-slate-900">{part.visitor_team?.name}</span>
-                      </td>
-                      <td className="p-3 text-slate-600 text-xs">
-                        {part.match_date ? new Date(part.match_date).toLocaleDateString() : 'Por definir'} | {part.match_time || 'Por definir'}
-                      </td>
-                      <td className="p-3 text-slate-600 text-xs">
-                        {part.venue?.name || 'Por definir'}
-                      </td>
-                      <td className="p-3">
-                        <InsigniaEstado estado={part.status} tipo="partido" />
-                      </td>
-                      {!esDelegado && (
-                        <td className="p-3 pr-4 text-right">
-                          {part.status !== 'finalizado' && (
-                            <button onClick={() => iniciarReprogramacion(part)} className="text-xs font-bold text-primary hover:underline cursor-pointer">
-                              Reprogramar
-                            </button>
-                          )}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                  {partidos.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="p-4 text-center">
-                        <EstadoVacio
-                          icono="event_busy"
-                          titulo="No hay partidos programados"
-                          descripcion="Genera el fixture automático o agrega encuentros desde la pestaña 'Generar Fixture'."
-                        />
-                      </td>
-                    </tr>
-                  )}
-                  {partidos.length > 0 && partidosFiltradosProg.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="p-4 text-center">
-                        <EstadoVacio
-                          icono="filter_alt_off"
-                          titulo="Sin partidos para este filtro"
-                          descripcion="No se encontraron encuentros que coincidan con la fecha, equipo o estado seleccionados."
-                        />
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <Paginador
-              paginaActual={paginaPartidosProg}
-              totalPaginas={totalPaginasPartidosProg}
-              totalRegistros={partidosFiltradosProg.length}
-              onCambiarPagina={setPaginaPartidosProg}
-              etiqueta="partidos"
-            />
-          </div>
+          <TabPartidosFixture
+            partidosPaginados={partidosPaginadosProg}
+            escenarios={escenarios}
+            filtros={{
+              ronda: filtroRondaPartidos,
+              equipo: filtroEquipoPartidos,
+              estado: filtroEstadoPartidos,
+              cancha: filtroCanchaPartidos,
+            }}
+            setRonda={setFiltroRondaPartidos}
+            setEquipo={setFiltroEquipoPartidos}
+            setEstado={setFiltroEstadoPartidos}
+            setCancha={setFiltroCanchaPartidos}
+            rondasDisponibles={rondasDisponiblesProg}
+            equiposEnPartidos={equiposEnPartidos}
+            paginaActual={paginaPartidosProg}
+            totalPaginas={totalPaginasPartidosProg}
+            totalRegistros={partidosFiltradosProg.length}
+            onCambiarPagina={setPaginaPartidosProg}
+            onLimpiarFiltros={limpiarFiltrosPartidos}
+            onReprogramar={iniciarReprogramacion}
+            esDelegado={Boolean(esDelegado)}
+          />
         )}
         {tabActiva === 'eventos' && (
           <>
@@ -3029,55 +2535,7 @@ export const ProgramacionFixture: React.FC = () => {
         <span className="material-symbols-outlined text-lg">question_mark</span>
       </button>
 
-      {/* Drawer de Ayuda */}
-      {mostrarAyuda && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex justify-end animate-fadeIn">
-          <div className="w-full max-w-sm bg-white h-full shadow-2xl flex flex-col animate-slideLeft">
-            {/* Cabecera del Drawer */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-base">help</span>
-                <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Ayuda: Fixture y Fechas</h3>
-              </div>
-              <button
-                onClick={() => setMostrarAyuda(false)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-sm">close</span>
-              </button>
-            </div>
-
-            {/* Contenido del Drawer */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-3">
-              <p className="text-[10px] text-slate-400 font-semibold leading-relaxed mb-4">
-                Sigue estos pasos en orden para estructurar y programar los partidos del campeonato:
-              </p>
-              {PASOS_AYUDA_FIXTURE.map((p) => (
-                <div key={p.paso} className="flex gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100/60 transition-colors">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
-                    {p.paso}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-xs text-slate-400">{p.icono}</span>
-                      {p.titulo}
-                    </h4>
-                    <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed font-medium">{p.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Pie del Drawer */}
-            <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50">
-              <p className="text-[10px] text-slate-400 font-semibold mb-1">💡 Consejo rápido:</p>
-              <p className="text-[10px] text-slate-500 leading-normal font-medium">
-                La asignación de horarios calcula los partidos basándose en la relevancia de cada equipo. Los partidos de alta expectación o puntaje acumulado suelen asignarse de manera optimizada en horarios centrales.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <PanelAyudaFixture visible={mostrarAyuda} onClose={() => setMostrarAyuda(false)} pasos={PASOS_AYUDA_FIXTURE} />
       </div>
 
     </div>
