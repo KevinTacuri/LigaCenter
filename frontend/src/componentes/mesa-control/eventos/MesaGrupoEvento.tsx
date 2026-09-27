@@ -262,14 +262,7 @@ const MesaGrupoEvento: React.FC<Props> = ({
               competition_event_group_participant_id:
                 asignacion.id,
 
-              result_unit:
-                evento.event_type ===
-                'carrera'
-                  ? 'segundos'
-                  : evento.event_type ===
-                      'puntaje'
-                    ? 'puntos'
-                    : null,
+              result_unit: obtenerUnidadResultado(evento.event_type),
 
               status:
                 'registrado',
@@ -458,6 +451,15 @@ const MesaGrupoEvento: React.FC<Props> = ({
     return 'compitiendo';
   };
 
+  const obtenerUnidadResultado = (eventType: string) => {
+    if (eventType === 'carrera') return 'segundos';
+    if (eventType === 'salto') return 'metros';
+    if (eventType === 'lanzamiento') return 'metros';
+    if (eventType === 'puntaje') return 'puntos';
+
+    return null;
+  };
+
   const obtenerOCrearResultado = async ( asignacion: ParticipanteGrupoEvento ): Promise<ResultadoEvento | undefined> => {
     const existente =
       obtenerResultado(
@@ -474,14 +476,7 @@ const MesaGrupoEvento: React.FC<Props> = ({
           competition_event_group_participant_id:
             asignacion.id,
 
-          result_unit:
-            evento.event_type ===
-            'carrera'
-              ? 'segundos'
-              : evento.event_type ===
-                  'puntaje'
-                ? 'puntos'
-                : null,
+          result_unit: obtenerUnidadResultado(evento.event_type),
 
           status:
             'registrado',
