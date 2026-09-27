@@ -3,6 +3,7 @@
 
 :root {
   /* Paleta de marca LigaCenter */
+  --background: #0b1220;
   --primary: #193b70;
   --primary-strong: #12315d;
   --primary-soft: #eaf3ff;
@@ -27,6 +28,10 @@
   --surface-container-low: #12263f;
   --surface-container-high: #173454;
   --surface-container-highest: #1d3d62;
+
+  --surface-card-azul: #142b46;
+  --surface-card-celeste: #123d42;
+  --surface-card-verde: #163d2c;
 
   --sidebar-bg: #0d1b2a;
   --sidebar-bg-strong: #12273d;
@@ -66,6 +71,7 @@
 }
 
 .light {
+  --background: #edf3f8;
   --primary: #193b70;
   --primary-strong: #12315d;
   --primary-soft: #eaf3ff;
@@ -83,13 +89,17 @@
   --accent-strong: #56af41;
   --accent-soft: #eefce8;
 
-  --surface: #f4f8fc;
-  --surface-dim: #edf4fb;
+  --surface: #f5f9fc;
+  --surface-dim: #edf2f8;
   --surface-bright: #ffffff;
   --surface-container-lowest: #ffffff;
   --surface-container-low: #f8fbff;
   --surface-container-high: #e3eefb;
   --surface-container-highest: #d7e8f9;
+
+  --surface-card-azul: #edf5ff;
+  --surface-card-celeste: #ebf9f8;
+  --surface-card-verde: #eefaf0;
 
   --sidebar-bg: #eaf3ff;
   --sidebar-bg-strong: #dfeeff;
@@ -180,7 +190,7 @@
   --color-slate-905: var(--slate-905);
 
   /* Variables requeridas por @omit/react-confirm-dialog */
-  --color-background: var(--surface);
+  --color-background: var(--background);
   --color-foreground: var(--on-surface);
   --color-border: var(--outline);
   --color-muted: var(--surface-dim);

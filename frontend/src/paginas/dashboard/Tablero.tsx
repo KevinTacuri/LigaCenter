@@ -38,6 +38,13 @@ const PASOS_TORNEO = [
   { step: '6', title: 'Resultados y Tabla de Posiciones', desc: 'Consulta posiciones, rankings y sanciones actualizados al instante.', icon: 'leaderboard' },
 ];
 
+const CARD_TONE = {
+  azul: 'bg-[var(--surface-card-azul)] border-[var(--outline)]',
+  azure: 'bg-[var(--surface-card-azul)] border-[var(--outline)]',
+  celeste: 'bg-[var(--surface-card-celeste)] border-[var(--outline)]',
+  verde: 'bg-[var(--surface-card-verde)] border-[var(--outline)]',
+};
+
 export const Tablero: React.FC = () => {
   const { usuario, cargando, tienePermiso, tieneRol } = useAutenticacion();
   const { campeonatoActivo, seleccionarCampeonato, setPanelCampeonatosAbierto } = useCampeonato();
@@ -369,7 +376,7 @@ export const Tablero: React.FC = () => {
           
           {/* Banner de Bienvenida Adaptativo y Descartable */}
           {!bannerBienvenidaCerrado && (
-            <section className="relative rounded-2xl bg-primary-container border border-outline p-5 shadow-xs overflow-hidden group text-on-surface">
+            <section className={`${CARD_TONE.azul} relative rounded-2xl border p-5 shadow-xs overflow-hidden group text-on-surface`}>
               <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-primary via-indigo-500 to-emerald-500"></div>
               
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10 pr-6">
@@ -427,7 +434,7 @@ export const Tablero: React.FC = () => {
               
               {/* 1. Métricas Globales del SaaS */}
               <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-primary-container border border-outline rounded-2xl p-6 shadow-xs flex items-center gap-5 hover:border-primary transition-all duration-300 relative overflow-hidden group text-on-surface">
+                <div className={`${CARD_TONE.azul} border rounded-2xl p-6 shadow-xs flex items-center gap-5 hover:border-primary transition-all duration-300 relative overflow-hidden group text-on-surface`}>
                   <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-2xl">groups</span>
                   </div>
@@ -438,7 +445,7 @@ export const Tablero: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="bg-primary-container border border-outline rounded-2xl p-6 shadow-xs flex items-center gap-5 hover:border-primary transition-all duration-300 relative overflow-hidden group text-on-surface">
+                <div className={`${CARD_TONE.celeste} border rounded-2xl p-6 shadow-xs flex items-center gap-5 hover:border-primary transition-all duration-300 relative overflow-hidden group text-on-surface`}>
                   <div className="w-12 h-12 rounded-xl bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-500/20 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-2xl">shield_person</span>
                   </div>
@@ -449,7 +456,7 @@ export const Tablero: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="bg-primary-container border border-outline rounded-2xl p-6 shadow-xs flex items-center gap-5 hover:border-emerald-500 transition-all duration-300 relative overflow-hidden group text-on-surface">
+                <div className={`${CARD_TONE.verde} border rounded-2xl p-6 shadow-xs flex items-center gap-5 hover:border-emerald-500 transition-all duration-300 relative overflow-hidden group text-on-surface`}>
                   <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-2xl">dns</span>
                   </div>
@@ -460,7 +467,7 @@ export const Tablero: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="bg-primary-container border border-outline rounded-2xl p-6 shadow-xs flex items-center gap-5 hover:border-amber-500 transition-all duration-300 relative overflow-hidden group text-on-surface">
+                <div className={`${CARD_TONE.azul} border rounded-2xl p-6 shadow-xs flex items-center gap-5 hover:border-amber-500 transition-all duration-300 relative overflow-hidden group text-on-surface`}>
                   <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-2xl">database</span>
                   </div>
@@ -474,7 +481,7 @@ export const Tablero: React.FC = () => {
 
               {/* Terminal y Tabla Snapshot */}
               <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-                <section className="bg-primary-container border border-outline rounded-2xl p-6 shadow-xs xl:col-span-7 flex flex-col h-[400px] text-on-surface">
+                <section className={`${CARD_TONE.azul} border rounded-2xl p-6 shadow-xs xl:col-span-7 flex flex-col h-[400px] text-on-surface`}>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-outline pb-4 mb-4 shrink-0">
                     <h3 className="font-bold text-xs uppercase tracking-wider flex items-center gap-2">
                       <span className="material-symbols-outlined text-lg text-primary">terminal</span>
@@ -504,7 +511,7 @@ export const Tablero: React.FC = () => {
                   </div>
                 </section>
 
-                <section className="bg-primary-container border border-outline rounded-2xl p-6 shadow-xs xl:col-span-5 flex flex-col h-[400px] text-on-surface">
+                <section className={`${CARD_TONE.celeste} border rounded-2xl p-6 shadow-xs xl:col-span-5 flex flex-col h-[400px] text-on-surface`}>
                   <div className="flex items-center justify-between border-b border-outline pb-4 mb-4 shrink-0">
                     <h3 className="font-bold text-xs uppercase tracking-wider flex items-center gap-2">
                       <span className="material-symbols-outlined text-lg text-primary">group</span>
@@ -554,7 +561,7 @@ export const Tablero: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="bg-primary-container border border-outline rounded-2xl p-6 text-left shadow-xs space-y-4">
+                <div className={`${CARD_TONE.azul} border rounded-2xl p-6 text-left shadow-xs space-y-4`}>
                   <form onSubmit={manejarCrearCampeonato} className="space-y-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-on-surface-variant block">Nombre del Campeonato *</label>
@@ -632,7 +639,7 @@ export const Tablero: React.FC = () => {
 
               {/* Tarjetas KPI de Estado del Delegado */}
               <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-primary-container border border-outline rounded-2xl p-5 shadow-xs flex items-center gap-4 text-on-surface">
+                <div className={`${CARD_TONE.azul} border rounded-2xl p-5 shadow-xs flex items-center gap-4 text-on-surface`}>
                   <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-2xl">groups</span>
                   </div>
@@ -643,7 +650,7 @@ export const Tablero: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="bg-primary-container border border-outline rounded-2xl p-5 shadow-xs flex items-center gap-4 text-on-surface">
+                <div className={`${CARD_TONE.celeste} border rounded-2xl p-5 shadow-xs flex items-center gap-4 text-on-surface`}>
                   <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-2xl">check_circle</span>
                   </div>
@@ -654,7 +661,7 @@ export const Tablero: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="bg-primary-container border border-outline rounded-2xl p-5 shadow-xs flex items-center gap-4 text-on-surface">
+                <div className={`${CARD_TONE.verde} border rounded-2xl p-5 shadow-xs flex items-center gap-4 text-on-surface`}>
                   <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-2xl">event</span>
                   </div>
@@ -673,7 +680,7 @@ export const Tablero: React.FC = () => {
 
               {/* Accesos Rápidos Directos */}
               <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-primary-container border border-outline rounded-2xl p-6 shadow-xs space-y-4 text-on-surface">
+                <div className={`${CARD_TONE.azul} border rounded-2xl p-6 shadow-xs space-y-4 text-on-surface`}>
                   <div className="flex items-center justify-between border-b border-outline pb-3">
                     <h3 className="font-extrabold text-xs uppercase tracking-wider flex items-center gap-2">
                       <span className="material-symbols-outlined text-primary text-base">format_list_bulleted</span>
@@ -692,7 +699,7 @@ export const Tablero: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="bg-primary-container border border-outline rounded-2xl p-6 shadow-xs space-y-4 text-on-surface">
+                <div className={`${CARD_TONE.celeste} border rounded-2xl p-6 shadow-xs space-y-4 text-on-surface`}>
                   <div className="flex items-center justify-between border-b border-outline pb-3">
                     <h3 className="font-extrabold text-xs uppercase tracking-wider flex items-center gap-2">
                       <span className="material-symbols-outlined text-primary text-base">calendar_month</span>
@@ -719,7 +726,7 @@ export const Tablero: React.FC = () => {
             <div className="space-y-6 animate-fadeIn">
 
               {/* ⚡ ACCIONES RÁPIDAS DE CONTROL DE 1-CLIC */}
-              <section className="bg-primary-container border border-outline rounded-2xl p-4 shadow-xs text-on-surface">
+              <section className={`${CARD_TONE.azure} border rounded-2xl p-4 shadow-xs text-on-surface`}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-primary text-base">bolt</span>
@@ -778,7 +785,7 @@ export const Tablero: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {alertasOperativas.map((alerta) => (
-                      <div key={alerta.id} className="bg-primary-container border border-outline rounded-xl p-3.5 flex items-center justify-between gap-3">
+                      <div key={alerta.id} className={`${CARD_TONE.celeste} border rounded-xl p-3.5 flex items-center justify-between gap-3`}>
                         <div className="space-y-0.5 min-w-0">
                           <h4 className="font-bold text-xs truncate">{alerta.title}</h4>
                           <p className="text-[10px] text-on-surface-variant leading-tight">{alerta.desc}</p>
@@ -799,7 +806,7 @@ export const Tablero: React.FC = () => {
               {/* 1. Tarjetas KPI de Métricas Operativas Multi-Deporte */}
               <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 {/* KPI 1: Equipos Inscritos */}
-                <div className="bg-primary-container border border-outline rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:border-primary transition-all duration-300 relative overflow-hidden group text-on-surface hover:shadow-md">
+                <div className={`${CARD_TONE.azul} border rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:border-primary transition-all duration-300 relative overflow-hidden group text-on-surface hover:shadow-md`}>
                   <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center shrink-0 shadow-xs">
                     <span className="material-symbols-outlined text-2xl">groups</span>
                   </div>
@@ -811,7 +818,7 @@ export const Tablero: React.FC = () => {
                 </div>
 
                 {/* KPI 2: Partidos Programados */}
-                <div className="bg-primary-container border border-outline rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:border-primary transition-all duration-300 relative overflow-hidden group text-on-surface hover:shadow-md">
+                <div className={`${CARD_TONE.celeste} border rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:border-primary transition-all duration-300 relative overflow-hidden group text-on-surface hover:shadow-md`}>
                   <div className="w-12 h-12 rounded-2xl bg-violet-100 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-500/20 flex items-center justify-center shrink-0 shadow-xs">
                     <span className="material-symbols-outlined text-2xl">calendar_today</span>
                   </div>
@@ -823,7 +830,7 @@ export const Tablero: React.FC = () => {
                 </div>
 
                 {/* KPI 3: Partidos en Vivo */}
-                <div className="bg-primary-container border border-outline rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:border-emerald-500 transition-all duration-300 relative overflow-hidden group text-on-surface hover:shadow-md">
+                <div className={`${CARD_TONE.verde} border rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:border-emerald-500 transition-all duration-300 relative overflow-hidden group text-on-surface hover:shadow-md`}>
                   <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/20 flex items-center justify-center shrink-0 shadow-xs">
                     <span className="material-symbols-outlined text-2xl animate-pulse">sensors</span>
                   </div>
@@ -835,7 +842,7 @@ export const Tablero: React.FC = () => {
                 </div>
 
                 {/* KPI 4: Jugadores Registrados */}
-                <div className="bg-primary-container border border-outline rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:border-amber-500 transition-all duration-300 relative overflow-hidden group text-on-surface hover:shadow-md">
+                <div className={`${CARD_TONE.azul} border rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:border-amber-500 transition-all duration-300 relative overflow-hidden group text-on-surface hover:shadow-md`}>
                   <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center shrink-0 shadow-xs">
                     <span className="material-symbols-outlined text-2xl">badge</span>
                   </div>
@@ -855,7 +862,7 @@ export const Tablero: React.FC = () => {
                   
                   {/* Partidos en Vivo (Si los hay) */}
                   {partidosEnVivo.length > 0 && (
-                    <div className="bg-primary-container border border-emerald-500/50 dark:border-emerald-500/30 rounded-2xl p-5 shadow-md space-y-4 text-on-surface">
+                    <div className={`${CARD_TONE.verde} border border-emerald-500/50 dark:border-emerald-500/30 rounded-2xl p-5 shadow-md space-y-4 text-on-surface`}>
                       <div className="flex items-center justify-between border-b border-outline pb-3">
                         <div className="flex items-center gap-2">
                           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -948,7 +955,7 @@ export const Tablero: React.FC = () => {
                   
                   {/* Top 3 Posiciones del Campeonato */}
                   {topEquipos.length > 0 && (
-                    <div className="bg-primary-container border border-outline rounded-2xl p-5 shadow-xs space-y-4 text-on-surface">
+                    <div className={`${CARD_TONE.azul} border rounded-2xl p-5 shadow-xs space-y-4 text-on-surface`}>
                       <div className="flex items-center justify-between border-b border-outline pb-3">
                         <h3 className="font-extrabold text-xs uppercase tracking-wider flex items-center gap-2">
                           <span className="material-symbols-outlined text-amber-500 text-base">emoji_events</span>
@@ -989,7 +996,7 @@ export const Tablero: React.FC = () => {
                   )}
 
                   {/* Ficha del Campeonato Activo */}
-                  <div className="bg-primary-container border border-outline rounded-2xl p-5 shadow-xs space-y-4 text-on-surface">
+                  <div className={`${CARD_TONE.celeste} border rounded-2xl p-5 shadow-xs space-y-4 text-on-surface`}>
                     <div className="flex items-center justify-between border-b border-outline pb-3">
                       <h3 className="font-extrabold text-xs uppercase tracking-wider flex items-center gap-2">
                         <span className="material-symbols-outlined text-primary text-base">verified</span>
@@ -1030,7 +1037,7 @@ export const Tablero: React.FC = () => {
                   </div>
 
                   {/* Checklist de Organización */}
-                  <div className="bg-primary-container border border-outline rounded-2xl p-5 shadow-xs space-y-3 text-on-surface">
+                  <div className={`${CARD_TONE.verde} border rounded-2xl p-5 shadow-xs space-y-3 text-on-surface`}>
                     <h3 className="font-extrabold text-xs uppercase tracking-wider border-b border-outline pb-3 flex items-center gap-2">
                       <span className="material-symbols-outlined text-primary text-base">checklist</span>
                       Pasos de Organización
@@ -1082,7 +1089,7 @@ export const Tablero: React.FC = () => {
                   className="absolute inset-0 bg-black/50 dark:bg-slate-950/60 backdrop-blur-xs"
                   onClick={() => setMostrarGuia(false)}
                 />
-                <div className="relative w-full max-w-sm bg-primary-container text-on-surface h-full shadow-2xl flex flex-col overflow-hidden border-l border-outline animate-slideInRight">
+                <div className={`${CARD_TONE.azul} relative w-full max-w-sm text-on-surface h-full shadow-2xl flex flex-col overflow-hidden border-l border-outline animate-slideInRight`}>
                   <div className="flex items-center justify-between px-5 py-4 border-b border-outline bg-surface-dim">
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-primary text-base">help</span>
@@ -1096,7 +1103,7 @@ export const Tablero: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-primary-container">
+                  <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-transparent">
                     <p className="text-[10px] text-on-surface-variant font-semibold leading-relaxed mb-4">
                       Sigue estos pasos en orden para configurar y gestionar tu campeonato:
                     </p>
@@ -1134,7 +1141,7 @@ export const Tablero: React.FC = () => {
         )}
 
         {/* Pie de Página */}
-        <footer className="mt-auto bg-primary-container border-t border-outline py-6 text-center text-xs text-on-surface-variant">
+        <footer className={`${CARD_TONE.azul} mt-auto border-t border-outline py-6 text-center text-xs text-on-surface-variant`}>
           <p>&copy; 2026 LigaCenter. Desarrollado para la gestión de campeonatos. Arequipa, Perú.</p>
         </footer>
       </div>
