@@ -1,3 +1,4 @@
+// c:\proyecto-campeonato\frontend\src\componentes\PanelLateralCampeonatos.tsx
 import React, { useEffect, useState } from 'react';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
 import { useCampeonato } from '../contexto/ContextoCampeonato';
@@ -150,31 +151,31 @@ export const PanelLateralCampeonatos: React.FC = () => {
   return (
     <>
       <div 
-        className={`fixed inset-0 z-45 bg-[#07080c]/60 backdrop-blur-xs transition-opacity duration-300 pointer-events-none lg:hidden ${
+        className={`fixed inset-0 z-45 bg-[#193b70]/50 backdrop-blur-xs transition-opacity duration-300 pointer-events-none lg:hidden ${
           panelCampeonatosAbierto ? 'opacity-100 pointer-events-auto' : 'opacity-0'
         }`}
         onClick={() => setPanelCampeonatosAbierto(false)}
       />
 
       <aside 
-        className={`fixed right-0 top-0 bottom-0 z-35 w-full lg:w-[384px] bg-[#0c0e16] border-l border-slate-800 shadow-2xl transition-transform duration-300 ease-out transform flex flex-col ${
+        className={`fixed right-0 top-0 bottom-0 z-35 w-full lg:w-[384px] bg-[#0b1220] border-l border-[#647a9e]/35 shadow-2xl transition-transform duration-300 ease-out transform flex flex-col ${
           panelCampeonatosAbierto ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between px-5 h-16 border-b border-slate-800 shrink-0">
+        <div className="flex items-center justify-between px-5 h-16 border-b border-[#647a9e]/30 shrink-0">
           <div>
             <h3 className="font-extrabold text-sm text-white uppercase tracking-wider flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-indigo-400 text-base">sports_soccer</span>
+              <span className="material-symbols-outlined text-[#41c2b5] text-base">sports_soccer</span>
               Gestionar Campeonatos
             </h3>
-            <p className="text-[11px] text-slate-500 font-semibold tracking-wide leading-none mt-1">
+            <p className="text-[11px] text-[#647a9e] font-semibold tracking-wide leading-none mt-1">
               Cambia el torneo actual o registra uno nuevo
             </p>
           </div>
           
           <button
             onClick={() => setPanelCampeonatosAbierto(false)}
-            className="w-7 h-7 rounded-lg border border-slate-800 text-slate-400 hover:bg-[#171a26] hover:text-white flex items-center justify-center transition-all cursor-pointer"
+            className="w-7 h-7 rounded-lg border border-[#647a9e]/30 text-[#647a9e] hover:bg-[#d0efe4]/10 hover:text-[#193b70] flex items-center justify-center transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-sm">close</span>
           </button>
@@ -192,30 +193,30 @@ export const PanelLateralCampeonatos: React.FC = () => {
             {!mostrarCreador ? (
               <button
                 onClick={() => setMostrarCreador(true)}
-                className="w-full py-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/40 text-indigo-400 font-extrabold text-xs uppercase rounded-xl tracking-wider cursor-pointer flex items-center justify-center gap-1.5 transition-all"
+                className="w-full py-2.5 bg-[#d0efe4]/10 hover:bg-[#d0efe4]/15 border border-[#41c2b5]/30 hover:border-[#41c2b5]/45 text-[#41c2b5] font-extrabold text-xs uppercase rounded-xl tracking-wider cursor-pointer flex items-center justify-center gap-1.5 transition-all"
               >
                 <span className="material-symbols-outlined text-xs font-bold">add</span>
                 Registrar Nuevo Campeonato
               </button>
             ) : (
-              <form onSubmit={manejarCrearCampeonato} className="border border-indigo-500/25 bg-[#171a26]/40 p-4.5 rounded-2xl space-y-3.5 animate-fadeIn">
-                <div className="flex items-center justify-between border-b border-slate-850 pb-2">
-                  <span className="text-xs font-black text-indigo-400 uppercase tracking-wider">Nuevo Campeonato</span>
+              <form onSubmit={manejarCrearCampeonato} className="border border-[#41c2b5]/25 bg-[#1a2d41]/60 p-4.5 rounded-2xl space-y-3.5 animate-fadeIn">
+                <div className="flex items-center justify-between border-b border-[#647a9e]/25 pb-2">
+                  <span className="text-xs font-black text-[#41c2b5] uppercase tracking-wider">Nuevo Campeonato</span>
                   <button 
                     type="button" 
                     onClick={() => setMostrarCreador(false)} 
-                    className="text-xs font-black text-slate-500 hover:text-slate-350 uppercase tracking-wider cursor-pointer bg-transparent border-0"
+                    className="text-xs font-black text-[#647a9e] hover:text-[#aab6ca] uppercase tracking-wider cursor-pointer bg-transparent border-0"
                   >
                     Ocultar
                   </button>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-350 block">Nombre del Campeonato *</label>
+<label className="text-xs font-bold text-[#aab6ca] block">Nombre del Campeonato *</label>
                   <input
                     type="text" required placeholder="Ej: Torneo Inter-Facultades 2026"
                     value={nuevoNombre} onChange={(e) => setNuevoNombre(e.target.value)}
-                    className="w-full text-xs border border-slate-800 bg-[#11131c] text-white rounded-lg p-2.5 outline-none focus:border-indigo-500/50 transition-colors"
+                    className="w-full text-xs border border-[#647a9e]/30 bg-[#111b2a] text-white rounded-lg p-2.5 outline-none focus:border-[#41c2b5]/60 transition-colors"
                   />
                 </div>
 
@@ -355,12 +356,12 @@ export const PanelLateralCampeonatos: React.FC = () => {
                       onClick={() => handleSeleccionar(c)}
                       className={`p-3.5 border rounded-xl transition-all flex items-center justify-between cursor-pointer select-none group ${
                         esActivo 
-                          ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' 
-                          : 'border-slate-850 bg-[#171a26]/40 hover:border-slate-700 hover:bg-[#1c1f2e]'
+                          ? 'bg-[#d0efe4]/10 text-[#41c2b5] border-[#41c2b5]/30' 
+                          : 'border-[#647a9e]/25 bg-[#171d2a]/70 hover:border-[#41c2b5]/30 hover:bg-[#1d2b3d]'
                       }`}
                     >
                       <div className="min-w-0 pr-3 space-y-1">
-                        <h4 className={`font-extrabold text-xs group-hover:text-indigo-400 transition-colors truncate ${esActivo ? 'text-indigo-400' : 'text-white'}`}>
+                        <h4 className={`font-extrabold text-xs group-hover:text-[#41c2b5] transition-colors truncate ${esActivo ? 'text-[#41c2b5]' : 'text-white'}`}>
                           {c.name}
                         </h4>
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -379,7 +380,7 @@ export const PanelLateralCampeonatos: React.FC = () => {
                       </div>
 
                       {esActivo ? (
-                        <span className="px-2.5 py-1 bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 font-extrabold text-[10px] uppercase rounded-lg tracking-wider shrink-0 select-none">
+                        <span className="px-2.5 py-1 bg-[#193b70] border border-[#41c2b5]/30 text-white font-extrabold text-[10px] uppercase rounded-lg tracking-wider shrink-0 select-none">
                           Activo
                         </span>
                       ) : (
@@ -389,7 +390,7 @@ export const PanelLateralCampeonatos: React.FC = () => {
                             e.stopPropagation();
                             handleSeleccionar(c);
                           }}
-                          className="bg-[#171a26] hover:bg-indigo-650 border border-slate-800 text-slate-355 hover:text-white font-extrabold text-[10px] px-2.5 py-1 rounded-lg cursor-pointer transition-all uppercase shrink-0"
+                          className="bg-[#193b70] hover:bg-[#234d85] border border-[#41c2b5]/30 text-white font-extrabold text-[10px] px-2.5 py-1 rounded-lg cursor-pointer transition-all uppercase shrink-0"
                         >
                           Seleccionar
                         </button>

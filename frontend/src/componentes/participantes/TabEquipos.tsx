@@ -152,7 +152,7 @@ export const TabEquipos: React.FC<TabEquiposProps> = ({
               {equiposPaginados.map((eq) => (
                 <div
                   key={eq.id}
-                  className="group relative flex flex-col justify-between p-5 bg-primary-container hover:bg-surface border border-outline hover:border-primary/50 rounded-2xl transition-all duration-300 shadow-xs hover:shadow-xl hover:-translate-y-1 overflow-hidden"
+                  className="group relative flex flex-col justify-between p-5 bg-[color:var(--surface-card-elevated)] hover:bg-[color:var(--surface-card-elevated-hover)] border border-[color:var(--surface-card-elevated-border)] hover:border-[color:var(--surface-card-elevated-border-hover)] rounded-2xl transition-all duration-300 shadow-xs hover:shadow-xl hover:-translate-y-1 overflow-hidden"
                 >
                   <div className="flex items-center justify-between w-full mb-3">
                     <InsigniaEstado estado={eq.registration_status || 'pendiente'} tipo="registro" />
@@ -193,18 +193,18 @@ export const TabEquipos: React.FC<TabEquiposProps> = ({
                         logo={eq.logo}
                         resolverUrl={resolverUrlImagen}
                         tamanio="lg"
-                        className="shadow-inner border-2"
+                        className="shadow-inner border-2 border-slate-200 dark:border-slate-700"
                       />
                     </div>
 
-                    <h4 className="text-sm font-extrabold text-on-surface line-clamp-1 mb-1 group-hover:text-primary transition-colors">
+                    <h4 className="text-sm font-extrabold text-[color:var(--surface-card-title)] line-clamp-1 mb-1 transition-colors">
                       {eq.name}
                     </h4>
                   </div>
 
                   <div className="mt-3 pt-3 border-t border-outline/60 w-full flex items-center justify-center">
                     {eq.championship_user?.user?.name || eq.representative ? (
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold truncate max-w-full">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[rgba(64,194,181,0.12)] border border-[rgba(64,194,181,0.28)] text-[#40c2b5] text-[10px] font-bold truncate max-w-full">
                         <span className="material-symbols-outlined text-[13px]">badge</span>
                         <span className="truncate">
                           {eq.championship_user?.user?.name || eq.representative}

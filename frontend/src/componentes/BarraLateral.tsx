@@ -1,3 +1,4 @@
+// c:\proyecto-campeonato\frontend\src\componentes\BarraLateral.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAutenticacion } from '../contexto/ContextoAutenticacion';
@@ -24,15 +25,15 @@ interface Props {
 }
 
 const obtenerPastelColorSidebar = (nombre: string) => {
-  if (!nombre) return { bg: 'bg-[var(--primary-soft)] border-[var(--outline)]', text: 'text-[var(--primary)]' };
+  if (!nombre) return { bg: 'bg-[#d0efe4] border border-[#aab6ca]', text: 'text-[#193b70]' };
   const hash = nombre.split('').reduce((acc, char) => char.charCodeAt(0) + acc, 0);
   const colores = [
-    { bg: 'bg-[var(--primary-soft)] border-[var(--outline)]', text: 'text-[var(--primary)]' },
-    { bg: 'bg-[var(--secondary-soft)] border-[var(--outline)]', text: 'text-[var(--secondary)]' },
-    { bg: 'bg-[var(--accent-soft)] border-[var(--outline)]', text: 'text-[var(--accent)]' },
-    { bg: 'bg-[var(--surface-container-high)] border-[var(--outline)]', text: 'text-[var(--primary)]' },
-    { bg: 'bg-[var(--primary-soft)] border-[var(--outline)]', text: 'text-[var(--secondary)]' },
-    { bg: 'bg-[var(--secondary-soft)] border-[var(--outline)]', text: 'text-[var(--primary)]' },
+    { bg: 'bg-[#d0efe4] border border-[#aab6ca]', text: 'text-[#193b70]' },
+    { bg: 'bg-[#d0efe4] border border-[#41c2b5]/55', text: 'text-[#193b70]' },
+    { bg: 'bg-[#b8e6ad] border border-[#8ed77b]', text: 'text-[#193b70]' },
+    { bg: 'bg-[#edf6ff] border border-[#aab6ca]', text: 'text-[#193b70]' },
+    { bg: 'bg-[#d0efe4] border border-[#41c2b5]/55', text: 'text-[#193b70]' },
+    { bg: 'bg-[#b8e6ad] border border-[#aab6ca]', text: 'text-[#193b70]' },
   ];
   return colores[hash % colores.length];
 };
@@ -266,14 +267,14 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
           onClick={manejarClic}
           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
             active
-              ? 'bg-[var(--primary-soft)] text-[var(--primary)] font-bold border border-[var(--outline)] shadow-sm'
-              : 'text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]'
+              ? 'bg-[#7ddc65]/50 text-[#193b70] font-bold border border-[#9bb0c7] shadow-sm'
+              : 'text-[var(--on-surface)] hover:bg-[#7ddc65]/50 hover:text-[#193b70]'
           } ${colapsado ? 'justify-center' : ''}`}
           title={colapsado ? item.titulo : ''}
         >
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-xl">{item.icono}</span>
-            {!colapsado && <span className="text-sm font-medium">{item.titulo}</span>}
+            <span className="material-symbols-outlined text-xl text-[var(--on-surface)]">{item.icono}</span>
+            {!colapsado && <span className="text-sm font-medium text-[var(--on-surface)]">{item.titulo}</span>}
           </div>
           {!colapsado && tieneSubItems && (
             <span className={`material-symbols-outlined text-sm text-on-surface-variant transition-transform duration-300 ${estaDesplegado ? 'rotate-180' : ''}`}>
@@ -300,8 +301,8 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
                     onClick={() => navigate(`${item.ruta}?${sub.query}`)}
                     className={`w-full text-left px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all block cursor-pointer ${
                       subActive
-                        ? 'text-primary bg-primary/10 font-black border-l-2 border-primary'
-                        : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-bright'
+                        ? 'text-[#193b70] bg-[#7ddc65]/50 font-black border-l-2 border-[#41c2b5]'
+                        : 'text-[var(--on-surface)] hover:text-[var(--on-surface)] hover:bg-[#7ddc65]/50'
                     }`}
                   >
                     {sub.titulo}
@@ -335,13 +336,13 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
         <button
           type="button"
           onClick={manejarClicMobile}
-          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer ${
-            active ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface-variant'
+          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-all ${
+            active ? 'bg-[#7ddc65]/50 text-[#193b70] font-bold border border-[#9bb0c7]' : 'text-[var(--on-surface)] hover:bg-[#7ddc65]/50 hover:text-[#193b70]'
           }`}
         >
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-xl">{item.icono}</span>
-            <span className="text-sm font-medium">{item.titulo}</span>
+            <span className="material-symbols-outlined text-xl text-[var(--on-surface)]">{item.icono}</span>
+            <span className="text-sm font-medium text-[var(--on-surface)]">{item.titulo}</span>
           </div>
           {tieneSubItems && (
             <span className={`material-symbols-outlined text-sm transition-transform duration-300 ${estaDesplegado ? 'rotate-180' : ''}`}>
@@ -371,8 +372,8 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
                     }}
                     className={`w-full text-left px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all block cursor-pointer ${
                       subActive
-                        ? 'text-primary bg-primary/10 font-black'
-                        : 'text-on-surface-variant hover:text-on-surface'
+                        ? 'text-[#193b70] bg-[#7ddc65]/50 font-black border-l-2 border-[#41c2b5]'
+                        : 'text-[var(--on-surface)] hover:text-[var(--on-surface)] hover:bg-[#7ddc65]/50'
                     }`}
                   >
                     {sub.titulo}

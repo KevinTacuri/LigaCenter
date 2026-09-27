@@ -74,7 +74,7 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
             >
               <img src={logoImg} className="w-8 h-8 object-contain group-hover:scale-105 transition-transform" alt="Logo LigaCenter" />
               <span className="font-black text-base text-on-surface tracking-tight hidden sm:inline">
-                Liga<span className="text-primary">Center</span>
+                Liga<span className="text-[var(--text-accent)]">Center</span>
               </span>
             </button>
             <div className="h-6 w-px bg-outline mx-1 hidden sm:block"></div>
@@ -109,7 +109,7 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
               onClick={() => navigate('/tablero/fixture?tab=partidos')}
               className="flex items-center gap-1.5 bg-[var(--surface)] hover:bg-[var(--surface-container-high)] text-[var(--on-surface)] border border-[var(--outline)] rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer shadow-sm"
             >
-              <span className="material-symbols-outlined text-sm text-primary">calendar_month</span>
+              <span className="material-symbols-outlined text-sm text-[var(--text-accent)]">calendar_month</span>
               <span>Partidos</span>
             </button>
           </div>
@@ -139,7 +139,7 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
                 className="flex items-center gap-1.5 bg-surface hover:bg-surface-bright text-on-surface border border-outline rounded-lg px-3 py-1.5 text-xs font-bold cursor-pointer transition-all shadow-xs"
                 title="Abrir Vista Pública del Campeonato"
               >
-                <span className="material-symbols-outlined text-sm text-primary">visibility</span>
+                <span className="material-symbols-outlined text-sm text-[var(--text-accent)]">visibility</span>
                 <span className="hidden md:inline">Vista Pública</span>
               </a>
             ) : (
@@ -150,7 +150,7 @@ export const CabeceraEstandar: React.FC<CabeceraEstandarProps> = ({
                 className="flex items-center gap-1.5 bg-surface hover:bg-surface-bright text-on-surface border border-outline rounded-lg px-3 py-1.5 text-xs font-bold cursor-pointer transition-all shadow-xs"
                 title="Ir al Portal Público General"
               >
-                <span className="material-symbols-outlined text-sm text-primary">visibility</span>
+                <span className="material-symbols-outlined text-sm text-[var(--text-accent)]">visibility</span>
                 <span className="hidden md:inline">Portal Público</span>
               </a>
             )}

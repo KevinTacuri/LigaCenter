@@ -11,6 +11,10 @@
   --on-primary-container: #edf6ff;
   --on-primary: #ffffff;
 
+  --text-accent: #41c2b5;
+  --text-accent-strong: #8ed77b;
+  --text-accent-soft: #d0efe4;
+
   --secondary: #40c2b5;
   --secondary-strong: #26a79b;
   --secondary-soft: #123e3d;
@@ -32,6 +36,11 @@
   --surface-card-azul: #142b46;
   --surface-card-celeste: #123d42;
   --surface-card-verde: #163d2c;
+  --surface-card-elevated: #1b2942;
+  --surface-card-elevated-hover: #213353;
+  --surface-card-elevated-border: rgba(64, 194, 181, 0.18);
+  --surface-card-elevated-border-hover: rgba(64, 194, 181, 0.42);
+  --surface-card-title: #ffffff;
 
   --sidebar-bg: #0d1b2a;
   --sidebar-bg-strong: #12273d;
@@ -71,13 +80,17 @@
 }
 
 .light {
-  --background: #edf3f8;
+  --background: #eef1f6;
   --primary: #193b70;
   --primary-strong: #12315d;
   --primary-soft: #eaf3ff;
   --primary-container: #ffffff;
   --on-primary-container: #102746;
   --on-primary: #ffffff;
+
+  --text-accent: #193b70;
+  --text-accent-strong: #193b70;
+  --text-accent-soft: #d0efe4;
 
   --secondary: #40c2b5;
   --secondary-strong: #1d9d90;
@@ -89,7 +102,7 @@
   --accent-strong: #56af41;
   --accent-soft: #eefce8;
 
-  --surface: #f5f9fc;
+  --surface: #eef1f6;
   --surface-dim: #edf2f8;
   --surface-bright: #ffffff;
   --surface-container-lowest: #ffffff;
@@ -100,6 +113,11 @@
   --surface-card-azul: #edf5ff;
   --surface-card-celeste: #ebf9f8;
   --surface-card-verde: #eefaf0;
+  --surface-card-elevated: #ffffff;
+  --surface-card-elevated-hover: #f7fafc;
+  --surface-card-elevated-border: rgba(148, 163, 184, 0.9);
+  --surface-card-elevated-border-hover: rgba(25, 59, 112, 0.35);
+  --surface-card-title: #193b70;
 
   --sidebar-bg: #eaf3ff;
   --sidebar-bg-strong: #dfeeff;
@@ -143,6 +161,9 @@
   --color-primary-container: var(--primary-container);
   --color-on-primary-container: var(--on-primary-container);
   --color-on-primary: var(--on-primary);
+  --color-text-accent: var(--text-accent);
+  --color-text-accent-strong: var(--text-accent-strong);
+  --color-text-accent-soft: var(--text-accent-soft);
   
   --color-secondary: var(--secondary);
   --color-secondary-container: var(--secondary-container);
@@ -155,6 +176,10 @@
   --color-surface-container-low: var(--surface-container-low);
   --color-surface-container-high: var(--surface-container-high);
   --color-surface-container-highest: var(--surface-container-highest);
+  --color-card-elevated: var(--surface-card-elevated);
+  --color-card-elevated-hover: var(--surface-card-elevated-hover);
+  --color-card-elevated-border: var(--surface-card-elevated-border);
+  --color-card-elevated-border-hover: var(--surface-card-elevated-border-hover);
 
   --color-on-surface: var(--on-surface);
   --color-on-surface-variant: var(--on-surface-variant);

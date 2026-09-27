@@ -53,7 +53,7 @@ export const Paginador: React.FC<PaginadorProps> = ({
     <div className={`p-4 border-t border-[var(--outline)] bg-[var(--surface-container-low)]/95 backdrop-blur-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs ${className}`}>
       {/* Texto informativo */}
       <div className="text-[var(--on-surface-muted)] font-medium flex items-center gap-1.5">
-        <span className="material-symbols-outlined text-[var(--primary)] text-sm">auto_awesome_motion</span>
+        <span className="material-symbols-outlined text-[var(--text-accent)] text-sm">auto_awesome_motion</span>
         <span>
           Página <strong className="text-[var(--on-surface)] font-bold">{paginaActual}</strong> de{' '}
           <strong className="text-[var(--on-surface)] font-bold">{totalPaginas}</strong>
