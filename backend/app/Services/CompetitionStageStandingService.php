@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use App\Events\CompetitionDataUpdated;
-
 use App\Models\CompetitionEventStage;
 use Illuminate\Support\Collection;
 use App\Models\CompetitionEventGroupParticipant;
@@ -217,8 +215,6 @@ class CompetitionStageStandingService
                 );
             }
         });
-
-        CompetitionDataUpdated::publish($stage, 'advance');
 
         return [
             'next_stage' => $nextStage,

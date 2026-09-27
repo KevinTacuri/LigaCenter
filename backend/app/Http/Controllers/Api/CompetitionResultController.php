@@ -2,18 +2,20 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\CompetitionDataUpdated;
-
+use App\Events\CompetitionLiveUpdated;
 use App\Http\Controllers\Controller;
+use App\Models\CompetitionEventGroup;
 use App\Models\CompetitionEventGroupParticipant;
 use App\Models\CompetitionResult;
+use App\Services\CompetitionLiveService;
 use App\Services\CompetitionResultService;
 use Illuminate\Http\Request;
 
 class CompetitionResultController extends Controller
 {
     public function __construct(
-        private CompetitionResultService $resultService
+        private CompetitionResultService $resultService,
+        private CompetitionLiveService $liveService
     ) {
     }
 
@@ -111,7 +113,13 @@ class CompetitionResultController extends Controller
             'attempts',
         ]);
 
-        CompetitionDataUpdated::publish($result, 'store');
+        // Live event broadcast
+        $groupId = $groupParticipant->competition_event_group_id;
+        $this->resultService->recalculatePositions(
+            $groupId
+        );
+        $this->broadcastGroupResults($groupId);
+
 
         return response()->json([
             'success' => true,
@@ -177,7 +185,15 @@ class CompetitionResultController extends Controller
             'attempts.member.championshipPlayer',
         ]);
 
-        CompetitionDataUpdated::publish($competitionResult, 'update');
+        // Live event broadcast
+        $groupId = $competitionResult
+            ->groupParticipant
+            ->competition_event_group_id;
+
+        $this->resultService->recalculatePositions(
+            $groupId
+        );
+        $this->broadcastGroupResults($groupId);
 
         return response()->json([
             'success' => true,
@@ -206,7 +222,7 @@ class CompetitionResultController extends Controller
             $groupId
         );
 
-        CompetitionDataUpdated::publish($competitionResult, 'destroy');
+        $this->broadcastGroupResults($groupId);
 
         return response()->json([
             'success' => true,
@@ -227,12 +243,22 @@ class CompetitionResultController extends Controller
             ],
         ]);
 
+        $groupId = $competitionResult
+            ->groupParticipant
+            ->competition_event_group_id;
+
+
         $competitionResult->update([
             'tiebreak_order' =>
                 $validated['tiebreak_order'],
         ]);
 
-        CompetitionDataUpdated::publish($competitionResult, 'updateTiebreak');
+        // Live broadcast
+        $this->resultService->recalculatePositions(
+            $groupId
+        );
+
+        $this->broadcastGroupResults($groupId);
 
         return response()->json([
             'success' => true,
@@ -241,5 +267,29 @@ class CompetitionResultController extends Controller
             'data' =>
                 $competitionResult->fresh(),
         ]);
+    }
+
+    private function broadcastGroupResults(int $groupId): void
+    {
+        $group = CompetitionEventGroup::with([
+            'stage.event.championshipDiscipline',
+        ])->find($groupId);
+
+        if (!$group) {
+            return;
+        }
+
+        $stage = $group->stage;
+        $event = $stage->event;
+
+        CompetitionLiveUpdated::publish(
+            eventId: $event->id,
+            championshipId:
+                $event->championshipDiscipline->championship_id,
+            stageId: $stage->id,
+            groupId: $group->id,
+            type: 'group-results',
+            data: $this->liveService->groupSnapshot($group),
+        );
     }
 }

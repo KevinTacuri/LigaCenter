@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use App\Events\CompetitionDataUpdated;
-
 use App\Models\CompetitionEvent;
 use App\Models\CompetitionEventGroup;
 use App\Models\CompetitionEventGroupParticipant;
@@ -121,8 +119,6 @@ class CompetitionQualificationService
                             'status' => 'finalizado',
                         ]);
                     }
-
-                    CompetitionDataUpdated::publish($stage, 'finish');
 
                     return [
                         'stage' => $stage->fresh(),
@@ -356,8 +352,6 @@ class CompetitionQualificationService
                 $stage->update([
                     'status' => 'finalizado',
                 ]);
-
-                CompetitionDataUpdated::publish($stage, 'finish');
 
                 return [
                     'stage' =>

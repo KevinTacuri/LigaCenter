@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\CompetitionDataUpdated;
-
 use App\Http\Controllers\Controller;
 use App\Models\CompetitionEvent;
 use Illuminate\Http\Request;
@@ -196,8 +194,6 @@ class CompetitionEventController extends Controller
             'stages',
         ]);
 
-        CompetitionDataUpdated::publish($event, 'store');
-
         return response()->json([
             'success' => true,
             'message' => 'Evento creado correctamente.',
@@ -324,8 +320,6 @@ class CompetitionEventController extends Controller
             'stages'
         ]);
 
-        CompetitionDataUpdated::publish($competitionEvent, 'update');
-
         return response()->json([
             'success' => true,
             'message' => 'Evento actualizado correctamente.',
@@ -339,8 +333,6 @@ class CompetitionEventController extends Controller
     public function destroy(CompetitionEvent $competitionEvent)
     {
         $competitionEvent->delete();
-
-        CompetitionDataUpdated::publish($competitionEvent, 'destroy');
 
         return response()->json([
             'success' => true,

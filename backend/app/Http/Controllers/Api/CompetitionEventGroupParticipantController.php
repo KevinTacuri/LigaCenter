@@ -2,8 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\CompetitionDataUpdated;
-
+use App\Events\CompetitionLiveUpdated;
 use App\Models\CompetitionEventGroup;
 use App\Models\CompetitionEventParticipant;
 use App\Models\CompetitionEventGroupParticipant;
@@ -127,8 +126,6 @@ class CompetitionEventGroupParticipantController extends Controller
             'start_order' => $startOrder,
         ]);
 
-        CompetitionDataUpdated::publish($groupParticipant, 'store');
-
         return response()->json([
             'success' => true,
             'message' =>
@@ -187,8 +184,6 @@ class CompetitionEventGroupParticipantController extends Controller
 
         $groupParticipant->update($validated);
 
-        CompetitionDataUpdated::publish($groupParticipant, 'update');
-
         return response()->json([
             'success' => true,
             'message' =>
@@ -201,8 +196,6 @@ class CompetitionEventGroupParticipantController extends Controller
         CompetitionEventGroupParticipant $groupParticipant
     ) {
         $groupParticipant->delete();
-
-        CompetitionDataUpdated::publish($groupParticipant, 'destroy');
 
         return response()->json([
             'success' => true,
@@ -240,7 +233,30 @@ class CompetitionEventGroupParticipantController extends Controller
                 $validated['status'],
         ]);
 
-        CompetitionDataUpdated::publish($groupParticipant, 'updateStatus');
+
+        $group = $groupParticipant->group;
+        $stage = $group->stage;
+        $event = $stage->event;
+
+        CompetitionLiveUpdated::publish(
+            eventId: $event->id,
+            championshipId:
+                $event->championshipDiscipline->championship_id,
+            stageId: $stage->id,
+            groupId: $group->id,
+            type: 'participant-status',
+            data: [
+                'group_participant_id' =>
+                    $groupParticipant->id,
+
+                'competition_event_participant_id' =>
+                    $groupParticipant
+                        ->competition_event_participant_id,
+
+                'status' =>
+                    $groupParticipant->status,
+            ],
+        );
 
         return response()->json([
             'success' => true,

@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\CompetitionDataUpdated;
-
 use App\Http\Controllers\Controller;
 use App\Models\CompetitionEvent;
 use App\Models\CompetitionEventParticipant;
@@ -102,8 +100,6 @@ class CompetitionEventParticipantController extends Controller
             'members.championshipPlayer.player',
         ]);
 
-        CompetitionDataUpdated::publish($participant, 'store');
-
         return response()->json([
             'success' => true,
             'message' => 'Participante registrado correctamente.',
@@ -147,8 +143,6 @@ class CompetitionEventParticipantController extends Controller
 
         $competitionEventParticipant->update($validated);
 
-        CompetitionDataUpdated::publish($competitionEventParticipant, 'update');
-
         return response()->json([
             'success' => true,
             'message' => 'Participante actualizado correctamente.',
@@ -169,8 +163,6 @@ class CompetitionEventParticipantController extends Controller
         CompetitionEventParticipant $competitionEventParticipant
     ) {
         $competitionEventParticipant->delete();
-
-        CompetitionDataUpdated::publish($competitionEventParticipant, 'destroy');
 
         return response()->json([
             'success' => true,
@@ -276,8 +268,6 @@ class CompetitionEventParticipantController extends Controller
         $competitionEventParticipant->update([
             'status' => $validated['status'],
         ]);
-
-        CompetitionDataUpdated::publish($competitionEventParticipant, 'updateStatus');
 
         return response()->json([
             'success' => true,

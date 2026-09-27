@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Events\CompetitionDataUpdated;
 
 use App\Models\CompetitionEvent;
 use App\Models\CompetitionEventGroup;
@@ -238,7 +237,6 @@ class CompetitionEventLifecycleService
             'status' => 'finalizado',
         ]);
 
-        CompetitionDataUpdated::publish($event, 'finish');
 
         return $event->fresh();
     }

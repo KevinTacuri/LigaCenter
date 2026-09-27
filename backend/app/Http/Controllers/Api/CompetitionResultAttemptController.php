@@ -2,19 +2,21 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\CompetitionDataUpdated;
-
+use App\Events\CompetitionLiveUpdated;
 use App\Http\Controllers\Controller;
+use App\Models\CompetitionEventGroup;
 use App\Models\CompetitionResult;
 use App\Models\CompetitionResultAttempt;
 use App\Services\CompetitionResultService;
 use App\Models\CompetitionEventParticipantMember;
+use App\Services\CompetitionLiveService;
 use Illuminate\Http\Request;
 
 class CompetitionResultAttemptController extends Controller
 {
     public function __construct(
-        private CompetitionResultService $resultService
+        private CompetitionResultService $resultService,
+        private CompetitionLiveService $liveService
     ) {}
     /**
      * Listar intentos.
@@ -182,7 +184,11 @@ class CompetitionResultAttemptController extends Controller
             'member.championshipPlayer'
         );
 
-        CompetitionDataUpdated::publish($attempt, 'store');
+        // Broadcast Live service
+        $groupId = $competitionResult
+            ->groupParticipant
+            ->competition_event_group_id;
+        $this->broadcastGroupResults($groupId);
 
         return response()->json([
             'success' => true,
@@ -238,7 +244,13 @@ class CompetitionResultAttemptController extends Controller
 
         $this->resultService->syncResult($attempt->result);
 
-        CompetitionDataUpdated::publish($attempt, 'update');
+        // Broadcast live event
+        $groupId = $attempt
+            ->result
+            ->groupParticipant
+            ->competition_event_group_id;
+
+        $this->broadcastGroupResults($groupId);
 
         return response()->json([
             'success' => true,
@@ -264,16 +276,46 @@ class CompetitionResultAttemptController extends Controller
                     'No se puede eliminar un intento de un resultado oficializado.',
             ], 422);
         }
+        // Guarda el grupo antes de borrarlo para emitir el broadcast luego
+        $groupId = $attempt
+            ->result
+            ->groupParticipant
+            ->competition_event_group_id;
 
         $attempt->delete();
 
         $this->resultService->syncResult($attempt->result);
 
-        CompetitionDataUpdated::publish($attempt, 'destroy');
+        // Broadcast live event
+        $this->broadcastGroupResults($groupId);
 
         return response()->json([
             'success' => true,
             'message' => 'Intento eliminado correctamente.',
         ]);
+    }
+
+    private function broadcastGroupResults(int $groupId): void
+    {
+        $group = CompetitionEventGroup::with([
+            'stage.event.championshipDiscipline',
+        ])->find($groupId);
+
+        if (!$group) {
+            return;
+        }
+
+        $stage = $group->stage;
+        $event = $stage->event;
+
+        CompetitionLiveUpdated::publish(
+            eventId: $event->id,
+            championshipId:
+                $event->championshipDiscipline->championship_id,
+            stageId: $stage->id,
+            groupId: $group->id,
+            type: 'group-results',
+            data: $this->liveService->groupSnapshot($group),
+        );
     }
 }

@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\CompetitionDataUpdated;
-
 use App\Models\CompetitionEventGroup;
 use App\Models\CompetitionEventStage;
 use App\Http\Controllers\Controller;
@@ -107,8 +105,6 @@ class CompetitionEventGroupController extends Controller
 
         $group->load('venue');
 
-        CompetitionDataUpdated::publish($group, 'store');
-
         return response()->json([
             'success' => true,
             'message' =>
@@ -188,8 +184,6 @@ class CompetitionEventGroupController extends Controller
 
         $group->load('venue');
 
-        CompetitionDataUpdated::publish($group, 'update');
-
         return response()->json([
             'success' => true,
             'message' =>
@@ -202,8 +196,6 @@ class CompetitionEventGroupController extends Controller
         CompetitionEventGroup $group
     ) {
         $group->delete();
-
-        CompetitionDataUpdated::publish($group, 'destroy');
 
         return response()->json([
             'success' => true,
@@ -281,8 +273,6 @@ class CompetitionEventGroupController extends Controller
                 }
             }
         );
-
-        CompetitionDataUpdated::publish($competitionEventGroup, 'start');
 
         return response()->json([
             'success' => true,
@@ -456,8 +446,6 @@ class CompetitionEventGroupController extends Controller
                 ]);
             }
         );
-
-        CompetitionDataUpdated::publish($competitionEventGroup, 'finish');
 
         return response()->json([
             'success' => true,
