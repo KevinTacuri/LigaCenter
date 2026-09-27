@@ -20,10 +20,11 @@ export const GrupoEventoPublico = ({
 }: Props) => {
   const [open, setOpen] = useState(defaultOpen);
 
-  const fecha = group.date
-    ? new Date(
-        `${group.date}T${group.start_time || '00:00'}`
-      ).toLocaleString('es-ES', {
+  const fechaBase = group.date?.split('T')[0];
+  const hora = group.start_time || '00:00';
+
+  const fecha = fechaBase
+    ? new Date(`${fechaBase}T${hora}`).toLocaleString('es-ES', {
         day: '2-digit',
         month: 'short',
         hour: '2-digit',
@@ -35,7 +36,7 @@ export const GrupoEventoPublico = ({
     <div className="bg-[#0c0e16] border border-slate-800/70 rounded-lg overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-[#171a26] transition-colors"
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container-high transition-colors"
       >
         <div className="flex items-center gap-3 min-w-0">
           <span

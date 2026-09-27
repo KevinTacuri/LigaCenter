@@ -44,7 +44,7 @@ export const EtapaEventoPublico = ({
     <div className="bg-[#11131c] border border-slate-800 rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-[#171a26]/40 transition-colors"
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container-high transition-colors"
       >
         <div className="flex items-center gap-2">
           <span

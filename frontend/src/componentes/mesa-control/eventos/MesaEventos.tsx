@@ -645,7 +645,7 @@ const MesaEventos: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
 
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-2.5 text-xs text-slate-500">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-sm text-on-surface-variant pointer-events-none z-1">
                 search
               </span>
 
@@ -658,7 +658,7 @@ const MesaEventos: React.FC = () => {
                   )
                 }
                 placeholder="Buscar evento..."
-                className="w-full bg-[#171a26] border border-slate-850 text-xs text-white pl-9 pr-4 py-2 rounded-xl focus:border-indigo-650 focus:outline-hidden"
+                className="w-full bg-surface-bright border border-outline text-xs text-on-surface !pl-10 pr-4 py-2 rounded-xl focus:border-primary focus:outline-hidden"
               />
             </div>
 
@@ -888,7 +888,7 @@ const MesaEventos: React.FC = () => {
             setEtapas([]);
             setGruposPorEtapa({});
           }}
-          className="w-9 h-9 rounded-lg flex items-center justify-center border border-slate-800 hover:bg-[#171a26] text-slate-300 cursor-pointer"
+          className="w-9 h-9 rounded-lg flex items-center justify-center border border-outline hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface cursor-pointer transition-colors"
         >
           <span className="material-symbols-outlined text-sm">
             arrow_back
@@ -981,7 +981,7 @@ const MesaEventos: React.FC = () => {
                         etapa.id
                       )
                     }
-                    className="w-full p-5 text-left hover:bg-[#151821] transition-colors cursor-pointer"
+                    className="w-full p-5 text-left hover:bg-surface-container-high transition-colors cursor-pointer"
                   >
                     <div className="flex items-center justify-between gap-4">
                       {/* IZQUIERDA */}

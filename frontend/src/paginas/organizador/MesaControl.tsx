@@ -1125,8 +1125,8 @@ export const MesaControl: React.FC = () => {
               }
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 modoMesa === 'partidos'
-                  ? 'bg-[#800f2f] text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-[#171a26]'
+                  ? 'bg-primary text-on-primary shadow-sm'
+                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'
               }`}
             >
               <span className="material-symbols-outlined text-sm">
@@ -1143,8 +1143,8 @@ export const MesaControl: React.FC = () => {
               }
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 modoMesa === 'eventos'
-                  ? 'bg-[#800f2f] text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-[#171a26]'
+                  ? 'bg-primary text-on-primary shadow-sm'
+                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'
               }`}
             >
               <span className="material-symbols-outlined text-sm">

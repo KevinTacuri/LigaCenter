@@ -36,9 +36,9 @@ export const ResultadoIntentos = ({ results, updatedIds }: Props) => (
                 {result.attempts.map((attempt) => (
                   <span
                     key={attempt.id}
-                    className="px-2 py-1 rounded bg-slate-800 text-[10px] text-slate-300"
+                    className="px-2 py-1 rounded bg-surface-container-high text-[10px] text-on-surface-variant border border-outline"
                   >
-                    {attempt.value}
+                    {Number(Number(attempt.value).toFixed(2))}
                   </span>
                 ))}
               </div>
@@ -50,7 +50,7 @@ export const ResultadoIntentos = ({ results, updatedIds }: Props) => (
               </p>
 
               <p className="text-sm font-bold text-white">
-                {result.result_value ?? '—'}
+                {result.result_value ? Number(Number(result.result_value).toFixed(2)) : '—'}
                 {result.result_unit
                   ? ` ${result.result_unit}`
                   : ''}

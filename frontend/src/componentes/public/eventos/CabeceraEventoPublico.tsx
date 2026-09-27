@@ -18,6 +18,13 @@ const etiquetas = {
   qualifying_final: 'Clasificación | Final',
 };
 
+const badgeClass = `
+  text-[10px] px-2 py-1 rounded
+  bg-surface-container-high
+  text-on-surface
+  border border-outline
+`;
+
 export const CabeceraEventoPublico = ({ evento }: Props) => (
   <div className="bg-[#11131c] border border-slate-800 rounded-xl p-5">
     <div className="flex justify-between items-start gap-3">
@@ -40,16 +47,16 @@ export const CabeceraEventoPublico = ({ evento }: Props) => (
           </span>
         </div>
         <div className="flex flex-wrap gap-2 mt-2">
-            <span className="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-300">
+            <span className={badgeClass}>
                 {etiquetas[evento.event_type as keyof typeof etiquetas] || evento.event_type}
             </span>
 
-            <span className="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-300">
+            <span className={badgeClass}>
                 {etiquetas[evento.participation_type as keyof typeof etiquetas] || evento.participation_type}
             </span>
 
             {evento.competition_format && (
-                <span className="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-300">
+                <span className={badgeClass}>
                     {etiquetas[evento.competition_format as keyof typeof etiquetas] || evento.competition_format}
                 </span>
             )}
