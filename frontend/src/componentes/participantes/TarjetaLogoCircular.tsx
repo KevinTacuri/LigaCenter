@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface TarjetaLogoCircularProps {
   nombre: string;
@@ -23,6 +23,21 @@ export const TarjetaLogoCircular: React.FC<TarjetaLogoCircularProps> = ({
 }) => {
   const urlResuelta = resolverUrl ? resolverUrl(logo || null) : logo || null;
   const clasesTamanio = TAMANIOS[tamanio];
+  const [temaActual, setTemaActual] = useState<'light' | 'dark'>(() =>
+    document.documentElement.classList.contains('light') ? 'light' : 'dark'
+  );
+
+  useEffect(() => {
+    const actualizarTema = () => {
+      setTemaActual(document.documentElement.classList.contains('light') ? 'light' : 'dark');
+    };
+
+    actualizarTema();
+    const observer = new MutationObserver(actualizarTema);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
+  }, []);
 
   if (urlResuelta) {
     return (
@@ -35,9 +50,15 @@ export const TarjetaLogoCircular: React.FC<TarjetaLogoCircularProps> = ({
   }
 
   const inicial = nombre?.trim()?.[0]?.toUpperCase() || '?';
+  const esModoClaro = temaActual === 'light';
+
   return (
     <div
-      className={`${clasesTamanio} rounded-full border border-slate-200 bg-slate-100 flex items-center justify-center font-bold text-slate-500 shrink-0 ${className}`}
+      className={`${clasesTamanio} rounded-full border border-[var(--primary)]/30 flex items-center justify-center font-black shrink-0 ${className}`}
+      style={{
+        backgroundColor: esModoClaro ? 'rgba(25, 59, 112, 0.5)' : 'rgba(255, 255, 255, 0.5)',
+        color: esModoClaro ? '#ffffff' : 'var(--primary)',
+      }}
     >
       {inicial}
     </div>

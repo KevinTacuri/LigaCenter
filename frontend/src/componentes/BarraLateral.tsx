@@ -43,7 +43,7 @@ const subMenus: Record<string, SubItemMenu[]> = {
     { id: 'categorias', titulo: 'Categorías', query: 'tab=categorias' },
     { id: 'equipos', titulo: 'Equipos', query: 'tab=equipos' },
     { id: 'jugadores', titulo: 'Jugadores', query: 'tab=jugadores' },
-    { id: 'registro-equipo', titulo: 'Inscripción Rápida', query: 'tab=registro-equipo' },
+    // { id: 'registro-equipo', titulo: 'Inscripción Rápida', query: 'tab=registro-equipo' },
     { id: 'planilla-jugadores', titulo: 'Planilla Jugadores', query: 'tab=planilla-jugadores' },
   ],
   fixture: [
