@@ -204,6 +204,96 @@ export interface ChampionshipStats {
     }>;
 }
 
+export interface PublicCompetitionEvent {
+  id: number;
+  name: string;
+  event_type: string;
+  status: string;
+
+  championship_id: number;
+  championship_name?: string;
+
+  discipline_id: number;
+  discipline_name?: string;
+
+  category_id: number;
+  category_name?: string;
+
+  date?: string | null;
+  start_time?: string | null;
+
+  venue?: {
+    id: number;
+    name: string;
+  } | null;
+
+  current_stage?: {
+    id: number;
+    name: string;
+    stage_type: string;
+    status: string;
+  } | null;
+
+  current_group?: {
+    id: number;
+    name: string;
+    status: string;
+  } | null;
+}
+
+export interface PublicEventStage {
+  id: number;
+  name: string;
+  stage_type: string;
+  stage_number: number;
+  status: string;
+  groups: PublicEventGroup[];
+  qualification_method?: 'best_overall' | 'best_per_group' | 'all' | 'none' | null;
+  qualifiers_count?: number | null;
+  qualifiers_per_group?: number | null;
+  podium_places?: number | null;
+}
+
+export interface PublicEventGroup {
+  id: number;
+  name: string;
+  group_number: number;
+  status: string;
+  date?: string | null;
+  start_time?: string | null;
+}
+
+export interface PublicCompetitionEventDetail extends PublicCompetitionEvent {
+  participation_type: string;
+  competition_format?: string | null;
+  result_aggregation?: string | null;
+  participants_count: number;
+  stages: PublicEventStage[];
+}
+
+export interface PublicCompetitionResult {
+  id: number;
+  result_value?: string | null;
+  result_unit?: string | null;
+  position?: number | null;
+  tiebreak_order?: number | null;
+  status: string;
+  lane?: number | null;
+  start_order?: number | null;
+
+  participant?: {
+    type: 'player' | 'team';
+    id: number;
+    name: string;
+  } | null;
+
+  attempts: {
+    id: number;
+    attempt_number: number;
+    value: string;
+  }[];
+}
+
 export const publicApi = {
     search: (query: string) =>
         apiPublic.get<{ success: boolean; data: SearchResults; message: string }>('/public/search', { 
@@ -299,6 +389,20 @@ export const publicApi = {
 
     getPlayer: (id: number) =>
         apiPublic.get<{ success: boolean; data: any; message: string }>(`/public/players/${id}`),
+
+    getCompetitionEvents: (params?: {
+        championship_id?: number;
+        discipline_id?: number;
+        category_id?: number;
+        status?: string;
+    }) =>
+    apiPublic.get('/public/competition-events', { params }),
+
+    getHighlightedEvents: () => apiPublic.get('/public/competition-events/highlighted'),
+
+    getCompetitionEvent: (id: number) => apiPublic.get(`/public/competition-events/${id}`),
+
+    getCompetitionGroupResults: (groupId: number) => apiPublic.get(`/public/competition-event-groups/${groupId}/results`),
 };
 
 export default apiPublic;
