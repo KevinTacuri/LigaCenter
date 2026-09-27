@@ -36,3 +36,24 @@ export const registrarCanalPartido = (matchId: number) => {
 export const registrarCanalCampeonato = (championshipId: number) => {
   return echo.channel(`championship.${championshipId}`);
 };
+
+export const suscribirLiveCompetencia = (
+  channelName: string,
+  callback: (data: any) => void,
+) => {
+  const channel = echo.channel(channelName);
+
+  channel.listen(
+    '.competition.live.updated',
+    callback,
+  );
+
+  return () => {
+    channel.stopListening(
+      '.competition.live.updated',
+      callback,
+    );
+
+    echo.leave(channelName);
+  };
+};
