@@ -121,6 +121,7 @@ export const Perfil: React.FC = () => {
           ].map((tab) => (
             <button
               key={tab.id}
+              id={`tab-${tab.id}`}
               onClick={() => setTabActiva(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 tabActiva === tab.id
@@ -139,7 +140,7 @@ export const Perfil: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
             {/* Card de identidad */}
-            <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 flex flex-col items-center gap-4 shadow-xs text-center">
+            <div id="perfil-identity-card" className="bg-[var(--surface-card-azul)] border border-[var(--outline)] rounded-2xl p-6 flex flex-col items-center gap-4 shadow-xs text-center">
               <div className={`w-20 h-20 rounded-full border-2 flex items-center justify-center ${colorAvatar.bg}`}>
                 <span className={`text-3xl font-black ${colorAvatar.text}`}>{inicialUsuario}</span>
               </div>
@@ -164,8 +165,8 @@ export const Perfil: React.FC = () => {
             </div>
 
             {/* Formulario de edición */}
-            <div className="md:col-span-2 bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs space-y-5">
-              <div className="border-b border-slate-900 pb-4">
+            <div id="perfil-form-card" className="md:col-span-2 bg-[var(--surface-card-verde)] border border-[var(--outline)] rounded-2xl p-6 shadow-xs space-y-5">
+              <div className="border-b border-[var(--outline)] pb-4">
                 <h2 className="text-sm font-extrabold text-white">Editar Información Personal</h2>
                 <p className="text-xs text-slate-455 mt-1">Los cambios se reflejan inmediatamente en el sistema.</p>
               </div>
@@ -268,39 +269,46 @@ export const Perfil: React.FC = () => {
         {/* Panel: Guía del Torneo */}
         {tabActiva === 'guia' && (
           <div className="space-y-4">
-            <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs">
-              <div className="border-b border-slate-900 pb-4 mb-6">
-                <h2 className="text-sm font-extrabold text-white flex items-center gap-2">
-                  <span className="material-symbols-outlined text-indigo-400 text-base">help</span>
+            <div id="guia-torneo-card" className="bg-[var(--surface-card-azul)] border border-[var(--outline)] rounded-2xl p-6 shadow-xs">
+              <div className="border-b border-[var(--outline)] pb-4 mb-6">
+                <h2 className="text-sm font-extrabold text-[var(--surface-card-title)] flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[var(--text-accent)] text-base">help</span>
                   Guía del Ciclo de Vida del Torneo
                 </h2>
-                <p className="text-xs text-slate-450 mt-1 leading-relaxed">
+                <p className="text-xs text-[var(--on-surface-variant)] mt-1 leading-relaxed">
                   Sigue esta secuencia de pasos para configurar y gestionar tu campeonato correctamente de principio a fin.
                 </p>
               </div>
 
               <div className="space-y-3">
-                {PASOS_TORNEO.map((paso) => (
-                  <div key={paso.step} className="flex gap-4 p-4 rounded-xl border border-slate-850 bg-[#171a26] hover:bg-[#1c1f2e] transition-colors">
+                {PASOS_TORNEO.map((paso, index) => (
+                  <div
+                    key={paso.step}
+                    className={`flex gap-4 p-4 rounded-xl border border-[var(--outline)] transition-colors ${
+                      index % 2 === 0
+                        ? 'bg-[var(--surface-card-azul)]'
+                        : 'bg-[var(--surface-card-verde)]'
+                    }`}
+                  >
                     <div className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${paso.color}`}>
                       <span className="material-symbols-outlined text-base">{paso.icon}</span>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] font-black text-slate-505 uppercase tracking-widest">Paso {paso.step}</span>
+                        <span className="text-[10px] font-black text-[var(--on-surface-variant)] uppercase tracking-widest">Paso {paso.step}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-extrabold text-white leading-none mb-1.5">{paso.title}</h3>
+                        <h3 className="text-sm font-extrabold text-[var(--surface-card-title)] leading-none mb-1.5">{paso.title}</h3>
                       </div>
-                      <p className="text-xs text-slate-450 leading-relaxed font-medium">{paso.desc}</p>
+                      <p className="text-xs text-[var(--on-surface-variant)] leading-relaxed font-medium">{paso.desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-900 flex items-center justify-between text-xs text-slate-450">
+              <div className="mt-6 pt-4 border-t border-[var(--outline)] flex items-center justify-between text-xs text-[var(--on-surface-variant)]">
                 <span className="font-semibold">¿Tienes problemas? Escríbenos.</span>
-                <a href="mailto:soporte@ligacenter.com" className="text-indigo-400 font-bold hover:underline">
+                <a href="mailto:soporte@ligacenter.com" className="text-[var(--text-accent)] font-bold hover:underline">
                   soporte@ligacenter.com
                 </a>
               </div>

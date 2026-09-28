@@ -450,12 +450,12 @@ export const EstadisticasOrganizador: React.FC = () => {
 
   if (cargando || loading) {
     return (
-      <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans">
+      <div className="min-h-screen bg-[var(--background)] text-[var(--on-surface)] font-sans">
         <BarraLateral rol={usuario?.roles?.[0] || 'organizador'} />
         <div className="lg:ml-64 flex items-center justify-center min-h-screen">
           <div className="flex flex-col items-center gap-4">
-            <div className="w-10 h-10 rounded-full border-4 border-slate-800 border-t-indigo-500 animate-spin" />
-            <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Cargando estadísticas...</span>
+            <div className="w-10 h-10 rounded-full border-4 border-[var(--outline)] border-t-[var(--primary)] animate-spin" />
+            <span className="text-xs text-on-surface-variant font-bold uppercase tracking-widest">Cargando estadísticas...</span>
           </div>
         </div>
       </div>
@@ -467,7 +467,7 @@ export const EstadisticasOrganizador: React.FC = () => {
   const disciplinaActual = getDisciplinaActual();
 
   return (
-    <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans">
+    <div className="min-h-screen bg-[var(--background)] text-[var(--on-surface)] font-sans">
       <BarraLateral rol={usuario.roles?.[0] || 'organizador'} />
       
       <div className="lg:ml-64 flex flex-col min-h-screen">
@@ -475,11 +475,11 @@ export const EstadisticasOrganizador: React.FC = () => {
 
         <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto space-y-6 px-4 md:px-8">
 
-          <div className="bg-[#11131c] border border-slate-900 rounded-xl p-5 space-y-4">
+          <div className="bg-[var(--surface-card-elevated)] border border-[var(--outline)] rounded-2xl p-5 space-y-4 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4">
               {disciplinas.length > 0 && (
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Disciplina</label>
+                  <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Disciplina</label>
                   <select
                     value={selectedDiscipline || ''}
                     onChange={(e) => {
@@ -489,7 +489,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                       setTotalEquipos(0);
                       setPaginaPartidos(1);
                     }}
-                    className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
+                    className="text-xs bg-[var(--surface)] border border-[var(--outline)] text-[var(--on-surface)] rounded-lg px-3 py-2 outline-none focus:border-[var(--primary)] w-full min-w-[150px]"
                   >
                     {disciplinas.map(d => (
                       <option key={d.id} value={d.id}>{d.name}</option>
@@ -500,7 +500,7 @@ export const EstadisticasOrganizador: React.FC = () => {
 
               {categorias.length > 0 && (
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Categoría</label>
+                  <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Categoría</label>
                   <select
                     value={selectedCategory || ''}
                     onChange={(e) => {
@@ -509,7 +509,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                       setTotalEquipos(0);
                       setPaginaPartidos(1);
                     }}
-                    className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
+                    className="text-xs bg-[var(--surface)] border border-[var(--outline)] text-[var(--on-surface)] rounded-lg px-3 py-2 outline-none focus:border-[var(--primary)] w-full min-w-[150px]"
                   >
                     <option value="">Seleccionar categoría</option>
                     {categorias
@@ -522,14 +522,14 @@ export const EstadisticasOrganizador: React.FC = () => {
               )}
 
               <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estado</label>
+                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Estado</label>
                 <select
                   value={filterStatus}
                   onChange={(e) => {
                     setFilterStatus(e.target.value);
                     setPaginaPartidos(1);
                   }}
-                  className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
+                  className="text-xs bg-[var(--surface)] border border-[var(--outline)] text-[var(--on-surface)] rounded-lg px-3 py-2 outline-none focus:border-[var(--primary)] w-full min-w-[150px]"
                 >
                   <option value="todos">Todos</option>
                   <option value="programado">Programados</option>
@@ -540,14 +540,14 @@ export const EstadisticasOrganizador: React.FC = () => {
 
               {rondasDisponibles.length > 0 && (
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Jornada</label>
+                  <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Jornada</label>
                   <select
                     value={selectedRound ?? ''}
                     onChange={(e) => {
                       setSelectedRound(e.target.value ? Number(e.target.value) : null);
                       setPaginaPartidos(1);
                     }}
-                    className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
+                    className="text-xs bg-[var(--surface)] border border-[var(--outline)] text-[var(--on-surface)] rounded-lg px-3 py-2 outline-none focus:border-[var(--primary)] w-full min-w-[150px]"
                   >
                     <option value="">Todas</option>
                     {rondasDisponibles.map(r => (
@@ -559,14 +559,14 @@ export const EstadisticasOrganizador: React.FC = () => {
 
               {equiposFiltrados.length > 0 && (
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Equipo</label>
+                  <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Equipo</label>
                   <select
                     value={selectedTeamPartido ?? ''}
                     onChange={(e) => {
                       setSelectedTeamPartido(e.target.value ? Number(e.target.value) : null);
                       setPaginaPartidos(1);
                     }}
-                    className="text-xs bg-[#0c0e16] border border-slate-800 text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-indigo-500/50 w-full min-w-[150px]"
+                    className="text-xs bg-[var(--surface)] border border-[var(--outline)] text-[var(--on-surface)] rounded-lg px-3 py-2 outline-none focus:border-[var(--primary)] w-full min-w-[150px]"
                   >
                     <option value="">Todos</option>
                     {equiposFiltrados.map(eq => (
@@ -583,7 +583,7 @@ export const EstadisticasOrganizador: React.FC = () => {
                     loadData();
                   }}
                   disabled={loading}
-                  className="text-xs bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 px-3 py-2 rounded-lg transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="text-xs bg-[var(--surface-card-celeste)] hover:bg-[var(--surface-card-celeste)]/80 border border-[var(--outline)] text-[var(--on-surface)] px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-xs hover:-translate-y-0.5"
                 >
                   <span className="material-symbols-outlined text-sm">refresh</span>
                   {loading ? 'Cargando...' : 'Recargar'}
@@ -600,30 +600,30 @@ export const EstadisticasOrganizador: React.FC = () => {
           )}
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-[#11131c] border border-slate-900 rounded-xl p-5 text-center">
-              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Equipos</p>
-              <p className="text-2xl font-black text-white mt-1">{stats.totalTeams}</p>
+            <div className="bg-[var(--surface-card-azul)] border border-[var(--outline)] rounded-2xl p-5 text-center shadow-xs">
+              <p className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Equipos</p>
+              <p className="text-2xl font-black text-[var(--surface-card-title)] mt-1">{stats.totalTeams}</p>
             </div>
-            <div className="bg-[#11131c] border border-slate-900 rounded-xl p-5 text-center">
-              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Partidos</p>
-              <p className="text-2xl font-black text-white mt-1">{stats.totalMatches}</p>
+            <div className="bg-[var(--surface-card-verde)] border border-[var(--outline)] rounded-2xl p-5 text-center shadow-xs">
+              <p className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Partidos</p>
+              <p className="text-2xl font-black text-[var(--surface-card-title)] mt-1">{stats.totalMatches}</p>
             </div>
-            <div className="bg-[#11131c] border border-slate-900 rounded-xl p-5 text-center">
-              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Goles Totales</p>
-              <p className="text-2xl font-black text-white mt-1">{stats.totalGoals}</p>
+            <div className="bg-[var(--surface-card-azul)] border border-[var(--outline)] rounded-2xl p-5 text-center shadow-xs">
+              <p className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Goles Totales</p>
+              <p className="text-2xl font-black text-[var(--surface-card-title)] mt-1">{stats.totalGoals}</p>
             </div>
-            <div className="bg-[#11131c] border border-slate-900 rounded-xl p-5 text-center">
-              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Promedio Goles</p>
-              <p className="text-2xl font-black text-white mt-1">{stats.avgGoals}</p>
+            <div className="bg-[var(--surface-card-verde)] border border-[var(--outline)] rounded-2xl p-5 text-center shadow-xs">
+              <p className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Promedio Goles</p>
+              <p className="text-2xl font-black text-[var(--surface-card-title)] mt-1">{stats.avgGoals}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            <div id="seccion-posiciones" className="lg:col-span-2 bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden scroll-mt-4">
-              <div className="px-5 py-3 border-b border-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <span className="material-symbols-outlined text-indigo-400 text-base">leaderboard</span>
+            <div id="seccion-posiciones" className="lg:col-span-2 bg-[var(--surface-card-elevated)] border border-[var(--outline)] rounded-2xl overflow-hidden scroll-mt-4 shadow-xs">
+              <div className="px-5 py-3 border-b border-[var(--outline)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <h3 className="text-sm font-bold text-[var(--surface-card-title)] uppercase tracking-wider flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[var(--text-accent)] text-base">leaderboard</span>
                   {categoriaActual?.format === 'eliminacion_directa' ? 'Llaves de Eliminación Directa' : 'Tabla de Posiciones'}
                 </h3>
                 
@@ -955,14 +955,14 @@ export const EstadisticasOrganizador: React.FC = () => {
               </div>
             </div>
 
-            <div id="seccion-goleadores" className="bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden scroll-mt-4">
-              <div className="px-5 py-3 border-b border-slate-900">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <span className="material-symbols-outlined text-amber-400 text-base">sports_soccer</span>
+            <div id="seccion-goleadores" className="bg-[var(--surface-card-azul)] border border-[var(--outline)] rounded-2xl overflow-hidden scroll-mt-4 shadow-xs">
+              <div className="px-5 py-3 border-b border-[var(--outline)]">
+                <h3 className="text-sm font-bold text-[var(--surface-card-title)] uppercase tracking-wider flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[var(--text-accent)] text-base">sports_soccer</span>
                   Máximos Goleadores
                 </h3>
               </div>
-              <div className="divide-y divide-slate-800">
+              <div className="divide-y divide-[var(--outline)]">
                 {topScorers.length === 0 ? (
                   <div className="p-6 text-center text-slate-500 text-sm">
                     No hay datos de goleadores disponibles
@@ -993,13 +993,13 @@ export const EstadisticasOrganizador: React.FC = () => {
             </div>
           </div>
 
-          <div id="seccion-partidos" className="bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden scroll-mt-4">
-            <div className="px-5 py-3 border-b border-slate-900 flex justify-between items-center">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <span className="material-symbols-outlined text-indigo-400 text-base">calendar_today</span>
+          <div id="seccion-partidos" className="bg-[var(--surface-card-azul)] border border-[var(--outline)] rounded-2xl overflow-hidden scroll-mt-4 shadow-xs">
+            <div className="px-5 py-3 border-b border-[var(--outline)] flex justify-between items-center">
+              <h3 className="text-sm font-bold text-[var(--surface-card-title)] uppercase tracking-wider flex items-center gap-2">
+                <span className="material-symbols-outlined text-[var(--text-accent)] text-base">calendar_today</span>
                 Partidos
               </h3>
-              <span className="text-[10px] text-slate-400">
+              <span className="text-[10px] text-on-surface-variant">
                 {partidos.length} encuentros totales
                 {(filterStatus !== 'todos' || selectedRound || selectedTeamPartido) && (
                   <span className="ml-1">
@@ -1015,26 +1015,26 @@ export const EstadisticasOrganizador: React.FC = () => {
                 </div>
               ) : (
                 partidosPaginados.map(match => (
-                  <div key={match.id} className="bg-[#171a26]/40 border border-slate-800 rounded-lg p-3 hover:border-indigo-500/30 transition-all">
-                    <div className="flex justify-between items-center text-[10px] text-slate-400 mb-2">
+                  <div key={match.id} className="bg-[var(--surface-card-celeste)] border border-[var(--outline)] rounded-xl p-3 hover:border-[var(--text-accent)]/40 transition-all shadow-xs">
+                    <div className="flex justify-between items-center text-[10px] text-on-surface-variant mb-2">
                       <span>{match.discipline?.name || '—'}</span>
                       <span>{match.category?.name || '—'}</span>
                       {getStatusBadge(match.status)}
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className="font-bold text-sm text-white truncate">{obtenerNombreEquipo(match.local_team?.name) || (match as any).placeholder_text_home || 'Local'}</p>
+                        <p className="font-bold text-sm text-[var(--surface-card-title)] truncate">{obtenerNombreEquipo(match.local_team?.name) || (match as any).placeholder_text_home || 'Local'}</p>
                       </div>
                       <div className="flex items-center gap-2 px-3">
-                        <span className="font-bold text-base text-indigo-400">{getLocalScore(match)}</span>
-                        <span className="text-slate-500 text-xs font-bold">VS</span>
-                        <span className="font-bold text-base text-indigo-400">{getVisitorScore(match)}</span>
+                        <span className="font-bold text-base text-[var(--text-accent)]">{getLocalScore(match)}</span>
+                        <span className="text-on-surface-variant text-xs font-bold">VS</span>
+                        <span className="font-bold text-base text-[var(--text-accent)]">{getVisitorScore(match)}</span>
                       </div>
                       <div className="flex-1 text-right">
-                        <p className="font-bold text-sm text-white truncate">{obtenerNombreEquipo(match.visitor_team?.name) || (match as any).placeholder_text_away || 'Visitante'}</p>
+                        <p className="font-bold text-sm text-[var(--surface-card-title)] truncate">{obtenerNombreEquipo(match.visitor_team?.name) || (match as any).placeholder_text_away || 'Visitante'}</p>
                       </div>
                     </div>
-                    <div className="mt-2 text-[9px] text-slate-500 flex justify-between">
+                    <div className="mt-2 text-[9px] text-on-surface-variant flex justify-between">
                       <span>{match.match_date ? new Date(match.match_date).toLocaleDateString() : '—'}</span>
                       <span>{match.venue?.name || '—'}</span>
                     </div>
@@ -1065,16 +1065,16 @@ export const EstadisticasOrganizador: React.FC = () => {
             )}
           </div>
 
-          <div id="seccion-sanciones" className="bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden scroll-mt-4">
-            <div className="px-5 py-3 border-b border-slate-900 flex items-center justify-between gap-3 flex-wrap">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <span className="material-symbols-outlined text-rose-400 text-base">gavel</span>
+          <div id="seccion-sanciones" className="bg-[var(--surface-card-verde)] border border-[var(--outline)] rounded-2xl overflow-hidden scroll-mt-4 shadow-xs">
+            <div className="px-5 py-3 border-b border-[var(--outline)] flex items-center justify-between gap-3 flex-wrap">
+              <h3 className="text-sm font-bold text-[var(--surface-card-title)] uppercase tracking-wider flex items-center gap-2">
+                <span className="material-symbols-outlined text-[var(--text-accent)] text-base">gavel</span>
                 Sanciones Activas
               </h3>
               <select
                 value={selectedTeamSancion ?? ''}
                 onChange={(e) => setSelectedTeamSancion(e.target.value ? parseInt(e.target.value) : null)}
-                className="bg-[#171a26] border border-slate-800 text-slate-300 text-[10px] rounded-md px-2 py-1 outline-hidden font-bold cursor-pointer"
+                className="bg-[var(--surface)] border border-[var(--outline)] text-[var(--on-surface)] text-[10px] rounded-md px-2 py-1 outline-hidden font-bold cursor-pointer"
               >
                 <option value="">Todos los equipos</option>
                 {equiposFiltrados.map((eq) => (
@@ -1085,7 +1085,7 @@ export const EstadisticasOrganizador: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#171a26] text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                  <tr className="bg-[var(--surface)] text-on-surface-variant text-[10px] font-bold uppercase tracking-wider">
                     <th className="p-3 pl-5">Jugador</th>
                     <th className="p-3">Equipo</th>
                     <th className="p-3">Motivo</th>
@@ -1094,26 +1094,26 @@ export const EstadisticasOrganizador: React.FC = () => {
                     <th className="p-3 pr-5 text-right">Estado</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody className="divide-y divide-[var(--outline)]">
                   {sanciones.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-6 text-center text-slate-500 text-sm">
+                      <td colSpan={6} className="p-6 text-center text-[var(--on-surface-variant)] text-sm">
                         No hay sanciones registradas
                       </td>
                     </tr>
                   ) : (
                     sancionesPaginadas.map(san => (
-                      <tr key={san.id} className="hover:bg-[#171a26]/40 transition-colors">
-                        <td className="p-3 pl-5 font-bold text-white text-sm">{san.player?.name || '—'}</td>
-                        <td className="p-3 text-slate-300">{obtenerNombreEquipo(san.player?.team?.name)}</td>
-                        <td className="p-3 text-slate-400 text-xs max-w-[150px] truncate">{san.reason}</td>
-                        <td className="p-3 text-slate-400 text-xs">{new Date(san.start_date).toLocaleDateString()}</td>
-                        <td className="p-3 text-slate-300">{san.duration || 0} partido{san.duration !== 1 ? 's' : ''}</td>
+                      <tr key={san.id} className="odd:bg-[var(--surface-card-celeste)]/30 even:bg-[var(--surface-card-azul)]/10 hover:bg-[var(--surface-card-elevated-hover)]/90 transition-colors">
+                        <td className="p-3 pl-5 font-bold text-[var(--surface-card-title)] text-sm">{san.player?.name || '—'}</td>
+                        <td className="p-3 text-[var(--on-surface)]">{obtenerNombreEquipo(san.player?.team?.name)}</td>
+                        <td className="p-3 text-on-surface-variant text-xs max-w-[150px] truncate">{san.reason}</td>
+                        <td className="p-3 text-on-surface-variant text-xs">{new Date(san.start_date).toLocaleDateString()}</td>
+                        <td className="p-3 text-[var(--on-surface)]">{san.duration || 0} partido{san.duration !== 1 ? 's' : ''}</td>
                         <td className="p-3 pr-5 text-right">
                           <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
                             san.status === 'activa' || san.status === 'activo' 
-                              ? 'bg-rose-500/20 text-rose-400' 
-                              : 'bg-emerald-500/20 text-emerald-400'
+                              ? 'bg-rose-500/20 text-rose-300' 
+                              : 'bg-emerald-500/20 text-emerald-300'
                           }`}>
                             {san.status === 'activa' || san.status === 'activo' ? 'Activa' : 'Cumplida'}
                           </span>
@@ -1126,21 +1126,21 @@ export const EstadisticasOrganizador: React.FC = () => {
             </div>
 
             {totalPaginasSanciones > 1 && (
-              <div className="flex items-center justify-center gap-3 py-3 border-t border-slate-800">
+              <div className="flex items-center justify-center gap-3 py-3 border-t border-[var(--outline)]">
                 <button
                   onClick={() => setPaginaSanciones(prev => Math.max(1, prev - 1))}
                   disabled={paginaSanciones === 1}
-                  className="px-4 py-1.5 rounded-lg bg-[#171a26] border border-slate-800 text-xs font-bold text-slate-400 hover:text-white hover:border-indigo-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  className="px-4 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--outline)] text-xs font-bold text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] hover:border-[var(--primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                 >
                   Anterior
                 </button>
-                <span className="text-xs text-slate-500 font-medium">
+                <span className="text-xs text-[var(--on-surface-variant)] font-medium">
                   Página {paginaSanciones} de {totalPaginasSanciones} ({sanciones.length} sanciones)
                 </span>
                 <button
                   onClick={() => setPaginaSanciones(prev => Math.min(totalPaginasSanciones, prev + 1))}
                   disabled={paginaSanciones === totalPaginasSanciones}
-                  className="px-4 py-1.5 rounded-lg bg-[#171a26] border border-slate-800 text-xs font-bold text-slate-400 hover:text-white hover:border-indigo-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  className="px-4 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--outline)] text-xs font-bold text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] hover:border-[var(--primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                 >
                   Siguiente
                 </button>
@@ -1150,7 +1150,7 @@ export const EstadisticasOrganizador: React.FC = () => {
 
         </main>
 
-        <footer className="bg-[#11131c] border-t border-slate-900 py-4 text-center text-xs text-slate-400">
+        <footer className="bg-[var(--surface-card-elevated)] border-t border-[var(--outline)] py-4 text-center text-xs text-on-surface-variant">
           <p>© 2026 LigaCenter. Estadísticas y posiciones del campeonato.</p>
         </footer>
       </div>

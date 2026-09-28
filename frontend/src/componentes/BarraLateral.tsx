@@ -53,11 +53,6 @@ const subMenus: Record<string, SubItemMenu[]> = {
     { id: 'partidos', titulo: 'Partidos', query: 'tab=partidos' },
     { id: 'eventos', titulo: 'Eventos', query: 'tab=eventos' },
   ],
-  posiciones: [
-    { id: 'posiciones', titulo: 'Tabla Posiciones', query: 'tab=posiciones' },
-    { id: 'partidos', titulo: 'Calendario Partidos', query: 'tab=partidos' },
-    { id: 'sanciones', titulo: 'Sanciones', query: 'tab=sanciones' },
-  ],
 };
 
 export const BarraLateral: React.FC<Props> = ({ rol }) => {
@@ -89,6 +84,7 @@ export const BarraLateral: React.FC<Props> = ({ rol }) => {
   };
 
   const getSubMenus = (itemId: string): SubItemMenu[] => {
+    if (itemId === 'posiciones') return [];
     const items = subMenus[itemId] || [];
     if (esDelegadoPuro) {
       if (itemId === 'teams') {

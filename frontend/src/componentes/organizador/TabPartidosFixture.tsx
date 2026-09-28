@@ -50,16 +50,16 @@ export const TabPartidosFixture: React.FC<TabPartidosFixtureProps> = ({
 }) => {
   return (
     <div className="bg-[var(--surface-container-low)] rounded-2xl border border-[var(--outline)] p-6 shadow-xs">
-      <h2 className="font-extrabold text-base text-slate-900 mb-4 border-b border-slate-100 pb-2">Programación de Partidos</h2>
+      <h2 className="font-extrabold text-base text-[var(--on-surface)] mb-4 border-b border-[var(--outline)] pb-2">Programación de Partidos</h2>
 
       <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 mb-4">
         {rondasDisponibles.length > 0 && (
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Jornada</label>
+            <label className="block text-[10px] font-bold text-[var(--on-surface-variant)] uppercase tracking-wider">Jornada</label>
             <select
               value={filtros.ronda ?? ''}
               onChange={(e) => setRonda(e.target.value ? Number(e.target.value) : null)}
-              className="w-full sm:w-auto text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 outline-none focus:border-primary/50 cursor-pointer"
+              className="w-full sm:w-auto text-xs bg-[var(--surface)] border border-[var(--outline)] text-[var(--on-surface)] rounded-lg px-3 py-2 outline-none focus:border-[var(--primary)] cursor-pointer"
             >
               <option value="">Todas</option>
               {rondasDisponibles.map((ronda) => (
@@ -71,11 +71,11 @@ export const TabPartidosFixture: React.FC<TabPartidosFixtureProps> = ({
 
         {equiposEnPartidos.length > 0 && (
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Equipo</label>
+            <label className="block text-[10px] font-bold text-[var(--on-surface-variant)] uppercase tracking-wider">Equipo</label>
             <select
               value={filtros.equipo ?? ''}
               onChange={(e) => setEquipo(e.target.value ? Number(e.target.value) : null)}
-              className="w-full sm:w-auto text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 outline-none focus:border-primary/50 cursor-pointer"
+              className="w-full sm:w-auto text-xs bg-[var(--surface)] border border-[var(--outline)] text-[var(--on-surface)] rounded-lg px-3 py-2 outline-none focus:border-[var(--primary)] cursor-pointer"
             >
               <option value="">Todos</option>
               {equiposEnPartidos.map(([id, nombre]) => (
@@ -86,11 +86,11 @@ export const TabPartidosFixture: React.FC<TabPartidosFixtureProps> = ({
         )}
 
         <div className="space-y-1.5">
-          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Estado</label>
+          <label className="block text-[10px] font-bold text-[var(--on-surface-variant)] uppercase tracking-wider">Estado</label>
           <select
             value={filtros.estado}
             onChange={(e) => setEstado(e.target.value)}
-            className="w-full sm:w-auto text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 outline-none focus:border-primary/50 cursor-pointer"
+            className="w-full sm:w-auto text-xs bg-[var(--surface)] border border-[var(--outline)] text-[var(--on-surface)] rounded-lg px-3 py-2 outline-none focus:border-[var(--primary)] cursor-pointer"
           >
             <option value="todos">Todos</option>
             <option value="programado">Programado</option>
@@ -103,11 +103,11 @@ export const TabPartidosFixture: React.FC<TabPartidosFixtureProps> = ({
 
         {escenarios.length > 0 && (
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cancha</label>
+            <label className="block text-[10px] font-bold text-[var(--on-surface-variant)] uppercase tracking-wider">Cancha</label>
             <select
               value={filtros.cancha ?? ''}
               onChange={(e) => setCancha(e.target.value ? Number(e.target.value) : null)}
-              className="w-full sm:w-auto text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 outline-none focus:border-primary/50 cursor-pointer"
+              className="w-full sm:w-auto text-xs bg-[var(--surface)] border border-[var(--outline)] text-[var(--on-surface)] rounded-lg px-3 py-2 outline-none focus:border-[var(--primary)] cursor-pointer"
             >
               <option value="">Todas</option>
               {escenarios.map((escenario) => (
@@ -121,7 +121,7 @@ export const TabPartidosFixture: React.FC<TabPartidosFixtureProps> = ({
           <button
             type="button"
             onClick={onLimpiarFiltros}
-            className="text-xs font-bold text-primary hover:underline cursor-pointer pb-2"
+            className="text-xs font-bold text-[var(--text-accent)] hover:text-[var(--primary)] cursor-pointer pb-2 transition-colors"
           >
             Limpiar filtros
           </button>
@@ -131,7 +131,7 @@ export const TabPartidosFixture: React.FC<TabPartidosFixtureProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-150 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+            <tr className="bg-[var(--surface-container-high)] border-b border-[var(--outline)] text-[var(--on-surface-variant)] text-[10px] uppercase font-bold tracking-wider">
               <th className="p-3 pl-4">Fecha (Round)</th>
               <th className="p-3">Partido (Equipos)</th>
               <th className="p-3">Día y Hora</th>
@@ -140,7 +140,7 @@ export const TabPartidosFixture: React.FC<TabPartidosFixtureProps> = ({
               {!esDelegado && <th className="p-3 pr-4 text-right">Acciones</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 text-sm">
+          <tbody className="divide-y divide-[var(--outline)] text-sm">
             {partidosPaginados.map((partido) => (
               <TarjetaPartidoFixture
                 key={partido.id}
