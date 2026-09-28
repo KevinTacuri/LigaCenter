@@ -47,7 +47,7 @@ export const TarjetaPartidoDestacado = ({
 }: Props) => (
   <Link
     to={`/partidos/${match.id}`}
-    className="bg-[#11131c] rounded-xl p-4 border border-slate-800 hover:border-indigo-500/50 transition-all hover:scale-[1.02] min-w-[260px] max-w-[260px] flex-shrink-0"
+    className="bg-[var(--surface-card-azul)] rounded-xl p-4 border border-[var(--outline)] hover:border-[var(--text-accent)]/50 transition-all hover:scale-[1.02] min-w-[260px] max-w-[260px] flex-shrink-0 shadow-xs"
   >
     <div className="flex justify-between items-start gap-1 mb-2">
       <div className="min-w-0 flex-1">

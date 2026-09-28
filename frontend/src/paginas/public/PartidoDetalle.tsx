@@ -215,7 +215,7 @@ export const PartidoDetalle: React.FC = () => {
         </Link>
 
         {/* Header del partido */}
-        <div className="bg-[#11131c] rounded-xl border border-slate-800 p-6 md:p-8">
+        <div className="bg-[var(--surface-card-azul)] rounded-xl border border-[var(--outline)] p-6 md:p-8">
           <div className="flex justify-between items-start mb-4">
             <div>
               <h2 className="text-lg font-bold text-white">
@@ -283,7 +283,7 @@ export const PartidoDetalle: React.FC = () => {
 
         {/* Incidencias */}
         {data.incidences && Object.keys(data.incidences).length > 0 && (
-          <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">
+          <div className="mt-6 bg-[var(--surface-card-verde)] rounded-xl border border-[var(--outline)] p-6">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Incidencias del Partido</h3>
             <div className="space-y-3">
               {Object.entries(data.incidences).map(([type, items]: [string, any]) => (
@@ -306,7 +306,7 @@ export const PartidoDetalle: React.FC = () => {
 
         {/* Estadisticas rapidas */}
         {match.status === 'finalizado' && (
-          <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">
+          <div className="mt-6 bg-[var(--surface-card-azul)] rounded-xl border border-[var(--outline)] p-6">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Resumen</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div>

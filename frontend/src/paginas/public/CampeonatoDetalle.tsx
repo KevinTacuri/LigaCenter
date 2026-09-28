@@ -348,7 +348,7 @@ export const CampeonatoDetalle: React.FC = () => {
                     </Link>
                 </div>
 
-                <div className="bg-[#11131c] rounded-xl border border-slate-800 p-6 mb-6">
+                <div className="bg-[var(--surface-card-azul)] rounded-xl border border-[var(--outline)] p-6 mb-6">
                     <div className="flex flex-wrap justify-between items-start gap-3 mb-4">
                         <div>
                             <h2 className="text-2xl font-black text-white">{championship.name}</h2>
@@ -383,7 +383,7 @@ export const CampeonatoDetalle: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="bg-[#11131c] border border-slate-900 rounded-xl p-5 space-y-4 mb-6">
+                <div className="bg-[var(--surface-card-verde)] border border-[var(--outline)] rounded-xl p-5 space-y-4 mb-6">
                     <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4">
                         {disciplines.length > 0 && (
                             <div className="space-y-1">
@@ -520,21 +520,21 @@ export const CampeonatoDetalle: React.FC = () => {
                 )}
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                    <div className="bg-[#11131c] border border-slate-900 rounded-xl p-5 text-center">
+                    <div className="bg-[var(--surface-card-azul)] border border-[var(--outline)] rounded-xl p-5 text-center">
                         <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Equipos</p>
                         <p className="text-2xl font-black text-white mt-1">{stats.totalTeams}</p>
                     </div>
-                    <div className="bg-[#11131c] border border-slate-900 rounded-xl p-5 text-center">
+                    <div className="bg-[var(--surface-card-verde)] border border-[var(--outline)] rounded-xl p-5 text-center">
                         <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Partidos</p>
                         <p className="text-2xl font-black text-white mt-1">{stats.totalMatches}</p>
                     </div>
-                    <div className="bg-[#11131c] border border-slate-900 rounded-xl p-5 text-center">
+                    <div className="bg-[var(--surface-card-azul)] border border-[var(--outline)] rounded-xl p-5 text-center">
                         <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Goles Totales</p>
                         <p className="text-2xl font-black text-white mt-1">{stats.totalGoals}</p>
                     </div>
                 </div>
 
-                <div className="bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden mb-6">
+                <div className="bg-[var(--surface-card-verde)] border border-[var(--outline)] rounded-xl overflow-hidden mb-6">
                     <div className="px-5 py-3 border-b border-slate-900">
                         <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                             <span className="material-symbols-outlined text-indigo-400 text-base">leaderboard</span>
@@ -561,8 +561,8 @@ export const CampeonatoDetalle: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="bg-[#11131c] border border-slate-900 rounded-xl overflow-hidden">
-                    <div className="px-5 py-3 border-b border-slate-900 flex justify-between items-center">
+                <div className="bg-[var(--surface-card-azul)] border border-[var(--outline)] rounded-xl overflow-hidden">
+                    <div className="px-5 py-3 border-b border-[var(--outline)] flex justify-between items-center">
                         <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                             <span className="material-symbols-outlined text-indigo-400 text-base">calendar_today</span>
                             Partidos

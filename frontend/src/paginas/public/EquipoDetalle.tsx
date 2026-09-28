@@ -101,7 +101,7 @@ export const EquipoDetalle: React.FC = () => {
         {!loading && !error && data && (
           <>
             {/* Cabecera del equipo */}
-            <div className="bg-[#11131c] rounded-xl border border-slate-800 p-6 flex items-center gap-4">
+            <div className="bg-[var(--surface-card-azul)] rounded-xl border border-[var(--outline)] p-6 flex items-center gap-4">
               {data.team.logo ? (
                 <img src={data.team.logo} alt={data.team.name} className="w-16 h-16 rounded-full object-cover border border-slate-800" />
               ) : (
@@ -117,7 +117,7 @@ export const EquipoDetalle: React.FC = () => {
 
             {/* Estadísticas / standing */}
             {data.standing && (
-              <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">
+              <div className="mt-6 bg-[var(--surface-card-verde)] rounded-xl border border-[var(--outline)] p-6">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Estadísticas</h3>
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-4 text-center">
                   <div>
@@ -151,7 +151,7 @@ export const EquipoDetalle: React.FC = () => {
             )}
 
             {/* Plantilla */}
-            <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">
+            <div className="mt-6 bg-[var(--surface-card-azul)] rounded-xl border border-[var(--outline)] p-6">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Plantilla</h3>
               {data.players.length === 0 ? (
                 <p className="text-slate-500 text-sm">No hay jugadores registrados.</p>
@@ -207,7 +207,7 @@ export const EquipoDetalle: React.FC = () => {
             </div>
 
             {/* Últimos partidos */}
-            <div className="mt-6 bg-[#11131c] rounded-xl border border-slate-800 p-6">
+            <div className="mt-6 bg-[var(--surface-card-verde)] rounded-xl border border-[var(--outline)] p-6">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Últimos partidos</h3>
               {data.recent_matches.length === 0 ? (
                 <p className="text-slate-500 text-sm">No hay partidos recientes.</p>

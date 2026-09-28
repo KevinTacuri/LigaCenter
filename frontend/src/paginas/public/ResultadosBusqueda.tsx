@@ -74,8 +74,8 @@ export const ResultadosBusqueda: React.FC = () => {
           <section className="mb-8">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Campeonatos</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {results.championships.map((champ) => (
-                <div key={champ.id} className="bg-[#11131c] rounded-xl p-4 border border-slate-800">
+              {results.championships.map((champ, index) => (
+                <div key={champ.id} className={index % 2 === 0 ? 'bg-[var(--surface-card-azul)] rounded-xl p-4 border border-[var(--outline)]' : 'bg-[var(--surface-card-verde)] rounded-xl p-4 border border-[var(--outline)]'}>
                   <p className="font-bold text-white text-sm">{champ.name}</p>
                   <p className="text-xs text-slate-500 mt-1">{champ.status}</p>
                 </div>
@@ -88,11 +88,11 @@ export const ResultadosBusqueda: React.FC = () => {
           <section className="mb-8">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Partidos</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {results.matches.map((match) => (
+              {results.matches.map((match, index) => (
                 <Link
                   key={match.id}
                   to={`/partidos/${match.id}`}
-                  className="bg-[#11131c] rounded-xl p-4 border border-slate-800 hover:border-indigo-500/50 transition-all"
+                  className={index % 2 === 0 ? 'bg-[var(--surface-card-azul)] rounded-xl p-4 border border-[var(--outline)] hover:border-[var(--text-accent)]/50 transition-all' : 'bg-[var(--surface-card-verde)] rounded-xl p-4 border border-[var(--outline)] hover:border-[var(--text-accent)]/50 transition-all'}
                 >
                   <p className="text-sm text-slate-200">
                     {match.home_team?.name || '—'} <span className="text-slate-500">vs</span> {match.away_team?.name || '—'}
@@ -108,11 +108,11 @@ export const ResultadosBusqueda: React.FC = () => {
           <section className="mb-8">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Equipos</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {results.teams.map((team) => (
+              {results.teams.map((team, index) => (
                 <Link
                     key={team.id}
                     to={`/equipos/${team.id}`}
-                    className="bg-[#11131c] rounded-xl p-4 border border-slate-800 hover:border-indigo-500/50 transition-all flex items-center gap-3"
+                    className={index % 2 === 0 ? 'bg-[var(--surface-card-azul)] rounded-xl p-4 border border-[var(--outline)] hover:border-[var(--text-accent)]/50 transition-all flex items-center gap-3' : 'bg-[var(--surface-card-verde)] rounded-xl p-4 border border-[var(--outline)] hover:border-[var(--text-accent)]/50 transition-all flex items-center gap-3'}
                 >
                     {team.logo ? (
                     <img src={team.logo} alt={team.name} className="w-8 h-8 rounded-full object-cover" />
@@ -130,11 +130,11 @@ export const ResultadosBusqueda: React.FC = () => {
           <section className="mb-8">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Jugadores</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {results.players.map((player) => (
+              {results.players.map((player, index) => (
                 <Link
                     key={player.id}
                     to={`/jugadores/${player.id}`}
-                    className="bg-[#11131c] rounded-xl p-4 border border-slate-800 hover:border-indigo-500/50 transition-all flex items-center gap-3"
+                    className={index % 2 === 0 ? 'bg-[var(--surface-card-azul)] rounded-xl p-4 border border-[var(--outline)] hover:border-[var(--text-accent)]/50 transition-all flex items-center gap-3' : 'bg-[var(--surface-card-verde)] rounded-xl p-4 border border-[var(--outline)] hover:border-[var(--text-accent)]/50 transition-all flex items-center gap-3'}
                 >
                     {player.photo ? (
                     <img src={player.photo} alt={player.name} className="w-8 h-8 rounded-full object-cover" />

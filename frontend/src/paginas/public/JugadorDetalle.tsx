@@ -82,7 +82,7 @@ export const JugadorDetalle: React.FC = () => {
         {!loading && !error && data && (
           <>
             {/* Cabecera del jugador */}
-            <div className="bg-[#11131c] rounded-xl border border-slate-800 p-6 flex items-center gap-4">
+            <div className="bg-[var(--surface-card-azul)] rounded-xl border border-[var(--outline)] p-6 flex items-center gap-4">
               {data.player.photo ? (
                 <img src={data.player.photo} alt={data.player.name} className="w-16 h-16 rounded-full object-cover border border-slate-800" />
               ) : (
@@ -114,7 +114,7 @@ export const JugadorDetalle: React.FC = () => {
                 </div>
               ) : (
                 data.statistics_by_championship.map((entry, idx) => (
-                  <div key={idx} className="bg-[#11131c] rounded-xl border border-slate-800 p-6">
+                  <div key={idx} className={idx % 2 === 0 ? 'bg-[var(--surface-card-azul)] rounded-xl border border-[var(--outline)] p-6' : 'bg-[var(--surface-card-verde)] rounded-xl border border-[var(--outline)] p-6'}>
                     <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">
                       {entry.championship?.name || 'Competición'}
                     </h3>

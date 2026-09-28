@@ -269,7 +269,7 @@ export const HomePublic: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {championships.map((champ: PublicChampionship) => {
+            {championships.map((champ: PublicChampionship, index: number) => {
               const champState = expandedState[champ.id];
               const isExpanded = champState?.expanded || false;
               const disciplinesList = Object.values(champState?.disciplines || {});
@@ -277,7 +277,7 @@ export const HomePublic: React.FC = () => {
               return (
                 <div 
                   key={champ.id} 
-                  className="bg-[#11131c] rounded-xl border border-slate-800 overflow-hidden transition-all hover:border-indigo-500/30"
+                  className={index % 2 === 0 ? 'bg-[var(--surface-card-azul)] rounded-xl border border-[var(--outline)] overflow-hidden transition-all hover:border-[var(--text-accent)]/50' : 'bg-[var(--surface-card-verde)] rounded-xl border border-[var(--outline)] overflow-hidden transition-all hover:border-[var(--text-accent)]/50'}
                 >
                   <button
                     onClick={() => toggleChampionship(champ.id)}
@@ -397,7 +397,7 @@ export const HomePublic: React.FC = () => {
                                                         <Link
                                                           key={match.id}
                                                           to={`/partidos/${match.id}`}
-                                                          className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#0c0e16] hover:bg-[#171a26] border border-slate-800/50 hover:border-indigo-500/30 transition-all group"
+                                                          className="flex items-center justify-between px-3 py-2 rounded-lg bg-[var(--surface-card-celeste)] hover:bg-[var(--surface-card-celeste)]/80 border border-[var(--outline)] hover:border-[var(--text-accent)]/50 transition-all group"
                                                         >
                                                           <div className="flex items-center gap-3 min-w-0 flex-1">
                                                             <div className="flex items-center gap-2 text-xs font-semibold text-slate-200 truncate">
