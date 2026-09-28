@@ -10,6 +10,7 @@ const EQUIPO = [
   { nombre: 'Vladimir Solorzano Huamani', correo: 'vsolorzano@unsa.edu.pe',     rol: 'QA & Pruebas' },
   { nombre: 'Kevin Tacuri Masca',         correo: 'ktacurim@unsa.edu.pe',       rol: 'Gestión & Scrum Master' },
   { nombre: 'Rodrigo Veliz Saihua',       correo: 'rvelizs@unsa.edu.pe',        rol: 'Frontend & Diseño UI' },
+  { nombre: 'Valentina Chambilla Perca', correo: 'vmilagrosc@unsa.edu.pe', rol: 'Frontend & Despliegue' },
 ];
 
 const VALORES = [
@@ -19,27 +20,32 @@ const VALORES = [
   { icon: 'public',        title: 'Accesibilidad', desc: 'Diseñamos para que cualquier participante pueda consultar información desde cualquier dispositivo.' },
 ];
 
+const CARD_CLASS = 'bg-[var(--surface-container-low)] border border-[var(--outline)] rounded-2xl p-6 shadow-xs';
+const MINI_CARD_CLASS = 'bg-[var(--surface-container)] border border-[var(--outline)] rounded-2xl p-4 shadow-xs';
+
 export const Nosotros: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#0a0b10] text-slate-100 font-sans overflow-x-hidden">
       <CabeceraPublica />
 
       {/* HERO */}
-      <section className="pt-12 pb-16 px-6 text-center max-w-3xl mx-auto space-y-4">
-        <span className="inline-block text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full">
-          Quiénes somos
-        </span>
-        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-          El equipo detrás de <span className="text-indigo-400">LigaCenter</span>
-        </h1>
-        <p className="text-sm text-slate-400 leading-relaxed">
-          Somos ocho estudiantes de la Escuela Profesional de Ingeniería de Sistemas de la UNSA que desarrollamos esta plataforma como Proyecto Capstone 2026, en colaboración con el Colegio de Ingenieros de Arequipa.
-        </p>
+      <section className="pt-12 pb-16 px-6 max-w-4xl mx-auto">
+        <div className={`${CARD_CLASS} text-center space-y-4`}>
+          <span className="inline-block text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full">
+            Quiénes somos
+          </span>
+          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+            El equipo detrás de <span className="text-indigo-400">LigaCenter</span>
+          </h1>
+          <p className="text-sm text-slate-400 leading-relaxed max-w-2xl mx-auto">
+            Somos estudiantes de la Escuela Profesional de Ingeniería de Sistemas de la UNSA que desarrollamos esta plataforma como Proyecto Capstone 2026, en colaboración con el Colegio de Ingenieros de Arequipa.
+          </p>
+        </div>
       </section>
 
       {/* FUNDACIÓN / ORIGEN */}
       <section className="py-16 px-6 max-w-5xl mx-auto">
-        <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-8 md:p-12 grid md:grid-cols-2 gap-10 items-center">
+        <div className={`${CARD_CLASS} p-8 md:p-12 grid md:grid-cols-2 gap-10 items-center`}>
           <div className="space-y-4">
             <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Origen del proyecto</span>
             <h2 className="text-2xl font-black text-white">¿Por qué LigaCenter?</h2>
@@ -57,7 +63,7 @@ export const Nosotros: React.FC = () => {
               { label: 'Institución cliente',  valor: 'CIA Arequipa',  icon: 'domain' },
               { label: 'Sprints completados',  valor: '6 sprints',     icon: 'check_circle' },
             ].map((item) => (
-              <div key={item.label} className="bg-[#0a0b10] border border-slate-900 rounded-xl p-4 space-y-2">
+              <div key={item.label} className={`${MINI_CARD_CLASS} space-y-2`}>
                 <span className="material-symbols-outlined text-indigo-400 text-base">{item.icon}</span>
                 <p className="font-black text-sm text-white">{item.valor}</p>
                 <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wide">{item.label}</p>
@@ -70,7 +76,7 @@ export const Nosotros: React.FC = () => {
       {/* MISIÓN / VISIÓN / VALORES */}
       <section className="py-16 px-6 max-w-5xl mx-auto space-y-12">
         <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 space-y-3">
+          <div className={`${CARD_CLASS} space-y-3`}>
             <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
               <span className="material-symbols-outlined text-indigo-400">flag</span>
             </div>
@@ -79,7 +85,7 @@ export const Nosotros: React.FC = () => {
               Desarrollar una plataforma tecnológica accesible y robusta que optimice la gestión de campeonatos deportivos, proporcionando información precisa en tiempo real a todos los actores involucrados.
             </p>
           </div>
-          <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 space-y-3">
+          <div className={`${CARD_CLASS} space-y-3`}>
             <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
               <span className="material-symbols-outlined text-indigo-400">visibility</span>
             </div>
@@ -98,7 +104,7 @@ export const Nosotros: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {VALORES.map((v) => (
-              <div key={v.title} className="bg-[#11131c] border border-slate-900 rounded-2xl p-5 space-y-3 hover:border-indigo-500/30 transition-all text-center">
+              <div key={v.title} className={`${CARD_CLASS} p-5 space-y-3 hover:border-indigo-500/30 transition-all text-center`}>
                 <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto">
                   <span className="material-symbols-outlined text-indigo-400">{v.icon}</span>
                 </div>
@@ -116,9 +122,9 @@ export const Nosotros: React.FC = () => {
           <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Desarrolladores</span>
           <h2 className="text-2xl font-black text-white">El equipo</h2>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {EQUIPO.map((m) => (
-            <div key={m.correo} className="bg-[#11131c] border border-slate-900 rounded-2xl p-5 space-y-2 hover:border-indigo-500/30 transition-all text-center">
+            <div key={m.correo} className={`${CARD_CLASS} p-5 space-y-2 hover:border-indigo-500/30 transition-all text-center`}>
               <div className="w-12 h-12 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto">
                 <span className="material-symbols-outlined text-indigo-400 text-xl">person</span>
               </div>
@@ -130,7 +136,7 @@ export const Nosotros: React.FC = () => {
         </div>
 
         {/* Asesor */}
-        <div className="mt-8 bg-[#11131c] border border-indigo-500/20 rounded-2xl p-6 flex items-center gap-5">
+        <div className={`${CARD_CLASS} mt-8 border-indigo-500/20 flex items-center gap-5`}>
           <div className="w-14 h-14 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-indigo-400 text-2xl">school</span>
           </div>

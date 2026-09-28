@@ -115,10 +115,15 @@ export const Configuracion: React.FC = () => {
             <p className="text-xs text-slate-450 mt-1">Regresa al tablero y selecciona un campeonato antes de continuar.</p>
           </div>
         ) : (
-          <div className="bg-[#11131c] border border-slate-900 rounded-2xl p-6 shadow-xs space-y-6">
+          <div id="ajustes-generales-torneo" className="bg-[var(--surface-container-low)] rounded-2xl border border-[var(--outline)] p-6 shadow-xs">
             <div className="border-b border-slate-900 pb-4">
-              <h2 className="text-sm font-extrabold text-white uppercase tracking-wider">Ajustes Generales del Torneo</h2>
-              <p className="text-xs text-slate-450 mt-1">Configura los detalles básicos y sube el reglamento oficial de {campeonatoActivo.name}.</p>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-extrabold text-white uppercase tracking-wider">Ajustes Generales del Torneo</h2>
+                  <p className="text-xs text-slate-450 mt-1">Configura los detalles básicos y sube el reglamento oficial de {campeonatoActivo.name}.</p>
+                </div>
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.12em] bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">ID</span>
+              </div>
             </div>
 
             {errorLocal && (
@@ -128,38 +133,78 @@ export const Configuracion: React.FC = () => {
               </div>
             )}
 
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="rounded-2xl border border-[var(--outline)] bg-[var(--surface-container)] p-4 shadow-xs">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] uppercase tracking-[0.12em] text-slate-400">Inicio</span>
+                  <span className="material-symbols-outlined text-sm text-indigo-400">event</span>
+                </div>
+                <p className="text-sm font-bold text-white">{startDate ? new Date(startDate + 'T00:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Sin fecha'}</p>
+              </div>
+
+              <div className="rounded-2xl border border-[var(--outline)] bg-[var(--surface-container)] p-4 shadow-xs">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] uppercase tracking-[0.12em] text-slate-400">Fin</span>
+                  <span className="material-symbols-outlined text-sm text-emerald-400">flag</span>
+                </div>
+                <p className="text-sm font-bold text-white">{endDate ? new Date(endDate + 'T00:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Sin fecha'}</p>
+              </div>
+
+              <div className="rounded-2xl border border-[var(--outline)] bg-[var(--surface-container)] p-4 shadow-xs">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] uppercase tracking-[0.12em] text-slate-400">Estado</span>
+                  <span className="material-symbols-outlined text-sm text-amber-400">toggle_on</span>
+                </div>
+                <p className="text-sm font-bold text-white">{estado === 'en_curso' ? 'En curso' : estado === 'finalizado' ? 'Finalizado' : 'Creado'}</p>
+              </div>
+
+              <div className="rounded-2xl border border-[var(--outline)] bg-[var(--surface-container)] p-4 shadow-xs">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] uppercase tracking-[0.12em] text-slate-400">Visibilidad</span>
+                  <span className="material-symbols-outlined text-sm text-sky-400">{isPublic ? 'public' : 'lock'}</span>
+                </div>
+                <p className="text-sm font-bold text-white">{isPublic ? 'Público' : 'Privado'}</p>
+              </div>
+            </div>
+
             <form onSubmit={manejarGuardar} className="space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-350 block">Nombre del Campeonato *</label>
+              <div className="rounded-2xl border border-[var(--outline)] bg-[var(--surface-container)] p-4 shadow-xs">
+                <label className="text-[11px] font-bold text-slate-350 uppercase tracking-[0.12em] block mb-2.5">Nombre del Campeonato</label>
                 <input
                   type="text"
                   required
                   placeholder="Ej: Copa Clausura Ingenieros"
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
-                  className="w-full text-sm border border-slate-800 rounded-lg p-2.5 outline-hidden focus:border-indigo-500 bg-[#171a26] text-white"
+                  className="w-full text-sm border border-slate-700 rounded-xl p-3 outline-hidden focus:border-indigo-500 bg-[#0f121b] text-white"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-350 block">Tipo / Modo de Gestión *</label>
+                <div className="rounded-2xl border border-[var(--outline)] bg-[var(--surface-container)] p-4 shadow-xs">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-[11px] font-bold text-slate-350 uppercase tracking-[0.12em]">Tipo de gestión</label>
+                    <span className="material-symbols-outlined text-sm text-indigo-400">tune</span>
+                  </div>
                   <select
                     value={tipo}
                     onChange={(e) => setTipo(e.target.value as 'basico' | 'completo')}
-                    className="w-full text-sm border border-slate-800 rounded-lg p-2.5 outline-hidden focus:border-indigo-500 bg-[#171a26] text-white cursor-pointer"
+                    className="w-full text-sm border border-slate-700 rounded-xl p-3 outline-hidden focus:border-indigo-500 bg-[#0f121b] text-white cursor-pointer"
                   >
                     <option value="basico">Básico (Fixture rápido, marcadores)</option>
                     <option value="completo">Completo (Multi-deporte, actas detalladas, sanciones)</option>
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-350 block">Estado del Campeonato *</label>
+                <div className="rounded-2xl border border-[var(--outline)] bg-[var(--surface-container)] p-4 shadow-xs">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-[11px] font-bold text-slate-350 uppercase tracking-[0.12em]">Estado</label>
+                    <span className="material-symbols-outlined text-sm text-emerald-400">check_circle</span>
+                  </div>
                   <select
                     value={estado}
                     onChange={(e) => setEstado(e.target.value)}
-                    className="w-full text-sm border border-slate-800 rounded-lg p-2.5 outline-hidden focus:border-indigo-500 bg-[#171a26] text-white cursor-pointer"
+                    className="w-full text-sm border border-slate-700 rounded-xl p-3 outline-hidden focus:border-indigo-500 bg-[#0f121b] text-white cursor-pointer"
                   >
                     <option value="creado">Creado / Inscripciones abiertas</option>
                     <option value="en_curso">En Curso / Partidos programados</option>
@@ -169,26 +214,32 @@ export const Configuracion: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-350 block">Fecha de Inicio</label>
+                <div className="rounded-2xl border border-[var(--outline)] bg-[var(--surface-container)] p-4 shadow-xs">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-[11px] font-bold text-indigo-300 uppercase tracking-[0.12em]">Fecha de inicio</label>
+                    <span className="material-symbols-outlined text-sm text-indigo-300">event</span>
+                  </div>
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full text-sm border border-slate-800 rounded-lg p-2.5 outline-hidden focus:border-indigo-500 bg-[#171a26] text-white"
+                    className="w-full text-sm border border-indigo-500/40 rounded-xl p-3 outline-hidden focus:border-indigo-500 bg-[#0f121b] text-white"
                   />
-                  <p className="text-[10px] text-slate-500">Fecha de inicio del campeonato</p>
+                  <p className="text-[10px] text-slate-400 mt-2">Asignar inicio del torneo</p>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-350 block">Fecha de Fin</label>
+                <div className="rounded-2xl border border-[var(--outline)] bg-[var(--surface-container)] p-4 shadow-xs">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-[11px] font-bold text-emerald-300 uppercase tracking-[0.12em]">Fecha de fin</label>
+                    <span className="material-symbols-outlined text-sm text-emerald-300">flag</span>
+                  </div>
                   <input
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full text-sm border border-slate-800 rounded-lg p-2.5 outline-hidden focus:border-indigo-500 bg-[#171a26] text-white"
+                    className="w-full text-sm border border-emerald-500/40 rounded-xl p-3 outline-hidden focus:border-emerald-500 bg-[#0f121b] text-white"
                   />
-                  <p className="text-[10px] text-slate-500">Fecha de finalización del campeonato</p>
+                  <p className="text-[10px] text-slate-400 mt-2">Asignar cierre del torneo</p>
                 </div>
               </div>
 
@@ -254,9 +305,12 @@ export const Configuracion: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-2.5 pt-3 border-t border-slate-900">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-bold text-slate-350 block">Reglamento Oficial (PDF)</label>
+              <div className="rounded-2xl border border-slate-800 bg-[#171a26] p-4 space-y-2.5">
+                <div className="flex justify-between items-center gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-350 uppercase tracking-[0.12em] block">Reglamento Oficial</label>
+                    <p className="text-[10px] text-slate-500 leading-none mt-1">Archivo PDF del campeonato</p>
+                  </div>
                   {campeonatoActivo.rules_pdf && (
                     <button
                       type="button"
@@ -264,7 +318,7 @@ export const Configuracion: React.FC = () => {
                       className="text-xs text-indigo-400 font-bold hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-0 outline-hidden"
                     >
                       <span className="material-symbols-outlined text-xs">download</span>
-                      Descargar Reglamento Actual
+                      Descargar actual
                     </button>
                   )}
                 </div>
@@ -272,7 +326,7 @@ export const Configuracion: React.FC = () => {
                   type="file"
                   accept=".pdf"
                   onChange={(e) => setReglamento(e.target.files?.[0] || null)}
-                  className="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-500/10 file:text-indigo-400 file:hover:bg-indigo-500/20 file:cursor-pointer outline-hidden cursor-pointer bg-[#171a26] border border-slate-800 p-2"
+                  className="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-500/10 file:text-indigo-400 file:hover:bg-indigo-500/20 file:cursor-pointer outline-hidden cursor-pointer bg-[#0f121b] border border-slate-700 p-2 rounded-xl"
                 />
                 <p className="text-[10px] text-slate-500 leading-none">Sube un nuevo archivo PDF para reemplazar o registrar el reglamento del torneo.</p>
               </div>
